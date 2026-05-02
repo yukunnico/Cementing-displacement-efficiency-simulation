@@ -1,0 +1,9 @@
+name: shenjingwangluo
+dependencies:
+  - python>=3.9
+  - pip
+  - numpy
+  - scipy
+  - pandas
+  - matplotlib
+  - jupyter

@@ -1,0 +1,20 @@
+{
+  "source_pdf": "D:\\users\\desktop\\research\\控压固井项目\\参考文档\\呼101\\100312.PDF",
+  "document_type": "固井质量测井评价图",
+  "extracted_from_images": true,
+  "logged_interval_top_md_m": 5390.0,
+  "logged_interval_bottom_md_m": 7810.0,
+  "dual_casing_interval_top_md_m": 5390.0,
+  "dual_casing_interval_bottom_md_m": 5699.8,
+  "target_interval_top_md_m": 6153.0,
+  "target_interval_bottom_md_m": 7741.0,
+  "cbl_measured_cement_top_md_m": 5402.85,
+  "bond_qualification_rate_pct": 62.77,
+  "overall_quality": "不合格",
+  "target_interval_quality": "不合格",
+  "notes": [
+    "CBL 图头给出的实际返高为 5402.85m，与井史 5407.5m 存在约 4.65m 差异，应作为独立校准锚点保留。",
+    "5390.00-5699.80m 为双层套管，二界面不作评价；胶结合格率 62.77% 低于 70% 标准。",
+    "深度-声幅曲线已从图像轨道数字化到 temp_pdf_extract/cbl_depth_profile_v2.csv，可用于剖面级验证。"
+  ]
+}

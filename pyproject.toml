@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cemdisp"
+version = "0.1.0"
+description = "Cement-slurry displacement efficiency modeling scaffold"
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [
+  { name = "Sisyphus scaffold" }
+]
+dependencies = [
+  "numpy>=1.24",
+  "pandas>=1.5",
+  "matplotlib>=3.7",
+]
+
+[tool.setuptools.packages.find]
+include = ["cemdisp*"]

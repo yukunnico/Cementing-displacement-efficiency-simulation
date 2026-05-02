@@ -1,0 +1,13 @@
+{
+  "summary_json": "D:\\users\\desktop\\research\\控压固井项目\\cement model\\hu101model\\改进模型输出\\tail_then_mud\\呼101尾管_D2DGA_结果摘要.json",
+  "summary_md": "D:\\users\\desktop\\research\\控压固井项目\\cement model\\hu101model\\改进模型输出\\tail_then_mud\\呼101尾管_D2DGA_结果摘要.md",
+  "time_series_csv": "D:\\users\\desktop\\research\\控压固井项目\\cement model\\hu101model\\改进模型输出\\tail_then_mud\\呼101尾管_D2DGA_时间序列结果.csv",
+  "depth_profile_csv": "D:\\users\\desktop\\research\\控压固井项目\\cement model\\hu101model\\改进模型输出\\tail_then_mud\\呼101尾管_D2DGA_深度剖面.csv",
+  "field_npz": "D:\\users\\desktop\\research\\控压固井项目\\cement model\\hu101model\\改进模型输出\\tail_then_mud\\呼101尾管_D2DGA_最终场数据.npz",
+  "comparison_plot": "D:\\users\\desktop\\research\\控压固井项目\\cement model\\hu101model\\改进模型输出\\tail_then_mud\\图表\\呼101尾管_模拟与资料效率对比.png",
+  "profile_plot": "D:\\users\\desktop\\research\\控压固井项目\\cement model\\hu101model\\改进模型输出\\tail_then_mud\\图表\\呼101尾管_深度效率剖面对比.png",
+  "time_diagnostics_plot": "D:\\users\\desktop\\research\\控压固井项目\\cement model\\hu101model\\改进模型输出\\tail_then_mud\\图表\\呼101尾管_时程诊断_效率前沿窜槽.png",
+  "efficiency_annular_volumes_plot": "D:\\users\\desktop\\research\\控压固井项目\\cement model\\hu101model\\改进模型输出\\tail_then_mud\\图表\\呼101尾管_效率随环空体积数变化.png",
+  "depth_tracks_plot": "D:\\users\\desktop\\research\\控压固井项目\\cement model\\hu101model\\改进模型输出\\tail_then_mud\\图表\\呼101尾管_沿深度多轨诊断.png",
+  "final_fields_plot": "D:\\users\\desktop\\research\\控压固井项目\\cement model\\hu101model\\改进模型输出\\tail_then_mud\\图表\\呼101尾管_最终二维场_浓度效率残余泥浆.png"
+}

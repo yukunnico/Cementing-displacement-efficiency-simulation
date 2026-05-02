@@ -1,0 +1,971 @@
+sep=,,,,,,,,,,,,,
+数据表,分组,字段,值,单位,井深_top_m,井深_bottom_m,depth_md_m,cbl_amplitude_pct,quality_proxy,质量等级_代理,说明,来源文件,OCR置信度
+基本信息,文件,source_pdf,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,,,,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+基本信息,文件,document_type,固井质量测井评价图,,,,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+基本信息,文件,well_name,呼101井,,,,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+基本信息,文件,cbl_profile_csv,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,,,,,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+基本信息,文件,ocr_inventory_csv,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,,,,,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,
+元数据,header_metadata,report_title,固井质量测井评价图,,,,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+元数据,header_metadata,depth_scale,0.180555556,,,,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+元数据,header_metadata,logging_company,中油测井新疆分公司,,,,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+元数据,header_metadata,operator_company,西部钻探,,,,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+元数据,header_metadata,field_unit,新疆油田分公司,,,,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+元数据,header_metadata,logging_tool,CPLog,,,,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+元数据,header_metadata,interpretation_software,LEAD,,,,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+元数据,header_metadata,well_type,预探井,,,,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+元数据,header_metadata,logging_date,2022/12/15,,,,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+元数据,header_metadata,interpretation_date,2022/12/16,,,,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+元数据,header_metadata,cementing_date,2022/11/12,,,,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+元数据,engineering_metadata,measured_interval_top_md_m,5390,m,,,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+元数据,engineering_metadata,measured_interval_bottom_md_m,7810,m,,,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+元数据,engineering_metadata,completed_depth_md_m,7868,m,,,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+元数据,engineering_metadata,electric_log_depth_md_m,7810,m,,,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+元数据,engineering_metadata,artificial_bottom_md_m,7809.4,m,,,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+元数据,engineering_metadata,cbl_measured_cement_top_md_m,5402.85,m,,,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+元数据,engineering_metadata,hanger_position_md_m,"{""top"":5402.85,""bottom"":5407.46}",m,5402.85,5407.46,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+元数据,engineering_metadata.hanger_position_md_m,top,5402.85,m,,,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+元数据,engineering_metadata.hanger_position_md_m,bottom,5407.46,m,,,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+元数据,engineering_metadata,mud_density_g_cm3,1.96,g/cm3,,,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+元数据,engineering_metadata,cement_density_g_cm3,2.1,g/cm3,,,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+元数据,engineering_metadata,target_interval_md_m,"{""top"":6153.0,""bottom"":7741.0}",m,6153,7741,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+元数据,engineering_metadata.target_interval_md_m,top,6153,m,,,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+元数据,engineering_metadata.target_interval_md_m,bottom,7741,m,,,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+元数据,engineering_metadata,dual_casing_excluded_interval_md_m,"{""top"":5390.0,""bottom"":5699.8}",m,5390,5699.8,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+元数据,engineering_metadata.dual_casing_excluded_interval_md_m,top,5390,m,,,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+元数据,engineering_metadata.dual_casing_excluded_interval_md_m,bottom,5699.8,m,,,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+元数据,quality_evaluation,overall_quality,不合格,,,,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+元数据,quality_evaluation,target_interval_quality,不合格,,,,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+元数据,quality_evaluation,bond_qualification_rate_pct,62.77,%,,,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+元数据,quality_evaluation,qualification_threshold_pct,70,%,,,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+元数据,quality_evaluation,redline_violation,是,,,,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+元数据,quality_evaluation,note,测量井段内水泥胶结质量合格率为62.77%，未达到应封固井段的70.00%,,,,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+测井道说明,track_01,track,声波时差,,,,,,,,范围：100-500,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+测井道说明,track_01,range,100-500,,,,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+测井道说明,track_01,unit,us/m,,,,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+测井道说明,track_02,track,磁定位,,,,,,,,范围：-500~500,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+测井道说明,track_02,range,-500~500,,,,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+测井道说明,track_02,unit,mV,,,,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+测井道说明,track_03,track,声幅,,,,,,,,范围：0-100,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+测井道说明,track_03,range,0-100,,,,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+测井道说明,track_03,unit,%,,,,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+测井道说明,track_04,track,变密度,,,,,,,,范围：-500~500,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+测井道说明,track_04,range,-500~500,,,,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+测井道说明,track_04,unit,mV,,,,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+测井道说明,track_05,track,二界面,,,,,,,,范围：0-100,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+测井道说明,track_05,range,0-100,,,,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+测井道说明,track_05,unit,relative,,,,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+测井道说明,track_06,track,井径,,,,,,,,范围：10-50,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+测井道说明,track_06,range,10-50,,,,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+测井道说明,track_06,unit,cm,,,,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+测井道说明,track_07,track,自然伽玛(生产),,,,,,,,范围：100-2050,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+测井道说明,track_07,range,100-2050,,,,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+测井道说明,track_07,unit,API,,,,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+解释标签,interpretation_labels,label_01,胶结良好,,,,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+解释标签,interpretation_labels,label_02,胶结中等,,,,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+解释标签,interpretation_labels,label_03,胶结差,,,,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+解释标签,interpretation_labels,label_04,空套管,,,,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+CBL分段统计,full_interval_5500_7810,top_md_m,5500,m,5500,7810,,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL分段统计,full_interval_5500_7810,bottom_md_m,7810,m,5500,7810,,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL分段统计,full_interval_5500_7810,sample_count,232,,5500,7810,,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL分段统计,full_interval_5500_7810,mean_cbl_amplitude_pct,11.3806,%,5500,7810,,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL分段统计,full_interval_5500_7810,min_cbl_amplitude_pct,3.3,%,5500,7810,,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL分段统计,full_interval_5500_7810,max_cbl_amplitude_pct,93,%,5500,7810,,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL分段统计,full_interval_5500_7810,mean_quality_proxy,0.8862,,5500,7810,,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL分段统计,zone_5700_6100,top_md_m,5700,m,5700,6100,,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL分段统计,zone_5700_6100,bottom_md_m,6100,m,5700,6100,,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL分段统计,zone_5700_6100,sample_count,41,,5700,6100,,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL分段统计,zone_5700_6100,mean_cbl_amplitude_pct,17.4854,%,5700,6100,,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL分段统计,zone_5700_6100,min_cbl_amplitude_pct,3.3,%,5700,6100,,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL分段统计,zone_5700_6100,max_cbl_amplitude_pct,92.6,%,5700,6100,,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL分段统计,zone_5700_6100,mean_quality_proxy,0.8251,,5700,6100,,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL分段统计,zone_6100_6400,top_md_m,6100,m,6100,6400,,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL分段统计,zone_6100_6400,bottom_md_m,6400,m,6100,6400,,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL分段统计,zone_6100_6400,sample_count,31,,6100,6400,,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL分段统计,zone_6100_6400,mean_cbl_amplitude_pct,39.3968,%,6100,6400,,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL分段统计,zone_6100_6400,min_cbl_amplitude_pct,3.7,%,6100,6400,,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL分段统计,zone_6100_6400,max_cbl_amplitude_pct,93,%,6100,6400,,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL分段统计,zone_6100_6400,mean_quality_proxy,0.606,,6100,6400,,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL分段统计,zone_6400_7810,top_md_m,6400,m,6400,7810,,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL分段统计,zone_6400_7810,bottom_md_m,7810,m,6400,7810,,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL分段统计,zone_6400_7810,sample_count,142,,6400,7810,,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL分段统计,zone_6400_7810,mean_cbl_amplitude_pct,5.0373,%,6400,7810,,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL分段统计,zone_6400_7810,min_cbl_amplitude_pct,3.3,%,6400,7810,,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL分段统计,zone_6400_7810,max_cbl_amplitude_pct,8.9,%,6400,7810,,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL分段统计,zone_6400_7810,mean_quality_proxy,0.9496,,6400,7810,,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL分段统计,zone_6153_7741_target_interval,top_md_m,6153,m,6153,7741,,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL分段统计,zone_6153_7741_target_interval,bottom_md_m,7741,m,6153,7741,,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL分段统计,zone_6153_7741_target_interval,sample_count,159,,6153,7741,,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL分段统计,zone_6153_7741_target_interval,mean_cbl_amplitude_pct,8.4541,%,6153,7741,,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL分段统计,zone_6153_7741_target_interval,min_cbl_amplitude_pct,3.3,%,6153,7741,,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL分段统计,zone_6153_7741_target_interval,max_cbl_amplitude_pct,92.6,%,6153,7741,,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL分段统计,zone_6153_7741_target_interval,mean_quality_proxy,0.9155,,6153,7741,,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+关键观察,key_observations,observation_01,6100-6400m 为最明显异常段，CBL 声幅显著升高，应视为重点差胶结/窜流风险区。,,,,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+关键观察,key_observations,observation_02,6400m 以下大部分区段声幅较低，图像提取结果表现为胶结质量代理值较高。,,,,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+关键观察,key_observations,observation_03,CBL 实测返高 5402.85m 与井史 5407.5m 存在约 4.65m 差异，应作为独立实测锚点保留。,,,,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+关键观察,key_observations,observation_04,5390.0-5699.8m 为双层套管，不应与目的井段胶结质量混同评价。,,,,,,,,,D:\users\desktop\research\控压固井项目\参考文档\呼101\100312.PDF,
+OCR精选图头,selected_ocr_001,text,中国石油集团测井有限公司,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.9209
+OCR精选图头,selected_ocr_002,text,CHINANATIONALLOGGINGCORPORATION,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.961
+OCR精选图头,selected_ocr_003,text,呼101井,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.8001
+OCR精选图头,selected_ocr_004,text,固井质量测井评价图,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.8405
+OCR精选图头,selected_ocr_005,text,深度比例：1:200,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.878
+OCR精选图头,selected_ocr_006,text,用户单位,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7894
+OCR精选图头,selected_ocr_007,text,测井公司,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7463
+OCR精选图头,selected_ocr_008,text,中油测井新疆分公司,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.8674
+OCR精选图头,selected_ocr_009,text,新疆油田分公司,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.8613
+OCR精选图头,selected_ocr_010,text,固井日期,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7873
+OCR精选图头,selected_ocr_011,text,2022/11/12,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.8452
+OCR精选图头,selected_ocr_012,text,CPLog,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.8319
+OCR精选图头,selected_ocr_013,text,测井日期,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7857
+OCR精选图头,selected_ocr_014,text,呼图壁气田呼探1井区,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.8713
+OCR精选图头,selected_ocr_015,text,2022/12/15,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.8643
+OCR精选图头,selected_ocr_016,text,解释软件,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7962
+OCR精选图头,selected_ocr_017,text,LEAD,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7702
+OCR精选图头,selected_ocr_018,text,解释日期,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7693
+OCR精选图头,selected_ocr_019,text,2022/12/16,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.8999
+OCR精选图头,selected_ocr_020,text,测井项目,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.79
+OCR精选图头,selected_ocr_021,text,固井单位,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7626
+OCR精选图头,selected_ocr_022,text,5390.000-7810.000m,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.8388
+OCR精选图头,selected_ocr_023,text,"声幅变密度,校深（GR/CCL）",,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.8686
+OCR精选图头,selected_ocr_024,text,西部钻探,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7881
+OCR精选图头,selected_ocr_025,text,完钻井深,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7825
+OCR精选图头,selected_ocr_026,text,5402.850m,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7549
+OCR精选图头,selected_ocr_027,text,固井类别,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7701
+OCR精选图头,selected_ocr_028,text,7868.000m,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.8755
+OCR精选图头,selected_ocr_029,text,套管固井,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7871
+OCR精选图头,selected_ocr_030,text,人工井底,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7692
+OCR精选图头,selected_ocr_031,text,7809.400m,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.8707
+OCR精选图头,selected_ocr_032,text,固井方式,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7906
+OCR精选图头,selected_ocr_033,text,5402.850m,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.8946
+OCR精选图头,selected_ocr_034,text,单级固井,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7775
+OCR精选图头,selected_ocr_035,text,钻头程序,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7952
+OCR精选图头,selected_ocr_036,text,悬挂器位置,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.8231
+OCR精选图头,selected_ocr_037,text,215.900mm*7868.000m,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.8987
+OCR精选图头,selected_ocr_038,text,井液性质,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7612
+OCR精选图头,selected_ocr_039,text,5402.850-5407.460m,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7916
+OCR精选图头,selected_ocr_040,text,泥浆（1.960g/cm）,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.8588
+OCR精选图头,selected_ocr_041,text,套管程序,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.791
+OCR精选图头,selected_ocr_042,text,表层套管,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.773
+OCR精选图头,selected_ocr_043,text,分级箍位置,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.8308
+OCR精选图头,selected_ocr_044,text,钻井单位,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7828
+OCR精选图头,selected_ocr_045,text,609.6001mn*486.750m,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.8293
+OCR精选图头,selected_ocr_046,text,西部钻探,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7845
+OCR精选图头,selected_ocr_047,text,技术套管,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7993
+OCR精选图头,selected_ocr_048,text,473050mm*304920cm,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.862
+OCR精选图头,selected_ocr_049,text,7432.910-7434.260m,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.9331
+OCR精选图头,selected_ocr_050,text,365130mm*3935.850m,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.8721
+OCR精选图头,selected_ocr_051,text,6153.000-7741.0001m,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.8379
+OCR精选图头,selected_ocr_052,text,短套管下深,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7604
+OCR精选图头,selected_ocr_053,text,273.05on*5699 800m,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7492
+OCR精选图头,selected_ocr_054,text,生产套管,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7992
+OCR精选图头,selected_ocr_055,text,168.300mm*6796.130m,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.9008
+OCR精选图头,selected_ocr_056,text,7638.050-7639.400m,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.8694
+OCR精选图头,selected_ocr_057,text,139.700mm*7868.000m,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.9199
+OCR精选图头,selected_ocr_058,text,水泥密度,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7938
+OCR精选图头,selected_ocr_059,text,2.100g/cm2,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7856
+OCR精选图头,selected_ocr_060,text,X:4888395.000,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.9063
+OCR精选图头,selected_ocr_061,text,169.880t,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.8242
+OCR精选图头,selected_ocr_062,text,5402.850-7868.000m,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.875
+OCR精选图头,selected_ocr_063,text,不合格,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7486
+OCR精选图头,selected_ocr_064,text,Y:15477727.000,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.927
+OCR精选图头,selected_ocr_065,text,目的井段固井质量,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7774
+OCR精选图头,selected_ocr_066,text,不合格,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7473
+OCR精选图头,selected_ocr_067,text,电测井深：7810.00m。5390.00-5699.80m为双层套管二界面不作评价。违反七条红线规定：测,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.9273
+OCR精选图头,selected_ocr_068,text,技术说明,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7993
+OCR精选图头,selected_ocr_069,text,量井段内水泥胶结质量合格率为62.77%，未达到应封固井段的70.00%,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.8935
+OCR精选图头,selected_ocr_070,text,作业队号,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7712
+OCR精选图头,selected_ocr_071,text,李永涛,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7487
+OCR精选图头,selected_ocr_072,text,C4490,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.8268
+OCR精选图头,selected_ocr_073,text,田仕勇,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7419
+OCR精选图头,selected_ocr_074,text,审核员,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7488
+OCR精选图头,selected_ocr_075,text,校对人,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7469
+OCR精选图头,selected_ocr_076,text,同古力克,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7471
+OCR精选图头,selected_ocr_077,text,迟彦华,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.748
+OCR精选图头,selected_ocr_078,text,胶结中等,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7991
+OCR精选图头,selected_ocr_079,text,胶结差,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7482
+OCR精选图头,selected_ocr_080,text,胶结良好,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7963
+OCR精选图头,selected_ocr_081,text,解释结论,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7454
+OCR精选图头,selected_ocr_082,text,100,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7474
+OCR精选图头,selected_ocr_083,text,声波时差,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7632
+OCR精选图头,selected_ocr_084,text,磁定位,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7438
+OCR精选图头,selected_ocr_085,text,变密度,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7497
+OCR精选图头,selected_ocr_086,text,100,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7475
+OCR精选图头,selected_ocr_087,text,(us/m),,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.8202
+OCR精选图头,selected_ocr_088,text,100,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.741
+OCR精选图头,selected_ocr_089,text,500,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7487
+OCR精选图头,selected_ocr_090,text,自然伽玛（生产）,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7879
+OCR精选图头,selected_ocr_091,text,2050,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7866
+OCR精选图头,selected_ocr_092,text,5400,,,,5390,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7997
+OCR精选图头,selected_ocr_093,text,5420,,,,6120,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7763
+OCR精选图头,selected_ocr_094,text,5450,,,,7810,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7994
+OCR精选图头,selected_ocr_095,text,5460,,,,7810,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7736
+OCR精选图头,selected_ocr_096,text,5470,,,,7810,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7419
+OCR精选图头,selected_ocr_097,text,5480,,,,7810,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7824
+OCR精选图头,selected_ocr_098,text,5490,,,,7810,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.797
+OCR精选图头,selected_ocr_099,text,5500,,,,7810,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7996
+OCR精选图头,selected_ocr_100,text,5510,,,,7810,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7996
+OCR精选图头,selected_ocr_101,text,5520,,,,7810,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7995
+OCR精选图头,selected_ocr_102,text,5530,,,,7810,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7997
+OCR精选图头,selected_ocr_103,text,5540,,,,7810,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7995
+OCR精选图头,selected_ocr_104,text,5550,,,,7810,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7993
+OCR精选图头,selected_ocr_105,text,5570,,,,7810,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7995
+OCR精选图头,selected_ocr_106,text,5580,,,,7810,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7995
+OCR精选图头,selected_ocr_107,text,5590,,,,7810,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7904
+OCR精选图头,selected_ocr_108,text,5600,,,,7810,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7996
+OCR精选图头,selected_ocr_109,text,5610,,,,7810,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7666
+OCR精选图头,selected_ocr_110,text,5620,,,,7810,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7991
+OCR精选图头,selected_ocr_111,text,5630,,,,7810,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7996
+OCR精选图头,selected_ocr_112,text,5640,,,,7810,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7994
+OCR精选图头,selected_ocr_113,text,5650,,,,7810,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7987
+OCR精选图头,selected_ocr_114,text,...........,,,,7810,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7476
+OCR精选图头,selected_ocr_115,text,5660,,,,7810,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7995
+OCR精选图头,selected_ocr_116,text,5670,,,,7810,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7997
+OCR精选图头,selected_ocr_117,text,5680,,,,7810,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7991
+OCR精选图头,selected_ocr_118,text,......,,,,7810,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7462
+OCR精选图头,selected_ocr_119,text,...........,,,,7810,,,,,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7742
+CBL剖面点,双层套管不评价段,point_0001,,,,,5500,3.7,0.963,胶结良好,5390.0-5699.8m 双层套管二界面不作评价,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,双层套管不评价段,point_0002,,,,,5510,3.7,0.963,胶结良好,5390.0-5699.8m 双层套管二界面不作评价,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,双层套管不评价段,point_0003,,,,,5520,3.7,0.963,胶结良好,5390.0-5699.8m 双层套管二界面不作评价,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,双层套管不评价段,point_0004,,,,,5530,4.1,0.959,胶结良好,5390.0-5699.8m 双层套管二界面不作评价,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,双层套管不评价段,point_0005,,,,,5540,3.7,0.963,胶结良好,5390.0-5699.8m 双层套管二界面不作评价,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,双层套管不评价段,point_0006,,,,,5550,3.7,0.963,胶结良好,5390.0-5699.8m 双层套管二界面不作评价,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,双层套管不评价段,point_0007,,,,,5560,4.1,0.959,胶结良好,5390.0-5699.8m 双层套管二界面不作评价,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,双层套管不评价段,point_0008,,,,,5570,4.4,0.956,胶结良好,5390.0-5699.8m 双层套管二界面不作评价,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,双层套管不评价段,point_0009,,,,,5580,4.4,0.956,胶结良好,5390.0-5699.8m 双层套管二界面不作评价,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,双层套管不评价段,point_0010,,,,,5590,4.8,0.952,胶结良好,5390.0-5699.8m 双层套管二界面不作评价,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,双层套管不评价段,point_0011,,,,,5600,4.4,0.956,胶结良好,5390.0-5699.8m 双层套管二界面不作评价,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,双层套管不评价段,point_0012,,,,,5610,4.1,0.959,胶结良好,5390.0-5699.8m 双层套管二界面不作评价,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,双层套管不评价段,point_0013,,,,,5620,4.4,0.956,胶结良好,5390.0-5699.8m 双层套管二界面不作评价,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,双层套管不评价段,point_0014,,,,,5630,4.8,0.952,胶结良好,5390.0-5699.8m 双层套管二界面不作评价,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,双层套管不评价段,point_0015,,,,,5640,3.7,0.963,胶结良好,5390.0-5699.8m 双层套管二界面不作评价,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,双层套管不评价段,point_0016,,,,,5650,4.4,0.956,胶结良好,5390.0-5699.8m 双层套管二界面不作评价,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,双层套管不评价段,point_0017,,,,,5660,4.4,0.956,胶结良好,5390.0-5699.8m 双层套管二界面不作评价,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,双层套管不评价段,point_0018,,,,,5670,4.8,0.952,胶结良好,5390.0-5699.8m 双层套管二界面不作评价,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,双层套管不评价段,point_0019,,,,,5680,4.1,0.959,胶结良好,5390.0-5699.8m 双层套管二界面不作评价,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,双层套管不评价段,point_0020,,,,,5690,4.1,0.959,胶结良好,5390.0-5699.8m 双层套管二界面不作评价,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,过渡/非目的段,point_0021,,,,,5700,4.4,0.956,胶结良好,双层套管以下、目的井段以上,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,过渡/非目的段,point_0022,,,,,5710,4.8,0.952,胶结良好,双层套管以下、目的井段以上,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,过渡/非目的段,point_0023,,,,,5720,4.8,0.952,胶结良好,双层套管以下、目的井段以上,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,过渡/非目的段,point_0024,,,,,5730,4.8,0.952,胶结良好,双层套管以下、目的井段以上,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,过渡/非目的段,point_0025,,,,,5740,4.8,0.952,胶结良好,双层套管以下、目的井段以上,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,过渡/非目的段,point_0026,,,,,5750,4.8,0.952,胶结良好,双层套管以下、目的井段以上,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,过渡/非目的段,point_0027,,,,,5760,4.1,0.959,胶结良好,双层套管以下、目的井段以上,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,过渡/非目的段,point_0028,,,,,5770,4.8,0.952,胶结良好,双层套管以下、目的井段以上,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,过渡/非目的段,point_0029,,,,,5780,3.7,0.963,胶结良好,双层套管以下、目的井段以上,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,过渡/非目的段,point_0030,,,,,5790,3.7,0.963,胶结良好,双层套管以下、目的井段以上,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,过渡/非目的段,point_0031,,,,,5800,4.1,0.959,胶结良好,双层套管以下、目的井段以上,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,过渡/非目的段,point_0032,,,,,5810,3.3,0.967,胶结良好,双层套管以下、目的井段以上,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,过渡/非目的段,point_0033,,,,,5820,4.1,0.959,胶结良好,双层套管以下、目的井段以上,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,过渡/非目的段,point_0034,,,,,5830,4.1,0.959,胶结良好,双层套管以下、目的井段以上,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,过渡/非目的段,point_0035,,,,,5840,4.8,0.952,胶结良好,双层套管以下、目的井段以上,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,过渡/非目的段,point_0036,,,,,5850,4.8,0.952,胶结良好,双层套管以下、目的井段以上,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,过渡/非目的段,point_0037,,,,,5860,4.1,0.959,胶结良好,双层套管以下、目的井段以上,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,过渡/非目的段,point_0038,,,,,5870,4.1,0.959,胶结良好,双层套管以下、目的井段以上,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,过渡/非目的段,point_0039,,,,,5880,5.2,0.948,胶结良好,双层套管以下、目的井段以上,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,过渡/非目的段,point_0040,,,,,5890,4.4,0.956,胶结良好,双层套管以下、目的井段以上,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,过渡/非目的段,point_0041,,,,,5900,4.4,0.956,胶结良好,双层套管以下、目的井段以上,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,过渡/非目的段,point_0042,,,,,5910,4.1,0.959,胶结良好,双层套管以下、目的井段以上,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,过渡/非目的段,point_0043,,,,,5920,3.7,0.963,胶结良好,双层套管以下、目的井段以上,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,过渡/非目的段,point_0044,,,,,5930,3.7,0.963,胶结良好,双层套管以下、目的井段以上,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,过渡/非目的段,point_0045,,,,,5940,3.7,0.963,胶结良好,双层套管以下、目的井段以上,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,过渡/非目的段,point_0046,,,,,5950,5.9,0.941,胶结良好,双层套管以下、目的井段以上,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,过渡/非目的段,point_0047,,,,,5960,4.4,0.956,胶结良好,双层套管以下、目的井段以上,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,过渡/非目的段,point_0048,,,,,5970,4.8,0.952,胶结良好,双层套管以下、目的井段以上,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,过渡/非目的段,point_0049,,,,,5980,5.6,0.944,胶结良好,双层套管以下、目的井段以上,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,过渡/非目的段,point_0050,,,,,5990,5.6,0.944,胶结良好,双层套管以下、目的井段以上,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,过渡/非目的段,point_0051,,,,,6000,4.4,0.956,胶结良好,双层套管以下、目的井段以上,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,过渡/非目的段,point_0052,,,,,6010,6.3,0.937,胶结良好,双层套管以下、目的井段以上,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,过渡/非目的段,point_0053,,,,,6020,7.4,0.926,胶结良好,双层套管以下、目的井段以上,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,过渡/非目的段,point_0054,,,,,6030,3.7,0.963,胶结良好,双层套管以下、目的井段以上,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,过渡/非目的段,point_0055,,,,,6040,5.9,0.941,胶结良好,双层套管以下、目的井段以上,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,过渡/非目的段,point_0056,,,,,6050,92.6,0.074,差/空套风险,双层套管以下、目的井段以上,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,过渡/非目的段,point_0057,,,,,6060,92.6,0.074,差/空套风险,双层套管以下、目的井段以上,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,过渡/非目的段,point_0058,,,,,6070,92.6,0.074,差/空套风险,双层套管以下、目的井段以上,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,过渡/非目的段,point_0059,,,,,6080,92.6,0.074,差/空套风险,双层套管以下、目的井段以上,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,过渡/非目的段,point_0060,,,,,6090,92.6,0.074,差/空套风险,双层套管以下、目的井段以上,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,过渡/非目的段,point_0061,,,,,6100,92.6,0.074,差/空套风险,6100-6400m 高声幅异常/重点风险段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,过渡/非目的段,point_0062,,,,,6110,92.6,0.074,差/空套风险,6100-6400m 高声幅异常/重点风险段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,过渡/非目的段,point_0063,,,,,6120,92.6,0.074,差/空套风险,6100-6400m 高声幅异常/重点风险段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,过渡/非目的段,point_0064,,,,,6130,92.6,0.074,差/空套风险,6100-6400m 高声幅异常/重点风险段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,过渡/非目的段,point_0065,,,,,6140,93,0.07,差/空套风险,6100-6400m 高声幅异常/重点风险段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,过渡/非目的段,point_0066,,,,,6150,92.6,0.074,差/空套风险,6100-6400m 高声幅异常/重点风险段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0067,,,,,6160,92.6,0.074,差/空套风险,6100-6400m 高声幅异常/重点风险段（与目的井段上部相交）,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0068,,,,,6170,92.6,0.074,差/空套风险,6100-6400m 高声幅异常/重点风险段（与目的井段上部相交）,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0069,,,,,6180,92.6,0.074,差/空套风险,6100-6400m 高声幅异常/重点风险段（与目的井段上部相交）,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0070,,,,,6190,92.6,0.074,差/空套风险,6100-6400m 高声幅异常/重点风险段（与目的井段上部相交）,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0071,,,,,6200,92.6,0.074,差/空套风险,6100-6400m 高声幅异常/重点风险段（与目的井段上部相交）,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0072,,,,,6210,92.6,0.074,差/空套风险,6100-6400m 高声幅异常/重点风险段（与目的井段上部相交）,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0073,,,,,6220,7.4,0.926,胶结良好,6100-6400m 高声幅异常/重点风险段（与目的井段上部相交）,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0074,,,,,6230,5.6,0.944,胶结良好,6100-6400m 高声幅异常/重点风险段（与目的井段上部相交）,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0075,,,,,6240,24.8,0.752,胶结中等,6100-6400m 高声幅异常/重点风险段（与目的井段上部相交）,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0076,,,,,6250,5.9,0.941,胶结良好,6100-6400m 高声幅异常/重点风险段（与目的井段上部相交）,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0077,,,,,6260,5.2,0.948,胶结良好,6100-6400m 高声幅异常/重点风险段（与目的井段上部相交）,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0078,,,,,6270,5.2,0.948,胶结良好,6100-6400m 高声幅异常/重点风险段（与目的井段上部相交）,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0079,,,,,6280,4.4,0.956,胶结良好,6100-6400m 高声幅异常/重点风险段（与目的井段上部相交）,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0080,,,,,6290,4.8,0.952,胶结良好,6100-6400m 高声幅异常/重点风险段（与目的井段上部相交）,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0081,,,,,6300,4.4,0.956,胶结良好,6100-6400m 高声幅异常/重点风险段（与目的井段上部相交）,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0082,,,,,6310,4.1,0.959,胶结良好,6100-6400m 高声幅异常/重点风险段（与目的井段上部相交）,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0083,,,,,6320,4.1,0.959,胶结良好,6100-6400m 高声幅异常/重点风险段（与目的井段上部相交）,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0084,,,,,6330,4.1,0.959,胶结良好,6100-6400m 高声幅异常/重点风险段（与目的井段上部相交）,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0085,,,,,6340,4.1,0.959,胶结良好,6100-6400m 高声幅异常/重点风险段（与目的井段上部相交）,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0086,,,,,6350,4.1,0.959,胶结良好,6100-6400m 高声幅异常/重点风险段（与目的井段上部相交）,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0087,,,,,6360,4.8,0.952,胶结良好,6100-6400m 高声幅异常/重点风险段（与目的井段上部相交）,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0088,,,,,6370,4.8,0.952,胶结良好,6100-6400m 高声幅异常/重点风险段（与目的井段上部相交）,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0089,,,,,6380,3.7,0.963,胶结良好,6100-6400m 高声幅异常/重点风险段（与目的井段上部相交）,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0090,,,,,6390,4.1,0.959,胶结良好,6100-6400m 高声幅异常/重点风险段（与目的井段上部相交）,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0091,,,,,6400,4.1,0.959,胶结良好,6100-6400m 高声幅异常/重点风险段（与目的井段上部相交）,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0092,,,,,6410,4.1,0.959,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0093,,,,,6420,4.8,0.952,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0094,,,,,6430,4.4,0.956,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0095,,,,,6440,3.7,0.963,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0096,,,,,6450,3.3,0.967,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0097,,,,,6460,4.1,0.959,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0098,,,,,6470,4.1,0.959,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0099,,,,,6480,4.8,0.952,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0100,,,,,6490,4.1,0.959,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0101,,,,,6500,3.7,0.963,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0102,,,,,6510,4.4,0.956,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0103,,,,,6520,4.8,0.952,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0104,,,,,6530,4.4,0.956,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0105,,,,,6540,4.8,0.952,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0106,,,,,6550,3.7,0.963,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0107,,,,,6560,4.8,0.952,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0108,,,,,6570,4.4,0.956,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0109,,,,,6580,5.2,0.948,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0110,,,,,6590,4.8,0.952,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0111,,,,,6600,4.1,0.959,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0112,,,,,6610,3.7,0.963,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0113,,,,,6620,3.7,0.963,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0114,,,,,6630,4.8,0.952,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0115,,,,,6640,4.4,0.956,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0116,,,,,6650,4.8,0.952,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0117,,,,,6660,4.1,0.959,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0118,,,,,6670,4.8,0.952,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0119,,,,,6680,5.2,0.948,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0120,,,,,6690,4.4,0.956,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0121,,,,,6700,3.7,0.963,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0122,,,,,6710,4.4,0.956,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0123,,,,,6720,4.8,0.952,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0124,,,,,6730,3.7,0.963,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0125,,,,,6740,4.4,0.956,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0126,,,,,6750,4.1,0.959,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0127,,,,,6760,4.1,0.959,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0128,,,,,6770,4.1,0.959,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0129,,,,,6780,5.2,0.948,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0130,,,,,6790,3.3,0.967,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0131,,,,,6800,7,0.93,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0132,,,,,6810,5.6,0.944,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0133,,,,,6820,4.8,0.952,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0134,,,,,6830,5.6,0.944,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0135,,,,,6840,6.7,0.933,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0136,,,,,6850,6.3,0.937,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0137,,,,,6860,4.1,0.959,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0138,,,,,6870,4.1,0.959,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0139,,,,,6880,6.3,0.937,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0140,,,,,6890,5.2,0.948,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0141,,,,,6900,4.8,0.952,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0142,,,,,6910,3.3,0.967,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0143,,,,,6920,4.8,0.952,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0144,,,,,6930,4.8,0.952,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0145,,,,,6940,4.8,0.952,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0146,,,,,6950,4.1,0.959,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0147,,,,,6960,5.6,0.944,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0148,,,,,6970,6.3,0.937,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0149,,,,,6980,5.9,0.941,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0150,,,,,6990,6.3,0.937,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0151,,,,,7000,7,0.93,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0152,,,,,7010,5.2,0.948,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0153,,,,,7020,5.2,0.948,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0154,,,,,7030,3.7,0.963,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0155,,,,,7040,3.7,0.963,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0156,,,,,7050,4.4,0.956,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0157,,,,,7060,5.6,0.944,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0158,,,,,7070,5.9,0.941,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0159,,,,,7080,5.2,0.948,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0160,,,,,7090,4.8,0.952,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0161,,,,,7100,6.3,0.937,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0162,,,,,7110,4.1,0.959,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0163,,,,,7120,4.8,0.952,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0164,,,,,7130,3.7,0.963,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0165,,,,,7140,4.8,0.952,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0166,,,,,7150,4.4,0.956,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0167,,,,,7160,5.2,0.948,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0168,,,,,7170,4.4,0.956,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0169,,,,,7180,5.9,0.941,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0170,,,,,7190,7.8,0.922,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0171,,,,,7200,5.6,0.944,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0172,,,,,7210,6.3,0.937,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0173,,,,,7220,4.8,0.952,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0174,,,,,7230,4.1,0.959,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0175,,,,,7240,4.4,0.956,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0176,,,,,7250,4.4,0.956,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0177,,,,,7260,5.9,0.941,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0178,,,,,7270,4.4,0.956,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0179,,,,,7280,5.9,0.941,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0180,,,,,7290,4.4,0.956,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0181,,,,,7300,3.7,0.963,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0182,,,,,7310,4.4,0.956,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0183,,,,,7320,3.7,0.963,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0184,,,,,7330,3.7,0.963,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0185,,,,,7340,4.1,0.959,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0186,,,,,7350,4.8,0.952,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0187,,,,,7360,6.3,0.937,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0188,,,,,7370,5.9,0.941,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0189,,,,,7380,4.8,0.952,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0190,,,,,7390,7,0.93,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0191,,,,,7400,5.6,0.944,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0192,,,,,7410,5.9,0.941,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0193,,,,,7420,4.8,0.952,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0194,,,,,7430,6.3,0.937,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0195,,,,,7440,5.6,0.944,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0196,,,,,7450,5.9,0.941,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0197,,,,,7460,5.2,0.948,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0198,,,,,7470,5.2,0.948,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0199,,,,,7480,5.2,0.948,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0200,,,,,7490,4.4,0.956,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0201,,,,,7500,6.3,0.937,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0202,,,,,7510,4.8,0.952,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0203,,,,,7520,4.1,0.959,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0204,,,,,7530,6.7,0.933,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0205,,,,,7540,4.4,0.956,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0206,,,,,7550,4.1,0.959,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0207,,,,,7560,5.6,0.944,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0208,,,,,7570,5.6,0.944,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0209,,,,,7580,5.2,0.948,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0210,,,,,7590,5.6,0.944,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0211,,,,,7600,8.1,0.919,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0212,,,,,7610,8.1,0.919,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0213,,,,,7620,5.6,0.944,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0214,,,,,7630,5.9,0.941,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0215,,,,,7640,6.7,0.933,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0216,,,,,7650,5.2,0.948,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0217,,,,,7660,7.8,0.922,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0218,,,,,7670,6.7,0.933,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0219,,,,,7680,8.9,0.911,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0220,,,,,7690,8.5,0.915,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0221,,,,,7700,6.3,0.937,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0222,,,,,7710,5.2,0.948,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0223,,,,,7720,5.9,0.941,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0224,,,,,7730,4.1,0.959,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,目的井段,point_0225,,,,,7740,4.1,0.959,胶结良好,6153.0-7741.0m 目的/应封固评价井段,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,其他测量段,point_0226,,,,,7750,5.6,0.944,胶结良好,测量井段内其他深度,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,其他测量段,point_0227,,,,,7760,5.2,0.948,胶结良好,测量井段内其他深度,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,其他测量段,point_0228,,,,,7770,3.7,0.963,胶结良好,测量井段内其他深度,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,其他测量段,point_0229,,,,,7780,4.1,0.959,胶结良好,测量井段内其他深度,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,其他测量段,point_0230,,,,,7790,5.2,0.948,胶结良好,测量井段内其他深度,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,其他测量段,point_0231,,,,,7800,4.4,0.956,胶结良好,测量井段内其他深度,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+CBL剖面点,其他测量段,point_0232,,,,,7810,4.1,0.959,胶结良好,测量井段内其他深度,D:\users\desktop\research\控压固井项目\temp_pdf_extract\cbl_depth_profile_v2.csv,
+OCR完整清单,section_01,ocr_0001,内部资料,,,,5390,,,,x_px=1084; y_px=121,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7074371099472045
+OCR完整清单,section_01,ocr_0002,中国石油集团测井有限公司,,,,5390,,,,x_px=236; y_px=127,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.9209337005248437
+OCR完整清单,section_01,ocr_0003,CHINANATIONALLOGGINGCORPORATION,,,,5390,,,,x_px=236; y_px=139,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.961043793708086
+OCR完整清单,section_01,ocr_0004,呼101井,,,,5390,,,,x_px=616; y_px=168,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.8001284102598826
+OCR完整清单,section_01,ocr_0005,固井质量测井评价图,,,,5390,,,,x_px=618; y_px=221,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.8405366182327271
+OCR完整清单,section_01,ocr_0006,深度比例：1:200,,,,5390,,,,x_px=616; y_px=262,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.8780407959764654
+OCR完整清单,section_01,ocr_0007,用户单位,,,,5390,,,,x_px=134; y_px=283,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7894191980361939
+OCR完整清单,section_01,ocr_0008,测井公司,,,,5390,,,,x_px=503; y_px=283,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7462538361549378
+OCR完整清单,section_01,ocr_0009,中油测井新疆分公司,,,,5390,,,,x_px=684; y_px=283,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.8673815369606018
+OCR完整清单,section_01,ocr_0010,新疆油田分公司,,,,5390,,,,x_px=322; y_px=284,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.8612688705325127
+OCR完整清单,section_01,ocr_0011,固井日期,,,,5390,,,,x_px=886; y_px=284,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7873320579528809
+OCR完整清单,section_01,ocr_0012,2022/11/12,,,,5390,,,,x_px=1070; y_px=284,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.8452433889562433
+OCR完整清单,section_01,ocr_0013,地区,,,,5390,,,,x_px=133; y_px=309,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5678590536117554
+OCR完整清单,section_01,ocr_0014,测井装备,,,,5390,,,,x_px=503; y_px=308,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7178041219711304
+OCR完整清单,section_01,ocr_0015,CPLog,,,,5390,,,,x_px=684; y_px=309,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.8318805893262228
+OCR完整清单,section_01,ocr_0016,测井日期,,,,5390,,,,x_px=886; y_px=308,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.785727059841156
+OCR完整清单,section_01,ocr_0017,呼图壁气田呼探1井区,,,,5390,,,,x_px=322; y_px=308,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.8713335990905762
+OCR完整清单,section_01,ocr_0018,2022/12/15,,,,5390,,,,x_px=1070; y_px=307,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.8643492460250854
+OCR完整清单,section_01,ocr_0019,井别,,,,5390,,,,x_px=134; y_px=333,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6462310353914896
+OCR完整清单,section_01,ocr_0020,预探井,,,,5390,,,,x_px=324; y_px=333,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7216255813837051
+OCR完整清单,section_01,ocr_0021,解释软件,,,,5390,,,,x_px=504; y_px=333,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7961782336235046
+OCR完整清单,section_01,ocr_0022,LEAD,,,,5390,,,,x_px=684; y_px=332,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7702383875846863
+OCR完整清单,section_01,ocr_0023,解释日期,,,,5390,,,,x_px=886; y_px=333,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.769295871257782
+OCR完整清单,section_01,ocr_0024,2022/12/16,,,,5390,,,,x_px=1070; y_px=333,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.8999023220755837
+OCR完整清单,section_01,ocr_0025,测量井段,,,,5390,,,,x_px=136; y_px=358,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6767512023448944
+OCR完整清单,section_01,ocr_0026,测井项目,,,,5390,,,,x_px=502; y_px=358,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7899824619293213
+OCR完整清单,section_01,ocr_0027,固井单位,,,,5390,,,,x_px=886; y_px=358,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7625784516334534
+OCR完整清单,section_01,ocr_0028,5390.000-7810.000m,,,,5390,,,,x_px=325; y_px=357,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.838783954319201
+OCR完整清单,section_01,ocr_0029,"声幅变密度,校深（GR/CCL）",,,,5390,,,,x_px=680; y_px=356,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.8686189370996812
+OCR完整清单,section_01,ocr_0030,西部钻探,,,,5390,,,,x_px=1070; y_px=358,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7880529046058655
+OCR完整清单,section_01,ocr_0031,水泥,,,,5390,,,,x_px=457; y_px=390,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6632072726885477
+OCR完整清单,section_01,ocr_0032,完钻井深,,,,5390,,,,x_px=135; y_px=384,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7825035929679871
+OCR完整清单,section_01,ocr_0033,预计,,,,5390,,,,x_px=522; y_px=384,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6656068762143453
+OCR完整清单,section_01,ocr_0034,5402.850m,,,,5390,,,,x_px=683; y_px=383,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7549250900745392
+OCR完整清单,section_01,ocr_0035,固井类别,,,,5390,,,,x_px=885; y_px=384,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7700992822647095
+OCR完整清单,section_01,ocr_0036,7868.000m,,,,5390,,,,x_px=322; y_px=384,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.8754932224750519
+OCR完整清单,section_01,ocr_0037,套管固井,,,,5390,,,,x_px=1070; y_px=384,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7871185898780823
+OCR完整清单,section_01,ocr_0038,人工井底,,,,5390,,,,x_px=135; y_px=410,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7692246079444885
+OCR完整清单,section_01,ocr_0039,7809.400m,,,,5390,,,,x_px=320; y_px=410,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.8706949830055237
+OCR完整清单,section_01,ocr_0040,实测,,,,5390,,,,x_px=521; y_px=411,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6656792362531027
+OCR完整清单,section_01,ocr_0041,固井方式,,,,5390,,,,x_px=886; y_px=411,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7905738353729248
+OCR完整清单,section_01,ocr_0042,5402.850m,,,,5390,,,,x_px=684; y_px=411,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.8946333527565002
+OCR完整清单,section_01,ocr_0043,单级固井,,,,5390,,,,x_px=1070; y_px=411,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7774718642234802
+OCR完整清单,section_01,ocr_0044,钻头程序,,,,5390,,,,x_px=135; y_px=436,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7952324628829956
+OCR完整清单,section_01,ocr_0045,悬挂器位置,,,,5390,,,,x_px=503; y_px=436,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.8231454988320669
+OCR完整清单,section_01,ocr_0046,215.900mm*7868.000m,,,,5390,,,,x_px=323; y_px=435,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.8987389653921127
+OCR完整清单,section_01,ocr_0047,井液性质,,,,5390,,,,x_px=886; y_px=436,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7611565113067627
+OCR完整清单,section_01,ocr_0048,5402.850-5407.460m,,,,5390,,,,x_px=684; y_px=436,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7916368653899745
+OCR完整清单,section_01,ocr_0049,泥浆（1.960g/cm）,,,,5390,,,,x_px=1060; y_px=436,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.8587513523442405
+OCR完整清单,section_01,ocr_0050,套管程序,,,,5390,,,,x_px=84; y_px=485,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7909952640533447
+OCR完整清单,section_01,ocr_0051,表层套管,,,,5390,,,,x_px=153; y_px=460,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7730067014694214
+OCR完整清单,section_01,ocr_0052,分级箍位置,,,,5390,,,,x_px=503; y_px=460,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.8308370014031728
+OCR完整清单,section_01,ocr_0053,钻井单位,,,,5390,,,,x_px=886; y_px=460,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7827700138092041
+OCR完整清单,section_01,ocr_0054,609.6001mn*486.750m,,,,5390,,,,x_px=324; y_px=460,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.8293454855680465
+OCR完整清单,section_01,ocr_0055,西部钻探,,,,5390,,,,x_px=1070; y_px=460,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7845399141311645
+OCR完整清单,section_01,ocr_0056,技术套管,,,,5390,,,,x_px=154; y_px=486,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7992859005928039
+OCR完整清单,section_01,ocr_0057,473050mm*304920cm,,,,5390,,,,x_px=322; y_px=477,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.8620355849464735
+OCR完整清单,section_01,ocr_0058,7432.910-7434.260m,,,,5390,,,,x_px=685; y_px=485,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.9331330594263578
+OCR完整清单,section_01,ocr_0059,365130mm*3935.850m,,,,5390,,,,x_px=322; y_px=485,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.8720724457188657
+OCR完整清单,section_01,ocr_0060,6153.000-7741.0001m,,,,5390,,,,x_px=1068; y_px=485,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.837939304113388
+OCR完整清单,section_01,ocr_0061,短套管下深,,,,5390,,,,x_px=504; y_px=497,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7603772381941477
+OCR完整清单,section_01,ocr_0062,273.05on*5699 800m,,,,5390,,,,x_px=322; y_px=495,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7492090369525709
+OCR完整清单,section_01,ocr_0063,目的井段,,,,5390,,,,x_px=888; y_px=497,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6742096662521362
+OCR完整清单,section_01,ocr_0064,生产套管,,,,5390,,,,x_px=152; y_px=509,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7991514325141906
+OCR完整清单,section_01,ocr_0065,168.300mm*6796.130m,,,,5390,,,,x_px=324; y_px=505,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.900786405801773
+OCR完整清单,section_01,ocr_0066,7638.050-7639.400m,,,,5390,,,,x_px=684; y_px=510,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.8693707867672569
+OCR完整清单,section_01,ocr_0067,139.700mm*7868.000m,,,,5390,,,,x_px=323; y_px=516,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.9199045717716217
+OCR完整清单,section_01,ocr_0068,水泥密度,,,,5390,,,,x_px=457; y_px=552,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7937519907951355
+OCR完整清单,section_01,ocr_0069,2.100g/cm2,,,,5390,,,,x_px=522; y_px=536,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7856312556700273
+OCR完整清单,section_01,ocr_0070,固井质量,,,,5390,,,,x_px=886; y_px=536,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7025824666023255
+OCR完整清单,section_01,ocr_0071,X:4888395.000,,,,5390,,,,x_px=322; y_px=537,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.9062645520482745
+OCR完整清单,section_01,ocr_0072,169.880t,,,,5390,,,,x_px=600; y_px=537,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.8242367969618903
+OCR完整清单,section_01,ocr_0073,5402.850-7868.000m,,,,5390,,,,x_px=718; y_px=537,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.8749775761052182
+OCR完整清单,section_01,ocr_0074,不合格,,,,5390,,,,x_px=1068; y_px=537,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7485745847225189
+OCR完整清单,section_01,ocr_0075,并位坐标,,,,5390,,,,x_px=135; y_px=551,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7090317606925964
+OCR完整清单,section_01,ocr_0076,Y:15477727.000,,,,5390,,,,x_px=321; y_px=565,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.9270371357599895
+OCR完整清单,section_01,ocr_0077,目的井段固井质量,,,,5390,,,,x_px=886; y_px=565,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7774241301748488
+OCR完整清单,section_01,ocr_0078,不合格,,,,5390,,,,x_px=1069; y_px=566,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7472500801086426
+OCR完整清单,section_01,ocr_0079,电测井深：7810.00m。5390.00-5699.80m为双层套管二界面不作评价。违反七条红线规定：测,,,,5390,,,,x_px=680; y_px=601,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.9272891040201541
+OCR完整清单,section_01,ocr_0080,技术说明,,,,5390,,,,x_px=132; y_px=611,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7993223190307617
+OCR完整清单,section_01,ocr_0081,量井段内水泥胶结质量合格率为62.77%，未达到应封固井段的70.00%,,,,5390,,,,x_px=566; y_px=619,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.8934574159415992
+OCR完整清单,section_01,ocr_0082,作业队号,,,,5390,,,,x_px=134; y_px=654,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.771246337890625
+OCR完整清单,section_01,ocr_0083,操作员,,,,5390,,,,x_px=502; y_px=654,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5841594040393829
+OCR完整清单,section_01,ocr_0084,李永涛,,,,5390,,,,x_px=682; y_px=654,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.748739555478096
+OCR完整清单,section_01,ocr_0085,队长,,,,5390,,,,x_px=886; y_px=655,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6663021246592203
+OCR完整清单,section_01,ocr_0086,C4490,,,,5390,,,,x_px=327; y_px=654,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.8267505566279093
+OCR完整清单,section_01,ocr_0087,田仕勇,,,,5390,,,,x_px=1068; y_px=654,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7419338077306747
+OCR完整清单,section_01,ocr_0088,解释,,,,5390,,,,x_px=135; y_px=680,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6664896011352539
+OCR完整清单,section_01,ocr_0089,李宣达,,,,5390,,,,x_px=328; y_px=679,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7285464853048325
+OCR完整清单,section_01,ocr_0090,审核员,,,,5390,,,,x_px=504; y_px=680,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7488423883914948
+OCR完整清单,section_01,ocr_0091,校对人,,,,5390,,,,x_px=884; y_px=680,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7468509376049042
+OCR完整清单,section_01,ocr_0092,同古力克,,,,5390,,,,x_px=686; y_px=680,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.747082531452179
+OCR完整清单,section_01,ocr_0093,迟彦华,,,,5390,,,,x_px=1068; y_px=679,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7479839026927948
+OCR完整清单,section_01,ocr_0094,胶结中等,,,,5390,,,,x_px=480; y_px=741,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7991297721862793
+OCR完整清单,section_01,ocr_0095,胶结差,,,,5390,,,,x_px=624; y_px=741,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7482393980026245
+OCR完整清单,section_01,ocr_0096,胶结良好,,,,5390,,,,x_px=332; y_px=742,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.796320104598999
+OCR完整清单,section_01,ocr_0097,空套管,,,,5390,,,,x_px=764; y_px=740,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6757106930017471
+OCR完整清单,section_01,ocr_0098,解释结论,,,,5390,,,,x_px=369; y_px=844,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7454171299934387
+OCR完整清单,section_01,ocr_0099,深度,,,,5390,,,,x_px=87; y_px=836,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6635237137476603
+OCR完整清单,section_01,ocr_0100,100,,,,5390,,,,x_px=834; y_px=824,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7473907321691513
+OCR完整清单,section_01,ocr_0101,二界面,,,,5390,,,,x_px=1144; y_px=843,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6141716688871384
+OCR完整清单,section_01,ocr_0102,声幅,,,,5390,,,,x_px=738; y_px=846,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6288900375366211
+OCR完整清单,section_01,ocr_0103,声波时差,,,,5390,,,,x_px=222; y_px=850,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7632382988929749
+OCR完整清单,section_01,ocr_0104,磁定位,,,,5390,,,,x_px=516; y_px=850,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7438427805900574
+OCR完整清单,section_01,ocr_0105,(m),,,,5390,,,,x_px=88; y_px=859,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7371615767478943
+OCR完整清单,section_01,ocr_0106,变密度,,,,5390,,,,x_px=960; y_px=858,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7496734112501144
+OCR完整清单,section_01,ocr_0107,(%),,,,5390,,,,x_px=738; y_px=862,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7372528463602066
+OCR完整清单,section_01,ocr_0108,100,,,,5390,,,,x_px=834; y_px=862,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.747508779168129
+OCR完整清单,section_01,ocr_0109,(mV),,,,5390,,,,x_px=516; y_px=866,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7189660191535949
+OCR完整清单,section_01,ocr_0110,400,,,,5390,,,,x_px=126; y_px=865,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.73702472448349
+OCR完整清单,section_01,ocr_0111,(us/m),,,,5390,,,,x_px=220; y_px=866,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.8201525381633213
+OCR完整清单,section_01,ocr_0112,100,,,,5390,,,,x_px=315; y_px=866,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.740961879491806
+OCR完整清单,section_01,ocr_0113,500,,,,5390,,,,x_px=430; y_px=866,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6056091487407684
+OCR完整清单,section_01,ocr_0114,500,,,,5390,,,,x_px=612; y_px=866,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7486696243286133
+OCR完整清单,section_01,ocr_0115,并径,,,,5390,,,,x_px=221; y_px=882,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.510875403881073
+OCR完整清单,section_01,ocr_0116,自然伽玛（生产）,,,,5390,,,,x_px=512; y_px=882,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7878990636931525
+OCR完整清单,section_01,ocr_0117,50,,,,5390,,,,x_px=319; y_px=896,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5656134486198425
+OCR完整清单,section_01,ocr_0118,(APD),,,,5390,,,,x_px=516; y_px=896,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6544889261325201
+OCR完整清单,section_01,ocr_0119,(em),,,,5390,,,,x_px=222; y_px=897,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6379948854446411
+OCR完整清单,section_01,ocr_0120,150,,,,5390,,,,x_px=614; y_px=896,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6981048434972763
+OCR完整清单,section_01,ocr_0121,10,,,,5390,,,,x_px=120; y_px=897,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5807896653811137
+OCR完整清单,section_01,ocr_0122,100,,,,5390,,,,x_px=834; y_px=896,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.697787880897522
+OCR完整清单,section_01,ocr_0123,2050,,,,5390,,,,x_px=1045; y_px=896,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7866421937942505
+OCR完整清单,section_01,ocr_0124,5390,,,,5390,,,,x_px=88; y_px=917,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6068475365638732
+OCR完整清单,section_01,ocr_0125,5400,,,,5390,,,,x_px=88; y_px=1051,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7996838331222534
+OCR完整清单,section_01,ocr_0126,...,,,,5390,,,,x_px=1052; y_px=1139,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6045614928007126
+OCR完整清单,section_01,ocr_0127,5410,,,,5390,,,,x_px=88; y_px=1199,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7140749573707581
+OCR完整清单,section_01,ocr_0128,5420,,,,6120,,,,x_px=88; y_px=1346,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7762710571289062
+OCR完整清单,section_01,ocr_0129,5430,,,,6857,,,,x_px=88; y_px=1493,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7094659328460693
+OCR完整清单,section_01,ocr_0130,5440,,,,7598,,,,x_px=88; y_px=1642,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7296136140823364
+OCR完整清单,section_01,ocr_0131,5450,,,,7810,,,,x_px=88; y_px=1789,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7993639588356019
+OCR完整清单,section_01,ocr_0132,5460,,,,7810,,,,x_px=88; y_px=1937,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7736271262168884
+OCR完整清单,section_01,ocr_0133,5470,,,,7810,,,,x_px=88; y_px=2085,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7419343948364258
+OCR完整清单,section_01,ocr_0134,5480,,,,7810,,,,x_px=88; y_px=2231,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7824220180511474
+OCR完整清单,section_01,ocr_0135,5490,,,,7810,,,,x_px=88; y_px=2379,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7970428228378296
+OCR完整清单,section_01,ocr_0136,5500,,,,7810,,,,x_px=88; y_px=2527,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7996062874794007
+OCR完整清单,section_01,ocr_0137,5510,,,,7810,,,,x_px=88; y_px=2675,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7996449828147888
+OCR完整清单,section_01,ocr_0138,5520,,,,7810,,,,x_px=88; y_px=2823,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7995169281959533
+OCR完整清单,section_01,ocr_0139,5530,,,,7810,,,,x_px=88; y_px=2971,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.799716567993164
+OCR完整清单,section_01,ocr_0140,5540,,,,7810,,,,x_px=88; y_px=3119,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7994581937789917
+OCR完整清单,section_01,ocr_0141,.......,,,,7810,,,,x_px=891; y_px=3201,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5698873065412045
+OCR完整清单,section_01,ocr_0142,5550,,,,7810,,,,x_px=88; y_px=3265,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7993239283561706
+OCR完整清单,section_01,ocr_0143,5560,,,,7810,,,,x_px=88; y_px=3413,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7388312339782714
+OCR完整清单,section_01,ocr_0144,5570,,,,7810,,,,x_px=88; y_px=3561,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7994667053222656
+OCR完整清单,section_01,ocr_0145,5580,,,,7810,,,,x_px=88; y_px=3708,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7994661688804626
+OCR完整清单,section_01,ocr_0146,5590,,,,7810,,,,x_px=88; y_px=3856,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7904181718826294
+OCR完整清单,section_01,ocr_0147,5600,,,,7810,,,,x_px=88; y_px=4004,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7995615839958191
+OCR完整清单,section_01,ocr_0148,5610,,,,7810,,,,x_px=88; y_px=4152,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7666267871856689
+OCR完整清单,section_01,ocr_0149,5620,,,,7810,,,,x_px=88; y_px=4299,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7990870714187622
+OCR完整清单,section_01,ocr_0150,5630,,,,7810,,,,x_px=88; y_px=4447,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7995826721191406
+OCR完整清单,section_01,ocr_0151,5640,,,,7810,,,,x_px=88; y_px=4594,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7994390010833741
+OCR完整清单,section_01,ocr_0152,......,,,,7810,,,,x_px=190; y_px=4697,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.665054691689355
+OCR完整清单,section_01,ocr_0153,5650,,,,7810,,,,x_px=88; y_px=4742,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7986767292022705
+OCR完整清单,section_01,ocr_0154,.....,,,,7810,,,,x_px=191; y_px=4756,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5042196611563364
+OCR完整清单,section_01,ocr_0155,.....,,,,7810,,,,x_px=191; y_px=4786,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5386127928892771
+OCR完整清单,section_01,ocr_0156,...........,,,,7810,,,,x_px=190; y_px=4861,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7476116766532263
+OCR完整清单,section_01,ocr_0157,5660,,,,7810,,,,x_px=88; y_px=4890,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7995027422904968
+OCR完整清单,section_01,ocr_0158,5670,,,,7810,,,,x_px=88; y_px=5038,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.799658739566803
+OCR完整清单,section_01,ocr_0159,.....,,,,7810,,,,x_px=190; y_px=5053,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6098792453606924
+OCR完整清单,section_01,ocr_0160,......,,,,7810,,,,x_px=190; y_px=5081,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6708499363490513
+OCR完整清单,section_01,ocr_0161,......,,,,7810,,,,x_px=190; y_px=5111,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5866215910230365
+OCR完整清单,section_01,ocr_0162,.....,,,,7810,,,,x_px=190; y_px=5143,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6054369956254959
+OCR完整清单,section_01,ocr_0163,.....,,,,7810,,,,x_px=190; y_px=5171,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6579260130723318
+OCR完整清单,section_01,ocr_0164,5680,,,,7810,,,,x_px=88; y_px=5185,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7991448640823364
+OCR完整清单,section_01,ocr_0165,".....,",,,,7810,,,,x_px=190; y_px=5199,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5900018002305712
+OCR完整清单,section_01,ocr_0166,.....,,,,7810,,,,x_px=190; y_px=5230,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5497907350460688
+OCR完整清单,section_01,ocr_0167,......,,,,7810,,,,x_px=190; y_px=5259,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.746207228728703
+OCR完整清单,section_01,ocr_0168,...........,,,,7810,,,,x_px=190; y_px=5302,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7741700882713
+OCR完整清单,section_02,ocr_0169,.....1,,,,7810,,,,x_px=190; y_px=8046,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.50534730723926
+OCR完整清单,section_02,ocr_0170,............,,,,7810,,,,x_px=190; y_px=8118,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7050157235218928
+OCR完整清单,section_02,ocr_0171,5700,,,,7810,,,,x_px=88; y_px=8147,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7964563131332397
+OCR完整清单,section_02,ocr_0172,......,,,,7810,,,,x_px=190; y_px=8164,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7435988443238395
+OCR完整清单,section_02,ocr_0173,......,,,,7810,,,,x_px=190; y_px=8190,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.578801086970738
+OCR完整清单,section_02,ocr_0174,5710,,,,7810,,,,x_px=88; y_px=8294,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7995137572288513
+OCR完整清单,section_02,ocr_0175,5720,,,,7810,,,,x_px=88; y_px=8442,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.799636971950531
+OCR完整清单,section_02,ocr_0176,5730,,,,7810,,,,x_px=88; y_px=8590,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7984447121620178
+OCR完整清单,section_02,ocr_0177,5740,,,,7810,,,,x_px=88; y_px=8737,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7995137929916382
+OCR完整清单,section_02,ocr_0178,5750,,,,7810,,,,x_px=88; y_px=8885,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7989316582679749
+OCR完整清单,section_02,ocr_0179,5760,,,,7810,,,,x_px=88; y_px=9032,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.782783591747284
+OCR完整清单,section_02,ocr_0180,5770,,,,7810,,,,x_px=88; y_px=9180,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7951502323150634
+OCR完整清单,section_02,ocr_0181,5780,,,,7810,,,,x_px=88; y_px=9328,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7982924342155456
+OCR完整清单,section_02,ocr_0182,ALL,,,,7810,,,,x_px=972; y_px=9364,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5379513651132584
+OCR完整清单,section_02,ocr_0183,5790,,,,7810,,,,x_px=88; y_px=9476,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7791214942932129
+OCR完整清单,section_02,ocr_0184,5800,,,,7810,,,,x_px=88; y_px=9624,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7991677403450013
+OCR完整清单,section_02,ocr_0185,5810,,,,7810,,,,x_px=88; y_px=9771,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7990285992622376
+OCR完整清单,section_02,ocr_0186,..,,,,7810,,,,x_px=980; y_px=9774,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5295201142628988
+OCR完整清单,section_02,ocr_0187,...,,,,7810,,,,x_px=920; y_px=9829,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.659690797328949
+OCR完整清单,section_02,ocr_0188,5820,,,,7810,,,,x_px=88; y_px=9918,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7710195899009704
+OCR完整清单,section_02,ocr_0189,5830,,,,7810,,,,x_px=88; y_px=10066,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7996958374977112
+OCR完整清单,section_02,ocr_0190,5840,,,,7810,,,,x_px=88; y_px=10214,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7995141625404358
+OCR完整清单,section_02,ocr_0191,5850,,,,7810,,,,x_px=88; y_px=10362,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7061022043228149
+OCR完整清单,section_02,ocr_0192,5860,,,,7810,,,,x_px=88; y_px=10510,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7583380699157715
+OCR完整清单,section_02,ocr_0193,5870,,,,7810,,,,x_px=88; y_px=10657,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7456195831298829
+OCR完整清单,section_02,ocr_0194,.....,,,,7810,,,,x_px=652; y_px=10700,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.544202963511149
+OCR完整清单,section_02,ocr_0195,5880,,,,7810,,,,x_px=88; y_px=10805,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7977599382400513
+OCR完整清单,section_02,ocr_0196,5890,,,,7810,,,,x_px=88; y_px=10952,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.799206268787384
+OCR完整清单,section_02,ocr_0197,5900,,,,7810,,,,x_px=88; y_px=11100,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7997804760932923
+OCR完整清单,section_02,ocr_0198,5910,,,,7810,,,,x_px=88; y_px=11248,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7976112246513367
+OCR完整清单,section_02,ocr_0199,5920,,,,7810,,,,x_px=88; y_px=11395,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.79976567029953
+OCR完整清单,section_02,ocr_0200,5930,,,,7810,,,,x_px=88; y_px=11543,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7141567587852478
+OCR完整清单,section_02,ocr_0201,5940,,,,7810,,,,x_px=88; y_px=11691,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.799730920791626
+OCR完整清单,section_02,ocr_0202,5950,,,,7810,,,,x_px=88; y_px=11839,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7996160864830018
+OCR完整清单,section_02,ocr_0203,5960,,,,7810,,,,x_px=88; y_px=11985,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7996491074562073
+OCR完整清单,section_02,ocr_0204,5970,,,,7810,,,,x_px=88; y_px=12133,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7995246171951294
+OCR完整清单,section_02,ocr_0205,5980,,,,7810,,,,x_px=88; y_px=12281,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7983442902565002
+OCR完整清单,section_02,ocr_0206,5990,,,,7810,,,,x_px=88; y_px=12429,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.798312532901764
+OCR完整清单,section_02,ocr_0207,6000,,,,7810,,,,x_px=88; y_px=12576,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7995778560638428
+OCR完整清单,section_02,ocr_0208,6010,,,,7810,,,,x_px=88; y_px=12724,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7127691745758057
+OCR完整清单,section_02,ocr_0209,6020,,,,7810,,,,x_px=88; y_px=12872,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7995474696159363
+OCR完整清单,section_02,ocr_0210,6030,,,,7810,,,,x_px=87; y_px=13019,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7991386890411377
+OCR完整清单,section_02,ocr_0211,6040,,,,7810,,,,x_px=88; y_px=13167,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.775882339477539
+OCR完整清单,section_02,ocr_0212,6050,,,,7810,,,,x_px=88; y_px=13315,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7996371865272522
+OCR完整清单,section_03,ocr_0213,....,,,,7810,,,,x_px=650; y_px=16116,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5090668082237244
+OCR完整清单,section_03,ocr_0214,6060,,,,7810,,,,x_px=88; y_px=16128,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.799436342716217
+OCR完整清单,section_03,ocr_0215,.-.---...-.-,,,,7810,,,,x_px=189; y_px=16191,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5295386749964494
+OCR完整清单,section_03,ocr_0216,-...........,,,,7810,,,,x_px=189; y_px=16249,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.590544193983078
+OCR完整清单,section_03,ocr_0217,6070,,,,7810,,,,x_px=88; y_px=16277,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7254569411277771
+OCR完整清单,section_03,ocr_0218,....,,,,7810,,,,x_px=652; y_px=16289,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6150423407554626
+OCR完整清单,section_03,ocr_0219,6080,,,,7810,,,,x_px=88; y_px=16424,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7884581923484802
+OCR完整清单,section_03,ocr_0220,......A,,,,7810,,,,x_px=190; y_px=16469,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5247202813625336
+OCR完整清单,section_03,ocr_0221,......,,,,7810,,,,x_px=190; y_px=16500,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5158799546105521
+OCR完整清单,section_03,ocr_0222,6090,,,,7810,,,,x_px=88; y_px=16571,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7988478899002075
+OCR完整清单,section_03,ocr_0223,6100,,,,7810,,,,x_px=88; y_px=16719,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7995614528656005
+OCR完整清单,section_03,ocr_0224,6110,,,,7810,,,,x_px=88; y_px=16867,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7972146987915039
+OCR完整清单,section_03,ocr_0225,6120,,,,7810,,,,x_px=88; y_px=17014,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6424685597419739
+OCR完整清单,section_03,ocr_0226,6130,,,,7810,,,,x_px=88; y_px=17162,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7086843490600586
+OCR完整清单,section_03,ocr_0227,6140,,,,7810,,,,x_px=88; y_px=17310,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7828889608383178
+OCR完整清单,section_03,ocr_0228,6150,,,,7810,,,,x_px=88; y_px=17458,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7377612709999084
+OCR完整清单,section_03,ocr_0229,....,,,,7810,,,,x_px=652; y_px=17592,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6097139120101929
+OCR完整清单,section_03,ocr_0230,6160,,,,7810,,,,x_px=88; y_px=17605,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7696380019187927
+OCR完整清单,section_03,ocr_0231,6170,,,,7810,,,,x_px=88; y_px=17753,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7994706392288208
+OCR完整清单,section_03,ocr_0232,6180,,,,7810,,,,x_px=88; y_px=17900,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7990341305732727
+OCR完整清单,section_03,ocr_0233,6190,,,,7810,,,,x_px=88; y_px=18048,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7657292366027832
+OCR完整清单,section_03,ocr_0234,6200,,,,7810,,,,x_px=87; y_px=18195,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7993107676506043
+OCR完整清单,section_03,ocr_0235,6210,,,,7810,,,,x_px=88; y_px=18344,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7282299995422363
+OCR完整清单,section_03,ocr_0236,6220,,,,7810,,,,x_px=88; y_px=18491,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7983679294586181
+OCR完整清单,section_03,ocr_0237,6230,,,,7810,,,,x_px=88; y_px=18639,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7782084345817566
+OCR完整清单,section_03,ocr_0238,6240,,,,7810,,,,x_px=88; y_px=18786,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7305587768554688
+OCR完整清单,section_03,ocr_0239,6250,,,,7810,,,,x_px=88; y_px=18933,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7981467485427857
+OCR完整清单,section_03,ocr_0240,6260,,,,7810,,,,x_px=88; y_px=19081,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7930587887763977
+OCR完整清单,section_03,ocr_0241,6270,,,,7810,,,,x_px=88; y_px=19229,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7994588017463684
+OCR完整清单,section_03,ocr_0242,6280,,,,7810,,,,x_px=88; y_px=19377,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7990832567214966
+OCR完整清单,section_03,ocr_0243,6290,,,,7810,,,,x_px=88; y_px=19525,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7951632857322692
+OCR完整清单,section_03,ocr_0244,6300,,,,7810,,,,x_px=88; y_px=19672,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7995639324188233
+OCR完整清单,section_03,ocr_0245,6310,,,,7810,,,,x_px=88; y_px=19819,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7996899366378785
+OCR完整清单,section_03,ocr_0246,6320,,,,7810,,,,x_px=88; y_px=19967,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7993266344070434
+OCR完整清单,section_03,ocr_0247,.----,,,,7810,,,,x_px=192; y_px=20042,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5468210279941559
+OCR完整清单,section_03,ocr_0248,....,,,,7810,,,,x_px=650; y_px=20103,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6005666136741639
+OCR完整清单,section_03,ocr_0249,6330,,,,7810,,,,x_px=88; y_px=20115,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7994516849517822
+OCR完整清单,section_03,ocr_0250,....,,,,7810,,,,x_px=651; y_px=20159,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6109063029289246
+OCR完整清单,section_03,ocr_0251,6340,,,,7810,,,,x_px=88; y_px=20263,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7994009971618652
+OCR完整清单,section_03,ocr_0252,-..........,,,,7810,,,,x_px=182; y_px=20292,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5452137763301531
+OCR完整清单,section_03,ocr_0253,.....,,,,7810,,,,x_px=190; y_px=20366,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5678161283334097
+OCR完整清单,section_03,ocr_0254,6350,,,,7810,,,,x_px=88; y_px=20411,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7988062143325806
+OCR完整清单,section_03,ocr_0255,6360,,,,7810,,,,x_px=88; y_px=20557,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7941533207893372
+OCR完整清单,section_03,ocr_0256,6370,,,,7810,,,,x_px=88; y_px=20705,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7332975625991821
+OCR完整清单,section_03,ocr_0257,6380,,,,7810,,,,x_px=88; y_px=20853,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7991258978843689
+OCR完整清单,section_03,ocr_0258,6390,,,,7810,,,,x_px=88; y_px=21001,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7986316204071044
+OCR完整清单,section_03,ocr_0259,6400,,,,7810,,,,x_px=88; y_px=21149,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7996603727340699
+OCR完整清单,section_03,ocr_0260,6410,,,,7810,,,,x_px=88; y_px=21297,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7974047780036926
+OCR完整清单,section_04,ocr_0261,6420,,,,7810,,,,x_px=88; y_px=24111,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7997440695762634
+OCR完整清单,section_04,ocr_0262,6430,,,,7810,,,,x_px=88; y_px=24258,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7995575904846192
+OCR完整清单,section_04,ocr_0263,6440,,,,7810,,,,x_px=88; y_px=24405,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7888548851013184
+OCR完整清单,section_04,ocr_0264,6450,,,,7810,,,,x_px=88; y_px=24553,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7442865014076233
+OCR完整清单,section_04,ocr_0265,6460,,,,7810,,,,x_px=88; y_px=24701,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.715324854850769
+OCR完整清单,section_04,ocr_0266,6470,,,,7810,,,,x_px=88; y_px=24849,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6898520231246948
+OCR完整清单,section_04,ocr_0267,6480,,,,7810,,,,x_px=88; y_px=24997,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7848390102386474
+OCR完整清单,section_04,ocr_0268,....,,,,7810,,,,x_px=652; y_px=25041,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6436250567436218
+OCR完整清单,section_04,ocr_0269,...,,,,7810,,,,x_px=936; y_px=25088,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5535361915826797
+OCR完整清单,section_04,ocr_0270,6490,,,,7810,,,,x_px=87; y_px=25144,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7260787010192871
+OCR完整清单,section_04,ocr_0271,6500,,,,7810,,,,x_px=88; y_px=25291,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7995004773139953
+OCR完整清单,section_04,ocr_0272,6510,,,,7810,,,,x_px=88; y_px=25439,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7081918120384216
+OCR完整清单,section_04,ocr_0273,6520,,,,7810,,,,x_px=88; y_px=25587,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7998184084892273
+OCR完整清单,section_04,ocr_0274,6530,,,,7810,,,,x_px=88; y_px=25735,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7990803003311158
+OCR完整清单,section_04,ocr_0275,6540,,,,7810,,,,x_px=88; y_px=25883,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7992680549621582
+OCR完整清单,section_04,ocr_0276,.....,,,,7810,,,,x_px=650; y_px=25899,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6092202762762705
+OCR完整清单,section_04,ocr_0277,.....,,,,7810,,,,x_px=651; y_px=26015,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5612759490807852
+OCR完整清单,section_04,ocr_0278,6550,,,,7810,,,,x_px=88; y_px=26030,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7996104478836059
+OCR完整清单,section_04,ocr_0279,....,,,,7810,,,,x_px=651; y_px=26045,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5459240794181823
+OCR完整清单,section_04,ocr_0280,6560,,,,7810,,,,x_px=88; y_px=26178,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.793026614189148
+OCR完整清单,section_04,ocr_0281,6570,,,,7810,,,,x_px=88; y_px=26325,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7644799590110779
+OCR完整清单,section_04,ocr_0282,6580,,,,7810,,,,x_px=88; y_px=26473,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7989989161491394
+OCR完整清单,section_04,ocr_0283,...,,,,7810,,,,x_px=651; y_px=26461,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5811658501625061
+OCR完整清单,section_04,ocr_0284,6590,,,,7810,,,,x_px=88; y_px=26621,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7340885281562806
+OCR完整清单,section_04,ocr_0285,6600,,,,7810,,,,x_px=88; y_px=26768,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7995069861412049
+OCR完整清单,section_04,ocr_0286,6610,,,,7810,,,,x_px=88; y_px=26916,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7557299971580506
+OCR完整清单,section_04,ocr_0287,6620,,,,7810,,,,x_px=88; y_px=27064,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7794109344482422
+OCR完整清单,section_04,ocr_0288,6630,,,,7810,,,,x_px=88; y_px=27210,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7987748265266419
+OCR完整清单,section_04,ocr_0289,6640,,,,7810,,,,x_px=88; y_px=27358,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7798537135124206
+OCR完整清单,section_04,ocr_0290,6650,,,,7810,,,,x_px=88; y_px=27506,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.734587836265564
+OCR完整清单,section_04,ocr_0291,6660,,,,7810,,,,x_px=88; y_px=27654,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.746154272556305
+OCR完整清单,section_04,ocr_0292,6670,,,,7810,,,,x_px=88; y_px=27802,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7988667368888855
+OCR完整清单,section_04,ocr_0293,6680,,,,7810,,,,x_px=88; y_px=27949,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7983670592308044
+OCR完整清单,section_04,ocr_0294,6690,,,,7810,,,,x_px=88; y_px=28097,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7540297746658325
+OCR完整清单,section_04,ocr_0295,6700,,,,7810,,,,x_px=88; y_px=28244,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7994986176490784
+OCR完整清单,section_04,ocr_0296,....,,,,7810,,,,x_px=651; y_px=28232,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5702437400817871
+OCR完整清单,section_04,ocr_0297,6710,,,,7810,,,,x_px=88; y_px=28392,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7996736526489258
+OCR完整清单,section_04,ocr_0298,6720,,,,7810,,,,x_px=88; y_px=28539,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7140682101249695
+OCR完整清单,section_04,ocr_0299,6730,,,,7810,,,,x_px=88; y_px=28687,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6777319073677063
+OCR完整清单,section_04,ocr_0300,6740,,,,7810,,,,x_px=88; y_px=28835,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7036714434623719
+OCR完整清单,section_04,ocr_0301,6750,,,,7810,,,,x_px=88; y_px=28983,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7942670106887817
+OCR完整清单,section_04,ocr_0302,6760,,,,7810,,,,x_px=88; y_px=29130,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7499342799186707
+OCR完整清单,section_04,ocr_0303,6770,,,,7810,,,,x_px=88; y_px=29278,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7013781309127808
+OCR完整清单,section_04,ocr_0304,.....,,,,7810,,,,x_px=651; y_px=29293,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5894044240315756
+OCR完整清单,section_04,ocr_0305,...,,,,7810,,,,x_px=651; y_px=29320,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6689002960920334
+OCR完整清单,section_05,ocr_0306,6830,,,,7810,,,,x_px=88; y_px=32831,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7983202815055848
+OCR完整清单,section_05,ocr_0307,......,,,,7810,,,,x_px=654; y_px=32875,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5185823908873967
+OCR完整清单,section_05,ocr_0308,6840,,,,7810,,,,x_px=88; y_px=32979,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7994707942008972
+OCR完整清单,section_05,ocr_0309,.....,,,,7810,,,,x_px=174; y_px=32995,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5138797412316004
+OCR完整清单,section_05,ocr_0310,............,,,,7810,,,,x_px=174; y_px=33039,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6734369236689347
+OCR完整清单,section_05,ocr_0311,......,,,,7810,,,,x_px=654; y_px=33082,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5455202289990017
+OCR完整清单,section_05,ocr_0312,......,,,,7810,,,,x_px=654; y_px=33111,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6594753605978829
+OCR完整清单,section_05,ocr_0313,6850,,,,7810,,,,x_px=88; y_px=33126,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7672190427780151
+OCR完整清单,section_05,ocr_0314,......,,,,7810,,,,x_px=174; y_px=33171,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5934780197484153
+OCR完整清单,section_05,ocr_0315,.............,,,,7810,,,,x_px=174; y_px=33216,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6780047001583236
+OCR完整清单,section_05,ocr_0316,6860,,,,7810,,,,x_px=88; y_px=33275,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7867217898368836
+OCR完整清单,section_05,ocr_0317,.....,,,,7810,,,,x_px=175; y_px=33320,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6598233679930369
+OCR完整清单,section_05,ocr_0318,.....,,,,7810,,,,x_px=174; y_px=33348,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.633520245552063
+OCR完整清单,section_05,ocr_0319,.....,,,,7810,,,,x_px=174; y_px=33378,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5150187611579895
+OCR完整清单,section_05,ocr_0320,6870,,,,7810,,,,x_px=88; y_px=33422,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6753215074539185
+OCR完整清单,section_05,ocr_0321,...,,,,7810,,,,x_px=174; y_px=33439,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5278161764144897
+OCR完整清单,section_05,ocr_0322,6880,,,,7810,,,,x_px=88; y_px=33568,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7827951908111572
+OCR完整清单,section_05,ocr_0323,.....,,,,7810,,,,x_px=174; y_px=33585,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6531039277712504
+OCR完整清单,section_05,ocr_0324,......,,,,7810,,,,x_px=654; y_px=33673,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6306663283279964
+OCR完整清单,section_05,ocr_0325,.....,,,,7810,,,,x_px=174; y_px=33704,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5128771215677261
+OCR完整清单,section_05,ocr_0326,6890,,,,7810,,,,x_px=88; y_px=33717,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7994189620018005
+OCR完整清单,section_05,ocr_0327,6900,,,,7810,,,,x_px=88; y_px=33865,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7077885150909424
+OCR完整清单,section_05,ocr_0328,6910,,,,7810,,,,x_px=88; y_px=34013,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7977939009666443
+OCR完整清单,section_05,ocr_0329,6920,,,,7810,,,,x_px=87; y_px=34160,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7993332028388977
+OCR完整清单,section_05,ocr_0330,6930,,,,7810,,,,x_px=88; y_px=34308,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7995612740516662
+OCR完整清单,section_05,ocr_0331,.....,,,,7810,,,,x_px=174; y_px=34323,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5010883410771688
+OCR完整清单,section_05,ocr_0332,ot69,,,,7810,,,,x_px=88; y_px=34456,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5493080258369446
+OCR完整清单,section_05,ocr_0333,....,,,,7810,,,,x_px=656; y_px=34499,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5091647744178772
+OCR完整清单,section_05,ocr_0334,6950,,,,7810,,,,x_px=88; y_px=34602,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7974958658218384
+OCR完整清单,section_05,ocr_0335,...............,,,,7810,,,,x_px=655; y_px=34690,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5398274231702089
+OCR完整清单,section_05,ocr_0336,6960,,,,7810,,,,x_px=88; y_px=34750,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7995755076408386
+OCR完整清单,section_05,ocr_0337,6970,,,,7810,,,,x_px=88; y_px=34898,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7956949830055237
+OCR完整清单,section_05,ocr_0338,......,,,,7810,,,,x_px=656; y_px=35032,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6012169080121177
+OCR完整清单,section_05,ocr_0339,6980,,,,7810,,,,x_px=88; y_px=35046,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7048603415489196
+OCR完整清单,section_05,ocr_0340,.....,,,,7810,,,,x_px=172; y_px=35090,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6260171234607697
+OCR完整清单,section_05,ocr_0341,...,,,,7810,,,,x_px=170; y_px=35121,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5525452047586441
+OCR完整清单,section_05,ocr_0342,......,,,,7810,,,,x_px=170; y_px=35149,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5864192417689732
+OCR完整清单,section_05,ocr_0343,6990,,,,7810,,,,x_px=88; y_px=35193,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7981496214866638
+OCR完整清单,section_05,ocr_0344,.....,,,,7810,,,,x_px=172; y_px=35240,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5180114557345709
+OCR完整清单,section_05,ocr_0345,7000,,,,7810,,,,x_px=88; y_px=35342,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7001341223716736
+OCR完整清单,section_05,ocr_0346,.....,,,,7810,,,,x_px=172; y_px=35357,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5955043931802114
+OCR完整清单,section_05,ocr_0347,....,,,,7810,,,,x_px=172; y_px=35388,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5387717247009277
+OCR完整清单,section_05,ocr_0348,.....,,,,7810,,,,x_px=171; y_px=35475,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5800004502137502
+OCR完整清单,section_05,ocr_0349,7010,,,,7810,,,,x_px=88; y_px=35490,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.799660611152649
+OCR完整清单,section_05,ocr_0350,......,,,,7810,,,,x_px=172; y_px=35623,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5764983935015542
+OCR完整清单,section_05,ocr_0351,7020,,,,7810,,,,x_px=88; y_px=35637,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7996122241020203
+OCR完整清单,section_05,ocr_0352,....,,,,7810,,,,x_px=174; y_px=35710,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5858365297317505
+OCR完整清单,section_05,ocr_0353,7030,,,,7810,,,,x_px=88; y_px=35785,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7105183720588684
+OCR完整清单,section_05,ocr_0354,......,,,,7810,,,,x_px=174; y_px=35888,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5640167423657009
+OCR完整清单,section_05,ocr_0355,7040,,,,7810,,,,x_px=88; y_px=35933,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7104364395141601
+OCR完整清单,section_05,ocr_0356,.-...,,,,7810,,,,x_px=172; y_px=36036,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5079692552487055
+OCR完整清单,section_05,ocr_0357,7050,,,,7810,,,,x_px=88; y_px=36080,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7994897603988648
+OCR完整清单,section_05,ocr_0358,......,,,,7810,,,,x_px=174; y_px=36097,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6869535616465977
+OCR完整清单,section_05,ocr_0359,......,,,,7810,,,,x_px=174; y_px=36153,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6404069151197161
+OCR完整清单,section_05,ocr_0360,.....1,,,,7810,,,,x_px=173; y_px=36185,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6297733698572431
+OCR完整清单,section_05,ocr_0361,7060,,,,7810,,,,x_px=88; y_px=36228,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7225046038627625
+OCR完整清单,section_05,ocr_0362,.....,,,,7810,,,,x_px=172; y_px=36272,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5940927068392435
+OCR完整清单,section_05,ocr_0363,.....,,,,7810,,,,x_px=656; y_px=36272,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5822053651014963
+OCR完整清单,section_05,ocr_0364,...2.,,,,7810,,,,x_px=174; y_px=36301,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5205985456705093
+OCR完整清单,section_05,ocr_0365,4....,,,,7810,,,,x_px=172; y_px=36330,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.564666673541069
+OCR完整清单,section_05,ocr_0366,......,,,,7810,,,,x_px=173; y_px=36360,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7563833679471698
+OCR完整清单,section_05,ocr_0367,7070,,,,7810,,,,x_px=88; y_px=36376,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7718302726745605
+OCR完整清单,section_05,ocr_0368,......,,,,7810,,,,x_px=173; y_px=36390,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6323696545192173
+OCR完整清单,section_05,ocr_0369,...-..,,,,7810,,,,x_px=174; y_px=36421,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5578681315694537
+OCR完整清单,section_05,ocr_0370,......,,,,7810,,,,x_px=174; y_px=36479,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6498863697052002
+OCR完整清单,section_05,ocr_0371,7080,,,,7810,,,,x_px=88; y_px=36523,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7966690421104431
+OCR完整清单,section_05,ocr_0372,...,,,,7810,,,,x_px=174; y_px=36569,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5247192978858948
+OCR完整清单,section_05,ocr_0373,......,,,,7810,,,,x_px=174; y_px=36599,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5329418693270002
+OCR完整清单,section_05,ocr_0374,......,,,,7810,,,,x_px=654; y_px=36598,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5913482819284711
+OCR完整清单,section_05,ocr_0375,.....,,,,7810,,,,x_px=655; y_px=36626,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5169864892959595
+OCR完整清单,section_05,ocr_0376,7090,,,,7810,,,,x_px=88; y_px=36671,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6594727277755738
+OCR完整清单,section_05,ocr_0377,.....,,,,7810,,,,x_px=174; y_px=36805,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5385403881470362
+OCR完整清单,section_05,ocr_0378,7100,,,,7810,,,,x_px=87; y_px=36818,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7865040540695191
+OCR完整清单,section_05,ocr_0379,7110,,,,7810,,,,x_px=88; y_px=36966,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7191278815269471
+OCR完整清单,section_05,ocr_0380,.....,,,,7810,,,,x_px=172; y_px=36981,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5165229737758636
+OCR完整清单,section_05,ocr_0381,......,,,,7810,,,,x_px=173; y_px=37039,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6233193278312683
+OCR完整清单,section_05,ocr_0382,.....,,,,7810,,,,x_px=655; y_px=37039,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5288010090589523
+OCR完整清单,section_05,ocr_0383,.....,,,,7810,,,,x_px=174; y_px=37069,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5785091718037924
+OCR完整清单,section_05,ocr_0384,....,,,,7810,,,,x_px=654; y_px=37072,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5370330333709716
+OCR完整清单,section_05,ocr_0385,7120,,,,7810,,,,x_px=88; y_px=37114,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7945396065711975
+OCR完整清单,section_05,ocr_0386,.....,,,,7810,,,,x_px=174; y_px=37129,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5076070725917816
+OCR完整清单,section_05,ocr_0387,......,,,,7810,,,,x_px=174; y_px=37160,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5882601141929626
+OCR完整清单,section_05,ocr_0388,7130,,,,7810,,,,x_px=88; y_px=37261,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6641924619674683
+OCR完整清单,section_05,ocr_0389,--,,,,7810,,,,x_px=680; y_px=37277,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5106465617815653
+OCR完整清单,section_05,ocr_0390,.....,,,,7810,,,,x_px=174; y_px=37304,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6234930257002512
+OCR完整清单,section_06,ocr_0391,7280,,,,7810,,,,x_px=88; y_px=42143,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.799209725856781
+OCR完整清单,section_06,ocr_0392,...,,,,7810,,,,x_px=174; y_px=42159,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5767995566129684
+OCR完整清单,section_06,ocr_0393,.....,,,,7810,,,,x_px=172; y_px=42216,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5762062271436056
+OCR完整清单,section_06,ocr_0394,......,,,,7810,,,,x_px=174; y_px=42245,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5893519478184837
+OCR完整清单,section_06,ocr_0395,.....,,,,7810,,,,x_px=173; y_px=42277,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.789685050646464
+OCR完整清单,section_06,ocr_0396,7290,,,,7810,,,,x_px=88; y_px=42290,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7773591637611389
+OCR完整清单,section_06,ocr_0397,......,,,,7810,,,,x_px=173; y_px=42305,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5619027316570282
+OCR完整清单,section_06,ocr_0398,1.................,,,,7810,,,,x_px=173; y_px=42362,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5827385296947077
+OCR完整清单,section_06,ocr_0399,7300,,,,7810,,,,x_px=88; y_px=42438,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.63436861038208
+OCR完整清单,section_06,ocr_0400,.....1,,,,7810,,,,x_px=173; y_px=42453,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7217469555991036
+OCR完整清单,section_06,ocr_0401,.....,,,,7810,,,,x_px=174; y_px=42511,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5155022492011389
+OCR完整清单,section_06,ocr_0402,....,,,,7810,,,,x_px=174; y_px=42543,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6690794229507446
+OCR完整清单,section_06,ocr_0403,7310,,,,7810,,,,x_px=88; y_px=42586,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7972133040428162
+OCR完整清单,section_06,ocr_0404,.....,,,,7810,,,,x_px=174; y_px=42630,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5333146452903748
+OCR完整清单,section_06,ocr_0405,.....,,,,7810,,,,x_px=174; y_px=42688,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5488934020201365
+OCR完整清单,section_06,ocr_0406,7320,,,,7810,,,,x_px=88; y_px=42734,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7976847410202026
+OCR完整清单,section_06,ocr_0407,.........,,,,7810,,,,x_px=172; y_px=42764,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5363722383975983
+OCR完整清单,section_06,ocr_0408,7330,,,,7810,,,,x_px=88; y_px=42881,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6679672718048095
+OCR完整清单,section_06,ocr_0409,7340,,,,7810,,,,x_px=88; y_px=43029,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.799415671825409
+OCR完整清单,section_06,ocr_0410,......,,,,7810,,,,x_px=171; y_px=43161,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5376243931906564
+OCR完整清单,section_06,ocr_0411,7350,,,,7810,,,,x_px=88; y_px=43176,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6307610392570495
+OCR完整清单,section_06,ocr_0412,.....,,,,7810,,,,x_px=171; y_px=43192,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5699779192606608
+OCR完整清单,section_06,ocr_0413,....,,,,7810,,,,x_px=171; y_px=43221,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5608807682991028
+OCR完整清单,section_06,ocr_0414,.....1.......,,,,7810,,,,x_px=172; y_px=43266,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5681943765708378
+OCR完整清单,section_06,ocr_0415,7360,,,,7810,,,,x_px=88; y_px=43323,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7997158646583558
+OCR完整清单,section_06,ocr_0416,.....,,,,7810,,,,x_px=654; y_px=43368,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5482863783836365
+OCR完整清单,section_06,ocr_0417,............,,,,7810,,,,x_px=172; y_px=43413,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6620358228683472
+OCR完整清单,section_06,ocr_0418,.....,,,,7810,,,,x_px=173; y_px=43457,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5595368842283884
+OCR完整清单,section_06,ocr_0419,7370,,,,7810,,,,x_px=88; y_px=43471,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.609392523765564
+OCR完整清单,section_06,ocr_0420,7380,,,,7810,,,,x_px=88; y_px=43619,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6368750810623169
+OCR完整清单,section_06,ocr_0421,......,,,,7810,,,,x_px=172; y_px=43751,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5635660461017064
+OCR完整清单,section_06,ocr_0422,7390,,,,7810,,,,x_px=88; y_px=43767,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7958266496658325
+OCR完整清单,section_06,ocr_0423,162,,,,7810,,,,x_px=1024; y_px=43794,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5729260146617889
+OCR完整清单,section_06,ocr_0424,-...................,,,,7810,,,,x_px=170; y_px=43854,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5929331155050368
+OCR完整清单,section_06,ocr_0425,7400,,,,7810,,,,x_px=88; y_px=43914,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7370845794677734
+OCR完整清单,section_06,ocr_0426,.............,,,,7810,,,,x_px=171; y_px=44017,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5111106974737984
+OCR完整清单,section_06,ocr_0427,7410,,,,7810,,,,x_px=88; y_px=44063,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7886070847511292
+OCR完整清单,section_06,ocr_0428,.....,,,,7810,,,,x_px=171; y_px=44079,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.632201095422109
+OCR完整清单,section_06,ocr_0429,....................,,,,7810,,,,x_px=171; y_px=44151,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5934470281714485
+OCR完整清单,section_06,ocr_0430,7420,,,,7810,,,,x_px=88; y_px=44210,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6685305833816528
+OCR完整清单,section_06,ocr_0431,......-....,,,,7810,,,,x_px=171; y_px=44296,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5467640161514282
+OCR完整清单,section_06,ocr_0432,.....,,,,7810,,,,x_px=170; y_px=44341,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6242960691452026
+OCR完整清单,section_06,ocr_0433,7430,,,,7810,,,,x_px=88; y_px=44357,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7997167110443115
+OCR完整清单,section_06,ocr_0434,..-...-......,,,,7810,,,,x_px=171; y_px=44447,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5980837962457112
+OCR完整清单,section_06,ocr_0435,7440,,,,7810,,,,x_px=88; y_px=44505,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7992161273956299
+OCR完整清单,section_06,ocr_0436,7450,,,,7810,,,,x_px=88; y_px=44653,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7189339160919189
+OCR完整清单,section_06,ocr_0437,7460,,,,7810,,,,x_px=88; y_px=44800,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7992501497268677
+OCR完整清单,section_06,ocr_0438,7470,,,,7810,,,,x_px=88; y_px=44948,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.707756781578064
+OCR完整清单,section_06,ocr_0439,7480,,,,7810,,,,x_px=88; y_px=45096,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7350587010383606
+OCR完整清单,section_06,ocr_0440,...,,,,7810,,,,x_px=655; y_px=45115,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5079892799258232
+OCR完整清单,section_06,ocr_0441,..................,,,,7810,,,,x_px=655; y_px=45186,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5798504634907371
+OCR完整清单,section_06,ocr_0442,......,,,,7810,,,,x_px=170; y_px=45228,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6649457045963832
+OCR完整清单,section_06,ocr_0443,7490,,,,7810,,,,x_px=88; y_px=45243,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7997416377067565
+OCR完整清单,section_06,ocr_0444,......,,,,7810,,,,x_px=168; y_px=45316,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6402062773704529
+OCR完整清单,section_07,ocr_0445,7500,,,,7810,,,,x_px=88; y_px=48057,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7717256784439087
+OCR完整清单,section_07,ocr_0446,.....,,,,7810,,,,x_px=171; y_px=48073,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7835028072198232
+OCR完整清单,section_07,ocr_0447,7510,,,,7810,,,,x_px=88; y_px=48205,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.696723735332489
+OCR完整清单,section_07,ocr_0448,.....,,,,7810,,,,x_px=171; y_px=48309,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5312745571136475
+OCR完整清单,section_07,ocr_0449,.....,,,,7810,,,,x_px=172; y_px=48338,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5974749128023783
+OCR完整清单,section_07,ocr_0450,7520,,,,7810,,,,x_px=88; y_px=48353,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6708606004714965
+OCR完整清单,section_07,ocr_0451,7530,,,,7810,,,,x_px=88; y_px=48500,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7810569167137146
+OCR完整清单,section_07,ocr_0452,7540,,,,7810,,,,x_px=88; y_px=48648,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7730151653289795
+OCR完整清单,section_07,ocr_0453,7550,,,,7810,,,,x_px=88; y_px=48795,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7994991183280945
+OCR完整清单,section_07,ocr_0454,7560,,,,7810,,,,x_px=88; y_px=48943,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7985673189163208
+OCR完整清单,section_07,ocr_0455,7570,,,,7810,,,,x_px=88; y_px=49091,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7661824941635131
+OCR完整清单,section_07,ocr_0456,.-...+,,,,7810,,,,x_px=172; y_px=49167,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5488473347255162
+OCR完整清单,section_07,ocr_0457,7580,,,,7810,,,,x_px=88; y_px=49238,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6204118013381958
+OCR完整清单,section_07,ocr_0458,....,,,,7810,,,,x_px=170; y_px=49343,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6044621944427491
+OCR完整清单,section_07,ocr_0459,7590,,,,7810,,,,x_px=88; y_px=49386,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6492638230323792
+OCR完整清单,section_07,ocr_0460,.....,,,,7810,,,,x_px=170; y_px=49401,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5978987216949463
+OCR完整清单,section_07,ocr_0461,7600,,,,7810,,,,x_px=88; y_px=49534,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7689706325531006
+OCR完整清单,section_07,ocr_0462,..,,,,7810,,,,x_px=167; y_px=49580,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5625658830006918
+OCR完整清单,section_07,ocr_0463,7610,,,,7810,,,,x_px=88; y_px=49682,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7513936161994934
+OCR完整清单,section_07,ocr_0464,.....,,,,7810,,,,x_px=168; y_px=49755,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5489685932795206
+OCR完整清单,section_07,ocr_0465,7620,,,,7810,,,,x_px=88; y_px=49830,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7638957500457764
+OCR完整清单,section_07,ocr_0466,.....,,,,7810,,,,x_px=169; y_px=49960,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6323773364226023
+OCR完整清单,section_07,ocr_0467,7630,,,,7810,,,,x_px=88; y_px=49976,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7722208619117736
+OCR完整清单,section_07,ocr_0468,7640,,,,7810,,,,x_px=88; y_px=50124,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7553474187850953
+OCR完整清单,section_07,ocr_0469,....,,,,7810,,,,x_px=170; y_px=50139,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5086966514587402
+OCR完整清单,section_07,ocr_0470,7650,,,,7810,,,,x_px=88; y_px=50272,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7992353916168213
+OCR完整清单,section_07,ocr_0471,.....,,,,7810,,,,x_px=168; y_px=50406,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5649403035640717
+OCR完整清单,section_07,ocr_0472,7660,,,,7810,,,,x_px=88; y_px=50420,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6362573862075805
+OCR完整清单,section_07,ocr_0473,7670,,,,7810,,,,x_px=88; y_px=50567,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.706612503528595
+OCR完整清单,section_07,ocr_0474,7680,,,,7810,,,,x_px=88; y_px=50715,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6476988434791565
+OCR完整清单,section_07,ocr_0475,7690,,,,7810,,,,x_px=88; y_px=50863,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7107227444648743
+OCR完整清单,section_07,ocr_0476,...,,,,7810,,,,x_px=174; y_px=50962,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6833948940038681
+OCR完整清单,section_07,ocr_0477,7700,,,,7810,,,,x_px=88; y_px=51011,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7735379338264465
+OCR完整清单,section_07,ocr_0478,7710,,,,7810,,,,x_px=88; y_px=51158,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7213620066642761
+OCR完整清单,section_07,ocr_0479,7720,,,,7810,,,,x_px=88; y_px=51305,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6442945122718811
+OCR完整清单,section_07,ocr_0480,7730,,,,7810,,,,x_px=88; y_px=51453,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7984979271888732
+OCR完整清单,section_07,ocr_0481,7740,,,,7810,,,,x_px=88; y_px=51601,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7511200308799744
+OCR完整清单,section_07,ocr_0482,7750,,,,7810,,,,x_px=88; y_px=51749,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7201459050178528
+OCR完整清单,section_07,ocr_0483,....,,,,7810,,,,x_px=656; y_px=51763,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5283559203147888
+OCR完整清单,section_07,ocr_0484,7760,,,,7810,,,,x_px=88; y_px=51896,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7938783884048461
+OCR完整清单,section_07,ocr_0485,7770,,,,7810,,,,x_px=88; y_px=52043,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7629528522491456
+OCR完整清单,section_07,ocr_0486,7780,,,,7810,,,,x_px=88; y_px=52191,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7993874073028564
+OCR完整清单,section_07,ocr_0487,7790,,,,7810,,,,x_px=88; y_px=52339,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7988151431083679
+OCR完整清单,section_07,ocr_0488,7800,,,,7810,,,,x_px=88; y_px=52487,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7951550126075745
+OCR完整清单,section_07,ocr_0489,......,,,,7810,,,,x_px=654; y_px=52593,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5512647415910449
+OCR完整清单,section_07,ocr_0490,7810,,,,7810,,,,x_px=88; y_px=52621,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7845280289649963
+OCR完整清单,section_07,ocr_0491,解释结论,,,,7810,,,,x_px=368; y_px=52694,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7976918697357178
+OCR完整清单,section_07,ocr_0492,深度,,,,7810,,,,x_px=88; y_px=52687,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6534497539202372
+OCR完整清单,section_07,ocr_0493,100,,,,7810,,,,x_px=834; y_px=52675,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.741362139582634
+OCR完整清单,section_07,ocr_0494,二界面,,,,7810,,,,x_px=1143; y_px=52694,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6388573795557022
+OCR完整清单,section_07,ocr_0495,声幅,,,,7810,,,,x_px=738; y_px=52696,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6661808490753174
+OCR完整清单,section_07,ocr_0496,界面,,,,7810,,,,x_px=1096; y_px=52701,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5827597181002299
+OCR完整清单,section_07,ocr_0497,声波时差,,,,7810,,,,x_px=222; y_px=52700,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7939255356788635
+OCR完整清单,section_07,ocr_0498,磁定位,,,,7810,,,,x_px=516; y_px=52700,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.711914063
+OCR完整清单,section_07,ocr_0499,(m),,,,7810,,,,x_px=87; y_px=52709,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7448278814554214
+OCR完整清单,section_07,ocr_0500,nV,,,,7810,,,,x_px=738; y_px=52712,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5319801171620687
+OCR完整清单,section_07,ocr_0501,变密度,,,,7810,,,,x_px=960; y_px=52708,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7410861700773239
+OCR完整清单,section_07,ocr_0502,400,,,,7810,,,,x_px=125; y_px=52715,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7444001734256744
+OCR完整清单,section_07,ocr_0503,500,,,,7810,,,,x_px=613; y_px=52715,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7421336621046066
+OCR完整清单,section_07,ocr_0504,(mV),,,,7810,,,,x_px=517; y_px=52715,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7728238940238953
+OCR完整清单,section_07,ocr_0505,100,,,,7810,,,,x_px=315; y_px=52715,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7461555451154709
+OCR完整清单,section_07,ocr_0506,(us/m),,,,7810,,,,x_px=221; y_px=52716,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7042780135359082
+OCR完整清单,section_07,ocr_0507,-500,,,,7810,,,,x_px=428; y_px=52715,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.590707528591156
+OCR完整清单,section_07,ocr_0508,100,,,,7810,,,,x_px=834; y_px=52712,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7488518953323364
+OCR完整清单,section_07,ocr_0509,井径,,,,7810,,,,x_px=221; y_px=52732,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.5457098484039307
+OCR完整清单,section_07,ocr_0510,自然伽马（生产）,,,,7810,,,,x_px=512; y_px=52732,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.8013903631104363
+OCR完整清单,section_07,ocr_0511,(cm),,,,7810,,,,x_px=220; y_px=52747,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6360496759414673
+OCR完整清单,section_07,ocr_0512,1500,,,,7810,,,,x_px=620; y_px=52746,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7473968505859375
+OCR完整清单,section_07,ocr_0513,50,,,,7810,,,,x_px=320; y_px=52746,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6653613448143005
+OCR完整清单,section_07,ocr_0514,10,,,,7810,,,,x_px=120; y_px=52746,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.6651816169420878
+OCR完整清单,section_07,ocr_0515,2050,,,,7810,,,,x_px=1045; y_px=52747,D:\users\desktop\research\控压固井项目\temp_pdf_extract\full_ocr_inventory.csv,0.7310464739799499

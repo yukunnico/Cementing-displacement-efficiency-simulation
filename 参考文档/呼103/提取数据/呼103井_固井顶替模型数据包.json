@@ -1,0 +1,470 @@
+{
+  "project": "呼103井尾管/回接固井",
+  "goal": "尾管段固井顶替过程与最终质量标签模型输入整理（第二版高可信度运行包）",
+  "model_scope": "面向类似 hu102_tail_d2dga_model.py 的尾管段 D2DGA 模型输入；当前优先整理完井尾管与其质量标签，不混入无关井段。",
+  "package_version": "2.0",
+  "recommended_inputs": {
+    "well_depth_md": {
+      "value": "7770",
+      "unit": "m",
+      "type": "直接输入",
+      "source": "CBL评价图",
+      "note": "完钻井深"
+    },
+    "cement_top_md_design_upper_tail": {
+      "value": "5545.970",
+      "unit": "m",
+      "type": "直接输入",
+      "source": "φ168.30mm完井尾管CBL评价图",
+      "note": "φ168.30mm完井尾管预计水泥面"
+    },
+    "cement_top_md_actual_upper_tail": {
+      "value": "5544.000",
+      "unit": "m",
+      "type": "直接输入",
+      "source": "φ168.30mm完井尾管CBL评价图",
+      "note": "φ168.30mm完井尾管实测水泥面"
+    },
+    "cement_top_md_design_lower_tail": {
+      "value": "5540.000",
+      "unit": "m",
+      "type": "直接输入",
+      "source": "φ139.70mm完井尾管CBL评价图",
+      "note": "φ139.70mm完井尾管图上给出的水泥面预计值"
+    },
+    "cement_top_md_actual_lower_tail": {
+      "value": "",
+      "unit": "m",
+      "type": "缺失",
+      "source": "φ139.70mm完井尾管CBL评价图",
+      "note": "图中标注为“/”，未给出实测水泥面"
+    },
+    "cement_bottom_md": {
+      "value": "7770",
+      "unit": "m",
+      "type": "直接输入",
+      "source": "CBL评价图",
+      "note": "水泥封固井段底部/完钻井深"
+    },
+    "tail_interval_upper_top_md": {
+      "value": "5545.970",
+      "unit": "m",
+      "type": "直接输入",
+      "source": "φ168.30mm完井尾管CBL评价图",
+      "note": "上段生产套管/完井尾管 φ168.300mm 顶部"
+    },
+    "tail_interval_upper_bottom_md": {
+      "value": "7330.600",
+      "unit": "m",
+      "type": "直接输入",
+      "source": "φ168.30mm完井尾管CBL评价图",
+      "note": "上段生产套管/完井尾管 φ168.300mm 底部"
+    },
+    "tail_interval_lower_top_md": {
+      "value": "7330.600",
+      "unit": "m",
+      "type": "直接输入",
+      "source": "φ139.70mm完井尾管CBL评价图",
+      "note": "下段生产套管/完井尾管 φ139.700mm 顶部；变扣位置"
+    },
+    "tail_interval_lower_bottom_md": {
+      "value": "7770.000",
+      "unit": "m",
+      "type": "直接输入",
+      "source": "φ139.70mm完井尾管CBL评价图 + 20317.xlsx",
+      "note": "下段生产套管/完井尾管 φ139.700mm 底部"
+    },
+    "measured_interval_upper_tail": {
+      "value": "5540.000-7330.600",
+      "unit": "m",
+      "type": "直接输入",
+      "source": "φ168.30mm完井尾管CBL评价图",
+      "note": "φ168.30mm尾管质量图测量井段"
+    },
+    "measured_interval_lower_tail": {
+      "value": "7338.000-7712.000",
+      "unit": "m",
+      "type": "直接输入",
+      "source": "φ139.70mm完井尾管CBL评价图",
+      "note": "φ139.70mm尾管质量图测量井段"
+    },
+    "liner_od_upper": {
+      "value": "168.3",
+      "unit": "mm",
+      "type": "直接输入",
+      "source": "CBL评价图",
+      "note": "上段生产套管/完井尾管外径"
+    },
+    "liner_od_lower": {
+      "value": "139.7",
+      "unit": "mm",
+      "type": "直接输入",
+      "source": "CBL评价图 + 20317.xlsx",
+      "note": "下段生产套管/完井尾管外径"
+    },
+    "bit_diameter_lower_tail": {
+      "value": "215.900",
+      "unit": "mm",
+      "type": "直接输入",
+      "source": "φ139.70mm完井尾管CBL评价图",
+      "note": "钻头程序显示 215.900mm × 7770.000m，可作为下段尾管井眼名义尺寸候选"
+    },
+    "mud_density": {
+      "value": "1.180",
+      "unit": "g/cm³",
+      "type": "直接输入",
+      "source": "φ139.70mm完井尾管CBL评价图",
+      "note": "图头井液性质"
+    },
+    "balance_fluid_density": {
+      "value": "1.75",
+      "unit": "g/cm³",
+      "type": "直接输入",
+      "source": "10055.doc 施工设计 + 20323.doc / well_spacer_summary_fixed.csv",
+      "note": "完井尾管施工设计中的平衡液密度"
+    },
+    "spacer_density_front": {
+      "value": "1.80",
+      "unit": "g/cm³",
+      "type": "直接输入",
+      "source": "10055.doc 施工设计 + 203111.docx + 20323.doc / well_spacer_summary_fixed.csv",
+      "note": "完井尾管设计/实验中的驱油隔离液密度"
+    },
+    "flush_density_front": {
+      "value": "1.02",
+      "unit": "g/cm³",
+      "type": "直接输入",
+      "source": "10055.doc 施工设计 + 203111.docx + 20323.doc / well_spacer_summary_fixed.csv",
+      "note": "完井尾管设计/实验中的驱油冲洗液密度"
+    },
+    "lead_slurry_density": {
+      "value": "2.05",
+      "unit": "g/cm³",
+      "type": "直接输入",
+      "source": "203111.docx",
+      "note": "完井尾管领浆密度"
+    },
+    "tail_slurry_density": {
+      "value": "2.05",
+      "unit": "g/cm³",
+      "type": "直接输入",
+      "source": "203111.docx",
+      "note": "完井尾管中间浆密度"
+    },
+    "tail_slurry_density": {
+      "value": "2.05",
+      "unit": "g/cm³",
+      "type": "直接输入",
+      "source": "203111.docx",
+      "note": "完井尾管尾浆密度"
+    },
+    "cement_mass_total": {
+      "value": "153.000",
+      "unit": "t",
+      "type": "直接输入",
+      "source": "10052.xlsx 日报备注",
+      "note": "2024-10-02 完井尾管固井注入水泥浆 153t；相比 CBL 图头 130t 更接近施工实值，优先作为运行包输入"
+    },
+    "cement_density": {
+      "value": "1.90",
+      "unit": "g/cm³",
+      "type": "直接输入",
+      "source": "10055.doc 施工设计 + 10052.xlsx 日报备注",
+      "note": "完井尾管施工设计与日报均指向 1.90 g/cm³ 双凝水泥浆；CBL 图头 2.050 g/cm³ 更适合作为测井图元数据保留"
+    },
+    "lead_slurry_volume_design": {
+      "value": "91.0",
+      "unit": "m³",
+      "type": "直接输入",
+      "source": "10055.doc 施工设计",
+      "note": "完井尾管领浆设计量（含附加10m³）"
+    },
+    "tail_slurry_volume_design": {
+      "value": "19",
+      "unit": "m³",
+      "type": "直接输入",
+      "source": "10055.doc 施工设计",
+      "note": "完井尾管尾浆设计量（含下塞 1.18m³）"
+    },
+    "balance_fluid_volume_design": {
+      "value": "18",
+      "unit": "m³",
+      "type": "直接输入",
+      "source": "10055.doc 施工设计",
+      "note": "完井尾管平衡液设计量"
+    },
+    "spacer_volume_design": {
+      "value": "18",
+      "unit": "m³",
+      "type": "直接输入",
+      "source": "10055.doc 施工设计",
+      "note": "完井尾管驱油隔离液设计量"
+    },
+    "flush_volume_design": {
+      "value": "14",
+      "unit": "m³",
+      "type": "直接输入",
+      "source": "10055.doc 施工设计",
+      "note": "完井尾管驱油冲洗液设计量"
+    },
+    "plug_fluid_density": {
+      "value": "1.50",
+      "unit": "g/cm³",
+      "type": "直接输入",
+      "source": "10055.doc 施工设计",
+      "note": "压塞液密度"
+    },
+    "plug_fluid_volume": {
+      "value": "5.0",
+      "unit": "m³",
+      "type": "直接输入",
+      "source": "10055.doc 施工设计",
+      "note": "压塞液体积"
+    },
+    "displacement_mud_density": {
+      "value": "1.50",
+      "unit": "g/cm³",
+      "type": "直接输入",
+      "source": "10055.doc 施工设计",
+      "note": "顶替轻泥浆密度"
+    },
+    "displacement_mud_volume": {
+      "value": "110.0",
+      "unit": "m³",
+      "type": "直接输入",
+      "source": "10055.doc 施工设计",
+      "note": "顶替轻泥浆体积"
+    },
+    "displacement_volume_total": {
+      "value": "117.4",
+      "unit": "m³",
+      "type": "直接输入",
+      "source": "10055.doc 施工设计",
+      "note": "理论顶替总量（包含后置液）并附加2%压缩系数"
+    },
+    "pump_rate_main": {
+      "value": "1.3",
+      "unit": "m³/min",
+      "type": "直接输入",
+      "source": "10055.doc 施工设计",
+      "note": "注前置液及水泥浆主排量"
+    },
+    "pump_rate_displacement_schedule": {
+      "value": "1.5-1.0-0.8-0.6",
+      "unit": "m³/min",
+      "type": "直接输入",
+      "source": "10055.doc 施工设计",
+      "note": "替浆变排量施工制度"
+    },
+    "max_bottomhole_equivalent_density": {
+      "value": "2.411",
+      "unit": "g/cm³",
+      "type": "直接输入",
+      "source": "10055.doc 施工设计",
+      "note": "施工井底最大动当量密度"
+    },
+    "max_pump_pressure": {
+      "value": "47",
+      "unit": "MPa",
+      "type": "直接输入",
+      "source": "10055.doc 施工设计",
+      "note": "施工最高泵压"
+    },
+    "centralizer_count_total": {
+      "value": "149",
+      "unit": "ea",
+      "type": "直接输入",
+      "source": "10055.doc 施工设计",
+      "note": "241.3×193.7整体弹性扶正器总数"
+    },
+    "standoff_proxy": {
+      "value": "86.5",
+      "unit": "%",
+      "type": "直接输入",
+      "source": "10055.doc 施工设计",
+      "note": "设计书中的居中度模拟值，可作为standoff代理"
+    },
+    "spacer_density_field": {
+      "value": "1.92",
+      "unit": "g/cm³",
+      "type": "直接输入",
+      "source": "20314.doc / well_spacer_summary_fixed.csv",
+      "note": "现场隔离液性能"
+    },
+    "spacer_pv_field": {
+      "value": "35",
+      "unit": "mPa·s",
+      "type": "直接输入",
+      "source": "20314.doc / well_spacer_summary_fixed.csv",
+      "note": "现场隔离液塑粘"
+    },
+    "spacer_yp_field": {
+      "value": "8",
+      "unit": "Pa",
+      "type": "直接输入",
+      "source": "20314.doc / well_spacer_summary_fixed.csv",
+      "note": "现场隔离液屈服值"
+    },
+    "spacer_filtration_field": {
+      "value": "10",
+      "unit": "mL",
+      "type": "直接输入",
+      "source": "20314.doc / well_spacer_summary_fixed.csv",
+      "note": "现场隔离液滤失量"
+    },
+    "spacer_wash_efficiency": {
+      "value": "97.3",
+      "unit": "%",
+      "type": "直接输入",
+      "source": "203211.docx / well_spacer_summary_fixed.csv",
+      "note": "驱油隔离液冲洗效率"
+    },
+    "lead_thickening_time": {
+      "value": "493",
+      "unit": "min",
+      "type": "直接输入",
+      "source": "203211.docx / well_spacer_summary_fixed.csv",
+      "note": "回接领浆稠化时间"
+    },
+    "tail_thickening_time": {
+      "value": "295",
+      "unit": "min",
+      "type": "直接输入",
+      "source": "203211.docx / well_spacer_summary_fixed.csv",
+      "note": "回接尾浆稠化时间"
+    },
+    "lead_fluid_loss": {
+      "value": "42",
+      "unit": "mL",
+      "type": "直接输入",
+      "source": "203211.docx / well_spacer_summary_fixed.csv",
+      "note": "回接领浆API失水"
+    },
+    "tail_fluid_loss": {
+      "value": "35",
+      "unit": "mL",
+      "type": "直接输入",
+      "source": "203211.docx / well_spacer_summary_fixed.csv",
+      "note": "回接尾浆API失水"
+    },
+    "lead_24h_strength": {
+      "value": "11.5",
+      "unit": "MPa",
+      "type": "直接输入",
+      "source": "203211.docx / well_spacer_summary_fixed.csv",
+      "note": "回接领浆24h强度"
+    },
+    "tail_24h_strength": {
+      "value": "14.7",
+      "unit": "MPa",
+      "type": "直接输入",
+      "source": "203211.docx / well_spacer_summary_fixed.csv",
+      "note": "回接尾浆24h强度"
+    },
+    "quality_label_upper_tail": {
+      "value": "0.04",
+      "unit": "%",
+      "type": "直接输入",
+      "source": "100515.pdf",
+      "note": "φ168.30mm完井尾管固井质量综合合格率"
+    },
+    "quality_label_lower_tail": {
+      "value": "12.06",
+      "unit": "%",
+      "type": "直接输入",
+      "source": "100516.pdf",
+      "note": "φ139.70mm完井尾管固井质量综合合格率"
+    }
+  },
+  "model_ready_candidate": {
+    "target_section": "lower_tail_139_7mm",
+    "status": "可运行候选（仍含代理项）",
+    "rationale": "若按 hu102_tail_d2dga_model.py 的单一 139.7mm 尾管口径建模，呼103 的下段 φ139.70mm 完井尾管最接近该结构。",
+    "direct_fields": {
+      "well_top_md_m": 7330.6,
+      "well_bottom_md_m": 7770.0,
+      "bit_diameter_mm": 215.9,
+      "liner_od_mm": 139.7,
+      "cement_density_gcc": 2.05,
+      "field_reference_efficiency_pct": 12.06,
+      "field_reference_label": "100516.pdf 完井尾管固井质量测井评价图：测量井段内固井水泥一、二界面综合合格率 12.06%",
+      "mud_density_cementing_gcc": 1.98,
+      "mud_density_cbl_header_gcc": 1.18,
+      "mud_pv_mpas": 54.0,
+      "mud_gel_initial_pa": 4.0,
+      "mud_gel_final_pa": 12.5,
+      "lead_density_gcc": 2.05,
+      "intermediate_density_gcc": 2.05,
+      "tail_density_gcc": 2.05,
+      "lead_n": 0.82,
+      "lead_k_pa_s_n": 0.67,
+      "intermediate_n": 0.76,
+      "intermediate_k_pa_s_n": 1.11,
+      "tail_n": 0.76,
+      "tail_k_pa_s_n": 1.14,
+      "lead_thickening_time_min": 390.0,
+      "intermediate_thickening_time_min": 176.0,
+      "tail_thickening_time_min": 153.0,
+      "lead_fluid_loss_ml": 30.0,
+      "intermediate_fluid_loss_ml": 28.0,
+      "tail_fluid_loss_ml": 29.0,
+      "lead_24h_strength_mpa": 4.6,
+      "intermediate_24h_strength_mpa": 5.9,
+      "tail_24h_strength_mpa": 15.3,
+      "spacer_density_gcc": "2.00+1.95",
+      "spacer_wash_efficiency_pct": 96.8,
+      "compatibility_summary": "领浆与钻井液/平衡液/驱油隔离液组合均完成相容性实验"
+    },
+    "proxy_or_assumed_fields": {
+      "hole_diameter_profile": {
+        "value": "bit_diameter_mm as nominal lower-tail hole size",
+        "reason": "缺少可直接导入的井径剖面时，可先用 215.9mm 名义井眼做运行候选；20317.xlsx 与设计书共同支持该下段口径"
+      },
+      "inclination_profile": {
+        "value": "",
+        "reason": "尚缺井斜剖面，需后续补提"
+      },
+      "standoff_profile": {
+        "value": "use 86.5% design centralization as baseline proxy",
+        "reason": "已有设计书居中度模拟值 86.5%，仍非分段剖面"
+      }
+    },
+    "sources": [
+      "D:\\users\\desktop\\research\\控压固井项目\\0708\\1\\1005\\10051\\100516.pdf",
+      "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\203\\2031\\20311\\203111.docx",
+      "D:\\users\\desktop\\research\\控压固井项目\\0708\\1\\1005\\10055.doc",
+      "D:\\users\\desktop\\research\\控压固井项目\\0708\\1\\1005\\10052.xlsx",
+      "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\203\\2031\\20317.xlsx",
+      "D:\\users\\desktop\\research\\控压固井项目\\0708\\导出\\sisyphus_output\\well_spacer_summary_fixed.csv"
+    ]
+  },
+  "quality_labels": {
+    "upper_tail_168_3mm": {
+      "interval_md": "5540.000-7330.600",
+      "qualification_rate_pct": 0.04,
+      "overall_quality": "不合格",
+      "qualification_threshold_pct": 70.0,
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\1\\1005\\10051\\100515.pdf"
+    },
+    "lower_tail_139_7mm": {
+      "interval_md": "7338.000-7712.000",
+      "qualification_rate_pct": 12.06,
+      "overall_quality": "不合格",
+      "qualification_threshold_pct": 70.0,
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\1\\1005\\10051\\100516.pdf",
+      "extra_note": "油气水层段内及以上25m无连续胶结中等及以上"
+    }
+  },
+  "known_gaps": [
+    "未确认可直接用于D2DGA网格的井径/井斜实测剖面CSV或Excel",
+    "未确认双层套管等效段在呼103完井尾管模拟中的处理方式",
+    "虽有设计居中度 86.5%，但仍缺显式分段 standoff / 偏心剖面",
+    "未确认原始实时压力/排量曲线数字序列"
+  ],
+  "notes": [
+    "当前资料同时覆盖呼103的回接固井和完井尾管固井；第二版已经优先采用完井尾管专属实验参数和完井尾管施工设计，回接资料仅作为补充证据。",
+    "呼103有两个不同尾管质量标签（φ168.30mm 与 φ139.70mm），正式数值模拟前需要先明确本次模型的目标井段。",
+    "若后续确认模拟对象为φ139.70mm完井尾管，则应优先使用 7330.600–7770.000m 结构与 12.06% 质量标签。",
+    "第二版可作为高可信度运行包，但其标签仍是 CBL 质量代理标签，不是直接测得的水力顶替效率。"
+  ]
+}

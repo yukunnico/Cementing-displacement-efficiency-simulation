@@ -1,0 +1,292 @@
+{
+  "project": "呼101井油层尾管控压固井",
+  "goal": "固井顶替过程与最终顶替效率模型输入整理",
+  "recommended_inputs": {
+    "well_depth_md": {
+      "value": "7868",
+      "unit": "m",
+      "type": "直接输入",
+      "source": "设计+井史",
+      "note": "实际完钻井深"
+    },
+    "cement_top_md_design": {
+      "value": "5400",
+      "unit": "m",
+      "type": "直接输入",
+      "source": "尾管设计/施工记录",
+      "note": "设计返深"
+    },
+    "cement_top_md_actual": {
+      "value": "5407.5",
+      "unit": "m",
+      "type": "直接输入",
+      "source": "井史总结",
+      "note": "实际返深，建议与设计值并存"
+    },
+    "cement_bottom_md": {
+      "value": "7868",
+      "unit": "m",
+      "type": "直接输入",
+      "source": "尾管设计",
+      "note": "固井井段底部"
+    },
+    "lead_interval_top_md": {
+      "value": "5400",
+      "unit": "m",
+      "type": "直接输入",
+      "source": "尾管设计",
+      "note": "领浆段顶部"
+    },
+    "lead_interval_bottom_md": {
+      "value": "6800",
+      "unit": "m",
+      "type": "直接输入",
+      "source": "尾管设计",
+      "note": "领浆段底部"
+    },
+    "tail_interval_top_md": {
+      "value": "6800",
+      "unit": "m",
+      "type": "直接输入",
+      "source": "尾管设计",
+      "note": "尾浆段顶部"
+    },
+    "tail_interval_bottom_md": {
+      "value": "7868",
+      "unit": "m",
+      "type": "直接输入",
+      "source": "尾管设计",
+      "note": "尾浆段底部"
+    },
+    "hole_diameter_upper": {
+      "value": "260.35",
+      "unit": "mm",
+      "type": "直接输入",
+      "source": "尾管设计",
+      "note": "上段井眼尺寸"
+    },
+    "hole_diameter_lower": {
+      "value": "215.90",
+      "unit": "mm",
+      "type": "直接输入",
+      "source": "尾管设计",
+      "note": "下段井眼尺寸"
+    },
+    "liner_od_upper": {
+      "value": "168.3",
+      "unit": "mm",
+      "type": "直接输入",
+      "source": "尾管设计",
+      "note": "上段尾管外径"
+    },
+    "liner_od_lower": {
+      "value": "139.7",
+      "unit": "mm",
+      "type": "直接输入",
+      "source": "尾管设计",
+      "note": "下段尾管外径"
+    },
+    "mud_density": {
+      "value": "1.96",
+      "unit": "g/cm³",
+      "type": "直接输入",
+      "source": "尾管设计",
+      "note": "油基泥浆"
+    },
+    "balance_fluid_density": {
+      "value": "1.85",
+      "unit": "g/cm³",
+      "type": "直接输入",
+      "source": "尾管设计",
+      "note": "平衡液/轻泥浆"
+    },
+    "spacer_density_front": {
+      "value": "2.00",
+      "unit": "g/cm³",
+      "type": "直接输入",
+      "source": "尾管设计",
+      "note": "前置驱油隔离液"
+    },
+    "lead_slurry_density": {
+      "value": "2.10",
+      "unit": "g/cm³",
+      "type": "直接输入",
+      "source": "2011121 + 施工记录",
+      "note": "领浆平均实测"
+    },
+    "tail_slurry_density": {
+      "value": "1.90",
+      "unit": "g/cm³",
+      "type": "直接输入",
+      "source": "2011121 + 施工记录",
+      "note": "尾浆平均实测"
+    },
+    "lead_n_primary": {
+      "value": "0.719",
+      "unit": "-",
+      "type": "直接输入",
+      "source": "2011121",
+      "note": "主报告值"
+    },
+    "lead_K_primary": {
+      "value": "0.815",
+      "unit": "Pa·sⁿ",
+      "type": "直接输入",
+      "source": "2011121",
+      "note": "主报告值"
+    },
+    "lead_n_retest": {
+      "value": "0.844",
+      "unit": "-",
+      "type": "敏感性分析",
+      "source": "2011122 扫描页",
+      "note": "复检值"
+    },
+    "lead_K_retest": {
+      "value": "0.381",
+      "unit": "Pa·sⁿ",
+      "type": "敏感性分析",
+      "source": "2011122 扫描页",
+      "note": "复检值"
+    },
+    "tail_n_primary": {
+      "value": "0.722",
+      "unit": "-",
+      "type": "直接输入",
+      "source": "2011121",
+      "note": "主报告值"
+    },
+    "tail_K_primary": {
+      "value": "0.684",
+      "unit": "Pa·sⁿ",
+      "type": "直接输入",
+      "source": "2011121",
+      "note": "主报告值"
+    },
+    "tail_n_retest": {
+      "value": "0.830",
+      "unit": "-",
+      "type": "敏感性分析",
+      "source": "2011122 扫描页",
+      "note": "复检值"
+    },
+    "tail_K_retest": {
+      "value": "0.352",
+      "unit": "Pa·sⁿ",
+      "type": "敏感性分析",
+      "source": "2011122 扫描页",
+      "note": "复检值"
+    },
+    "mud_PV": {
+      "value": "58",
+      "unit": "mPa·s",
+      "type": "直接输入",
+      "source": "尾管设计",
+      "note": "65℃"
+    },
+    "mud_YP": {
+      "value": "9.2",
+      "unit": "Pa",
+      "type": "直接输入",
+      "source": "尾管设计",
+      "note": "65℃"
+    },
+    "pump_rate_main": {
+      "value": "1.2",
+      "unit": "m³/min",
+      "type": "直接输入",
+      "source": "尾管设计+施工记录",
+      "note": "主注入阶段"
+    },
+    "pump_rate_displacement_low": {
+      "value": "0.55",
+      "unit": "m³/min",
+      "type": "直接输入",
+      "source": "施工记录",
+      "note": "末段降排量"
+    },
+    "displacement_volume_total": {
+      "value": "101.4",
+      "unit": "m³",
+      "type": "直接输入",
+      "source": "施工记录",
+      "note": "实际替浆量"
+    },
+    "safe_window_lower": {
+      "value": "2.00",
+      "unit": "g/cm³",
+      "type": "直接输入",
+      "source": "尾管设计",
+      "note": "压稳下限"
+    },
+    "safe_window_upper": {
+      "value": "2.04",
+      "unit": "g/cm³",
+      "type": "直接输入",
+      "source": "尾管设计",
+      "note": "漏失上限"
+    },
+    "sensitive_depth_gas": {
+      "value": "7492",
+      "unit": "m",
+      "type": "直接输入",
+      "source": "尾管设计+施工记录",
+      "note": "气层顶"
+    },
+    "sensitive_depth_loss": {
+      "value": "7598",
+      "unit": "m",
+      "type": "直接输入",
+      "source": "尾管设计",
+      "note": "漏层敏感点"
+    },
+    "annular_velocity_168_nominal_at_1p2": {
+      "value": "0.645",
+      "unit": "m/s",
+      "type": "建议计算",
+      "source": "由井眼尺寸+尾管外径+排量计算",
+      "note": "基于 260.35 mm × 168.3 mm"
+    },
+    "annular_velocity_139_nominal_at_1p2": {
+      "value": "0.94",
+      "unit": "m/s",
+      "type": "建议计算",
+      "source": "由井眼尺寸+尾管外径+排量计算",
+      "note": "基于 215.9 mm × 139.7 mm"
+    },
+    "annular_velocity_139_nominal_at_0p55": {
+      "value": "0.431",
+      "unit": "m/s",
+      "type": "建议计算",
+      "source": "由井眼尺寸+尾管外径+排量计算",
+      "note": "末段降排量工况"
+    },
+    "hanger_single_side_clearance": {
+      "value": "6.69",
+      "unit": "mm",
+      "type": "直接输入",
+      "source": "尾管设计",
+      "note": "偏心/卡阻风险修正量"
+    },
+    "centralizer_count_total": {
+      "value": "132",
+      "unit": "ea",
+      "type": "直接输入",
+      "source": "尾管设计",
+      "note": "居中度边界信息"
+    }
+  },
+  "known_gaps": [
+    "显式顶替效率数值（平均值/%）",
+    "局部低效率井段的定量分布",
+    "隔离液完整流变参数（n、K、τy）",
+    "显式偏心率或 standoff 数值表",
+    "完整实时压力/排量曲线数字化序列",
+    "HB 参数或屈服应力 τy（浆体/隔离液）"
+  ],
+  "notes": [
+    "2011121 与 2011122 的浆体流变和强度存在复检差异，建议建模时将复检值作为敏感性分析区间。",
+    "当前资料未发现显式“顶替效率百分比”或分段顶替效率剖面，模型输出仍需数值模拟或测井反演补足。",
+    "annular_velocity_* 为基于名义井眼尺寸、尾管外径和给定排量的推导值，不是文档直接给出的现场测量值。"
+  ]
+}

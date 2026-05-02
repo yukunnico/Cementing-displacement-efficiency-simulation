@@ -1,0 +1,1908 @@
+{
+  "source_pdf": "D:\\users\\desktop\\research\\控压固井项目\\参考文档\\呼101\\100312.PDF",
+  "output_file_type": "detailed_structured_json",
+  "document_type": "固井质量测井评价图",
+  "well_name": "呼101井",
+  "generated_from": {
+    "cbl_profile_csv": "D:\\users\\desktop\\research\\控压固井项目\\temp_pdf_extract\\cbl_depth_profile_v2.csv",
+    "ocr_inventory_csv": "D:\\users\\desktop\\research\\控压固井项目\\temp_pdf_extract\\full_ocr_inventory.csv"
+  },
+  "header_metadata": {
+    "report_title": "固井质量测井评价图",
+    "depth_scale": "1:200",
+    "logging_company": "中油测井新疆分公司",
+    "operator_company": "西部钻探",
+    "field_unit": "新疆油田分公司",
+    "logging_tool": "CPLog",
+    "interpretation_software": "LEAD",
+    "well_type": "预探井",
+    "logging_date": "2022-12-15",
+    "interpretation_date": "2022-12-16",
+    "cementing_date": "2022-11-12"
+  },
+  "engineering_metadata": {
+    "measured_interval_top_md_m": 5390.0,
+    "measured_interval_bottom_md_m": 7810.0,
+    "completed_depth_md_m": 7868.0,
+    "electric_log_depth_md_m": 7810.0,
+    "artificial_bottom_md_m": 7809.4,
+    "cbl_measured_cement_top_md_m": 5402.85,
+    "hanger_position_md_m": {
+      "top": 5402.85,
+      "bottom": 5407.46
+    },
+    "mud_density_g_cm3": 1.96,
+    "cement_density_g_cm3": 2.1,
+    "target_interval_md_m": {
+      "top": 6153.0,
+      "bottom": 7741.0
+    },
+    "dual_casing_excluded_interval_md_m": {
+      "top": 5390.0,
+      "bottom": 5699.8
+    }
+  },
+  "quality_evaluation": {
+    "overall_quality": "不合格",
+    "target_interval_quality": "不合格",
+    "bond_qualification_rate_pct": 62.77,
+    "qualification_threshold_pct": 70.0,
+    "redline_violation": true,
+    "note": "测量井段内水泥胶结质量合格率为62.77%，未达到应封固井段的70.00%"
+  },
+  "track_legend": [
+    {
+      "track": "声波时差",
+      "range": "100-500",
+      "unit": "us/m"
+    },
+    {
+      "track": "磁定位",
+      "range": "-500~500",
+      "unit": "mV"
+    },
+    {
+      "track": "声幅",
+      "range": "0-100",
+      "unit": "%"
+    },
+    {
+      "track": "变密度",
+      "range": "-500~500",
+      "unit": "mV"
+    },
+    {
+      "track": "二界面",
+      "range": "0-100",
+      "unit": "relative"
+    },
+    {
+      "track": "井径",
+      "range": "10-50",
+      "unit": "cm"
+    },
+    {
+      "track": "自然伽玛(生产)",
+      "range": "100-2050",
+      "unit": "API"
+    }
+  ],
+  "interpretation_labels": [
+    "胶结良好",
+    "胶结中等",
+    "胶结差",
+    "空套管"
+  ],
+  "cbl_profile_summary": {
+    "full_interval_5500_7810": {
+      "top_md_m": 5500,
+      "bottom_md_m": 7810,
+      "sample_count": 232,
+      "mean_cbl_amplitude_pct": 11.3806,
+      "min_cbl_amplitude_pct": 3.3,
+      "max_cbl_amplitude_pct": 93.0,
+      "mean_quality_proxy": 0.8862
+    },
+    "zone_5700_6100": {
+      "top_md_m": 5700,
+      "bottom_md_m": 6100,
+      "sample_count": 41,
+      "mean_cbl_amplitude_pct": 17.4854,
+      "min_cbl_amplitude_pct": 3.3,
+      "max_cbl_amplitude_pct": 92.6,
+      "mean_quality_proxy": 0.8251
+    },
+    "zone_6100_6400": {
+      "top_md_m": 6100,
+      "bottom_md_m": 6400,
+      "sample_count": 31,
+      "mean_cbl_amplitude_pct": 39.3968,
+      "min_cbl_amplitude_pct": 3.7,
+      "max_cbl_amplitude_pct": 93.0,
+      "mean_quality_proxy": 0.606
+    },
+    "zone_6400_7810": {
+      "top_md_m": 6400,
+      "bottom_md_m": 7810,
+      "sample_count": 142,
+      "mean_cbl_amplitude_pct": 5.0373,
+      "min_cbl_amplitude_pct": 3.3,
+      "max_cbl_amplitude_pct": 8.9,
+      "mean_quality_proxy": 0.9496
+    },
+    "zone_6153_7741_target_interval": {
+      "top_md_m": 6153,
+      "bottom_md_m": 7741,
+      "sample_count": 159,
+      "mean_cbl_amplitude_pct": 8.4541,
+      "min_cbl_amplitude_pct": 3.3,
+      "max_cbl_amplitude_pct": 92.6,
+      "mean_quality_proxy": 0.9155
+    }
+  },
+  "key_observations": [
+    "6100-6400m 为最明显异常段，CBL 声幅显著升高，应视为重点差胶结/窜流风险区。",
+    "6400m 以下大部分区段声幅较低，图像提取结果表现为胶结质量代理值较高。",
+    "CBL 实测返高 5402.85m 与井史 5407.5m 存在约 4.65m 差异，应作为独立实测锚点保留。",
+    "5390.0-5699.8m 为双层套管，不应与目的井段胶结质量混同评价。"
+  ],
+  "selected_ocr_header_items": [
+    {
+      "text": "中国石油集团测井有限公司",
+      "confidence": 0.9209,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "CHINANATIONALLOGGINGCORPORATION",
+      "confidence": 0.961,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "呼101井",
+      "confidence": 0.8001,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "固井质量测井评价图",
+      "confidence": 0.8405,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "深度比例：1:200",
+      "confidence": 0.878,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "用户单位",
+      "confidence": 0.7894,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "测井公司",
+      "confidence": 0.7463,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "中油测井新疆分公司",
+      "confidence": 0.8674,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "新疆油田分公司",
+      "confidence": 0.8613,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "固井日期",
+      "confidence": 0.7873,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "2022-11-12",
+      "confidence": 0.8452,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "CPLog",
+      "confidence": 0.8319,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "测井日期",
+      "confidence": 0.7857,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "呼图壁气田呼探1井区",
+      "confidence": 0.8713,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "2022-12-15",
+      "confidence": 0.8643,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "解释软件",
+      "confidence": 0.7962,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "LEAD",
+      "confidence": 0.7702,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "解释日期",
+      "confidence": 0.7693,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "2022-12-16",
+      "confidence": 0.8999,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "测井项目",
+      "confidence": 0.79,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "固井单位",
+      "confidence": 0.7626,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "5390.000-7810.000m",
+      "confidence": 0.8388,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "声幅变密度,校深（GR/CCL）",
+      "confidence": 0.8686,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "西部钻探",
+      "confidence": 0.7881,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "完钻井深",
+      "confidence": 0.7825,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "5402.850m",
+      "confidence": 0.7549,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "固井类别",
+      "confidence": 0.7701,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "7868.000m",
+      "confidence": 0.8755,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "套管固井",
+      "confidence": 0.7871,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "人工井底",
+      "confidence": 0.7692,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "7809.400m",
+      "confidence": 0.8707,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "固井方式",
+      "confidence": 0.7906,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "5402.850m",
+      "confidence": 0.8946,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "单级固井",
+      "confidence": 0.7775,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "钻头程序",
+      "confidence": 0.7952,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "悬挂器位置",
+      "confidence": 0.8231,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "215.900mm*7868.000m",
+      "confidence": 0.8987,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "井液性质",
+      "confidence": 0.7612,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "5402.850-5407.460m",
+      "confidence": 0.7916,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "泥浆（1.960g/cm）",
+      "confidence": 0.8588,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "套管程序",
+      "confidence": 0.791,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "表层套管",
+      "confidence": 0.773,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "分级箍位置",
+      "confidence": 0.8308,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "钻井单位",
+      "confidence": 0.7828,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "609.6001mn*486.750m",
+      "confidence": 0.8293,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "西部钻探",
+      "confidence": 0.7845,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "技术套管",
+      "confidence": 0.7993,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "473050mm*304920cm",
+      "confidence": 0.862,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "7432.910-7434.260m",
+      "confidence": 0.9331,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "365130mm*3935.850m",
+      "confidence": 0.8721,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "6153.000-7741.0001m",
+      "confidence": 0.8379,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "短套管下深",
+      "confidence": 0.7604,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "273.05on*5699 800m",
+      "confidence": 0.7492,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "生产套管",
+      "confidence": 0.7992,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "168.300mm*6796.130m",
+      "confidence": 0.9008,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "7638.050-7639.400m",
+      "confidence": 0.8694,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "139.700mm*7868.000m",
+      "confidence": 0.9199,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "水泥密度",
+      "confidence": 0.7938,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "2.100g/cm²",
+      "confidence": 0.7856,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "X:4888395.000",
+      "confidence": 0.9063,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "169.880t",
+      "confidence": 0.8242,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "5402.850-7868.000m",
+      "confidence": 0.875,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "不合格",
+      "confidence": 0.7486,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "Y:15477727.000",
+      "confidence": 0.927,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "目的井段固井质量",
+      "confidence": 0.7774,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "不合格",
+      "confidence": 0.7473,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "电测井深：7810.00m。5390.00-5699.80m为双层套管二界面不作评价。违反七条红线规定：测",
+      "confidence": 0.9273,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "技术说明",
+      "confidence": 0.7993,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "量井段内水泥胶结质量合格率为62.77%，未达到应封固井段的70.00%",
+      "confidence": 0.8935,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "作业队号",
+      "confidence": 0.7712,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "李永涛",
+      "confidence": 0.7487,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "C4490",
+      "confidence": 0.8268,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "田仕勇",
+      "confidence": 0.7419,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "审核员",
+      "confidence": 0.7488,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "校对人",
+      "confidence": 0.7469,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "同古力克",
+      "confidence": 0.7471,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "迟彦华",
+      "confidence": 0.748,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "胶结中等",
+      "confidence": 0.7991,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "胶结差",
+      "confidence": 0.7482,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "胶结良好",
+      "confidence": 0.7963,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "解释结论",
+      "confidence": 0.7454,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "100",
+      "confidence": 0.7474,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "声波时差",
+      "confidence": 0.7632,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "磁定位",
+      "confidence": 0.7438,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "变密度",
+      "confidence": 0.7497,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "100",
+      "confidence": 0.7475,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "(us/m)",
+      "confidence": 0.8202,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "100",
+      "confidence": 0.741,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "500",
+      "confidence": 0.7487,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "自然伽玛（生产）",
+      "confidence": 0.7879,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "2050",
+      "confidence": 0.7866,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "5400",
+      "confidence": 0.7997,
+      "depth_md_m": 5390.0
+    },
+    {
+      "text": "5420",
+      "confidence": 0.7763,
+      "depth_md_m": 6120.0
+    },
+    {
+      "text": "5450",
+      "confidence": 0.7994,
+      "depth_md_m": 7810.0
+    },
+    {
+      "text": "5460",
+      "confidence": 0.7736,
+      "depth_md_m": 7810.0
+    },
+    {
+      "text": "5470",
+      "confidence": 0.7419,
+      "depth_md_m": 7810.0
+    },
+    {
+      "text": "5480",
+      "confidence": 0.7824,
+      "depth_md_m": 7810.0
+    },
+    {
+      "text": "5490",
+      "confidence": 0.797,
+      "depth_md_m": 7810.0
+    },
+    {
+      "text": "5500",
+      "confidence": 0.7996,
+      "depth_md_m": 7810.0
+    },
+    {
+      "text": "5510",
+      "confidence": 0.7996,
+      "depth_md_m": 7810.0
+    },
+    {
+      "text": "5520",
+      "confidence": 0.7995,
+      "depth_md_m": 7810.0
+    },
+    {
+      "text": "5530",
+      "confidence": 0.7997,
+      "depth_md_m": 7810.0
+    },
+    {
+      "text": "5540",
+      "confidence": 0.7995,
+      "depth_md_m": 7810.0
+    },
+    {
+      "text": "5550",
+      "confidence": 0.7993,
+      "depth_md_m": 7810.0
+    },
+    {
+      "text": "5570",
+      "confidence": 0.7995,
+      "depth_md_m": 7810.0
+    },
+    {
+      "text": "5580",
+      "confidence": 0.7995,
+      "depth_md_m": 7810.0
+    },
+    {
+      "text": "5590",
+      "confidence": 0.7904,
+      "depth_md_m": 7810.0
+    },
+    {
+      "text": "5600",
+      "confidence": 0.7996,
+      "depth_md_m": 7810.0
+    },
+    {
+      "text": "5610",
+      "confidence": 0.7666,
+      "depth_md_m": 7810.0
+    },
+    {
+      "text": "5620",
+      "confidence": 0.7991,
+      "depth_md_m": 7810.0
+    },
+    {
+      "text": "5630",
+      "confidence": 0.7996,
+      "depth_md_m": 7810.0
+    },
+    {
+      "text": "5640",
+      "confidence": 0.7994,
+      "depth_md_m": 7810.0
+    },
+    {
+      "text": "5650",
+      "confidence": 0.7987,
+      "depth_md_m": 7810.0
+    },
+    {
+      "text": "...........",
+      "confidence": 0.7476,
+      "depth_md_m": 7810.0
+    },
+    {
+      "text": "5660",
+      "confidence": 0.7995,
+      "depth_md_m": 7810.0
+    },
+    {
+      "text": "5670",
+      "confidence": 0.7997,
+      "depth_md_m": 7810.0
+    },
+    {
+      "text": "5680",
+      "confidence": 0.7991,
+      "depth_md_m": 7810.0
+    },
+    {
+      "text": "......",
+      "confidence": 0.7462,
+      "depth_md_m": 7810.0
+    },
+    {
+      "text": "...........",
+      "confidence": 0.7742,
+      "depth_md_m": 7810.0
+    }
+  ],
+  "cbl_depth_profile": [
+    {
+      "depth_md_m": 5500.0,
+      "cbl_amplitude_pct": 3.7,
+      "quality_proxy": 0.963
+    },
+    {
+      "depth_md_m": 5510.0,
+      "cbl_amplitude_pct": 3.7,
+      "quality_proxy": 0.963
+    },
+    {
+      "depth_md_m": 5520.0,
+      "cbl_amplitude_pct": 3.7,
+      "quality_proxy": 0.963
+    },
+    {
+      "depth_md_m": 5530.0,
+      "cbl_amplitude_pct": 4.1,
+      "quality_proxy": 0.959
+    },
+    {
+      "depth_md_m": 5540.0,
+      "cbl_amplitude_pct": 3.7,
+      "quality_proxy": 0.963
+    },
+    {
+      "depth_md_m": 5550.0,
+      "cbl_amplitude_pct": 3.7,
+      "quality_proxy": 0.963
+    },
+    {
+      "depth_md_m": 5560.0,
+      "cbl_amplitude_pct": 4.1,
+      "quality_proxy": 0.959
+    },
+    {
+      "depth_md_m": 5570.0,
+      "cbl_amplitude_pct": 4.4,
+      "quality_proxy": 0.956
+    },
+    {
+      "depth_md_m": 5580.0,
+      "cbl_amplitude_pct": 4.4,
+      "quality_proxy": 0.956
+    },
+    {
+      "depth_md_m": 5590.0,
+      "cbl_amplitude_pct": 4.8,
+      "quality_proxy": 0.952
+    },
+    {
+      "depth_md_m": 5600.0,
+      "cbl_amplitude_pct": 4.4,
+      "quality_proxy": 0.956
+    },
+    {
+      "depth_md_m": 5610.0,
+      "cbl_amplitude_pct": 4.1,
+      "quality_proxy": 0.959
+    },
+    {
+      "depth_md_m": 5620.0,
+      "cbl_amplitude_pct": 4.4,
+      "quality_proxy": 0.956
+    },
+    {
+      "depth_md_m": 5630.0,
+      "cbl_amplitude_pct": 4.8,
+      "quality_proxy": 0.952
+    },
+    {
+      "depth_md_m": 5640.0,
+      "cbl_amplitude_pct": 3.7,
+      "quality_proxy": 0.963
+    },
+    {
+      "depth_md_m": 5650.0,
+      "cbl_amplitude_pct": 4.4,
+      "quality_proxy": 0.956
+    },
+    {
+      "depth_md_m": 5660.0,
+      "cbl_amplitude_pct": 4.4,
+      "quality_proxy": 0.956
+    },
+    {
+      "depth_md_m": 5670.0,
+      "cbl_amplitude_pct": 4.8,
+      "quality_proxy": 0.952
+    },
+    {
+      "depth_md_m": 5680.0,
+      "cbl_amplitude_pct": 4.1,
+      "quality_proxy": 0.959
+    },
+    {
+      "depth_md_m": 5690.0,
+      "cbl_amplitude_pct": 4.1,
+      "quality_proxy": 0.959
+    },
+    {
+      "depth_md_m": 5700.0,
+      "cbl_amplitude_pct": 4.4,
+      "quality_proxy": 0.956
+    },
+    {
+      "depth_md_m": 5710.0,
+      "cbl_amplitude_pct": 4.8,
+      "quality_proxy": 0.952
+    },
+    {
+      "depth_md_m": 5720.0,
+      "cbl_amplitude_pct": 4.8,
+      "quality_proxy": 0.952
+    },
+    {
+      "depth_md_m": 5730.0,
+      "cbl_amplitude_pct": 4.8,
+      "quality_proxy": 0.952
+    },
+    {
+      "depth_md_m": 5740.0,
+      "cbl_amplitude_pct": 4.8,
+      "quality_proxy": 0.952
+    },
+    {
+      "depth_md_m": 5750.0,
+      "cbl_amplitude_pct": 4.8,
+      "quality_proxy": 0.952
+    },
+    {
+      "depth_md_m": 5760.0,
+      "cbl_amplitude_pct": 4.1,
+      "quality_proxy": 0.959
+    },
+    {
+      "depth_md_m": 5770.0,
+      "cbl_amplitude_pct": 4.8,
+      "quality_proxy": 0.952
+    },
+    {
+      "depth_md_m": 5780.0,
+      "cbl_amplitude_pct": 3.7,
+      "quality_proxy": 0.963
+    },
+    {
+      "depth_md_m": 5790.0,
+      "cbl_amplitude_pct": 3.7,
+      "quality_proxy": 0.963
+    },
+    {
+      "depth_md_m": 5800.0,
+      "cbl_amplitude_pct": 4.1,
+      "quality_proxy": 0.959
+    },
+    {
+      "depth_md_m": 5810.0,
+      "cbl_amplitude_pct": 3.3,
+      "quality_proxy": 0.967
+    },
+    {
+      "depth_md_m": 5820.0,
+      "cbl_amplitude_pct": 4.1,
+      "quality_proxy": 0.959
+    },
+    {
+      "depth_md_m": 5830.0,
+      "cbl_amplitude_pct": 4.1,
+      "quality_proxy": 0.959
+    },
+    {
+      "depth_md_m": 5840.0,
+      "cbl_amplitude_pct": 4.8,
+      "quality_proxy": 0.952
+    },
+    {
+      "depth_md_m": 5850.0,
+      "cbl_amplitude_pct": 4.8,
+      "quality_proxy": 0.952
+    },
+    {
+      "depth_md_m": 5860.0,
+      "cbl_amplitude_pct": 4.1,
+      "quality_proxy": 0.959
+    },
+    {
+      "depth_md_m": 5870.0,
+      "cbl_amplitude_pct": 4.1,
+      "quality_proxy": 0.959
+    },
+    {
+      "depth_md_m": 5880.0,
+      "cbl_amplitude_pct": 5.2,
+      "quality_proxy": 0.948
+    },
+    {
+      "depth_md_m": 5890.0,
+      "cbl_amplitude_pct": 4.4,
+      "quality_proxy": 0.956
+    },
+    {
+      "depth_md_m": 5900.0,
+      "cbl_amplitude_pct": 4.4,
+      "quality_proxy": 0.956
+    },
+    {
+      "depth_md_m": 5910.0,
+      "cbl_amplitude_pct": 4.1,
+      "quality_proxy": 0.959
+    },
+    {
+      "depth_md_m": 5920.0,
+      "cbl_amplitude_pct": 3.7,
+      "quality_proxy": 0.963
+    },
+    {
+      "depth_md_m": 5930.0,
+      "cbl_amplitude_pct": 3.7,
+      "quality_proxy": 0.963
+    },
+    {
+      "depth_md_m": 5940.0,
+      "cbl_amplitude_pct": 3.7,
+      "quality_proxy": 0.963
+    },
+    {
+      "depth_md_m": 5950.0,
+      "cbl_amplitude_pct": 5.9,
+      "quality_proxy": 0.941
+    },
+    {
+      "depth_md_m": 5960.0,
+      "cbl_amplitude_pct": 4.4,
+      "quality_proxy": 0.956
+    },
+    {
+      "depth_md_m": 5970.0,
+      "cbl_amplitude_pct": 4.8,
+      "quality_proxy": 0.952
+    },
+    {
+      "depth_md_m": 5980.0,
+      "cbl_amplitude_pct": 5.6,
+      "quality_proxy": 0.944
+    },
+    {
+      "depth_md_m": 5990.0,
+      "cbl_amplitude_pct": 5.6,
+      "quality_proxy": 0.944
+    },
+    {
+      "depth_md_m": 6000.0,
+      "cbl_amplitude_pct": 4.4,
+      "quality_proxy": 0.956
+    },
+    {
+      "depth_md_m": 6010.0,
+      "cbl_amplitude_pct": 6.3,
+      "quality_proxy": 0.937
+    },
+    {
+      "depth_md_m": 6020.0,
+      "cbl_amplitude_pct": 7.4,
+      "quality_proxy": 0.926
+    },
+    {
+      "depth_md_m": 6030.0,
+      "cbl_amplitude_pct": 3.7,
+      "quality_proxy": 0.963
+    },
+    {
+      "depth_md_m": 6040.0,
+      "cbl_amplitude_pct": 5.9,
+      "quality_proxy": 0.941
+    },
+    {
+      "depth_md_m": 6050.0,
+      "cbl_amplitude_pct": 92.6,
+      "quality_proxy": 0.074
+    },
+    {
+      "depth_md_m": 6060.0,
+      "cbl_amplitude_pct": 92.6,
+      "quality_proxy": 0.074
+    },
+    {
+      "depth_md_m": 6070.0,
+      "cbl_amplitude_pct": 92.6,
+      "quality_proxy": 0.074
+    },
+    {
+      "depth_md_m": 6080.0,
+      "cbl_amplitude_pct": 92.6,
+      "quality_proxy": 0.074
+    },
+    {
+      "depth_md_m": 6090.0,
+      "cbl_amplitude_pct": 92.6,
+      "quality_proxy": 0.074
+    },
+    {
+      "depth_md_m": 6100.0,
+      "cbl_amplitude_pct": 92.6,
+      "quality_proxy": 0.074
+    },
+    {
+      "depth_md_m": 6110.0,
+      "cbl_amplitude_pct": 92.6,
+      "quality_proxy": 0.074
+    },
+    {
+      "depth_md_m": 6120.0,
+      "cbl_amplitude_pct": 92.6,
+      "quality_proxy": 0.074
+    },
+    {
+      "depth_md_m": 6130.0,
+      "cbl_amplitude_pct": 92.6,
+      "quality_proxy": 0.074
+    },
+    {
+      "depth_md_m": 6140.0,
+      "cbl_amplitude_pct": 93.0,
+      "quality_proxy": 0.07
+    },
+    {
+      "depth_md_m": 6150.0,
+      "cbl_amplitude_pct": 92.6,
+      "quality_proxy": 0.074
+    },
+    {
+      "depth_md_m": 6160.0,
+      "cbl_amplitude_pct": 92.6,
+      "quality_proxy": 0.074
+    },
+    {
+      "depth_md_m": 6170.0,
+      "cbl_amplitude_pct": 92.6,
+      "quality_proxy": 0.074
+    },
+    {
+      "depth_md_m": 6180.0,
+      "cbl_amplitude_pct": 92.6,
+      "quality_proxy": 0.074
+    },
+    {
+      "depth_md_m": 6190.0,
+      "cbl_amplitude_pct": 92.6,
+      "quality_proxy": 0.074
+    },
+    {
+      "depth_md_m": 6200.0,
+      "cbl_amplitude_pct": 92.6,
+      "quality_proxy": 0.074
+    },
+    {
+      "depth_md_m": 6210.0,
+      "cbl_amplitude_pct": 92.6,
+      "quality_proxy": 0.074
+    },
+    {
+      "depth_md_m": 6220.0,
+      "cbl_amplitude_pct": 7.4,
+      "quality_proxy": 0.926
+    },
+    {
+      "depth_md_m": 6230.0,
+      "cbl_amplitude_pct": 5.6,
+      "quality_proxy": 0.944
+    },
+    {
+      "depth_md_m": 6240.0,
+      "cbl_amplitude_pct": 24.8,
+      "quality_proxy": 0.752
+    },
+    {
+      "depth_md_m": 6250.0,
+      "cbl_amplitude_pct": 5.9,
+      "quality_proxy": 0.941
+    },
+    {
+      "depth_md_m": 6260.0,
+      "cbl_amplitude_pct": 5.2,
+      "quality_proxy": 0.948
+    },
+    {
+      "depth_md_m": 6270.0,
+      "cbl_amplitude_pct": 5.2,
+      "quality_proxy": 0.948
+    },
+    {
+      "depth_md_m": 6280.0,
+      "cbl_amplitude_pct": 4.4,
+      "quality_proxy": 0.956
+    },
+    {
+      "depth_md_m": 6290.0,
+      "cbl_amplitude_pct": 4.8,
+      "quality_proxy": 0.952
+    },
+    {
+      "depth_md_m": 6300.0,
+      "cbl_amplitude_pct": 4.4,
+      "quality_proxy": 0.956
+    },
+    {
+      "depth_md_m": 6310.0,
+      "cbl_amplitude_pct": 4.1,
+      "quality_proxy": 0.959
+    },
+    {
+      "depth_md_m": 6320.0,
+      "cbl_amplitude_pct": 4.1,
+      "quality_proxy": 0.959
+    },
+    {
+      "depth_md_m": 6330.0,
+      "cbl_amplitude_pct": 4.1,
+      "quality_proxy": 0.959
+    },
+    {
+      "depth_md_m": 6340.0,
+      "cbl_amplitude_pct": 4.1,
+      "quality_proxy": 0.959
+    },
+    {
+      "depth_md_m": 6350.0,
+      "cbl_amplitude_pct": 4.1,
+      "quality_proxy": 0.959
+    },
+    {
+      "depth_md_m": 6360.0,
+      "cbl_amplitude_pct": 4.8,
+      "quality_proxy": 0.952
+    },
+    {
+      "depth_md_m": 6370.0,
+      "cbl_amplitude_pct": 4.8,
+      "quality_proxy": 0.952
+    },
+    {
+      "depth_md_m": 6380.0,
+      "cbl_amplitude_pct": 3.7,
+      "quality_proxy": 0.963
+    },
+    {
+      "depth_md_m": 6390.0,
+      "cbl_amplitude_pct": 4.1,
+      "quality_proxy": 0.959
+    },
+    {
+      "depth_md_m": 6400.0,
+      "cbl_amplitude_pct": 4.1,
+      "quality_proxy": 0.959
+    },
+    {
+      "depth_md_m": 6410.0,
+      "cbl_amplitude_pct": 4.1,
+      "quality_proxy": 0.959
+    },
+    {
+      "depth_md_m": 6420.0,
+      "cbl_amplitude_pct": 4.8,
+      "quality_proxy": 0.952
+    },
+    {
+      "depth_md_m": 6430.0,
+      "cbl_amplitude_pct": 4.4,
+      "quality_proxy": 0.956
+    },
+    {
+      "depth_md_m": 6440.0,
+      "cbl_amplitude_pct": 3.7,
+      "quality_proxy": 0.963
+    },
+    {
+      "depth_md_m": 6450.0,
+      "cbl_amplitude_pct": 3.3,
+      "quality_proxy": 0.967
+    },
+    {
+      "depth_md_m": 6460.0,
+      "cbl_amplitude_pct": 4.1,
+      "quality_proxy": 0.959
+    },
+    {
+      "depth_md_m": 6470.0,
+      "cbl_amplitude_pct": 4.1,
+      "quality_proxy": 0.959
+    },
+    {
+      "depth_md_m": 6480.0,
+      "cbl_amplitude_pct": 4.8,
+      "quality_proxy": 0.952
+    },
+    {
+      "depth_md_m": 6490.0,
+      "cbl_amplitude_pct": 4.1,
+      "quality_proxy": 0.959
+    },
+    {
+      "depth_md_m": 6500.0,
+      "cbl_amplitude_pct": 3.7,
+      "quality_proxy": 0.963
+    },
+    {
+      "depth_md_m": 6510.0,
+      "cbl_amplitude_pct": 4.4,
+      "quality_proxy": 0.956
+    },
+    {
+      "depth_md_m": 6520.0,
+      "cbl_amplitude_pct": 4.8,
+      "quality_proxy": 0.952
+    },
+    {
+      "depth_md_m": 6530.0,
+      "cbl_amplitude_pct": 4.4,
+      "quality_proxy": 0.956
+    },
+    {
+      "depth_md_m": 6540.0,
+      "cbl_amplitude_pct": 4.8,
+      "quality_proxy": 0.952
+    },
+    {
+      "depth_md_m": 6550.0,
+      "cbl_amplitude_pct": 3.7,
+      "quality_proxy": 0.963
+    },
+    {
+      "depth_md_m": 6560.0,
+      "cbl_amplitude_pct": 4.8,
+      "quality_proxy": 0.952
+    },
+    {
+      "depth_md_m": 6570.0,
+      "cbl_amplitude_pct": 4.4,
+      "quality_proxy": 0.956
+    },
+    {
+      "depth_md_m": 6580.0,
+      "cbl_amplitude_pct": 5.2,
+      "quality_proxy": 0.948
+    },
+    {
+      "depth_md_m": 6590.0,
+      "cbl_amplitude_pct": 4.8,
+      "quality_proxy": 0.952
+    },
+    {
+      "depth_md_m": 6600.0,
+      "cbl_amplitude_pct": 4.1,
+      "quality_proxy": 0.959
+    },
+    {
+      "depth_md_m": 6610.0,
+      "cbl_amplitude_pct": 3.7,
+      "quality_proxy": 0.963
+    },
+    {
+      "depth_md_m": 6620.0,
+      "cbl_amplitude_pct": 3.7,
+      "quality_proxy": 0.963
+    },
+    {
+      "depth_md_m": 6630.0,
+      "cbl_amplitude_pct": 4.8,
+      "quality_proxy": 0.952
+    },
+    {
+      "depth_md_m": 6640.0,
+      "cbl_amplitude_pct": 4.4,
+      "quality_proxy": 0.956
+    },
+    {
+      "depth_md_m": 6650.0,
+      "cbl_amplitude_pct": 4.8,
+      "quality_proxy": 0.952
+    },
+    {
+      "depth_md_m": 6660.0,
+      "cbl_amplitude_pct": 4.1,
+      "quality_proxy": 0.959
+    },
+    {
+      "depth_md_m": 6670.0,
+      "cbl_amplitude_pct": 4.8,
+      "quality_proxy": 0.952
+    },
+    {
+      "depth_md_m": 6680.0,
+      "cbl_amplitude_pct": 5.2,
+      "quality_proxy": 0.948
+    },
+    {
+      "depth_md_m": 6690.0,
+      "cbl_amplitude_pct": 4.4,
+      "quality_proxy": 0.956
+    },
+    {
+      "depth_md_m": 6700.0,
+      "cbl_amplitude_pct": 3.7,
+      "quality_proxy": 0.963
+    },
+    {
+      "depth_md_m": 6710.0,
+      "cbl_amplitude_pct": 4.4,
+      "quality_proxy": 0.956
+    },
+    {
+      "depth_md_m": 6720.0,
+      "cbl_amplitude_pct": 4.8,
+      "quality_proxy": 0.952
+    },
+    {
+      "depth_md_m": 6730.0,
+      "cbl_amplitude_pct": 3.7,
+      "quality_proxy": 0.963
+    },
+    {
+      "depth_md_m": 6740.0,
+      "cbl_amplitude_pct": 4.4,
+      "quality_proxy": 0.956
+    },
+    {
+      "depth_md_m": 6750.0,
+      "cbl_amplitude_pct": 4.1,
+      "quality_proxy": 0.959
+    },
+    {
+      "depth_md_m": 6760.0,
+      "cbl_amplitude_pct": 4.1,
+      "quality_proxy": 0.959
+    },
+    {
+      "depth_md_m": 6770.0,
+      "cbl_amplitude_pct": 4.1,
+      "quality_proxy": 0.959
+    },
+    {
+      "depth_md_m": 6780.0,
+      "cbl_amplitude_pct": 5.2,
+      "quality_proxy": 0.948
+    },
+    {
+      "depth_md_m": 6790.0,
+      "cbl_amplitude_pct": 3.3,
+      "quality_proxy": 0.967
+    },
+    {
+      "depth_md_m": 6800.0,
+      "cbl_amplitude_pct": 7.0,
+      "quality_proxy": 0.93
+    },
+    {
+      "depth_md_m": 6810.0,
+      "cbl_amplitude_pct": 5.6,
+      "quality_proxy": 0.944
+    },
+    {
+      "depth_md_m": 6820.0,
+      "cbl_amplitude_pct": 4.8,
+      "quality_proxy": 0.952
+    },
+    {
+      "depth_md_m": 6830.0,
+      "cbl_amplitude_pct": 5.6,
+      "quality_proxy": 0.944
+    },
+    {
+      "depth_md_m": 6840.0,
+      "cbl_amplitude_pct": 6.7,
+      "quality_proxy": 0.933
+    },
+    {
+      "depth_md_m": 6850.0,
+      "cbl_amplitude_pct": 6.3,
+      "quality_proxy": 0.937
+    },
+    {
+      "depth_md_m": 6860.0,
+      "cbl_amplitude_pct": 4.1,
+      "quality_proxy": 0.959
+    },
+    {
+      "depth_md_m": 6870.0,
+      "cbl_amplitude_pct": 4.1,
+      "quality_proxy": 0.959
+    },
+    {
+      "depth_md_m": 6880.0,
+      "cbl_amplitude_pct": 6.3,
+      "quality_proxy": 0.937
+    },
+    {
+      "depth_md_m": 6890.0,
+      "cbl_amplitude_pct": 5.2,
+      "quality_proxy": 0.948
+    },
+    {
+      "depth_md_m": 6900.0,
+      "cbl_amplitude_pct": 4.8,
+      "quality_proxy": 0.952
+    },
+    {
+      "depth_md_m": 6910.0,
+      "cbl_amplitude_pct": 3.3,
+      "quality_proxy": 0.967
+    },
+    {
+      "depth_md_m": 6920.0,
+      "cbl_amplitude_pct": 4.8,
+      "quality_proxy": 0.952
+    },
+    {
+      "depth_md_m": 6930.0,
+      "cbl_amplitude_pct": 4.8,
+      "quality_proxy": 0.952
+    },
+    {
+      "depth_md_m": 6940.0,
+      "cbl_amplitude_pct": 4.8,
+      "quality_proxy": 0.952
+    },
+    {
+      "depth_md_m": 6950.0,
+      "cbl_amplitude_pct": 4.1,
+      "quality_proxy": 0.959
+    },
+    {
+      "depth_md_m": 6960.0,
+      "cbl_amplitude_pct": 5.6,
+      "quality_proxy": 0.944
+    },
+    {
+      "depth_md_m": 6970.0,
+      "cbl_amplitude_pct": 6.3,
+      "quality_proxy": 0.937
+    },
+    {
+      "depth_md_m": 6980.0,
+      "cbl_amplitude_pct": 5.9,
+      "quality_proxy": 0.941
+    },
+    {
+      "depth_md_m": 6990.0,
+      "cbl_amplitude_pct": 6.3,
+      "quality_proxy": 0.937
+    },
+    {
+      "depth_md_m": 7000.0,
+      "cbl_amplitude_pct": 7.0,
+      "quality_proxy": 0.93
+    },
+    {
+      "depth_md_m": 7010.0,
+      "cbl_amplitude_pct": 5.2,
+      "quality_proxy": 0.948
+    },
+    {
+      "depth_md_m": 7020.0,
+      "cbl_amplitude_pct": 5.2,
+      "quality_proxy": 0.948
+    },
+    {
+      "depth_md_m": 7030.0,
+      "cbl_amplitude_pct": 3.7,
+      "quality_proxy": 0.963
+    },
+    {
+      "depth_md_m": 7040.0,
+      "cbl_amplitude_pct": 3.7,
+      "quality_proxy": 0.963
+    },
+    {
+      "depth_md_m": 7050.0,
+      "cbl_amplitude_pct": 4.4,
+      "quality_proxy": 0.956
+    },
+    {
+      "depth_md_m": 7060.0,
+      "cbl_amplitude_pct": 5.6,
+      "quality_proxy": 0.944
+    },
+    {
+      "depth_md_m": 7070.0,
+      "cbl_amplitude_pct": 5.9,
+      "quality_proxy": 0.941
+    },
+    {
+      "depth_md_m": 7080.0,
+      "cbl_amplitude_pct": 5.2,
+      "quality_proxy": 0.948
+    },
+    {
+      "depth_md_m": 7090.0,
+      "cbl_amplitude_pct": 4.8,
+      "quality_proxy": 0.952
+    },
+    {
+      "depth_md_m": 7100.0,
+      "cbl_amplitude_pct": 6.3,
+      "quality_proxy": 0.937
+    },
+    {
+      "depth_md_m": 7110.0,
+      "cbl_amplitude_pct": 4.1,
+      "quality_proxy": 0.959
+    },
+    {
+      "depth_md_m": 7120.0,
+      "cbl_amplitude_pct": 4.8,
+      "quality_proxy": 0.952
+    },
+    {
+      "depth_md_m": 7130.0,
+      "cbl_amplitude_pct": 3.7,
+      "quality_proxy": 0.963
+    },
+    {
+      "depth_md_m": 7140.0,
+      "cbl_amplitude_pct": 4.8,
+      "quality_proxy": 0.952
+    },
+    {
+      "depth_md_m": 7150.0,
+      "cbl_amplitude_pct": 4.4,
+      "quality_proxy": 0.956
+    },
+    {
+      "depth_md_m": 7160.0,
+      "cbl_amplitude_pct": 5.2,
+      "quality_proxy": 0.948
+    },
+    {
+      "depth_md_m": 7170.0,
+      "cbl_amplitude_pct": 4.4,
+      "quality_proxy": 0.956
+    },
+    {
+      "depth_md_m": 7180.0,
+      "cbl_amplitude_pct": 5.9,
+      "quality_proxy": 0.941
+    },
+    {
+      "depth_md_m": 7190.0,
+      "cbl_amplitude_pct": 7.8,
+      "quality_proxy": 0.922
+    },
+    {
+      "depth_md_m": 7200.0,
+      "cbl_amplitude_pct": 5.6,
+      "quality_proxy": 0.944
+    },
+    {
+      "depth_md_m": 7210.0,
+      "cbl_amplitude_pct": 6.3,
+      "quality_proxy": 0.937
+    },
+    {
+      "depth_md_m": 7220.0,
+      "cbl_amplitude_pct": 4.8,
+      "quality_proxy": 0.952
+    },
+    {
+      "depth_md_m": 7230.0,
+      "cbl_amplitude_pct": 4.1,
+      "quality_proxy": 0.959
+    },
+    {
+      "depth_md_m": 7240.0,
+      "cbl_amplitude_pct": 4.4,
+      "quality_proxy": 0.956
+    },
+    {
+      "depth_md_m": 7250.0,
+      "cbl_amplitude_pct": 4.4,
+      "quality_proxy": 0.956
+    },
+    {
+      "depth_md_m": 7260.0,
+      "cbl_amplitude_pct": 5.9,
+      "quality_proxy": 0.941
+    },
+    {
+      "depth_md_m": 7270.0,
+      "cbl_amplitude_pct": 4.4,
+      "quality_proxy": 0.956
+    },
+    {
+      "depth_md_m": 7280.0,
+      "cbl_amplitude_pct": 5.9,
+      "quality_proxy": 0.941
+    },
+    {
+      "depth_md_m": 7290.0,
+      "cbl_amplitude_pct": 4.4,
+      "quality_proxy": 0.956
+    },
+    {
+      "depth_md_m": 7300.0,
+      "cbl_amplitude_pct": 3.7,
+      "quality_proxy": 0.963
+    },
+    {
+      "depth_md_m": 7310.0,
+      "cbl_amplitude_pct": 4.4,
+      "quality_proxy": 0.956
+    },
+    {
+      "depth_md_m": 7320.0,
+      "cbl_amplitude_pct": 3.7,
+      "quality_proxy": 0.963
+    },
+    {
+      "depth_md_m": 7330.0,
+      "cbl_amplitude_pct": 3.7,
+      "quality_proxy": 0.963
+    },
+    {
+      "depth_md_m": 7340.0,
+      "cbl_amplitude_pct": 4.1,
+      "quality_proxy": 0.959
+    },
+    {
+      "depth_md_m": 7350.0,
+      "cbl_amplitude_pct": 4.8,
+      "quality_proxy": 0.952
+    },
+    {
+      "depth_md_m": 7360.0,
+      "cbl_amplitude_pct": 6.3,
+      "quality_proxy": 0.937
+    },
+    {
+      "depth_md_m": 7370.0,
+      "cbl_amplitude_pct": 5.9,
+      "quality_proxy": 0.941
+    },
+    {
+      "depth_md_m": 7380.0,
+      "cbl_amplitude_pct": 4.8,
+      "quality_proxy": 0.952
+    },
+    {
+      "depth_md_m": 7390.0,
+      "cbl_amplitude_pct": 7.0,
+      "quality_proxy": 0.93
+    },
+    {
+      "depth_md_m": 7400.0,
+      "cbl_amplitude_pct": 5.6,
+      "quality_proxy": 0.944
+    },
+    {
+      "depth_md_m": 7410.0,
+      "cbl_amplitude_pct": 5.9,
+      "quality_proxy": 0.941
+    },
+    {
+      "depth_md_m": 7420.0,
+      "cbl_amplitude_pct": 4.8,
+      "quality_proxy": 0.952
+    },
+    {
+      "depth_md_m": 7430.0,
+      "cbl_amplitude_pct": 6.3,
+      "quality_proxy": 0.937
+    },
+    {
+      "depth_md_m": 7440.0,
+      "cbl_amplitude_pct": 5.6,
+      "quality_proxy": 0.944
+    },
+    {
+      "depth_md_m": 7450.0,
+      "cbl_amplitude_pct": 5.9,
+      "quality_proxy": 0.941
+    },
+    {
+      "depth_md_m": 7460.0,
+      "cbl_amplitude_pct": 5.2,
+      "quality_proxy": 0.948
+    },
+    {
+      "depth_md_m": 7470.0,
+      "cbl_amplitude_pct": 5.2,
+      "quality_proxy": 0.948
+    },
+    {
+      "depth_md_m": 7480.0,
+      "cbl_amplitude_pct": 5.2,
+      "quality_proxy": 0.948
+    },
+    {
+      "depth_md_m": 7490.0,
+      "cbl_amplitude_pct": 4.4,
+      "quality_proxy": 0.956
+    },
+    {
+      "depth_md_m": 7500.0,
+      "cbl_amplitude_pct": 6.3,
+      "quality_proxy": 0.937
+    },
+    {
+      "depth_md_m": 7510.0,
+      "cbl_amplitude_pct": 4.8,
+      "quality_proxy": 0.952
+    },
+    {
+      "depth_md_m": 7520.0,
+      "cbl_amplitude_pct": 4.1,
+      "quality_proxy": 0.959
+    },
+    {
+      "depth_md_m": 7530.0,
+      "cbl_amplitude_pct": 6.7,
+      "quality_proxy": 0.933
+    },
+    {
+      "depth_md_m": 7540.0,
+      "cbl_amplitude_pct": 4.4,
+      "quality_proxy": 0.956
+    },
+    {
+      "depth_md_m": 7550.0,
+      "cbl_amplitude_pct": 4.1,
+      "quality_proxy": 0.959
+    },
+    {
+      "depth_md_m": 7560.0,
+      "cbl_amplitude_pct": 5.6,
+      "quality_proxy": 0.944
+    },
+    {
+      "depth_md_m": 7570.0,
+      "cbl_amplitude_pct": 5.6,
+      "quality_proxy": 0.944
+    },
+    {
+      "depth_md_m": 7580.0,
+      "cbl_amplitude_pct": 5.2,
+      "quality_proxy": 0.948
+    },
+    {
+      "depth_md_m": 7590.0,
+      "cbl_amplitude_pct": 5.6,
+      "quality_proxy": 0.944
+    },
+    {
+      "depth_md_m": 7600.0,
+      "cbl_amplitude_pct": 8.1,
+      "quality_proxy": 0.919
+    },
+    {
+      "depth_md_m": 7610.0,
+      "cbl_amplitude_pct": 8.1,
+      "quality_proxy": 0.919
+    },
+    {
+      "depth_md_m": 7620.0,
+      "cbl_amplitude_pct": 5.6,
+      "quality_proxy": 0.944
+    },
+    {
+      "depth_md_m": 7630.0,
+      "cbl_amplitude_pct": 5.9,
+      "quality_proxy": 0.941
+    },
+    {
+      "depth_md_m": 7640.0,
+      "cbl_amplitude_pct": 6.7,
+      "quality_proxy": 0.933
+    },
+    {
+      "depth_md_m": 7650.0,
+      "cbl_amplitude_pct": 5.2,
+      "quality_proxy": 0.948
+    },
+    {
+      "depth_md_m": 7660.0,
+      "cbl_amplitude_pct": 7.8,
+      "quality_proxy": 0.922
+    },
+    {
+      "depth_md_m": 7670.0,
+      "cbl_amplitude_pct": 6.7,
+      "quality_proxy": 0.933
+    },
+    {
+      "depth_md_m": 7680.0,
+      "cbl_amplitude_pct": 8.9,
+      "quality_proxy": 0.911
+    },
+    {
+      "depth_md_m": 7690.0,
+      "cbl_amplitude_pct": 8.5,
+      "quality_proxy": 0.915
+    },
+    {
+      "depth_md_m": 7700.0,
+      "cbl_amplitude_pct": 6.3,
+      "quality_proxy": 0.937
+    },
+    {
+      "depth_md_m": 7710.0,
+      "cbl_amplitude_pct": 5.2,
+      "quality_proxy": 0.948
+    },
+    {
+      "depth_md_m": 7720.0,
+      "cbl_amplitude_pct": 5.9,
+      "quality_proxy": 0.941
+    },
+    {
+      "depth_md_m": 7730.0,
+      "cbl_amplitude_pct": 4.1,
+      "quality_proxy": 0.959
+    },
+    {
+      "depth_md_m": 7740.0,
+      "cbl_amplitude_pct": 4.1,
+      "quality_proxy": 0.959
+    },
+    {
+      "depth_md_m": 7750.0,
+      "cbl_amplitude_pct": 5.6,
+      "quality_proxy": 0.944
+    },
+    {
+      "depth_md_m": 7760.0,
+      "cbl_amplitude_pct": 5.2,
+      "quality_proxy": 0.948
+    },
+    {
+      "depth_md_m": 7770.0,
+      "cbl_amplitude_pct": 3.7,
+      "quality_proxy": 0.963
+    },
+    {
+      "depth_md_m": 7780.0,
+      "cbl_amplitude_pct": 4.1,
+      "quality_proxy": 0.959
+    },
+    {
+      "depth_md_m": 7790.0,
+      "cbl_amplitude_pct": 5.2,
+      "quality_proxy": 0.948
+    },
+    {
+      "depth_md_m": 7800.0,
+      "cbl_amplitude_pct": 4.4,
+      "quality_proxy": 0.956
+    },
+    {
+      "depth_md_m": 7810.0,
+      "cbl_amplitude_pct": 4.1,
+      "quality_proxy": 0.959
+    }
+  ]
+}

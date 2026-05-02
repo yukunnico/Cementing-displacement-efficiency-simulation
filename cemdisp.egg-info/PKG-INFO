@@ -1,0 +1,87 @@
+Metadata-Version: 2.4
+Name: cemdisp
+Version: 0.1.0
+Summary: Cement-slurry displacement efficiency modeling scaffold
+Author: Sisyphus scaffold
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+Requires-Dist: numpy>=1.24
+Requires-Dist: pandas>=1.5
+
+# 固井顶替效率建模项目骨架
+
+这个目录当前包含三类内容：
+
+1. 多口井的参考资料与标签整理；
+2. 既有的单井 legacy 脚本与算例输出；
+3. 新建立的、面向多井复用的 `cemdisp` Python 包骨架。
+
+## 当前目标
+
+项目的近期目标不是立即重写所有旧模型，而是先完成以下几项基础工作：
+
+- 建立可安装的 `cemdisp` 包结构；
+- 建立统一的井筒、流体、施工程序输入数据结构；
+- 为后续“地面开泵 → 套管内输运 → 环空 2D 顶替”分层建模做好接口占位；
+- 逐步把 `hu101model/`、`hu102model/` 的可复用逻辑迁移进新包。
+
+## 当前目录说明
+
+```text
+参考文档/   多口井现场资料与统一标签表
+hu101model/ legacy 呼101 单井脚本与输出
+hu102model/ legacy 呼102 单井脚本与输出
+cankao/     外部文献与全文提取
+baogao/     项目方案、任务清单、对比分析报告
+cemdisp/    新的多井通用模型包骨架
+```
+
+## `cemdisp` 当前骨架
+
+```text
+cemdisp/
+  data/         标准输入数据结构
+  transport1d/  套管内 1D 输运层占位
+  models2d/     环空 2D 顶替层占位
+  diagnostics/  诊断层占位
+  reporting/    输出层占位
+  validation/   校验层占位
+  correlations/ 经验/判别层占位
+  utils/        通用工具占位
+```
+
+## 安装与检查
+
+### 1. 激活环境
+
+```powershell
+conda activate shenjingwangluo
+```
+
+### 2. 本地可编辑安装
+
+```powershell
+python -m pip install -e .
+```
+
+### 3. 快速导入检查
+
+```powershell
+python -c "from cemdisp import WellSpec, FluidSpec, PumpingSchedule; print('cemdisp import ok')"
+```
+
+## 开发原则
+
+- Python 包、模块、类、函数名使用英文；
+- 图表标题、坐标轴、图例、摘要字段和输出文件名尽量使用中文；
+- 通用模块中不要硬编码单井井号、井深、井段、流体体积和文件路径；
+- legacy 单井脚本优先迁移逻辑，不继续复制派生；
+- 先做骨架和输入标准，再做求解器迁移与增强。
+
+## 文档优先级
+
+后续开发优先参考：
+
+1. `AGENTS.md`
+2. `baogao/multiwell_primary_cementing_model_scheme.md`
+3. `baogao/multiwell_primary_cementing_development_task_list.md`

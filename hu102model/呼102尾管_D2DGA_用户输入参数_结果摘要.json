@@ -1,0 +1,86 @@
+{
+  "target_metric": "effective_efficiency",
+  "scenario_count": 6,
+  "factors": {
+    "rate_m3_min": [
+      0.5,
+      0.7,
+      0.8,
+      1.0,
+      1.3,
+      1.6
+    ],
+    "pv_mpa_s": [
+      60.0
+    ],
+    "yp_pa": [
+      15.0
+    ]
+  },
+  "impact_ranking": [
+    {
+      "factor": "rate_m3_min",
+      "factor_name": "排量(m3/min)",
+      "mean_effect_span": 0.07330787221196622,
+      "overall_slope": -0.06596587569668895,
+      "level_count": 6.0,
+      "note": "",
+      "importance_share": 1.0,
+      "rank": 1
+    },
+    {
+      "factor": "pv_mpa_s",
+      "factor_name": "塑性黏度(mPa·s)",
+      "mean_effect_span": 0.0,
+      "overall_slope": 0.0,
+      "level_count": 1.0,
+      "note": "仅一个水平，无法评估影响",
+      "importance_share": 0.0,
+      "rank": 2
+    },
+    {
+      "factor": "yp_pa",
+      "factor_name": "屈服值(Pa)",
+      "mean_effect_span": 0.0,
+      "overall_slope": 0.0,
+      "level_count": 1.0,
+      "note": "仅一个水平，无法评估影响",
+      "importance_share": 0.0,
+      "rank": 3
+    }
+  ],
+  "best_case": {
+    "rate_m3_min": 0.8,
+    "pv_mpa_s": 60.0,
+    "yp_pa": 15.0,
+    "effective_efficiency": 0.9997152010896132,
+    "cbl_eval_interval_efficiency": 0.9996954433098363,
+    "cbl_quality_proxy": 0.9996481353383903,
+    "target_interval_efficiency": 0.9997591807170778
+  },
+  "recommended_ranges": {
+    "selection_rule": {
+      "top_n": 2.0,
+      "max_metric": 0.9997152010896132,
+      "metric_name": "effective_efficiency"
+    },
+    "rate_m3_min": {
+      "min": 0.7,
+      "max": 0.8
+    },
+    "pv_mpa_s": {
+      "min": 60.0,
+      "max": 60.0
+    },
+    "yp_pa": {
+      "min": 15.0,
+      "max": 15.0
+    }
+  },
+  "analysis_name": "呼102尾管_D2DGA 用户输入参数全井段顶替效率计算",
+  "outputs": {
+    "scenario_csv": "D:\\users\\desktop\\research\\控压固井项目\\cement model\\hu102model\\呼102尾管_D2DGA_用户输入参数_场景结果.csv",
+    "summary_json": "D:\\users\\desktop\\research\\控压固井项目\\cement model\\hu102model\\呼102尾管_D2DGA_用户输入参数_结果摘要.json",
+    "summary_md": "D:\\users\\desktop\\research\\控压固井项目\\cement model\\hu102model\\呼102尾管_D2DGA_用户输入参数_结果摘要.md"
+  }
+}

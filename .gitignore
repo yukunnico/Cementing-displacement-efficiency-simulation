@@ -1,0 +1,7 @@
+**/*.xlsx
+**/*.txt
+**/*.doc
+**/*.docx
+**/*.pdf
+**/*.tmp
+.env

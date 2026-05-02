@@ -1,0 +1,6 @@
+well_name,tail_section_type,label_type,label_value,label_unit,label_text,confidence,source_file,notes
+呼103井,完井尾管φ168.30mm,numeric_quality_rate,0.04,%,不合格,HIGH,D:\users\desktop\research\控压固井项目\0708\1\1005\10051\100515.pdf,测量井段内固井水泥一二界面综合合格率0.04% 未达到70%
+呼103井,完井尾管φ139.70mm,numeric_quality_rate,12.06,%,不合格,HIGH,D:\users\desktop\research\控压固井项目\0708\1\1005\10051\100516.pdf,测量井段内固井水泥一二界面综合合格率12.06% 未达到70%
+呼探1井(HT1-001),139.7mm油层尾管,qualitative,,,合格,HIGH,D:\users\desktop\research\控压固井项目\0708\2\HT1-001完井交\HT1-001井139.7mm油层尾管技术总结.doc,固井质量统计给出合格结论 当前未确认统一数值型CBL百分比
+呼探1-002井,219.1mm技术尾管,qualitative,,,声幅合格,HIGH,D:\users\desktop\research\控压固井项目\0708\2\206\2061\20611\206118\呼探1-002井219.1mm技术尾管总结.doc,尾管总结给出声幅合格结论
+呼探1-002井,219.1mm尾管固井,qualitative,,,CBL解释合格,HIGH,D:\users\desktop\research\控压固井项目\0708\2\206\2061\20611\206118\呼探1-002井219.1mm尾管固井施工小结.docx,施工小结中明确给出CBL解释合格
