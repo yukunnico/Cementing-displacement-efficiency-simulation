@@ -30,7 +30,9 @@ cemdisp/
 │   └── pipe_exit_state.py       # 鞋口出流状态数据类
 ├── reporting/                   # 图表与摘要输出层
 │   ├── __init__.py
-│   └── plots.py                 # 绘图函数（中文字体+中文标签）
+│   ├── plots.py                 # 静态图表（时间序列/深度剖面/风险指标/柱状对比）
+│   ├── contour_plots.py         # 云图（深度-时间等值线/截面快照/最终场三联图）
+│   └── animation.py             # 动画（水泥浓度场时间演化GIF/MP4）
 ├── runners/                      # 各井段模型运行器
 │   ├── __init__.py
 │   └── hu102_tailpipe.py         # 呼102尾管段运行器（初版+1D2D耦合）
@@ -284,6 +286,9 @@ cemdisp/
   - `depth_profiles: dict[str, ndarray]` — 深度剖面字典（含"水泥浆占据率"、"壁面泥饼残余率"、"顶替效率"、"有效顶替效率"）
   - `summary: dict[str, float]` — 最终汇总指标（含各效率值、风险指标等）
   - `time_points_s: list[float]` — 时间节点列表（秒）
+  - `cement_snapshots: Tuple[ndarray, ...]` — 水泥浓度场快照序列（每元素shape: ny×nz），按 `save_interval` 间隔保存
+  - `wall_snapshots: Tuple[ndarray, ...]` — 壁面泥饼场快照序列（每元素shape: ny×nz）
+  - `snapshot_times_s: Tuple[float, ...]` — 快照时间点列表（秒），与快照序列一一对应
   - `notes: list[str]` — 运行备注
 
 #### `AnnulusD2DGASolver`
@@ -300,6 +305,7 @@ cemdisp/
   - `mixing_penalty_weight: float = 0.30` — 混浆惩罚权重
   - `instability_penalty_weight: float = 0.35` — 失稳惩罚权重
   - `instability_decay_scale: float = 0.001` — 失稳衰减尺度
+  - `save_interval: int = 60` — 快照保存间隔（每隔N个时间步保存一次2D场快照）
 
 - **核心方法**：
 
@@ -545,6 +551,66 @@ cemdisp/
 
 ---
 
+### 5.3 `cemdisp/reporting/contour_plots.py`
+
+**功能**：三类云图绘制函数，展示环空顶替过程的二维场分布。
+
+**导出**：`__all__` 包含 `plot_depth_time_contour`, `plot_annulus_snapshots`, `plot_final_fields_contour`
+
+**依赖**：复用 `plots.py` 中的 `_setup_chinese_font`, `_save_figure`, `_safe_filename_component`
+
+#### `plot_depth_time_contour(result, output_dir)`
+
+- **参数**：`AnnulusSimulationResult`, 输出目录路径
+- **输出文件**：`{井号}_深度-时间顶替效率云图.png`
+- **内容**：
+  - X轴：时间（min），Y轴：深度（m），颜色：水泥浓度
+  - 使用 `contourf` + `RdYlGn` 配色（红=低效，绿=高效）
+  - 添加0.5/0.7/0.9等值线及标签
+  - 数据来源：`cement_snapshots` 沿方位角平均后构建深度-时间矩阵
+
+#### `plot_annulus_snapshots(result, output_dir, n_panels=6)`
+
+- **参数**：`AnnulusSimulationResult`, 输出目录路径, 面板数
+- **输出文件**：`{井号}_水泥浓度场演化过程.png`
+- **内容**：
+  - 多面板并排展示不同时刻的环空截面浓度场
+  - 每面板：X轴=井深(m)，Y轴=方位角(宽边→窄边)，颜色=水泥浓度
+  - 使用 `viridis` 配色，每面板标题 "t = XXX.X min"
+  - 从 `cement_snapshots` 中均匀选取 `n_panels` 个时刻
+
+#### `plot_final_fields_contour(result, output_dir)`
+
+- **参数**：`AnnulusSimulationResult`, 输出目录路径
+- **输出文件**：`{井号}_最终场分布.png`
+- **内容**：
+  - 三联图：水泥浓度(viridis) + 有效效率(RdYlGn) + 泥饼残余(YlOrRd)
+  - 展示最终时刻的完整二维场分布
+
+---
+
+### 5.4 `cemdisp/reporting/animation.py`
+
+**功能**：水泥浓度场时间演化动画生成。
+
+**导出**：`__all__` 包含 `animate_cement_field`
+
+**依赖**：复用 `plots.py` 中的 `_setup_chinese_font`, `_safe_filename_component`
+
+#### `animate_cement_field(result, output_dir, interval_ms=200, fps=10, save_format='gif')`
+
+- **参数**：`AnnulusSimulationResult`, 输出目录路径, 帧间隔(ms), 帧率, 保存格式(gif/mp4)
+- **输出文件**：`{井号}_顶替过程动画.gif` 或 `.mp4`
+- **内容**：
+  - 单面板动画，每帧展示一时刻的水泥浓度场
+  - X轴=井深(m)，Y轴=方位角(宽边→窄边)
+  - 标题每帧更新："水泥浓度场 — t = XXX.X min"
+  - 使用 `viridis` 配色，`FuncAnimation` 生成
+  - GIF使用 `pillow` 写入器，MP4使用 `ffmpeg` 写入器
+  - 空快照时提前返回并记录警告
+
+---
+
 ## 6. 运行器子包 `cemdisp/runners/`
 
 运行器负责将"加载→求解→导出→打印"全流程封装为可调函数，每个模块对应一口井的一个固井段。
@@ -570,12 +636,15 @@ cemdisp/
 |------|----|------|
 | `PROJECT_ROOT` | `Path(__file__).resolve().parents[1].parent` | cement model根目录，用于定位results/输出 |
 
-**输出**（每模式8个文件）：
+**输出**（每模式13个文件）：
 - `呼102尾管_{模式}_时间序列结果.csv` — 逐时刻指标CSV
 - `呼102尾管_{模式}_深度剖面.csv` — 深度剖面CSV
 - `呼102尾管_{模式}_结果摘要.json` — 完整结果JSON
 - `呼102尾管_{模式}_结果摘要.md` — 结果摘要Markdown
-- 4张PNG图表（时间序列、深度剖面、风险指标、效率汇总柱状图）
+- `呼102尾管_{模式}_2D场数据.npz` — 二维场数据（水泥浓度快照+壁面泥饼快照+网格坐标）
+- 4张静态PNG图表（时间序列、深度剖面、风险指标、效率汇总柱状图）
+- 3张云图PNG（深度-时间等值线、水泥浓度场演化过程、最终场分布三联图）
+- 1张动画GIF（水泥浓度场时间演化）
 
 ---
 
@@ -624,4 +693,4 @@ cemdisp/
 
 ---
 
-> **文档版本**：2026-05-03 | 基于 cemdisp/ 当前23个 .py 文件编写（含新增 runners/ 子包）
+> **文档版本**：2026-05-03 | 基于 cemdisp/ 当前25个 .py 文件编写（含新增 runners/ 子包、contour_plots.py、animation.py）
