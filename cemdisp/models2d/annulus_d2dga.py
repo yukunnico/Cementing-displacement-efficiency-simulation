@@ -31,7 +31,9 @@
 - nz: 井深方向网格数，默认140
 - ny: 方位角方向网格数，默认40
 - alpha_clean: 泥饼清除系数，默认0.085
-- total_t: 总模拟时间（秒），默认6600秒（110分钟）
+- total_t: 总模拟时间（秒），默认12000秒（200分钟）
+- enable_d2dga: 是否启用D2DGA通量修正（Zhang & Frigaard 2022），默认开启
+- d2dga_viscosity_ratio: D2DGA粘度比 m = η_displaced/η_displacing，默认1.0
 - quality_penalty_scale: 质量惩罚因子，默认0.099
 - channeling_penalty_weight: 窜槽风险权重，默认0.55
 - mixing_penalty_weight: 混浆风险权重，默认0.35
@@ -149,9 +151,16 @@ class AnnulusD2DGASolver:
 
     主要物理过程：
     1. 平流输运：水泥浆与前置/隔离液随速度场向下游运移
-    2. 弥散效应：横向(day)和垂向(dax)扩散，与偏心度和流体性质相关
-    3. 壁面清除：泥饼在剪切作用下被水泥浆与前置/隔离液逐渐清除
-    4. 浮力效应：密度差导致窄边优先顶替和潜在失稳风险
+    2. D2DGA分散：基于Zhang & Frigaard (2022)的通量修正，捕捉间隙尺度速度梯度分散
+    3. 弥散效应：横向(day)和垂向(dax)扩散，与偏心度和流体性质相关
+    4. 壁面清除：泥饼在剪切作用下被水泥浆与前置/隔离液逐渐清除
+    5. 浮力效应：密度差导致窄边优先顶替和潜在失稳风险
+
+    D2DGA通量修正（核心改进）：
+    - 假设替浆液占据间隙中心（流速快），被替液贴近壁面（流速慢）
+    - 通量放大因子 f(c̄, m) = [m·c̄² + 1.5·(1-c̄²)] / [m·c̄³ + (1-c̄³)]
+    - 效果：低浓度时f>1（替浆前锋跑得快），高浓度时f≈1（通量不变）
+    - 参考文献：Zhang & Frigaard (2022), JFM Vol.947, A32
 
     模型特点：
     - 网格：ny×nz（方位角×井深），使用双线性插值实现反演追踪
@@ -171,7 +180,9 @@ class AnnulusD2DGASolver:
         nz: int = 140,
         ny: int = 40,
         alpha_clean: float = 0.085,
-        total_t: float = 6600.0,
+        total_t: float = 12000.0,
+        enable_d2dga: bool = True,
+        d2dga_viscosity_ratio: float = 1.0,
         quality_penalty_scale: float = 0.099,
         channeling_penalty_weight: float = 0.55,
         mixing_penalty_weight: float = 0.35,
@@ -200,7 +211,9 @@ class AnnulusD2DGASolver:
             nz: 井深方向网格数，默认140
             ny: 方位角方向网格数，默认40
             alpha_clean: 泥饼清除系数，默认0.085
-            total_t: 总模拟时间（秒），默认6600秒（110分钟）
+            total_t: 总模拟时间（秒），默认12000秒（200分钟）
+            enable_d2dga: 是否启用D2DGA通量修正（Zhang & Frigaard 2022），默认开启
+            d2dga_viscosity_ratio: D2DGA粘度比 m = η_displaced/η_displacing，默认1.0
             quality_penalty_scale: 质量惩罚因子，默认0.099
             channeling_penalty_weight: 窜槽风险权重，默认0.55
             mixing_penalty_weight: 混浆风险权重，默认0.35
@@ -227,6 +240,8 @@ class AnnulusD2DGASolver:
         self.ny = ny
         self.alpha_clean = alpha_clean
         self.total_t = total_t
+        self.enable_d2dga = enable_d2dga
+        self.d2dga_viscosity_ratio = d2dga_viscosity_ratio
         self.quality_penalty_scale = quality_penalty_scale
         self.channeling_penalty_weight = channeling_penalty_weight
         self.mixing_penalty_weight = mixing_penalty_weight
@@ -647,9 +662,26 @@ class AnnulusD2DGASolver:
                 dax = 0.0040 * np.abs(w) * effective_b * (0.20 + 1.20 * cement * (1.0 - cement)) * (1.0 + 0.50 * geom["e"][None, :]) * (1.0 + 0.10 * np.maximum(disp_ratio - 1.0, 0.0)) / (1.0 + 0.95 * buoy_num)
                 day = 0.16 * dax * (0.45 + 0.55 * geom["e"][None, :])
 
+                # === D2DGA通量修正（Zhang & Frigaard 2022, JFM Vol.947, A32）===
+                # 论文核心：假设替浆液占据间隙中心（流速快），被替液贴近壁面（流速慢），
+                # 不同浓度层以不同速度运动，产生分散效应。
+                # 通量放大因子 f(c̄, m) = [m·c̄² + 1.5·(1-c̄²)] / [m·c̄³ + (1-c̄³)]
+                # 其中 c̄ = 间隙平均浓度（水泥浆），m = 粘度比（被替/替）
+                # 效果：c̄小→f>1（替浆前锋跑得快），c̄大→f≈1（通量不变）
+                if self.enable_d2dga:
+                    m_ratio = self.d2dga_viscosity_ratio
+                    c_safe = np.clip(cement, 0.01, 0.99)  # 避免除零
+                    f_amp = (m_ratio * c_safe**2 + 1.5 * (1.0 - c_safe**2)) / (m_ratio * c_safe**3 + (1.0 - c_safe**3))
+                    f_amp = np.clip(f_amp, 0.5, 2.0)  # 限制放大范围，保持数值稳定
+                else:
+                    f_amp = 1.0
+
                 v_eff = v + 0.007 * np.maximum(rho - mud_density_gcc, 0.0) * cement * np.sin(np.pi * geom["phi"])[:, None]
-                ysrc = ygrid - v_eff * self.dt
-                ssrc = sgrid - w * self.dt
+                # D2DGA修正：用放大因子调整有效速度场
+                w_d2dga = w * f_amp
+                v_eff_d2dga = v_eff * f_amp
+                ysrc = ygrid - v_eff_d2dga * self.dt
+                ssrc = sgrid - w_d2dga * self.dt
                 # 水泥浆与前置/隔离液使用同一速度场输运；只改变被输运的浓度变量。
                 cement_adv = _bilinear_interp(cement, ysrc, ssrc, geom, inlet_cement_fraction)
                 spacer_adv = _bilinear_interp(spacer, ysrc, ssrc, geom, inlet_spacer_fraction)
@@ -672,8 +704,16 @@ class AnnulusD2DGASolver:
                 spacer_lap_y[1:-1, :] = (spacer_adv[2:, :] - 2.0 * spacer_adv[1:-1, :] + spacer_adv[:-2, :]) / dy**2
                 spacer_lap_y[0, :] = (spacer_adv[1, :] - spacer_adv[0, :]) / dy**2
                 spacer_lap_y[-1, :] = (spacer_adv[-2, :] - spacer_adv[-1, :]) / dy**2
-                cement = np.clip(cement_adv + self.dt * (dax * lap_s + day * lap_y), 0.0, 1.0)
-                spacer = np.clip(spacer_adv + self.dt * (dax * spacer_lap_s + day * spacer_lap_y), 0.0, 1.0)
+                cement = np.clip(
+                    cement_adv + self.dt * (dax * lap_s + day * lap_y),
+                    0.0,
+                    1.0,
+                )
+                spacer = np.clip(
+                    spacer_adv + self.dt * (dax * spacer_lap_s + day * spacer_lap_y),
+                    0.0,
+                    1.0,
+                )
                 # 数值扩散可能使显式两相之和略超1；按比例压回可行域，保持泥浆分数非负。
                 tracked_total = cement + spacer
                 overfilled = tracked_total > 1.0
