@@ -100,18 +100,28 @@ def _read_profile_rows(caliper_csv_path: Path) -> tuple[tuple[float, float, floa
 
 
 def _standoff_value(depth_md_m: float, hole_diameter_mm: float, liner_od_mm: float) -> float:
-    standoff = 0.58
-    if 6840.00 <= depth_md_m < 7119.80:
-        standoff = 0.52
-    elif 7119.80 <= depth_md_m < 7405.00:
-        standoff = 0.62
-    elif 7405.00 <= depth_md_m <= 7540.00:
-        standoff = 0.56
+    """计算居中度(standoff)剖面。
+
+    基于邻井呼探1-002的扶正器数据估算：
+    - 呼探1-002: 95只整体式弹扶，目的层44m间距，非目的层55m间距
+    - 呼102井段较短(911.9m)，采用相似间距策略
+
+    居中度定义：standoff = 1 - 偏心度
+    - standoff = 1.0: 完全居中
+    - standoff = 0.0: 完全偏心
+    """
+    # 基于邻井数据的居中度估算
+    # 目的层段(7405-7540m): 44m间距 → standoff ≈ 0.70
+    # 非目的层段: 55m间距 → standoff ≈ 0.65
+    standoff = 0.65  # 默认值（非目的层）
+    if 7405.00 <= depth_md_m <= 7540.00:
+        standoff = 0.70  # 目的层段（油气水层）
     elif depth_md_m > 7540.00:
-        standoff = 0.60
+        standoff = 0.68  # 底部段（略好于非目的层）
+    # 间隙修正因子：间隙越大，居中度越好
     clearance_mm = max(hole_diameter_mm - liner_od_mm, 5.0)
     standoff *= min(max(clearance_mm / 70.0, 0.55), 1.0)
-    return min(max(standoff, 0.30), 0.82)
+    return min(max(standoff, 0.30), 0.85)
 
 
 def _build_hole_profile(profile_rows: Iterable[tuple[float, float, float]]) -> tuple[DepthValuePoint, ...]:
