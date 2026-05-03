@@ -6,7 +6,7 @@
 2. 1D-2D耦合：套管内前沿追踪 → 鞋口出流 → 环空入口
 
 输出目录：results/呼102尾管_初版模型/ 和 results/呼102尾管_1D2D耦合模型/
-输出文件：CSV(时间序列/深度剖面) + JSON(摘要) + Markdown(摘要) + PNG(4张图)
+输出文件：CSV(时间序列/深度剖面) + JSON(摘要) + Markdown(摘要) + PNG(静态图) + NPZ(2D场数据) + GIF(动画)
 """
 
 from __future__ import annotations
@@ -16,9 +16,17 @@ import json
 from pathlib import Path
 from typing import cast
 
+import numpy as np
+
 from cemdisp.data.loaders import build_hu102_annulus_inlet_provider, load_hu102_tailpipe
 from cemdisp.models2d import AnnulusD2DGASolver
 from cemdisp.models2d.boundary_bridge import AnnulusInletState, build_coupled_annulus_inlet_provider
+from cemdisp.reporting.animation import animate_cement_field
+from cemdisp.reporting.contour_plots import (
+    plot_annulus_snapshots,
+    plot_depth_time_contour,
+    plot_final_fields_contour,
+)
 from cemdisp.reporting.plots import (
     plot_depth_profiles,
     plot_efficiency_summary_bar,
@@ -84,11 +92,32 @@ def run_and_export(
         encoding="utf-8",
     )
 
-    # 导出图表（中文标签+中文文件名）
+    # 导出静态图表（中文标签+中文文件名）
     _ = plot_time_series(result, output_dir=output_dir)
     _ = plot_depth_profiles(result, well_spec=well_spec, output_dir=output_dir)
     _ = plot_risk_indices(result, output_dir=output_dir)
     _ = plot_efficiency_summary_bar(result, output_dir=output_dir)
+
+    # 导出云图（深度-时间等值线 + 多时刻截面快照 + 最终场三联图）
+    _ = plot_depth_time_contour(result, output_dir=output_dir)
+    _ = plot_annulus_snapshots(result, output_dir=output_dir)
+    _ = plot_final_fields_contour(result, output_dir=output_dir)
+
+    # 导出2D场数据NPZ（水泥浓度快照 + 壁面泥饼快照 + 时间点 + 网格坐标）
+    npz_path = output_dir / f"呼102尾管_{mode_title}_2D场数据.npz"
+    _ = np.savez(
+        npz_path,
+        cement_snapshots=np.array(result.cement_snapshots),
+        wall_snapshots=np.array(result.wall_snapshots),
+        snapshot_times_s=np.array(result.snapshot_times_s),
+        md=result.geom["md"],
+        y=result.geom["y"],
+        cement_final=result.cement_field,
+        wall_final=result.wall_field,
+    )
+
+    # 导出水泥浓度场时间演化动画（GIF格式）
+    _ = animate_cement_field(result, output_dir=output_dir, save_format="gif")
 
     # 打印摘要
     print(f"\n=== {mode_title} ===")

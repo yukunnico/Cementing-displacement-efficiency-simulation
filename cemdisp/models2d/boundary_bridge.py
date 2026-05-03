@@ -15,7 +15,7 @@
 
 3. build_coupled_annulus_inlet_provider()：构建1D-2D耦合的边界提供器
     - 将套管鞋口出流状态转换为环空入口边界
-    - 自动将流体名称映射为环空两相模型（cement/mud）
+    - 自动将流体名称映射为环空三相模型（cement/spacer/mud）
     - 保持1D层可插拔，不改变环空2D求解器接口
 
 设计原则：
@@ -72,15 +72,18 @@ def build_coupled_annulus_inlet_provider(
     role_by_name: dict[str, FluidRole] = {fluid.name: fluid.role for fluid in fluids}
 
     def _phase_fractions_for_fluid(fluid_name: str) -> tuple[tuple[str, float], ...]:
-        """根据流体角色映射为环空二维模型的两相名称。"""
+        """根据流体角色映射为环空二维模型的三相名称。"""
 
         role = role_by_name.get(fluid_name, FluidRole.MUD)
+        # 三相映射规则：领浆/尾浆归为水泥相，冲洗液/隔离液归为隔离液相，其余归为泥浆相。
         if role in {FluidRole.LEAD, FluidRole.TAIL}:
             return (("cement", 1.0),)
+        if role in {FluidRole.WASH, FluidRole.SPACER}:
+            return (("spacer", 1.0),)
         return (("mud", 1.0),)
 
     def _provider(time_s: float) -> AnnulusInletState:
-        # 先查询套管内 1D 鞋口出流，再把流体名称映射为环空两相分数。
+        # 先查询套管内 1D 鞋口出流，再把流体名称映射为环空三相分数。
         pipe_exit_state = casing_solver.pipe_exit_state_at(casing_result, time_s)
         fluid_name = pipe_exit_state.phase_fractions[0][0] if pipe_exit_state.phase_fractions else ""
         mapped_pipe_exit = PipeExitState(

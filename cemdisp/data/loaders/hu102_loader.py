@@ -6,8 +6,8 @@
 主要功能：
 - 从井径/井斜CSV文件读取剖面数据
 - 构建井筒几何参数（井段范围、套管尺寸、偏心度等）
-- 定义钻井液、替浆液、尾管水泥浆的物性参数
-- 构建现场记录施工日程（尾浆注入+替浆液推进两步）
+- 定义钻井液、替浆液、尾管水泥浆，以及可选冲洗液/隔离液的物性参数
+- 构建现场记录施工日程（默认尾浆注入+替浆液推进两步，可选加入冲洗液/隔离液）
 - 提供环空入口边界状态提供器（支持多种边界模式）
 
 物理参数说明：
@@ -35,8 +35,8 @@
 from __future__ import annotations
 
 import csv
+from collections.abc import Callable, Iterable
 from pathlib import Path
-from typing import Callable, Dict, Iterable, Tuple
 
 from cemdisp.data.fluid_spec import FluidRole, FluidSpec, RheologyModel
 from cemdisp.data.pumping_schedule import PumpingSchedule, PumpingScheduleStep
@@ -83,9 +83,9 @@ HU102_SPACER_PV_PA_S = 0.035         # 驱油隔离液塑性粘度（呼103邻�
 HU102_SPACER_YP_PA = 8.0             # 驱油隔离液屈服值（呼103邻井）
 
 
-def _read_profile_rows(caliper_csv_path: Path) -> Tuple[Tuple[float, float, float], ...]:
+def _read_profile_rows(caliper_csv_path: Path) -> tuple[tuple[float, float, float], ...]:
     with caliper_csv_path.open("r", encoding="utf-8-sig", newline="") as handle:
-        rows = []
+        rows: list[tuple[float, float, float]] = []
         for row in csv.DictReader(handle):
             rows.append(
                 (
@@ -114,15 +114,15 @@ def _standoff_value(depth_md_m: float, hole_diameter_mm: float, liner_od_mm: flo
     return min(max(standoff, 0.30), 0.82)
 
 
-def _build_hole_profile(profile_rows: Iterable[Tuple[float, float, float]]) -> Tuple[DepthValuePoint, ...]:
+def _build_hole_profile(profile_rows: Iterable[tuple[float, float, float]]) -> tuple[DepthValuePoint, ...]:
     return tuple(DepthValuePoint(depth_md_m=depth, value=hole_diameter) for depth, hole_diameter, _ in profile_rows)
 
 
-def _build_inclination_profile(profile_rows: Iterable[Tuple[float, float, float]]) -> Tuple[DepthValuePoint, ...]:
+def _build_inclination_profile(profile_rows: Iterable[tuple[float, float, float]]) -> tuple[DepthValuePoint, ...]:
     return tuple(DepthValuePoint(depth_md_m=depth, value=inclination) for depth, _, inclination in profile_rows)
 
 
-def _build_standoff_profile(profile_rows: Iterable[Tuple[float, float, float]]) -> Tuple[DepthValuePoint, ...]:
+def _build_standoff_profile(profile_rows: Iterable[tuple[float, float, float]]) -> tuple[DepthValuePoint, ...]:
     return tuple(
         DepthValuePoint(
             depth_md_m=depth,
@@ -136,8 +136,18 @@ def load_hu102_tailpipe(
     *,
     caliper_csv_path: Path | None = None,
     reference_root: Path | None = None,
-) -> Tuple[WellSpec, Tuple[FluidSpec, ...], PumpingSchedule, ValidationData]:
-    """加载呼102尾管段首版模型输入。"""
+    include_wash_spacer: bool = False,
+) -> tuple[WellSpec, tuple[FluidSpec, ...], PumpingSchedule, ValidationData]:
+    """加载呼102尾管段首版模型输入。
+
+    Args:
+        caliper_csv_path: 可选井径/井斜 CSV 路径。
+        reference_root: 可选参考资料根目录。
+        include_wash_spacer: 是否把 0708 邻井代理的冲洗液/隔离液步骤加入泵注程序。
+
+    Returns:
+        井筒参数、流体参数、泵注程序与验证资料路径。
+    """
 
     resolved_reference_root = reference_root or DEFAULT_REFERENCE_ROOT
     resolved_caliper_csv_path = caliper_csv_path or DEFAULT_CALIPER_CSV
@@ -192,10 +202,46 @@ def load_hu102_tailpipe(
             power_law_n=HU102_CEMENT_POWER_LAW_N,
             consistency_k=HU102_CEMENT_CONSISTENCY_K,
         ),
+        FluidSpec(
+            name="冲洗液",
+            role=FluidRole.WASH,
+            density_kg_m3=HU102_WASH_DENSITY_KG_M3,
+            rheology_model=RheologyModel.BINGHAM,
+            plastic_viscosity_pa_s=HU102_WASH_PV_PA_S,
+            yield_stress_pa=HU102_WASH_YP_PA,
+        ),
+        FluidSpec(
+            name="隔离液",
+            role=FluidRole.SPACER,
+            density_kg_m3=HU102_SPACER_DENSITY_KG_M3,
+            rheology_model=RheologyModel.BINGHAM,
+            plastic_viscosity_pa_s=HU102_SPACER_PV_PA_S,
+            yield_stress_pa=HU102_SPACER_YP_PA,
+        ),
     )
 
+    # 默认保持现场记录的两步程序；仅在显式开启时插入前置冲洗液/隔离液代理步骤。
+    optional_front_steps = ()
+    if include_wash_spacer:
+        optional_front_steps = (
+            PumpingScheduleStep(
+                step_name="注入冲洗液",
+                fluid_name="冲洗液",
+                volume_m3=3.0,  # 0708邻井代理值，非呼102主作业最终确认值
+                rate_m3_min=HU102_RATE_M3_MIN,
+                remarks="0708邻井代理，体积待确认。",
+            ),
+            PumpingScheduleStep(
+                step_name="注入隔离液",
+                fluid_name="隔离液",
+                volume_m3=5.0,  # 0708邻井代理值，非呼102主作业最终确认值
+                rate_m3_min=HU102_RATE_M3_MIN,
+                remarks="0708邻井代理，体积待确认。",
+            ),
+        )
+
     schedule = PumpingSchedule(
-        steps=(
+        steps=optional_front_steps + (
             PumpingScheduleStep(
                 step_name="注入尾管水泥浆",
                 fluid_name="尾管水泥浆",
@@ -212,9 +258,9 @@ def load_hu102_tailpipe(
             ),
         ),
         notes=(
-            "按现场记录（10042.xlsx Row 26）：仅尾浆+替浆液两步。",
-            "前置液/隔离液/领浆程序缺少主作业直接证据，暂不强制注入（方案A）。",
-            "可选补充：WASH(ρ=1.88) 和 SPACER(ρ=1.85) 参数已定义在模块常量中，供后续参数化使用。",
+            "按现场记录（10042.xlsx Row 26）：默认仅尾浆+替浆液两步。",
+            "前置液/隔离液/领浆程序缺少主作业直接证据，默认不强制注入（方案A）。",
+            "可选补充：include_wash_spacer=True 时加入 WASH(ρ=1.88) 和 SPACER(ρ=1.85) 代理步骤。",
         ),
     )
 
@@ -233,27 +279,41 @@ def load_hu102_tailpipe(
 
 def build_hu102_annulus_inlet_provider(
     schedule: PumpingSchedule,
-    fluids: Tuple[FluidSpec, ...],
+    fluids: tuple[FluidSpec, ...],
     annulus_boundary_mode: str = "sustained_tail",
 ) -> Callable[[float], AnnulusInletState]:
     """为 Hu102 尾管段首版模型构建环空入口边界提供器。"""
 
-    fluid_role_by_name: Dict[str, FluidRole] = {fluid.name: fluid.role for fluid in fluids}
+    fluid_role_by_name: dict[str, FluidRole] = {fluid.name: fluid.role for fluid in fluids}
     cement_fluid_names = {fluid.name for fluid in fluids if fluid.role in {FluidRole.LEAD, FluidRole.TAIL}}
     if not cement_fluid_names:
         raise ValueError("至少需要一个角色为 LEAD 或 TAIL 的水泥浆流体")
     default_cement_name = next(iter(sorted(cement_fluid_names)))
 
-    def _phase_fractions_for_fluid(fluid_name: str) -> Tuple[Tuple[str, float], ...]:
-        role = fluid_role_by_name[fluid_name]
+    def _phase_fractions_for_fluid(fluid_name: str) -> tuple[tuple[str, float], ...]:
+        role = fluid_role_by_name.get(fluid_name, FluidRole.MUD)
+        # 三相映射规则：领浆/尾浆归为水泥相，冲洗液/隔离液归为隔离液相，其余归为泥浆相。
         if role in {FluidRole.LEAD, FluidRole.TAIL}:
             return (("cement", 1.0),)
+        if role in {FluidRole.WASH, FluidRole.SPACER}:
+            return (("spacer", 1.0),)
         return (("mud", 1.0),)
 
     steps = schedule.steps
     if len(steps) < 2:
         raise ValueError("Hu102 首版边界提供器至少需要水泥浆步骤和替浆步骤")
-    displacement_step = steps[1]
+    # 多流体程序下替浆步骤不再固定为第 2 步，因此按流体角色定位替浆阶段。
+    displacement_step_index = next(
+        (
+            index
+            for index, step in enumerate(steps)
+            if fluid_role_by_name[step.fluid_name] == FluidRole.DISPLACEMENT
+        ),
+        None,
+    )
+    if displacement_step_index is None:
+        raise ValueError("Hu102 边界提供器需要至少一个替浆液步骤")
+    displacement_step = steps[displacement_step_index]
     displacement_rate_m3_s = displacement_step.rate_m3_min / 60.0
 
     def _provider(time_s: float) -> AnnulusInletState:
@@ -261,7 +321,7 @@ def build_hu102_annulus_inlet_provider(
         for index, step in enumerate(steps):
             duration_s = 0.0 if step.rate_m3_min <= 0.0 else step.volume_m3 / step.rate_m3_min * 60.0
             if time_s < elapsed_s + duration_s - 1e-12:
-                if index == 1:
+                if index == displacement_step_index:
                     if annulus_boundary_mode == "sustained_tail":
                         return AnnulusInletState(
                             time_s=time_s,
