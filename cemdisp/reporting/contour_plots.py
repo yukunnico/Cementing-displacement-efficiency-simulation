@@ -3,8 +3,8 @@
 
 本模块提供面向报告与论文插图的二维场可视化函数，包括：
 1. 深度-时间顶替效率云图；
-2. 环空水泥浓度场多时刻快照图；
-3. 最终水泥浓度、有效顶替效率与壁面泥饼场分布图。
+2. 环空水泥与隔离液浓度场多时刻快照图；
+3. 最终水泥浓度、隔离液浓度、有效顶替效率与壁面泥饼场分布图。
 
 所有图表均沿用 :mod:`cemdisp.reporting.plots` 中的中文字体、保存逻辑与安全文件名规则，
 并避免在通用绘图函数中硬编码任何单井专用数据。
@@ -41,6 +41,28 @@ def _require_snapshot_data(result: AnnulusSimulationResult) -> tuple[tuple[Array
 
     times_min = np.asarray(raw_times, dtype=float) / 60.0
     return snapshots, times_min
+
+
+def _optional_spacer_snapshots(result: AnnulusSimulationResult, expected_count: int) -> tuple[Array, ...]:
+    """读取隔离液快照；旧结果缺少该字段时返回同尺寸零场以保持兼容。"""
+    raw_snapshots = getattr(result, "spacer_snapshots", ())
+    snapshots = tuple(np.asarray(snapshot, dtype=float) for snapshot in raw_snapshots)
+    if not snapshots:
+        # 兼容旧版单流体结果：没有隔离液快照时显示为零浓度，不影响原有水泥图。
+        cement_snapshots = tuple(np.asarray(snapshot, dtype=float) for snapshot in result.cement_snapshots)
+        return tuple(np.zeros_like(snapshot, dtype=float) for snapshot in cement_snapshots)
+    if len(snapshots) != expected_count:
+        raise ValueError("隔离液快照数量与水泥快照数量不一致，无法绘制多流体快照云图。")
+    return snapshots
+
+
+def _optional_spacer_field(result: AnnulusSimulationResult, cement_field: Array) -> Array:
+    """读取最终隔离液浓度场；旧结果缺少该字段时返回零场以保持向后兼容。"""
+    raw_field = getattr(result, "spacer_field", None)
+    if raw_field is None:
+        # 旧版本 AnnulusSimulationResult 只有水泥场，零场能保持既有功能不报错。
+        return np.zeros_like(cement_field, dtype=float)
+    return np.asarray(raw_field, dtype=float)
 
 
 def _depth_coordinates(result: AnnulusSimulationResult) -> Array:
@@ -138,10 +160,10 @@ def plot_annulus_snapshots(
     output_dir: Path | str | None = None,
     n_panels: int = 6,
 ) -> Figure:
-    """绘制环空水泥浓度场多时刻快照图。
+    """绘制环空水泥与隔离液浓度场多时刻快照图。
 
     Args:
-        result: 环空二维模拟结果，需包含水泥浓度场快照。
+        result: 环空二维模拟结果，需包含水泥浓度场快照，可选包含隔离液快照。
         output_dir: 可选输出目录；若提供则自动保存 PNG 图表。
         n_panels: 展示的快照面板数量，按时间均匀抽取。
 
@@ -152,26 +174,33 @@ def plot_annulus_snapshots(
         raise ValueError("n_panels 必须为正整数。")
 
     snapshots, times_min = _require_snapshot_data(result)
+    spacer_snapshots = _optional_spacer_snapshots(result, len(snapshots))
     depth = _depth_coordinates(result)
     azimuth = _azimuth_coordinates(result)
     for index, snapshot in enumerate(snapshots):
         _validate_field_shape(snapshot, depth, azimuth, f"cement_snapshots[{index}]")
+    for index, snapshot in enumerate(spacer_snapshots):
+        _validate_field_shape(snapshot, depth, azimuth, f"spacer_snapshots[{index}]")
 
     panel_count = min(n_panels, len(snapshots))
     selected_indices = np.linspace(0, len(snapshots) - 1, panel_count, dtype=int)
     selected_indices = np.unique(selected_indices)
     panel_count = int(selected_indices.size)
     n_cols = min(3, panel_count)
-    n_rows = int(np.ceil(panel_count / n_cols))
+    time_rows = int(np.ceil(panel_count / n_cols))
+    n_rows = time_rows * 2
 
     well_name = _safe_filename_component(result.well_name)
-    fig, axes = plt.subplots(n_rows, n_cols, figsize=(4.8 * n_cols, 3.6 * n_rows), squeeze=False)
-    image = None
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(4.8 * n_cols, 2.9 * n_rows), squeeze=False)
+    cement_image = None
+    spacer_image = None
     for panel_index, snapshot_index in enumerate(selected_indices):
-        row, col = divmod(panel_index, n_cols)
-        ax = axes[row][col]
+        base_row, col = divmod(panel_index, n_cols)
+        cement_ax = axes[base_row][col]
+        spacer_ax = axes[base_row + time_rows][col]
+        # 多流体采用上下两行对照：上排水泥、下排隔离液，避免透明叠加造成读数混淆。
         # 原始数组按窄边到宽边存储；翻转后按“宽边→窄边”展示。
-        image = ax.imshow(
+        cement_image = cement_ax.imshow(
             snapshots[int(snapshot_index)][::-1, :],
             extent=_field_extent(depth),
             origin="lower",
@@ -180,20 +209,35 @@ def plot_annulus_snapshots(
             vmin=0.0,
             vmax=1.0,
         )
-        ax.set_title(f"t = {times_min[int(snapshot_index)]:.1f} min")
-        ax.set_xlabel("井深 / m")
-        ax.set_ylabel("方位角位置 (宽边→窄边)")
+        spacer_image = spacer_ax.imshow(
+            spacer_snapshots[int(snapshot_index)][::-1, :],
+            extent=_field_extent(depth),
+            origin="lower",
+            aspect="auto",
+            cmap="coolwarm",
+            vmin=0.0,
+            vmax=1.0,
+        )
+        cement_ax.set_title(f"水泥 t = {times_min[int(snapshot_index)]:.1f} min")
+        spacer_ax.set_title(f"隔离液 t = {times_min[int(snapshot_index)]:.1f} min")
+        for ax in (cement_ax, spacer_ax):
+            ax.set_xlabel("井深 / m")
+            ax.set_ylabel("方位角位置 (宽边→窄边)")
 
-    for empty_index in range(panel_count, n_rows * n_cols):
-        row, col = divmod(empty_index, n_cols)
-        axes[row][col].axis("off")
+    for empty_index in range(panel_count, time_rows * n_cols):
+        base_row, col = divmod(empty_index, n_cols)
+        axes[base_row][col].axis("off")
+        axes[base_row + time_rows][col].axis("off")
 
-    fig.suptitle(f"{result.well_name} 水泥浓度场演化过程", fontsize=15, fontweight="bold")
-    if image is not None:
-        colorbar = fig.colorbar(image, ax=axes.ravel().tolist(), pad=0.02, shrink=0.92)
-        colorbar.set_label("水泥浓度")
+    fig.suptitle(f"{result.well_name} 水泥-隔离液浓度场演化过程", fontsize=15, fontweight="bold")
+    if cement_image is not None:
+        cement_colorbar = fig.colorbar(cement_image, ax=axes[:time_rows, :].ravel().tolist(), pad=0.02, shrink=0.9)
+        cement_colorbar.set_label("水泥浓度")
+    if spacer_image is not None:
+        spacer_colorbar = fig.colorbar(spacer_image, ax=axes[time_rows:, :].ravel().tolist(), pad=0.02, shrink=0.9)
+        spacer_colorbar.set_label("隔离液浓度")
     fig.tight_layout(rect=(0, 0, 1, 0.95))
-    _save_figure(fig, output_dir, f"{well_name}_水泥浓度场演化过程.png")
+    _save_figure(fig, output_dir, f"{well_name}_水泥-隔离液浓度场演化过程.png")
     return fig
 
 
@@ -201,10 +245,10 @@ def plot_final_fields_contour(
     result: AnnulusSimulationResult,
     output_dir: Path | str | None = None,
 ) -> Figure:
-    """绘制最终水泥浓度、有效顶替效率和壁面泥饼场分布图。
+    """绘制最终水泥、隔离液、有效顶替效率和壁面泥饼场分布图。
 
     Args:
-        result: 环空二维模拟结果，需包含最终水泥浓度场和壁面泥饼场。
+        result: 环空二维模拟结果，需包含最终水泥浓度场、隔离液浓度场和壁面泥饼场。
         output_dir: 可选输出目录；若提供则自动保存 PNG 图表。
 
     Returns:
@@ -213,21 +257,25 @@ def plot_final_fields_contour(
     depth = _depth_coordinates(result)
     azimuth = _azimuth_coordinates(result)
     cement_field = np.asarray(result.cement_field, dtype=float)
+    spacer_field = _optional_spacer_field(result, cement_field)
     wall_field = np.asarray(result.wall_field, dtype=float)
     effective_field = cement_field * (1.0 - wall_field)
 
     _validate_field_shape(cement_field, depth, azimuth, "cement_field")
+    _validate_field_shape(spacer_field, depth, azimuth, "spacer_field")
     _validate_field_shape(wall_field, depth, azimuth, "wall_field")
 
     panels = [
         ("水泥浓度", cement_field, "viridis"),
+        ("隔离液浓度", spacer_field, "coolwarm"),
         ("有效顶替效率", effective_field, "RdYlGn"),
         ("壁面泥饼", wall_field, "YlOrRd"),
     ]
     well_name = _safe_filename_component(result.well_name)
-    fig, axes = plt.subplots(1, 3, figsize=(15, 4.8), sharex=True, sharey=True)
+    fig, axes = plt.subplots(1, 4, figsize=(19.2, 4.8), sharex=True, sharey=True)
 
     for ax, (title, field, colormap) in zip(axes, panels):
+        # 多流体最终场分面显示，保持每种物理量独立色标，避免把隔离液误读为顶替效率。
         # 按宽边到窄边显示，避免用户读图时误解方位方向。
         image = ax.imshow(
             field[::-1, :],

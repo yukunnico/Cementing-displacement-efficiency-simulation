@@ -281,13 +281,20 @@ cemdisp/
   - `well_name: str` — 井号
   - `geom: dict` — 环空几何信息字典（含 `y`, `phi`, `h`, `b`, `e`, `standoff`, `inc_deg`, `hole`, `od_mm`, `clearance`, `half_gap_mean`, `mean_radius`）
   - `cement_field: ndarray` — 水泥浆浓度场（shape: ny×nz，值0~1）
+  - `spacer_field: ndarray` — 隔离液浓度场（shape: ny×nz，值0~1，三相追踪时使用）
   - `wall_field: ndarray` — 壁面泥饼残余率场（shape: ny×nz，值0~1）
   - `metrics: DataFrame` — 逐时刻指标表（含时间、排量、效率等列）
-  - `depth_profiles: dict[str, ndarray]` — 深度剖面字典（含"水泥浆占据率"、"壁面泥饼残余率"、"顶替效率"、"有效顶替效率"）
+  - `depth_profiles: dict[str, ndarray]` — 深度剖面字典（含"水泥浆占据率"、"隔离液占据率"、"壁面泥饼残余率"、"顶替效率"、"有效顶替效率"）
   - `summary: dict[str, float]` — 最终汇总指标（含各效率值、风险指标等）
   - `time_points_s: list[float]` — 时间节点列表（秒）
   - `cement_snapshots: Tuple[ndarray, ...]` — 水泥浓度场快照序列（每元素shape: ny×nz），按 `save_interval` 间隔保存
+  - `spacer_snapshots: Tuple[ndarray, ...]` — 隔离液浓度场快照序列（每元素shape: ny×nz，三相追踪时使用）
   - `wall_snapshots: Tuple[ndarray, ...]` — 壁面泥饼场快照序列（每元素shape: ny×nz）
+  - `gel_strength_snapshots: Tuple[ndarray, ...]` — 胶凝强度场快照序列（每元素shape: ny×nz），记录停泵期间的凝胶结构演化
+  - `mud_cake_field: ndarray` — 最终泥饼厚度场（shape: ny×nz，单位m），泥饼模型关闭时为0
+  - `mud_cake_snapshots: Tuple[ndarray, ...]` — 泥饼厚度快照序列
+  - `reynolds_snapshots: Tuple[ndarray, ...]` — Reynolds数场快照序列，用于识别层流/混合/湍流区
+  - `turbulent_viscosity_snapshots: Tuple[ndarray, ...]` — 湍流附加粘度快照序列，湍流模型关闭时为0
   - `snapshot_times_s: Tuple[float, ...]` — 快照时间点列表（秒），与快照序列一一对应
   - `notes: list[str]` — 运行备注
 
@@ -306,6 +313,20 @@ cemdisp/
   - `instability_penalty_weight: float = 0.35` — 失稳惩罚权重
   - `instability_decay_scale: float = 0.001` — 失稳衰减尺度
   - `save_interval: int = 60` — 快照保存间隔（每隔N个时间步保存一次2D场快照）
+  - `gel_growth_rate: float = 0.001` — 胶凝强度增长系数（1/s），控制停泵期间凝胶结构增长速度
+  - `gel_max_pa: float = 50.0` — 最大胶凝强度（Pa），限制凝胶结构增长上限
+  - `gel_break_threshold: float = 100.0` — 凝胶破碎剪切率阈值（1/s），超过此剪切率时凝胶结构被破坏
+  - `T_surface: float = 20.0` — 地面参考温度（°C）
+  - `geothermal_gradient: float = 0.03` — 线性地温梯度（°C/m）
+  - `T_ref: float = 80.0` — 流变温度修正参考温度（°C）
+  - `alpha_T: float = 0.01` — 粘度温度线性修正系数（1/°C）
+  - `enable_temperature_coupling: bool = False` — 是否启用温度-流变耦合；默认关闭以保持历史结果兼容
+  - `enable_mud_cake: bool = False` — 是否启用泥饼厚度模型；默认关闭以保持历史结果兼容
+  - `initial_mud_cake_mm: float = 3.0` — 初始泥饼厚度（mm）
+  - `k_erosion: float = 0.001` — 水泥/隔离液剪切侵蚀泥饼系数
+  - `enable_turbulence: bool = False` — 是否启用湍流/混合流态粘度修正；默认关闭以保持历史结果兼容
+  - `Re_critical: float = 2100.0` — 层流-湍流判别临界Reynolds数
+  - `turbulence_coefficient: float = 0.16` — 混合长度湍流粘度系数
 
 - **核心方法**：
 
@@ -314,22 +335,24 @@ cemdisp/
 | `run(well_spec, fluids, inlet_state_provider)` | 井身、流体列表、入口状态函数 | `AnnulusSimulationResult` | 执行完整时间推进模拟 |
 | `_build_geom(well_spec)` | 井身数据 | `dict` | 构建环空几何网格（深度y、周向phi、间隙h、宽度b） |
 | `_physical_annular_volume(well_spec)` | 井身数据 | `float` | 计算物理环空体积（m³） |
-| `_pick_fluids(fluids)` | 流体列表 | `tuple[FluidSpec, FluidSpec]` | 从流体列表中选出泥浆和水泥浆 |
-| `_compute_props(cement, w_prev, geom, mud_fluid, cement_fluid)` | 浓度场、几何、流体 | `tuple[ndarray, ndarray, ndarray]` | 计算各网格点的表观粘度μ、密度ρ、泥浆分数 |
-| `_compute_velocity(cement, geom, q_m3s, w_prev, mud_fluid, cement_fluid)` | 浓度场、几何、排量、流体 | `ndarray` | 计算周向流速场v（含浮力修正和窄间隙加速） |
+| `_pick_fluids(fluids)` | 流体列表 | `tuple[FluidSpec, FluidSpec, FluidSpec \| None]` | 从流体列表中选出泥浆、水泥浆和隔离液（可选，三相追踪时隔离液不为None） |
+| `_update_effective_gap(geom, mud_cake_thickness)` | 几何、泥饼厚度场 | `dict` | 生成含 `effective_b` 的几何字典，泥饼启用时用有效环空间隙参与速度与剪切计算 |
+| `_compute_props(cement, spacer, w_prev, geom, mud_fluid, cement_fluid, spacer_fluid, gel_strength, temperature_correction)` | 浓度场、几何、流体、胶凝和温度修正 | `tuple[ndarray, ndarray, ndarray]` | 计算各网格点的表观粘度μ、密度ρ、泥浆分数；胶凝强度只叠加到钻井液相，温度修正默认关闭 |
+| `_compute_velocity(cement, spacer, geom, q_m3s, w_prev, mud_fluid, cement_fluid, spacer_fluid, gel_strength, temperature_correction)` | 浓度场、几何、排量、流体、胶凝和温度修正 | `tuple` | 计算轴向/周向速度场、表观粘度、密度、泥浆分数、Reynolds数与湍流附加粘度 |
 | `_apparent_viscosity(fluid, gamma)` | 流体、剪切速率 | `float` | 计算单流体表观粘度 |
-| `_depth_profiles(geom, cement, wall, eff)` | 几何、浓度场、壁面场、效率 | `dict` | 计算深度方向平均剖面 |
+| `_depth_profiles(geom, cement, spacer, wall, eff)` | 几何、水泥浓度场、隔离液场、壁面场、效率 | `dict` | 计算深度方向平均剖面（含隔离液占据率） |
 
 - **求解流程**（`run`方法内部）：
   1. 构建几何网格和初始场
   2. 时间循环：每个时间步调用 `inlet_state_provider(current_time)` 获取入口状态
-  3. 停泵检测：若 `flow_rate < 1e-9 m³/s`，冻结水泥浆和壁面场，跳过平流/扩散/壁面清洁
-  4. 计算流速场 `_compute_velocity`
-  5. 半拉格朗日平流推进（bilinear插值）
+  3. 停泵检测：若 `flow_rate < 1e-9 m³/s`，冻结水泥浆和壁面场，跳过平流/扩散/壁面清洁；启动胶凝强度增长
+  4. 计算流速场 `_compute_velocity`（三相时同时考虑水泥和隔离液的浮力修正）
+  5. 半拉格朗日平流推进（bilinear插值），同步推进水泥场和隔离液场
   6. 显式扩散（轴向+周向Laplacian）
-  7. 壁面泥饼清除（剪切驱动 + 0.45基准清除率）
-  8. 计算效率指标和风险指标
-  9. 最终汇总：计算质量响应效率（quality_proxy = bulk_fill × quality_factor）
+  7. 胶凝强度演化：`_compute_gel_strength` 根据停泵时间增长或剪切率破碎
+  8. 壁面泥饼清除（剪切驱动 + 0.45基准清除率）；壁面清洁效率与`cement + 0.8 * spacer`成正比（隔离液协助清洁）
+  9. 计算效率指标和风险指标
+  10. 最终汇总：计算质量响应效率（quality_proxy = bulk_fill × quality_factor）
 
 - **关键指标列**（metrics DataFrame）：
 
@@ -341,14 +364,37 @@ cemdisp/
 | `水泥浆前沿_宽侧_m` | 宽侧水泥浆前沿位置 |
 | `水泥浆前沿_窄侧_m` | 窄侧水泥浆前沿位置 |
 | `水泥浆前沿_中间_m` | 中间位置前沿 |
+| `隔离液前沿_宽侧_m` | 宽侧隔离液前沿位置（三相追踪时） |
+| `隔离液前沿_窄侧_m` | 窄侧隔离液前沿位置（三相追踪时） |
 | `窜槽指数` | 宽窄侧前沿差值 |
 | `混浆指数` | 0.1~0.9过渡区面积占比 |
 | `宽侧流度比` | 宽侧μ_mud/μ_cement |
 | `窄侧流度比` | 窄侧μ_mud/μ_cement |
 | `失稳代理值` | 浮力-粘性力比值 |
+| `胶凝强度_Pa` | 当前最大胶凝强度（停泵时增长，泵运行时归零） |
 | `顶替效率` | 水泥浆占据率（bulk_fill） |
 | `有效顶替效率` | 窜槽/混浆/失稳修正后的效率 |
 | `质量响应效率` | 经CBL校准缩放的最终代理值 |
+
+- **触变性模型**（胶凝强度演化）：
+
+  水泥浆具有触变性（静胶凝强度增长特性），本求解器通过简化的触变模型捕捉这一行为：
+  - **停泵期间**：胶凝强度按指数增长速率 `gel_growth_rate` 持续增长，上限为 `gel_max_pa`
+    ```
+    gel_strength = min(gel_max_pa, gel_growth_rate * t_since_pump_off)
+    ```
+  - **泵运行期间**：若有效剪切速率 `gamma_eff` 超过 `gel_break_threshold`，胶凝强度归零（凝胶结构被打碎）
+    ```
+    if gamma_eff > gel_break_threshold:
+        gel_strength = 0.0
+    else:
+        gel_strength = min(gel_max_pa, previous_gel + gel_growth_rate * dt)
+    ```
+  - **表观粘度贡献**：胶凝强度叠加到流体的粘性应力项：
+    ```
+    tau_eff = mu_apparent * gamma + gel_strength * (gel_strength > 0)
+    ```
+  - **设计目的**：模拟短停泵期间水泥浆形成的微弱凝胶结构抵抗浮力引起的滑落，避免停泵时水泥"蒸发"
 
 **内部辅助函数**：
 - `_profile_to_arrays(points)` — 将 `DepthValuePoint` 列表转为深度和数值数组
@@ -572,20 +618,22 @@ cemdisp/
 #### `plot_annulus_snapshots(result, output_dir, n_panels=6)`
 
 - **参数**：`AnnulusSimulationResult`, 输出目录路径, 面板数
-- **输出文件**：`{井号}_水泥浓度场演化过程.png`
+- **输出文件**：`{井号}_浓度场演化过程.png`
 - **内容**：
+  - 双行布局：上行展示水泥浓度场，下行展示隔离液浓度场（三相追踪模式）
   - 多面板并排展示不同时刻的环空截面浓度场
-  - 每面板：X轴=井深(m)，Y轴=方位角(宽边→窄边)，颜色=水泥浓度
-  - 使用 `viridis` 配色，每面板标题 "t = XXX.X min"
-  - 从 `cement_snapshots` 中均匀选取 `n_panels` 个时刻
+  - 每面板：X轴=井深(m)，Y轴=方位角(宽边→窄边)
+  - 水泥行使用 `viridis` 配色，隔离并行使用 `plasma` 配色以示区分
+  - 每面板标题 "t = XXX.X min"
+  - 从 `cement_snapshots` 和 `spacer_snapshots` 中均匀选取 `n_panels` 个时刻
 
 #### `plot_final_fields_contour(result, output_dir)`
 
 - **参数**：`AnnulusSimulationResult`, 输出目录路径
 - **输出文件**：`{井号}_最终场分布.png`
 - **内容**：
-  - 三联图：水泥浓度(viridis) + 有效效率(RdYlGn) + 泥饼残余(YlOrRd)
-  - 展示最终时刻的完整二维场分布
+  - 四联图布局：水泥浓度(viridis) + 隔离液浓度(plasma) + 有效效率(RdYlGn) + 泥饼残余(YlOrRd)
+  - 展示最终时刻的完整二维场分布（三相追踪模式）
 
 ---
 
@@ -602,10 +650,12 @@ cemdisp/
 - **参数**：`AnnulusSimulationResult`, 输出目录路径, 帧间隔(ms), 帧率, 保存格式(gif/mp4)
 - **输出文件**：`{井号}_顶替过程动画.gif` 或 `.mp4`
 - **内容**：
-  - 单面板动画，每帧展示一时刻的水泥浓度场
+  - 双面板动画：上行展示水泥浓度场，下行展示隔离液浓度场（三相追踪模式）
+  - 每帧同步展示两相在不同时刻的场分布
   - X轴=井深(m)，Y轴=方位角(宽边→窄边)
-  - 标题每帧更新："水泥浓度场 — t = XXX.X min"
-  - 使用 `viridis` 配色，`FuncAnimation` 生成
+  - 标题每帧更新："水泥浓度场 / 隔离液浓度场 — t = XXX.X min"
+  - 水泥行使用 `viridis` 配色，隔离液行使用 `plasma` 配色
+  - 使用 `FuncAnimation` 生成
   - GIF使用 `pillow` 写入器，MP4使用 `ffmpeg` 写入器
   - 空快照时提前返回并记录警告
 
@@ -630,6 +680,36 @@ cemdisp/
 | `run_and_export(mode_title, output_dir, inlet_provider)` | 封装加载→求解→导出→打印全流程 |
 | `run_hu102_tailpipe_initial()` | 完整运行入口，依次执行初版和耦合两种模式 |
 
+**加载器参数变化**：
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `include_wash_spacer` | `bool` | `False` | 是否注入冲洗液和隔离液（启用三相追踪模式） |
+
+**五步施工时序**（当 `include_wash_spacer=True` 时）：
+
+| 步骤 | 流体 | 体积/m³ | 排量/(m³/min) | 说明 |
+|------|------|---------|---------------|------|
+| 1 | 冲洗液 | 3.0 | 1.30 | 清洗套管壁面 |
+| 2 | 隔离液 | 6.0 | 1.30 | 隔离泥浆与水泥 |
+| 3 | 领浆 | 5.0 | 1.30 | 先行水泥浆 |
+| 4 | 尾浆 | 16.67 | 1.30 | 主水泥浆体积 |
+| 5 | 替浆液 | 74.0 | 1.30 | 推进至鞋口 |
+
+**三相映射规则**（`_phase_fractions_for_fluid` 函数）：
+
+| 流体角色 | 水泥分数 | 隔离液分数 | 备注 |
+|----------|----------|------------|------|
+| MUD | 0.0 | 0.0 | 钻井液 |
+| WASH | 0.0 | 0.0 | 冲洗液不参与环空追踪 |
+| SPACER | 0.0 | 1.0 | 隔离液单独一相 |
+| LEAD | 0.5 | 0.0 | 领浆（与尾浆合计为水泥） |
+| TAIL | 1.0 | 0.0 | 尾浆（与领浆合计为水泥） |
+| DISPLACEMENT | 0.0 | 0.0 | 替浆液（驱替相） |
+
+- **壁面清洁公式**：`cleaning_effectiveness = cement + 0.8 * spacer`
+  - 隔离液的壁面清洁效果为水泥的0.8倍（因为隔离液通常具有更好的润湿性和清洗能力）
+
 **关键常量**：
 
 | 常量 | 值 | 说明 |
@@ -641,7 +721,7 @@ cemdisp/
 - `呼102尾管_{模式}_深度剖面.csv` — 深度剖面CSV
 - `呼102尾管_{模式}_结果摘要.json` — 完整结果JSON
 - `呼102尾管_{模式}_结果摘要.md` — 结果摘要Markdown
-- `呼102尾管_{模式}_2D场数据.npz` — 二维场数据（水泥浓度快照+壁面泥饼快照+网格坐标）
+- `呼102尾管_{模式}_2D场数据.npz` — 二维场数据（水泥/隔离液/壁面泥饼/胶凝强度/泥饼厚度/Reynolds数/湍流粘度快照+网格坐标）
 - 4张静态PNG图表（时间序列、深度剖面、风险指标、效率汇总柱状图）
 - 3张云图PNG（深度-时间等值线、水泥浓度场演化过程、最终场分布三联图）
 - 1张动画GIF（水泥浓度场时间演化）
@@ -686,11 +766,15 @@ cemdisp/
 |------|------|------|
 | 冻结dataclass | 所有数据类使用 `frozen=True` | 防止意外修改输入数据，确保求解器收到不可变输入 |
 | 停泵冻结 | `flow_rate < 1e-9` 时冻结水泥浆和壁面场 | 水泥浆静态胶凝强度在短停泵期抵抗浮力滑落；防止v_eff和壁面清洁基准项导致水泥"蒸发" |
-| 单相水泥 | 初版仅追踪水泥浆（TAIL）浓度场（0/1） | 缺乏冲洗液/隔离液/领浆的直接数据证据，待0708资料确认后扩展 |
+| 三相追踪 | 支持水泥浆+隔离液+泥浆三相浓度场 | 冲洗液/隔离液影响壁面清洁效率和顶替机理，需独立追踪 |
+| 触变胶凝模型 | 停泵时凝胶强度增长，泵运行时破裂 | 模拟水泥浆触变性引起的静胶凝强度演化，抵抗停泵期间浮力滑落 |
 | 1D纯前沿追踪 | 套管内不考虑管内混合/扩散 | 首版简化，后续可加入对流-弥散而无需重写环空核心 |
 | 入口提供器 | 函数式 `Callable[[float], AnnulusInletState]` | 解耦1D与2D，支持硬编码和耦合两种模式切换 |
 | 质量响应效率 | `quality_proxy = bulk_fill × quality_factor`，α=0.099 | 由Hu102 CBL合格率66.65%校准，明确标注为代理值而非顶替效率真值 |
+| 壁面清洁系数 | `cement + 0.8 * spacer` | 隔离液协助清洁壁面，其效果按0.8倍水泥浆折算 |
+| 泥饼厚度模型 | `enable_mud_cake=False` 默认关闭，启用时用泥饼厚度修正 `effective_b` | 保持历史结果兼容，同时提供井壁泥饼占据环空间隙与剪切侵蚀的可选精细化模型 |
+| 湍流/混合流态 | `enable_turbulence=False` 默认关闭，启用时按Reynolds数和混合长度模型修正粘度 | 保持层流基线稳定，同时为高排量或混合流态工况提供Maleki-Frigaard思路的扩展入口 |
 
 ---
 
-> **文档版本**：2026-05-03 | 基于 cemdisp/ 当前25个 .py 文件编写（含新增 runners/ 子包、contour_plots.py、animation.py）
+> **文档版本**：2026-05-03 | 基于 cemdisp/ 当前25个 .py 文件编写（含新增 runners/ 子包、contour_plots.py、animation.py、三相多流体追踪、触变性胶凝模型、泥饼厚度模型、湍流/混合流态扩展）

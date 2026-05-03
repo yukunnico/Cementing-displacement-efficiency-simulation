@@ -30,13 +30,19 @@ class Hu102LoaderTestCase(unittest.TestCase):
         mud = next(fluid for fluid in fluids if fluid.role == FluidRole.MUD)
         displacement = next(fluid for fluid in fluids if fluid.role == FluidRole.DISPLACEMENT)
         cement = next(fluid for fluid in fluids if fluid.role == FluidRole.TAIL)
-        self.assertEqual(len(fluids), 3)
+        wash = next(fluid for fluid in fluids if fluid.role == FluidRole.WASH)
+        spacer = next(fluid for fluid in fluids if fluid.role == FluidRole.SPACER)
+        self.assertEqual(len(fluids), 5)
         self.assertEqual(mud.rheology_model, RheologyModel.BINGHAM)
         self.assertEqual(displacement.rheology_model, RheologyModel.BINGHAM)
         self.assertEqual(cement.rheology_model, RheologyModel.POWER_LAW)
+        self.assertEqual(wash.rheology_model, RheologyModel.BINGHAM)
+        self.assertEqual(spacer.rheology_model, RheologyModel.BINGHAM)
         self.assertAlmostEqual(mud.density_kg_m3, 2020.0)
         self.assertAlmostEqual(displacement.density_kg_m3, 2020.0)
         self.assertAlmostEqual(cement.density_kg_m3, 2100.0)
+        self.assertAlmostEqual(wash.density_kg_m3, 1880.0)
+        self.assertAlmostEqual(spacer.density_kg_m3, 1850.0)
 
         self.assertEqual(len(schedule.steps), 2)
         self.assertAlmostEqual(schedule.steps[0].volume_m3, 16.6666666667, places=2)
@@ -49,6 +55,30 @@ class Hu102LoaderTestCase(unittest.TestCase):
         self.assertIsInstance(validation_data, ValidationData)
         self.assertIsNotNone(validation_data.cbl_summary_path)
         self.assertIsNotNone(validation_data.job_report_path)
+
+    def test_optional_wash_spacer_schedule(self) -> None:
+        _, fluids, schedule, _ = load_hu102_tailpipe(include_wash_spacer=True)
+
+        self.assertEqual(len(schedule.steps), 4)
+        self.assertEqual(schedule.steps[0].fluid_name, "冲洗液")
+        self.assertEqual(schedule.steps[1].fluid_name, "隔离液")
+        self.assertEqual(schedule.steps[2].fluid_name, "尾管水泥浆")
+        self.assertEqual(schedule.steps[3].fluid_name, "替浆液")
+        self.assertAlmostEqual(schedule.steps[0].volume_m3, 3.0)
+        self.assertAlmostEqual(schedule.steps[1].volume_m3, 5.0)
+
+        provider = build_hu102_annulus_inlet_provider(schedule, fluids, "tail_then_mud")
+        wash_state = provider(1.0)
+        spacer_time_s = schedule.steps[0].volume_m3 / schedule.steps[0].rate_m3_min * 60.0 + 1.0
+        spacer_state = provider(spacer_time_s)
+        displacement_time_s = sum(
+            step.volume_m3 / step.rate_m3_min * 60.0 for step in schedule.steps[:3]
+        ) + 1.0
+        displacement_state = provider(displacement_time_s)
+
+        self.assertEqual(wash_state.phase_fractions, (("spacer", 1.0),))
+        self.assertEqual(spacer_state.phase_fractions, (("spacer", 1.0),))
+        self.assertEqual(displacement_state.phase_fractions, (("mud", 1.0),))
 
     def test_standoff_profile_range(self) -> None:
         well_spec, _, _, _ = load_hu102_tailpipe()
