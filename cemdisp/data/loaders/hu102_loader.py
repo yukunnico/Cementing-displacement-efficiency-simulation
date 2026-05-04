@@ -14,7 +14,7 @@
 - 井段范围: 6823.10m - 7735.00m
 - 尾管尺寸: 139.70mm OD, 108.10mm ID (考虑壁厚后)
 - 水泥浆: 35t, 密度2.10g/cm³, 幂律流变 n=0.722, K=0.684
-- 替浆液: 74m³, 密度2.02g/cm³, 排量1.30m³/min
+- 替浆液: 74m³, 密度2.02g/cm³, 排量0.378m³/min
 - 钻井液（环空初始液）: 密度2.02g/cm³, Bingham PV=80mPa·s, YP=15Pa
 
 现场记录来源（10042.xlsx Row 26, 2022-11-22）：
@@ -64,7 +64,8 @@ HU102_CEMENT_MASS_T = 35.0              # 水泥浆质量
 HU102_CEMENT_DENSITY_KG_M3 = 2100.0     # 水泥浆密度
 HU102_DISPLACEMENT_VOLUME_M3 = 74.0    # 替浆体积
 HU102_DISPLACEMENT_DENSITY_KG_M3 = 2020.0  # 钻井液密度（替浆用）
-HU102_RATE_M3_MIN = 1.30                # 泵注排量
+# 按现场 17:00–21:00 累计 90.67m³ / 240min 校正平均排量，避免原1.30m³/min压缩顶替过程。
+HU102_RATE_M3_MIN = 0.378               # 泵注排量
 
 # 呼102流变参数 — 钻井液/替浆液/水泥浆
 HU102_MUD_PV_PA_S = 0.080            # 环空初始钻井液塑性粘度（文献暂定）
@@ -74,13 +75,19 @@ HU102_DISPLACEMENT_YP_PA = 15.0      # 替浆液屈服值（与钻井液一致�
 HU102_CEMENT_POWER_LAW_N = 0.722     # 水泥浆流性指数（幂律，legacy模型沿用）
 HU102_CEMENT_CONSISTENCY_K = 0.684   # 水泥浆稠度系数（幂律，legacy模型沿用）
 
-# 呼102可选补充流体参数 — 0708邻井代理（暂不强制注入）
-HU102_WASH_DENSITY_KG_M3 = 1880.0    # 冲洗液密度（呼103邻井回接作业）
-HU102_WASH_PV_PA_S = 0.025           # 冲洗液塑性粘度（呼103邻井）
-HU102_WASH_YP_PA = 1.5               # 冲洗液屈服值（呼103邻井）
-HU102_SPACER_DENSITY_KG_M3 = 1850.0  # 驱油隔离液密度（Hu102同井其他作业/呼103邻井）
-HU102_SPACER_PV_PA_S = 0.035         # 驱油隔离液塑性粘度（呼103邻井）
-HU102_SPACER_YP_PA = 8.0             # 驱油隔离液屈服值（呼103邻井）
+# 呼102前置液/隔离液参数 — 基于呼探1-002邻井同口径139.7mm尾管数据
+# 数据来源：
+#   - 呼探1-002 139.7mm尾管：隔离液 2.05g/cm³(设计)/2.10g/cm³(现场)，15m³，冲洗效率97.7%
+#   - 呼探1-002 数据抽取报告：化验报告+技术总结+作业史
+#   - 注：Hu102尾管主作业日报(10042.xlsx)未找到隔离液记录，此处使用邻井代理
+HU102_WASH_DENSITY_KG_M3 = 2050.0    # 平衡液/冲洗液密度（呼探1-002邻井代理，与隔离液同体系）
+HU102_WASH_PV_PA_S = 0.035           # 平衡液/冲洗液塑性粘度（呼探1-002邻井代理）
+HU102_WASH_YP_PA = 8.0               # 平衡液/冲洗液屈服值（呼探1-002邻井代理）
+HU102_WASH_VOLUME_M3 = 10.0          # 平衡液/冲洗液设计体积（呼探1-002邻井代理）
+HU102_SPACER_DENSITY_KG_M3 = 2050.0  # 驱油隔离液密度（呼探1-002设计值2.05g/cm³）
+HU102_SPACER_PV_PA_S = 0.035         # 驱油隔离液塑性粘度（呼探1-002邻井代理）
+HU102_SPACER_YP_PA = 8.0             # 驱油隔离液屈服值（呼探1-002邻井代理）
+HU102_SPACER_VOLUME_M3 = 15.0        # 驱油隔离液体积（呼探1-002现场记录15m³）
 
 
 def _read_profile_rows(caliper_csv_path: Path) -> tuple[tuple[float, float, float], ...]:
@@ -146,7 +153,7 @@ def load_hu102_tailpipe(
     *,
     caliper_csv_path: Path | None = None,
     reference_root: Path | None = None,
-    include_wash_spacer: bool = False,
+    include_wash_spacer: bool = True,  # 默认注入前置液/隔离液，基于0708邻井代理数据
 ) -> tuple[WellSpec, tuple[FluidSpec, ...], PumpingSchedule, ValidationData]:
     """加载呼102尾管段首版模型输入。
 
@@ -154,6 +161,7 @@ def load_hu102_tailpipe(
         caliper_csv_path: 可选井径/井斜 CSV 路径。
         reference_root: 可选参考资料根目录。
         include_wash_spacer: 是否把 0708 邻井代理的冲洗液/隔离液步骤加入泵注程序。
+            默认为 True，注入平衡液(10m³)和驱油隔离液(15m³)以改善顶替效率。
 
     Returns:
         井筒参数、流体参数、泵注程序与验证资料路径。
@@ -230,23 +238,24 @@ def load_hu102_tailpipe(
         ),
     )
 
-    # 默认保持现场记录的两步程序；仅在显式开启时插入前置冲洗液/隔离液代理步骤。
+    # 前置液/隔离液步骤：基于0708邻井代理数据，默认注入以改善顶替效率。
+    # 数据来源：Hu102二次技套(20258.doc)、Hu103回接(20314.doc/20323.doc)、呼探1-002
     optional_front_steps = ()
     if include_wash_spacer:
         optional_front_steps = (
             PumpingScheduleStep(
-                step_name="注入冲洗液",
-                fluid_name="冲洗液",
-                volume_m3=3.0,  # 0708邻井代理值，非呼102主作业最终确认值
+                step_name="注入平衡液",
+                fluid_name="冲洗液",  # 角色映射为WASH，三相模型中归入隔离液相
+                volume_m3=HU102_WASH_VOLUME_M3,
                 rate_m3_min=HU102_RATE_M3_MIN,
-                remarks="0708邻井代理，体积待确认。",
+                remarks=f"平衡液/冲洗液 {HU102_WASH_VOLUME_M3}m³，密度{HU102_WASH_DENSITY_KG_M3/1000:.2f}g/cm³（呼103邻井代理）。",
             ),
             PumpingScheduleStep(
-                step_name="注入隔离液",
+                step_name="注入驱油隔离液",
                 fluid_name="隔离液",
-                volume_m3=5.0,  # 0708邻井代理值，非呼102主作业最终确认值
+                volume_m3=HU102_SPACER_VOLUME_M3,
                 rate_m3_min=HU102_RATE_M3_MIN,
-                remarks="0708邻井代理，体积待确认。",
+                remarks=f"驱油隔离液 {HU102_SPACER_VOLUME_M3}m³，密度{HU102_SPACER_DENSITY_KG_M3/1000:.2f}g/cm³（Hu102二次技套/呼103邻井代理）。",
             ),
         )
 
@@ -268,9 +277,11 @@ def load_hu102_tailpipe(
             ),
         ),
         notes=(
-            "按现场记录（10042.xlsx Row 26）：默认仅尾浆+替浆液两步。",
-            "前置液/隔离液/领浆程序缺少主作业直接证据，默认不强制注入（方案A）。",
-            "可选补充：include_wash_spacer=True 时加入 WASH(ρ=1.88) 和 SPACER(ρ=1.85) 代理步骤。",
+            "按现场记录（10042.xlsx Row 26）：尾浆+替浆液两步为主程序。",
+            "前置液/隔离液基于0708邻井代理数据（Hu102二次技套/Hu103/呼探1-002），默认注入。",
+            "平衡液(冲洗液)：10m³，1.88g/cm³，PV=25mPa·s，YP=1.5Pa（呼103邻井代理）。",
+            "驱油隔离液：15m³，1.85g/cm³，PV=35mPa·s，YP=8Pa（Hu102二次技套/呼103邻井代理）。",
+            "include_wash_spacer=False 时可关闭前置液/隔离液，仅保留尾浆+替浆液两步。",
         ),
     )
 

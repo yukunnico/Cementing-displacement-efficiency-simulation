@@ -57,14 +57,18 @@ def run_and_export(
 
     output_dir.mkdir(parents=True, exist_ok=True)
     well_spec, fluids, _, _ = load_hu102_tailpipe()
-    solver = AnnulusD2DGASolver()
+    # 前置液(10m³)+隔离液(15m³)+水泥(16.67m³)+替浆(74m³)=115.67m³
+    # 按0.378m³/min排量，总泵注时间≈306min=18360s
+    # total_t=20000s覆盖完整泵注(18360s)+约27min停泵后静置/候凝早期观察窗口
+    # enable_gravity=True启用停泵阶段密度驱动对流：高密度水泥浆下沉、低密度泥浆上返。
+    solver = AnnulusD2DGASolver(total_t=20000.0, enable_gravity=True)
     result = solver.run(well_spec, fluids, inlet_provider)
 
     # 导出CSV
     metrics_path = output_dir / f"呼102尾管_{mode_title}_时间序列结果.csv"
     profiles_path = output_dir / f"呼102尾管_{mode_title}_深度剖面.csv"
-    _ = result.metrics.to_csv(metrics_path, index=False, encoding="utf-8-sig")
-    _ = result.depth_profiles.to_csv(profiles_path, index=False, encoding="utf-8-sig")
+    _ = result.metrics.to_csv(metrics_path, index=False, encoding="utf-8-sig")  # pyright: ignore[reportUnknownMemberType]
+    _ = result.depth_profiles.to_csv(profiles_path, index=False, encoding="utf-8-sig")  # pyright: ignore[reportUnknownMemberType]
 
     # 导出JSON摘要
     summary_json_path = output_dir / f"呼102尾管_{mode_title}_结果摘要.json"
@@ -146,7 +150,8 @@ def run_hu102_tailpipe_initial() -> None:
     )
 
     # 1D-2D耦合模式：套管内前沿追踪 → 鞋口出流 → 环空入口。
-    casing_solver = CasingFlowSolver()
+    # 套管内同样启用重力项，使鞋口边界能反映停泵后的密度分异趋势。
+    casing_solver = CasingFlowSolver(enable_gravity=True)
     casing_result = casing_solver.run(well_spec, fluids, schedule)
     coupled_provider = build_coupled_annulus_inlet_provider(casing_result, casing_solver, fluids)
     run_and_export(

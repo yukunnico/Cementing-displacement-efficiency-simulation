@@ -133,6 +133,8 @@ class AnnulusSimulationResult:
     summary: Dict[str, object]
     time_points_s: Tuple[float, ...] = field(default_factory=tuple)
     cement_snapshots: Tuple[Array, ...] = field(default_factory=tuple)
+    lead_snapshots: Tuple[Array, ...] = field(default_factory=tuple)
+    tail_snapshots: Tuple[Array, ...] = field(default_factory=tuple)
     spacer_snapshots: Tuple[Array, ...] = field(default_factory=tuple)
     wall_snapshots: Tuple[Array, ...] = field(default_factory=tuple)
     gel_strength_snapshots: Tuple[Array, ...] = field(default_factory=tuple)
@@ -142,6 +144,8 @@ class AnnulusSimulationResult:
     turbulent_viscosity_snapshots: Tuple[Array, ...] = field(default_factory=tuple)
     snapshot_times_s: Tuple[float, ...] = field(default_factory=tuple)
     notes: Tuple[str, ...] = field(default_factory=tuple)
+    lead_field: Array = field(default_factory=lambda: np.empty((0, 0), dtype=float))
+    tail_field: Array = field(default_factory=lambda: np.empty((0, 0), dtype=float))
 
 
 class AnnulusD2DGASolver:
@@ -203,6 +207,9 @@ class AnnulusD2DGASolver:
         enable_turbulence: bool = False,
         Re_critical: float = 2100.0,
         turbulence_coefficient: float = 0.16,
+        enable_gravity: bool = False,
+        g_constant: float = 9.81,
+        gravity_yield_factor: float = 0.5,
     ) -> None:
         """初始化环空二维求解器参数。
 
@@ -234,6 +241,9 @@ class AnnulusD2DGASolver:
             enable_turbulence: 是否启用湍流/混合流修正；默认关闭以保持层流算例历史输出不变
             Re_critical: 临界雷诺数，超过该值时按湍流单元处理，默认2100
             turbulence_coefficient: 湍流系数，等价于混合长度模型中的0.4²，默认0.16
+            enable_gravity: 是否启用显式井轴重力体力项；默认关闭以保持历史输出不变
+            g_constant: 重力加速度（m/s²），默认9.81
+            gravity_yield_factor: 重力对流需克服的屈服应力比例，默认取屈服应力的50%
         """
         self.dt = dt
         self.nz = nz
@@ -267,6 +277,10 @@ class AnnulusD2DGASolver:
         self.enable_turbulence: bool = enable_turbulence
         self.Re_critical: float = Re_critical
         self.turbulence_coefficient: float = turbulence_coefficient
+        # 显式重力模型参数：默认关闭，避免改变既有经验浮力修正路径和历史测试结果。
+        self.enable_gravity: bool = enable_gravity
+        self.g_constant: float = g_constant
+        self.gravity_yield_factor: float = gravity_yield_factor
 
     def _build_geom(self, well_spec: WellSpec, mud_cake_thickness: Array | None = None) -> Dict[str, Array]:
         """根据井筒规格构建环空二维网格几何参数。
@@ -366,14 +380,18 @@ class AnnulusD2DGASolver:
         area = np.pi * ((cal_hole / 1000.0) ** 2 - (od / 1000.0) ** 2) / 4.0
         return float(np.trapezoid(area, x=cal_md))
 
-    def _pick_fluids(self, fluids: Tuple[FluidSpec, ...]) -> Tuple[FluidSpec, FluidSpec, FluidSpec | None]:
-        """从流体列表中选取钻井液、水泥浆和可选前置/隔离液。"""
+    def _pick_fluids(
+        self,
+        fluids: Tuple[FluidSpec, ...],
+    ) -> Tuple[FluidSpec, FluidSpec | None, FluidSpec | None, FluidSpec | None]:
+        """从流体列表中选取钻井液、领浆、尾浆和可选前置/隔离液。"""
         mud = next((fluid for fluid in fluids if fluid.role == FluidRole.MUD), None)
-        cement = next((fluid for fluid in fluids if fluid.role in {FluidRole.LEAD, FluidRole.TAIL}), None)
+        lead = next((fluid for fluid in fluids if fluid.role == FluidRole.LEAD), None)
+        tail = next((fluid for fluid in fluids if fluid.role == FluidRole.TAIL), None)
         spacer = next((fluid for fluid in fluids if fluid.role in {FluidRole.WASH, FluidRole.SPACER}), None)
-        if mud is None or cement is None:
+        if mud is None or (lead is None and tail is None):
             raise ValueError("需要钻井液和至少一个水泥浆流体")
-        return mud, cement, spacer
+        return mud, lead, tail, spacer
 
     def _apparent_viscosity(
         self,
@@ -423,41 +441,51 @@ class AnnulusD2DGASolver:
 
     def _compute_props(
         self,
-        cement: Array,
+        lead: Array,
+        tail: Array,
         spacer: Array,
         w_prev: Array,
         geom: Dict[str, Array],
         mud_fluid: FluidSpec,
-        cement_fluid: FluidSpec,
+        lead_fluid: FluidSpec | None,
+        tail_fluid: FluidSpec | None,
         spacer_fluid: FluidSpec | None,
         gel_strength: Array | None = None,
         temperature_correction: Array | None = None,
     ) -> Tuple[Array, Array, Array]:
-        """计算三相混合物系的表观粘度、密度和钻井液分数。"""
-        # 三相体积分数闭合：显式跟踪水泥浆和前置/隔离液，钻井液由守恒关系反算。
-        mud = np.clip(1.0 - cement - spacer, 0.0, 1.0)
+        """计算四相混合物系的表观粘度、密度和钻井液分数。"""
+        # 四相体积分数闭合：显式跟踪领浆、尾浆和前置/隔离液，钻井液由守恒关系反算。
+        mud = np.clip(1.0 - lead - tail - spacer, 0.0, 1.0)
         effective_b = geom.get("effective_b", geom["b"])
         gamma = np.maximum(6.0 * np.abs(w_prev) / np.maximum(effective_b, 1.0e-5), 1.0e-6)
         # 凝胶强度仅随钻井液相贡献到混合表观粘度，水泥浆和隔离液不受该触变状态影响。
         mu = mud * self._apparent_viscosity(mud_fluid, gamma, gel_strength, temperature_correction)
-        mu += cement * self._apparent_viscosity(cement_fluid, gamma, temperature_correction=temperature_correction)
+        if lead_fluid is not None:
+            mu += lead * self._apparent_viscosity(lead_fluid, gamma, temperature_correction=temperature_correction)
+        if tail_fluid is not None:
+            mu += tail * self._apparent_viscosity(tail_fluid, gamma, temperature_correction=temperature_correction)
         if spacer_fluid is not None:
             mu += spacer * self._apparent_viscosity(spacer_fluid, gamma, temperature_correction=temperature_correction)
         rho = mud * (mud_fluid.density_kg_m3 / 1000.0)
-        rho += cement * (cement_fluid.density_kg_m3 / 1000.0)
+        if lead_fluid is not None:
+            rho += lead * (lead_fluid.density_kg_m3 / 1000.0)
+        if tail_fluid is not None:
+            rho += tail * (tail_fluid.density_kg_m3 / 1000.0)
         if spacer_fluid is not None:
             rho += spacer * (spacer_fluid.density_kg_m3 / 1000.0)
         return mu, rho, mud
 
     def _compute_velocity(
         self,
-        cement: Array,
+        lead: Array,
+        tail: Array,
         spacer: Array,
         geom: Dict[str, Array],
         q_m3s: float,
         w_prev: Array,
         mud_fluid: FluidSpec,
-        cement_fluid: FluidSpec,
+        lead_fluid: FluidSpec | None,
+        tail_fluid: FluidSpec | None,
         spacer_fluid: FluidSpec | None,
         gel_strength: Array | None = None,
         temperature_correction: Array | None = None,
@@ -486,17 +514,20 @@ class AnnulusD2DGASolver:
         b = effective_b
         q_half = q_m3s / 2.0
         mu, rho, mud = self._compute_props(
-            cement,
+            lead,
+            tail,
             spacer,
             w_prev,
             geom,
             mud_fluid,
-            cement_fluid,
+            lead_fluid,
+            tail_fluid,
             spacer_fluid,
             gel_strength,
             temperature_correction,
         )
         mud_density_gcc = mud_fluid.density_kg_m3 / 1000.0
+        cement = np.clip(lead + tail, 0.0, 1.0)
 
         shear_rate = np.maximum(6.0 * np.abs(w_prev) / np.maximum(effective_b, 1.0e-5), 1.0e-6)
         # Reynolds number calculation
@@ -534,6 +565,24 @@ class AnnulusD2DGASolver:
         int_m = np.trapezoid(b * m, x=y, axis=0)
         w = (q_half / np.maximum(int_m, 1.0e-12))[None, :] * m
 
+        if self.enable_gravity:
+            # 在斜井/水平井段中，重力沿井轴分量为 g·sin(θ)，θ为从垂直方向测量的井斜角。
+            # 对Hele-Shaw窄缝流动，体力驱动速度近似为 (b²/12μ)·ρ·g·sin(θ)。
+            # 这里保留原有排量归一化速度，同时叠加密度相关的显式重力体力项。
+            theta = np.deg2rad(geom["inc_deg"])[None, :]
+            w_gravity = (
+                b**2
+                / (12.0 * np.maximum(mu_effective, 1.0e-6))
+                * rho_kg_m3
+                * self.g_constant
+                * np.sin(theta)
+            )
+            # 减去面积加权平均重力速度，使叠加项不改变每个井深截面的总排量约束。
+            gravity_flux = np.trapezoid(b * w_gravity, x=y, axis=0)
+            area_flux = np.trapezoid(b, x=y, axis=0)
+            w_gravity -= (gravity_flux / np.maximum(area_flux, 1.0e-12))[None, :]
+            w = w + w_gravity
+
         ds = geom["s"][1] - geom["s"][0]
         dy = y[1] - y[0]
         bw = b * w
@@ -545,13 +594,16 @@ class AnnulusD2DGASolver:
         v = bv / np.maximum(b, 1.0e-8)
         return w, v, mu_effective, rho, mud, Re, mu_turbulent
 
-    def _depth_profiles(self, geom: Dict[str, Array], cement: Array, spacer: Array, wall: Array) -> pd.DataFrame:
+    def _depth_profiles(self, geom: Dict[str, Array], lead: Array, tail: Array, spacer: Array, wall: Array) -> pd.DataFrame:
         """计算深度方向的平均剖面数据。"""
+        cement = np.clip(lead + tail, 0.0, 1.0)
         eff = cement * (1.0 - wall)
-        mud = np.clip(1.0 - cement - spacer, 0.0, 1.0)
+        mud = np.clip(1.0 - lead - tail - spacer, 0.0, 1.0)
         return pd.DataFrame(
             {
                 "井深_m": geom["md"],
+                "领浆平均浓度": np.average(lead, axis=0, weights=geom["b"]),
+                "尾浆平均浓度": np.average(tail, axis=0, weights=geom["b"]),
                 "水泥平均浓度": np.average(cement, axis=0, weights=geom["b"]),
                 "前置液隔离液平均浓度": np.average(spacer, axis=0, weights=geom["b"]),
                 "平均有效顶替效率": np.average(eff, axis=0, weights=geom["b"]),
@@ -579,9 +631,10 @@ class AnnulusD2DGASolver:
     ) -> AnnulusSimulationResult:
         """运行 Hu102 尾管段首版环空二维顶替求解。"""
 
-        mud_fluid, cement_fluid, spacer_fluid = self._pick_fluids(fluids)
+        mud_fluid, lead_fluid, tail_fluid, spacer_fluid = self._pick_fluids(fluids)
         geom = self._build_geom(well_spec)
-        cement = np.zeros((self.ny, self.nz), dtype=float)
+        lead = np.zeros((self.ny, self.nz), dtype=float)
+        tail = np.zeros((self.ny, self.nz), dtype=float)
         spacer = np.zeros((self.ny, self.nz), dtype=float)
         wall = np.ones((self.ny, self.nz), dtype=float)
         # 触变状态场：记录钻井液在泵停静置期间形成的凝胶强度，初始为0以保持正常泵注结果不变。
@@ -609,6 +662,8 @@ class AnnulusD2DGASolver:
         rows: list[list[float | str]] = []
         mud_density_gcc = mud_fluid.density_kg_m3 / 1000.0
         cement_snapshots: list[Array] = []
+        lead_snapshots: list[Array] = []
+        tail_snapshots: list[Array] = []
         spacer_snapshots: list[Array] = []
         wall_snapshots: list[Array] = []
         gel_strength_snapshots: list[Array] = []
@@ -628,6 +683,8 @@ class AnnulusD2DGASolver:
             current_time_s = step_index * self.dt
             inlet_state = inlet_state_provider(current_time_s)
             inlet_cement_fraction = _phase_fraction(inlet_state, "cement")
+            inlet_lead_fraction = _phase_fraction(inlet_state, "lead")
+            inlet_tail_fraction = _phase_fraction(inlet_state, "tail") + inlet_cement_fraction
             inlet_spacer_fraction = _phase_fraction(inlet_state, "spacer")
 
             # 泵停判断：排量低于阈值时认为泵已停止。
@@ -640,13 +697,15 @@ class AnnulusD2DGASolver:
             if pump_active:
                 # === 正常泵注阶段：执行全部物理过程 ===
                 w, v, mu, rho, mud, Re, mu_turbulent = self._compute_velocity(
-                    cement,
+                    lead,
+                    tail,
                     spacer,
                     geom,
                     inlet_state.flow_rate_m3_s,
                     w_prev,
                     mud_fluid,
-                    cement_fluid,
+                    lead_fluid,
+                    tail_fluid,
                     spacer_fluid,
                     gel_strength,
                     viscosity_correction,
@@ -657,6 +716,7 @@ class AnnulusD2DGASolver:
                 gel_strength *= np.where(shear_rate > self.gel_break_threshold, 0.1, 0.5)
                 w_prev = w
 
+                cement = np.clip(lead + tail, 0.0, 1.0)
                 buoy_num = np.maximum(rho - mud_density_gcc, 0.0)
                 disp_ratio = np.clip(mud / (cement + 1.0e-4), 0.2, 8.0)
                 dax = 0.0040 * np.abs(w) * effective_b * (0.20 + 1.20 * cement * (1.0 - cement)) * (1.0 + 0.50 * geom["e"][None, :]) * (1.0 + 0.10 * np.maximum(disp_ratio - 1.0, 0.0)) / (1.0 + 0.95 * buoy_num)
@@ -682,30 +742,44 @@ class AnnulusD2DGASolver:
                 v_eff_d2dga = v_eff * f_amp
                 ysrc = ygrid - v_eff_d2dga * self.dt
                 ssrc = sgrid - w_d2dga * self.dt
-                # 水泥浆与前置/隔离液使用同一速度场输运；只改变被输运的浓度变量。
-                cement_adv = _bilinear_interp(cement, ysrc, ssrc, geom, inlet_cement_fraction)
+                # 领浆、尾浆与前置/隔离液使用同一速度场输运；只改变被输运的浓度变量。
+                lead_adv = _bilinear_interp(lead, ysrc, ssrc, geom, inlet_lead_fraction)
+                tail_adv = _bilinear_interp(tail, ysrc, ssrc, geom, inlet_tail_fraction)
                 spacer_adv = _bilinear_interp(spacer, ysrc, ssrc, geom, inlet_spacer_fraction)
 
                 dy = geom["y"][1] - geom["y"][0]
                 ds = geom["s"][1] - geom["s"][0]
-                lap_s = np.zeros_like(cement_adv)
-                lap_y = np.zeros_like(cement_adv)
+                lead_lap_s = np.zeros_like(lead_adv)
+                lead_lap_y = np.zeros_like(lead_adv)
+                tail_lap_s = np.zeros_like(tail_adv)
+                tail_lap_y = np.zeros_like(tail_adv)
                 spacer_lap_s = np.zeros_like(spacer_adv)
                 spacer_lap_y = np.zeros_like(spacer_adv)
-                lap_s[:, 1:-1] = (cement_adv[:, 2:] - 2.0 * cement_adv[:, 1:-1] + cement_adv[:, :-2]) / ds**2
-                lap_s[:, 0] = (cement_adv[:, 1] - cement_adv[:, 0]) / ds**2
-                lap_s[:, -1] = (cement_adv[:, -2] - cement_adv[:, -1]) / ds**2
-                lap_y[1:-1, :] = (cement_adv[2:, :] - 2.0 * cement_adv[1:-1, :] + cement_adv[:-2, :]) / dy**2
-                lap_y[0, :] = (cement_adv[1, :] - cement_adv[0, :]) / dy**2
-                lap_y[-1, :] = (cement_adv[-2, :] - cement_adv[-1, :]) / dy**2
+                lead_lap_s[:, 1:-1] = (lead_adv[:, 2:] - 2.0 * lead_adv[:, 1:-1] + lead_adv[:, :-2]) / ds**2
+                lead_lap_s[:, 0] = (lead_adv[:, 1] - lead_adv[:, 0]) / ds**2
+                lead_lap_s[:, -1] = (lead_adv[:, -2] - lead_adv[:, -1]) / ds**2
+                lead_lap_y[1:-1, :] = (lead_adv[2:, :] - 2.0 * lead_adv[1:-1, :] + lead_adv[:-2, :]) / dy**2
+                lead_lap_y[0, :] = (lead_adv[1, :] - lead_adv[0, :]) / dy**2
+                lead_lap_y[-1, :] = (lead_adv[-2, :] - lead_adv[-1, :]) / dy**2
+                tail_lap_s[:, 1:-1] = (tail_adv[:, 2:] - 2.0 * tail_adv[:, 1:-1] + tail_adv[:, :-2]) / ds**2
+                tail_lap_s[:, 0] = (tail_adv[:, 1] - tail_adv[:, 0]) / ds**2
+                tail_lap_s[:, -1] = (tail_adv[:, -2] - tail_adv[:, -1]) / ds**2
+                tail_lap_y[1:-1, :] = (tail_adv[2:, :] - 2.0 * tail_adv[1:-1, :] + tail_adv[:-2, :]) / dy**2
+                tail_lap_y[0, :] = (tail_adv[1, :] - tail_adv[0, :]) / dy**2
+                tail_lap_y[-1, :] = (tail_adv[-2, :] - tail_adv[-1, :]) / dy**2
                 spacer_lap_s[:, 1:-1] = (spacer_adv[:, 2:] - 2.0 * spacer_adv[:, 1:-1] + spacer_adv[:, :-2]) / ds**2
                 spacer_lap_s[:, 0] = (spacer_adv[:, 1] - spacer_adv[:, 0]) / ds**2
                 spacer_lap_s[:, -1] = (spacer_adv[:, -2] - spacer_adv[:, -1]) / ds**2
                 spacer_lap_y[1:-1, :] = (spacer_adv[2:, :] - 2.0 * spacer_adv[1:-1, :] + spacer_adv[:-2, :]) / dy**2
                 spacer_lap_y[0, :] = (spacer_adv[1, :] - spacer_adv[0, :]) / dy**2
                 spacer_lap_y[-1, :] = (spacer_adv[-2, :] - spacer_adv[-1, :]) / dy**2
-                cement = np.clip(
-                    cement_adv + self.dt * (dax * lap_s + day * lap_y),
+                lead = np.clip(
+                    lead_adv + self.dt * (dax * lead_lap_s + day * lead_lap_y),
+                    0.0,
+                    1.0,
+                )
+                tail = np.clip(
+                    tail_adv + self.dt * (dax * tail_lap_s + day * tail_lap_y),
                     0.0,
                     1.0,
                 )
@@ -715,10 +789,12 @@ class AnnulusD2DGASolver:
                     1.0,
                 )
                 # 数值扩散可能使显式两相之和略超1；按比例压回可行域，保持泥浆分数非负。
-                tracked_total = cement + spacer
+                tracked_total = lead + tail + spacer
                 overfilled = tracked_total > 1.0
-                cement[overfilled] /= tracked_total[overfilled]
+                lead[overfilled] /= tracked_total[overfilled]
+                tail[overfilled] /= tracked_total[overfilled]
                 spacer[overfilled] /= tracked_total[overfilled]
+                cement = np.clip(lead + tail, 0.0, 1.0)
 
                 # 清洗能力由水泥浆主导，隔离液/冲洗液也参与泥饼清除但权重较低。
                 cleaner = 1.10 * (cement + 0.8 * spacer)
@@ -746,24 +822,70 @@ class AnnulusD2DGASolver:
                 # 使用上一步的 mu/rho/mud 计算 mobility 等指标（用于风险指数），
                 # 但不更新 cement 或 wall，避免浮力流"蒸发"已就位的水泥。
                 w, v, mu, rho, mud, Re, mu_turbulent = self._compute_velocity(
-                    cement,
+                    lead,
+                    tail,
                     spacer,
                     geom,
                     0.0,
                     w_prev,
                     mud_fluid,
-                    cement_fluid,
+                    lead_fluid,
+                    tail_fluid,
                     spacer_fluid,
                     gel_strength,
                     viscosity_correction,
                 )
                 # 注意：w_prev 保持泵停前最后的值，不再更新，
                 # 因泵停后速度场已冻结。
+                if self.enable_gravity:
+                    # 停泵期间Q=0，密度差形成的井轴重力分量成为唯一可能的驱动力。
+                    # 驱动剪切应力近似为 |Δρ|·g·sin(θ)·b/2；若小于屈服应力阈值，则认为凝胶/屈服应力锁住流体。
+                    theta = np.deg2rad(geom["inc_deg"])[None, :]
+                    density_delta_kg_m3 = (rho - mud_density_gcc) * 1000.0
+                    gravity_stress = (
+                        np.abs(density_delta_kg_m3)
+                        * self.g_constant
+                        * np.sin(theta)
+                        * effective_b
+                        / 2.0
+                    )
+                    if mud_fluid.yield_stress_pa is not None:
+                        yield_threshold = mud_fluid.yield_stress_pa * self.gravity_yield_factor
+                    else:
+                        yield_threshold = 0.0
+                    flow_mask = gravity_stress > yield_threshold
+                    # 用Hele-Shaw体力速度估算停泵沉降/上浮速度；正负号由密度差决定。
+                    w_settle = (
+                        effective_b**2
+                        / (12.0 * np.maximum(mu, 1.0e-6))
+                        * density_delta_kg_m3
+                        * self.g_constant
+                        * np.sin(theta)
+                    )
+                    w_settle = np.where(flow_mask, w_settle, 0.0)
+                    # 停泵对流是缓慢再分布过程，限制最大速度以避免显式反演追踪数值不稳定。
+                    w_settle = np.clip(w_settle, -0.01, 0.01)
+                    # 仅做轴向平流，不额外加入扩散或壁面清除，避免把停泵重力滑移误当成继续顶替效率增长。
+                    lead = _bilinear_interp(lead, ygrid, sgrid - w_settle * self.dt, geom, inlet_lead_fraction)
+                    tail = _bilinear_interp(tail, ygrid, sgrid - w_settle * self.dt, geom, inlet_tail_fraction)
+                    spacer = _bilinear_interp(spacer, ygrid, sgrid - w_settle * self.dt, geom, inlet_spacer_fraction)
+                    lead = np.clip(lead, 0.0, 1.0)
+                    tail = np.clip(tail, 0.0, 1.0)
+                    spacer = np.clip(spacer, 0.0, 1.0)
+                    tracked_total = lead + tail + spacer
+                    overfilled = tracked_total > 1.0
+                    lead[overfilled] /= tracked_total[overfilled]
+                    tail[overfilled] /= tracked_total[overfilled]
+                    spacer[overfilled] /= tracked_total[overfilled]
+                    cement = np.clip(lead + tail, 0.0, 1.0)
 
             # 在物理场更新后、指标计算前保存快照，确保快照与本步指标使用同一状态。
             # 使用 copy() 固化二维场，避免后续时间步原地更新影响已保存结果。
             if step_index % self.save_interval == 0 or step_index == int(self.total_t / self.dt):
+                cement = np.clip(lead + tail, 0.0, 1.0)
                 cement_snapshots.append(cement.copy())
+                lead_snapshots.append(lead.copy())
+                tail_snapshots.append(tail.copy())
                 spacer_snapshots.append(spacer.copy())
                 wall_snapshots.append(wall.copy())
                 gel_strength_snapshots.append(gel_strength.copy())
@@ -773,6 +895,7 @@ class AnnulusD2DGASolver:
                 turbulent_viscosity_snapshots.append(mu_turbulent.copy())
                 snapshot_times.append(current_time_s)
 
+            cement = np.clip(lead + tail, 0.0, 1.0)
             eff = cement * (1.0 - wall)
             bulk_fill = _trapez2d(geom["b"] * cement, geom) / half_volume
             effective_efficiency = _trapez2d(geom["b"] * eff, geom) / half_volume
@@ -844,10 +967,11 @@ class AnnulusD2DGASolver:
             "mean_mud",
         ]
         metrics = pd.DataFrame(data=rows, columns=pd.Index(metric_columns))
-        depth_profiles = self._depth_profiles(geom, cement, spacer, wall)
+        cement = np.clip(lead + tail, 0.0, 1.0)
+        depth_profiles = self._depth_profiles(geom, lead, tail, spacer, wall)
         final = metrics.iloc[-1]
         summary: Dict[str, object] = {
-            "模型名称": "Hu102尾管段首版环空顶替模型",
+            "模型名称": "通用尾管段环空二维顶替模型",
             "模拟对象": f"{well_spec.well_name} 尾管段 {well_spec.top_md_m:.2f}-{well_spec.bottom_md_m:.2f}m",
             "井段_m": [well_spec.top_md_m, well_spec.bottom_md_m],
             "物理环空体积_m3": self._physical_annular_volume(well_spec),
@@ -873,6 +997,8 @@ class AnnulusD2DGASolver:
             summary=summary,
             time_points_s=tuple(float(value) for value in metrics["time_s"].to_list()),
             cement_snapshots=tuple(cement_snapshots),
+            lead_snapshots=tuple(lead_snapshots),
+            tail_snapshots=tuple(tail_snapshots),
             spacer_snapshots=tuple(spacer_snapshots),
             wall_snapshots=tuple(wall_snapshots),
             gel_strength_snapshots=tuple(gel_strength_snapshots),
@@ -882,11 +1008,13 @@ class AnnulusD2DGASolver:
             turbulent_viscosity_snapshots=tuple(turbulent_viscosity_snapshots),
             snapshot_times_s=tuple(snapshot_times),
             notes=(
-                "当前显式跟踪水泥浆相（领浆/尾浆）与前置液/隔离液相，钻井液由体积分数闭合反算。",
-                "效率与质量指标仍按水泥浆相计算，前置液/隔离液仅影响流变混合、输运占据和壁面清洗。",
+                "当前显式跟踪领浆、尾浆与前置液/隔离液三类入环空相，钻井液由体积分数闭合反算。",
+                "效率与质量指标按总水泥浆相（领浆+尾浆）计算，前置液/隔离液仅影响流变混合、输运占据和壁面清洗。",
                 "触变凝胶强度仅作用于钻井液表观粘度：泵停增长，泵启剪切破坏，不改变水泥浆输运/扩散公式。",
                 "温度-流变耦合使用线性地温梯度与黏度线性修正；默认等温兼容模式下修正系数为1。",
                 "泥饼残余层模型默认关闭；启用后泥饼厚度会缩小有效环空间隙，并随水泥浆剪切侵蚀逐步降低。",
                 "湍流/混合流态修正基于临界雷诺数与混合长度粘度；默认关闭，开启后仅在Re超过阈值处增加有效粘度。",
             ),
+            lead_field=lead,
+            tail_field=tail,
         )

@@ -25,7 +25,7 @@ class CasingFlowSolverTestCase(unittest.TestCase):
 
     def setUp(self) -> None:
         super().setUp()
-        self.well_spec, self.fluids, self.schedule, _ = load_hu102_tailpipe()
+        self.well_spec, self.fluids, self.schedule, _ = load_hu102_tailpipe(include_wash_spacer=False)
         self.solver = CasingFlowSolver()
         self.result = self.solver.run(self.well_spec, self.fluids, self.schedule)
 
@@ -64,19 +64,19 @@ class CasingFlowSolverTestCase(unittest.TestCase):
         displacement_front = self.result.fronts[1]
 
         self.assertAlmostEqual(cement_front.time_s, expected_cement_arrival_s, delta=2.0)
-        self.assertAlmostEqual(cement_front.time_s, 3279.0, delta=20.0)
+        self.assertAlmostEqual(cement_front.time_s, 11272.0, delta=20.0)
         self.assertAlmostEqual(displacement_front.time_s, expected_displacement_arrival_s, delta=2.0)
 
     def test_pipe_exit_state_before_arrival(self) -> None:
         state = self.solver.pipe_exit_state_at(self.result, 3000.0)
 
-        self.assertAlmostEqual(state.flow_rate_m3_s, 1.30 / 60.0)
+        self.assertAlmostEqual(state.flow_rate_m3_s, 0.378 / 60.0)
         self.assertEqual(state.phase_fractions, (("钻井液", 1.0),))
 
     def test_pipe_exit_state_after_arrival(self) -> None:
-        state = self.solver.pipe_exit_state_at(self.result, 3400.0)
+        state = self.solver.pipe_exit_state_at(self.result, 12000.0)
 
-        self.assertAlmostEqual(state.flow_rate_m3_s, 1.30 / 60.0)
+        self.assertAlmostEqual(state.flow_rate_m3_s, 0.378 / 60.0)
         self.assertEqual(state.phase_fractions, (("尾管水泥浆", 1.0),))
 
 

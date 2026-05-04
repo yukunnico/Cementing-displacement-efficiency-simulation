@@ -9,3 +9,9 @@
 每个运行器模块对应一口井的一个固井段，
 输出文件名和图表标题均使用中文。
 """
+
+from cemdisp.runners.hu101_tailpipe import run_hu101_tailpipe_initial
+from cemdisp.runners.hu102_tailpipe import run_hu102_tailpipe_initial
+
+
+__all__ = ["run_hu101_tailpipe_initial", "run_hu102_tailpipe_initial"]

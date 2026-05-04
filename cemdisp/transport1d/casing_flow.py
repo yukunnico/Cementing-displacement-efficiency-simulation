@@ -80,17 +80,35 @@ class CasingFlowSolver:
     - 前缘到达鞋口后，对应流体从鞋口进入环空。
     """
 
-    def __init__(self, *, dt: float = 2.0) -> None:
+    def __init__(
+        self,
+        *,
+        dt: float = 2.0,
+        enable_gravity: bool = False,
+        g_constant: float = 9.81,
+        settling_velocity_factor: float = 0.001,
+    ) -> None:
         """初始化求解器。
 
         Args:
             dt: 时间步长（秒），仅用于内部时间查询的容差判断
+            enable_gravity: 是否启用套管内重力修正；默认关闭以保持旧模型行为
+            g_constant: 重力加速度（m/s²），用于按现场重力条件缩放简化修正项
+            settling_velocity_factor: 沉降速度系数，单位为 m/s 每 kg/m³ 密度差
         """
         if not math.isfinite(dt) or dt <= 0.0:
             raise ValueError("dt 必须为大于0的有限数值")
+        if not math.isfinite(g_constant) or g_constant <= 0.0:
+            raise ValueError("g_constant 必须为大于0的有限数值")
+        if not math.isfinite(settling_velocity_factor) or settling_velocity_factor < 0.0:
+            raise ValueError("settling_velocity_factor 必须为非负有限数值")
         self.dt: float = dt
+        self.enable_gravity: bool = enable_gravity
+        self.g_constant: float = g_constant
+        self.settling_velocity_factor: float = settling_velocity_factor
         self._scheduled_steps_by_result_id: dict[int, tuple[_ScheduledStep, ...]] = {}
         self._initial_fluid_by_result_id: dict[int, str] = {}
+        self._fluids_by_result_id: dict[int, tuple[FluidSpec, ...]] = {}
 
     def run(
         self,
@@ -111,6 +129,8 @@ class CasingFlowSolver:
         fronts: list[InterfaceFront] = []
         for scheduled in scheduled_steps:
             arrival_time_s = self._front_arrival_time(scheduled, scheduled_steps, pipe_volume_m3)
+            if self.enable_gravity and arrival_time_s is not None:
+                arrival_time_s = self._gravity_corrected_arrival_time(arrival_time_s, scheduled.step.fluid_name, fluids)
             final_distance_m = min(shoe_depth_m, scheduled.cumulative_volume_end_m3 / pipe_area_m2)
             fronts.append(
                 InterfaceFront(
@@ -132,6 +152,7 @@ class CasingFlowSolver:
         )
         self._scheduled_steps_by_result_id[id(result)] = scheduled_steps
         self._initial_fluid_by_result_id[id(result)] = initial_fluid
+        self._fluids_by_result_id[id(result)] = fluids
         return result
 
     def pipe_exit_state_at(self, result: CasingFlowResult, time_s: float) -> PipeExitState:
@@ -152,6 +173,16 @@ class CasingFlowSolver:
         if cumulative_at_time >= pipe_volume_m3:
             delayed_volume_m3 = cumulative_at_time - pipe_volume_m3
             fluid_name = self._fluid_by_injected_volume(scheduled_steps, delayed_volume_m3)
+
+        if self.enable_gravity and flow_rate_m3_s < 1.0e-9:
+            fluid_name = self._settled_exit_fluid_name(
+                result=result,
+                scheduled_steps=scheduled_steps,
+                time_s=time_s,
+                cumulative_at_time=cumulative_at_time,
+                pipe_volume_m3=pipe_volume_m3,
+                default_fluid_name=fluid_name,
+            )
 
         return PipeExitState(
             time_s=time_s,
@@ -226,6 +257,74 @@ class CasingFlowSolver:
         if scheduled_steps is not None:
             return scheduled_steps
         return self._build_scheduled_steps(PumpingSchedule(steps=result.schedule_steps))
+
+    def _gravity_corrected_arrival_time(
+        self,
+        arrival_time_s: float,
+        fluid_name: str,
+        fluids: tuple[FluidSpec, ...],
+    ) -> float:
+        """按流体密度对前缘到达时间做简化重力修正。"""
+
+        fluid_density = self._get_fluid_density(fluid_name, fluids)
+        # 在套管内，向下泵注时重力沿管轴方向辅助较重流体前缘下行。
+        # 这里不改变原有体积追踪，只把到达鞋口的解析时间按密度做小幅提前。
+        # g_constant 用于把现场重力加速度归一到标准重力，便于后续扩展井斜/重力场修正。
+        gravity_scale = self.g_constant / 9.81
+        gravity_factor = self.settling_velocity_factor * (fluid_density - 1000.0) / 1000.0 * gravity_scale
+        return max(arrival_time_s * (1.0 - gravity_factor), 0.0)
+
+    def _settled_exit_fluid_name(
+        self,
+        *,
+        result: CasingFlowResult,
+        scheduled_steps: tuple[_ScheduledStep, ...],
+        time_s: float,
+        cumulative_at_time: float,
+        pipe_volume_m3: float,
+        default_fluid_name: str,
+    ) -> str:
+        """停泵期间按密度差估算沉降后鞋口流体。"""
+
+        fluids = self._fluids_by_result_id.get(id(result), ())
+        initial_fluid = self._initial_fluid_by_result_id.get(id(result), default_fluid_name)
+        current_density = self._get_fluid_density(default_fluid_name, fluids)
+        initial_density = self._get_fluid_density(initial_fluid, fluids)
+        # 停泵期间，排量为零，体积推进停止；密度差会让重流体下沉、轻流体上浮。
+        # v_settle = k * Δρ，其中 k 为经验沉降速度系数，Δρ 为当前流体与初始管内流体密度差。
+        delta_rho = current_density - initial_density
+        v_settle_m_s = self.settling_velocity_factor * delta_rho
+        shutdown_duration_s = self._shutdown_duration_at(scheduled_steps, time_s)
+        # 将沉降距离折算成等效体积位移，仅用于查询鞋口相态，不改写原体积追踪前缘。
+        settled_volume_m3 = cumulative_at_time + v_settle_m_s * shutdown_duration_s * result.pipe_cross_section_m2
+        if settled_volume_m3 < pipe_volume_m3:
+            return initial_fluid
+        delayed_volume_m3 = max(settled_volume_m3 - pipe_volume_m3, 0.0)
+        return self._fluid_by_injected_volume(scheduled_steps, delayed_volume_m3)
+
+    @staticmethod
+    def _shutdown_duration_at(scheduled_steps: tuple[_ScheduledStep, ...], time_s: float) -> float:
+        """计算当前停泵段已经持续的时间。"""
+
+        for scheduled in scheduled_steps:
+            if scheduled.start_time_s <= time_s < scheduled.end_time_s - 1.0e-12:
+                if scheduled.step.rate_m3_min <= 0.0:
+                    return max(time_s - scheduled.start_time_s, 0.0)
+                return 0.0
+        last_flow_end_s = 0.0
+        for scheduled in scheduled_steps:
+            if scheduled.end_time_s <= time_s and scheduled.step.rate_m3_min > 0.0:
+                last_flow_end_s = scheduled.end_time_s
+        return max(time_s - last_flow_end_s, 0.0)
+
+    @staticmethod
+    def _get_fluid_density(fluid_name: str, fluids: tuple[FluidSpec, ...]) -> float:
+        """按流体名称读取密度；未知流体用清水密度保持查询稳健。"""
+
+        for fluid in fluids:
+            if fluid.name == fluid_name:
+                return fluid.density_kg_m3
+        return 1000.0
 
     @staticmethod
     def _active_step_at(scheduled_steps: tuple[_ScheduledStep, ...], time_s: float) -> _ScheduledStep | None:

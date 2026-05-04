@@ -41,16 +41,16 @@ class Hu102LoaderTestCase(unittest.TestCase):
         self.assertAlmostEqual(mud.density_kg_m3, 2020.0)
         self.assertAlmostEqual(displacement.density_kg_m3, 2020.0)
         self.assertAlmostEqual(cement.density_kg_m3, 2100.0)
-        self.assertAlmostEqual(wash.density_kg_m3, 1880.0)
-        self.assertAlmostEqual(spacer.density_kg_m3, 1850.0)
+        self.assertAlmostEqual(wash.density_kg_m3, 2050.0)
+        self.assertAlmostEqual(spacer.density_kg_m3, 2050.0)
 
-        self.assertEqual(len(schedule.steps), 2)
-        self.assertAlmostEqual(schedule.steps[0].volume_m3, 16.6666666667, places=2)
-        self.assertAlmostEqual(schedule.steps[1].volume_m3, 74.0)
-        self.assertEqual(schedule.steps[0].fluid_name, "尾管水泥浆")
-        self.assertEqual(schedule.steps[1].fluid_name, "替浆液")
-        self.assertAlmostEqual(schedule.steps[0].rate_m3_min, 1.30)
-        self.assertAlmostEqual(schedule.steps[1].rate_m3_min, 1.30)
+        self.assertEqual(len(schedule.steps), 4)
+        self.assertAlmostEqual(schedule.steps[0].volume_m3, 10.0)
+        self.assertAlmostEqual(schedule.steps[1].volume_m3, 15.0)
+        self.assertEqual(schedule.steps[0].fluid_name, "冲洗液")
+        self.assertEqual(schedule.steps[1].fluid_name, "隔离液")
+        self.assertAlmostEqual(schedule.steps[0].rate_m3_min, 0.378)
+        self.assertAlmostEqual(schedule.steps[1].rate_m3_min, 0.378)
 
         self.assertIsInstance(validation_data, ValidationData)
         self.assertIsNotNone(validation_data.cbl_summary_path)
@@ -64,8 +64,8 @@ class Hu102LoaderTestCase(unittest.TestCase):
         self.assertEqual(schedule.steps[1].fluid_name, "隔离液")
         self.assertEqual(schedule.steps[2].fluid_name, "尾管水泥浆")
         self.assertEqual(schedule.steps[3].fluid_name, "替浆液")
-        self.assertAlmostEqual(schedule.steps[0].volume_m3, 3.0)
-        self.assertAlmostEqual(schedule.steps[1].volume_m3, 5.0)
+        self.assertAlmostEqual(schedule.steps[0].volume_m3, 10.0)
+        self.assertAlmostEqual(schedule.steps[1].volume_m3, 15.0)
 
         provider = build_hu102_annulus_inlet_provider(schedule, fluids, "tail_then_mud")
         wash_state = provider(1.0)
@@ -86,13 +86,13 @@ class Hu102LoaderTestCase(unittest.TestCase):
         self.assertTrue(all(0.30 <= value <= 0.82 for value in values))
 
     def test_annulus_inlet_provider_modes(self) -> None:
-        _, fluids, schedule, _ = load_hu102_tailpipe()
+        _, fluids, schedule, _ = load_hu102_tailpipe(include_wash_spacer=False)
 
         sustained_provider = build_hu102_annulus_inlet_provider(schedule, fluids, "sustained_tail")
         tail_then_mud_provider = build_hu102_annulus_inlet_provider(schedule, fluids, "tail_then_mud")
 
         cement_state = sustained_provider(10.0)
-        self.assertAlmostEqual(cement_state.flow_rate_m3_s, 1.30 / 60.0)
+        self.assertAlmostEqual(cement_state.flow_rate_m3_s, 0.378 / 60.0)
         self.assertEqual(cement_state.phase_fractions, (("cement", 1.0),))
 
         displacement_time_s = schedule.steps[0].volume_m3 / schedule.steps[0].rate_m3_min * 60.0 + 1.0
