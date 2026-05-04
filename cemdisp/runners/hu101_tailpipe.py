@@ -15,11 +15,14 @@ import json
 from pathlib import Path
 from typing import cast
 
+import matplotlib.pyplot as plt
 import numpy as np
+from numpy.typing import NDArray
+import pandas as pd
 
 from cemdisp.data.loaders import build_hu101_annulus_inlet_provider, load_hu101_tailpipe
 from cemdisp.data.pumping_schedule import PumpingSchedule
-from cemdisp.models2d import AnnulusD2DGASolver
+from cemdisp.models2d import AnnulusD2DGASolver, AnnulusSimulationResult
 from cemdisp.models2d.boundary_bridge import AnnulusInletState, build_coupled_annulus_inlet_provider
 from cemdisp.reporting.animation import animate_cement_field
 from cemdisp.reporting.contour_plots import (
@@ -38,12 +41,134 @@ from cemdisp.transport1d import CasingFlowSolver
 
 _CEMDISP_ROOT = Path(__file__).resolve().parents[1]  # cemdisp/
 PROJECT_ROOT = _CEMDISP_ROOT.parent                  # cement model/
+HU101_CBL_PROFILE_PATH = PROJECT_ROOT / "参考文档" / "呼101" / "提取数据" / "100312_CBL剖面_Excel版.csv"
 
 
 def _schedule_total_time_s(schedule: PumpingSchedule) -> float:
     """按现场分段排量计算施工总时长。"""
 
     return sum(0.0 if step.rate_m3_min <= 0.0 else step.volume_m3 / step.rate_m3_min * 60.0 for step in schedule.steps)
+
+
+def _load_hu101_cbl_profile() -> pd.DataFrame:
+    """读取 Hu101 CBL 剖面代理 CSV，并保留用于同深度对比的数值字段。"""
+
+    columns = [
+        "row_id",
+        "depth_md_m",
+        "cbl_amplitude_pct",
+        "quality_proxy",
+        "quality_proxy_pct",
+        "quality_grade_cn",
+        "segment_type_cn",
+        "segment_note_cn",
+        "is_target_interval_cn",
+        "is_double_liner_excluded_cn",
+    ]
+    last_error: UnicodeDecodeError | None = None
+    for encoding in ("utf-8-sig", "gbk", "gb18030"):
+        try:
+            cbl_profile = pd.read_csv(HU101_CBL_PROFILE_PATH, skiprows=2, names=columns, encoding=encoding)
+            break
+        except UnicodeDecodeError as exc:
+            last_error = exc
+    else:
+        raise RuntimeError(f"无法读取 Hu101 CBL 剖面 CSV: {HU101_CBL_PROFILE_PATH}") from last_error
+
+    for column in ("depth_md_m", "cbl_amplitude_pct", "quality_proxy", "quality_proxy_pct"):
+        cbl_profile[column] = pd.to_numeric(cbl_profile[column], errors="coerce")
+    return cbl_profile.dropna(subset=["depth_md_m", "quality_proxy"]).reset_index(drop=True)
+
+
+def _export_cbl_profile_comparison(result: AnnulusSimulationResult, output_dir: Path) -> None:
+    """导出 Hu101 模拟剖面与 CBL 代理剖面的逐深度对比结果。"""
+
+    cbl_profile = _load_hu101_cbl_profile()
+    profile = result.depth_profiles.sort_values("井深_m")
+
+    simulated = np.interp(
+        cbl_profile["depth_md_m"].to_numpy(dtype=float),
+        profile["井深_m"].to_numpy(dtype=float),
+        profile["平均有效顶替效率"].to_numpy(dtype=float),
+    )
+    observed = cbl_profile["quality_proxy"].to_numpy(dtype=float)
+    diff = simulated - observed
+
+    comparison = cbl_profile[[
+        "depth_md_m",
+        "cbl_amplitude_pct",
+        "quality_proxy",
+        "quality_proxy_pct",
+        "quality_grade_cn",
+        "segment_type_cn",
+        "segment_note_cn",
+    ]].copy()
+    comparison["simulated_effective_efficiency"] = simulated
+    comparison["simulated_minus_cbl_proxy"] = diff
+    comparison_path = output_dir / "呼101尾管_模拟剖面_vs_CBL代理剖面.csv"
+    comparison.to_csv(comparison_path, index=False, encoding="utf-8-sig")
+
+    severe_mask = (cbl_profile["depth_md_m"] >= 6050.0) & (cbl_profile["depth_md_m"] <= 6210.0)
+    anomaly_mask = (cbl_profile["depth_md_m"] >= 6100.0) & (cbl_profile["depth_md_m"] <= 6400.0)
+    target_mask = (cbl_profile["depth_md_m"] >= 6153.0) & (cbl_profile["depth_md_m"] <= 7741.0)
+
+    def _mean_for(mask: pd.Series, array: NDArray[np.float64]) -> float:
+        mask_array = np.asarray(mask, dtype=bool)
+        return float(np.mean(array[mask_array])) if np.any(mask_array) else float("nan")
+
+    diagnostics = {
+        "CBL剖面对比点数": float(len(cbl_profile)),
+        "模拟_minus_CBL代理_平均差": float(np.mean(diff)),
+        "模拟_minus_CBL代理_MAE": float(np.mean(np.abs(diff))),
+        "模拟_minus_CBL代理_RMSE": float(np.sqrt(np.mean(diff**2))),
+        "CBL代理_全剖面均值": float(np.mean(observed)),
+        "模拟剖面_全剖面均值": float(np.mean(simulated)),
+        "6050_6210m_CBL代理均值": _mean_for(severe_mask, observed),
+        "6050_6210m_模拟均值": _mean_for(severe_mask, simulated),
+        "6100_6400m_CBL代理均值": _mean_for(anomaly_mask, observed),
+        "6100_6400m_模拟均值": _mean_for(anomaly_mask, simulated),
+        "6153_7741m_CBL代理均值": _mean_for(target_mask, observed),
+        "6153_7741m_模拟均值": _mean_for(target_mask, simulated),
+    }
+
+    diagnostics_json_path = output_dir / "呼101尾管_CBL剖面对比诊断.json"
+    diagnostics_json_path.write_text(json.dumps(diagnostics, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    diagnostics_md_path = output_dir / "呼101尾管_CBL剖面对比诊断.md"
+    diagnostics_md_path.write_text(
+        "\n".join(
+            [
+                "# 呼101尾管模拟剖面与 CBL 代理剖面对比诊断",
+                "",
+                f"- CBL剖面对比点数：{diagnostics['CBL剖面对比点数']:.0f}",
+                f"- 模拟-CBL平均差：{diagnostics['模拟_minus_CBL代理_平均差']:.4f}",
+                f"- MAE：{diagnostics['模拟_minus_CBL代理_MAE']:.4f}",
+                f"- RMSE：{diagnostics['模拟_minus_CBL代理_RMSE']:.4f}",
+                f"- CBL代理全剖面均值：{diagnostics['CBL代理_全剖面均值']:.4f}",
+                f"- 模拟全剖面均值：{diagnostics['模拟剖面_全剖面均值']:.4f}",
+                f"- 6050–6210m：模拟 {diagnostics['6050_6210m_模拟均值']:.4f} / CBL {diagnostics['6050_6210m_CBL代理均值']:.4f}",
+                f"- 6100–6400m：模拟 {diagnostics['6100_6400m_模拟均值']:.4f} / CBL {diagnostics['6100_6400m_CBL代理均值']:.4f}",
+                f"- 6153–7741m：模拟 {diagnostics['6153_7741m_模拟均值']:.4f} / CBL {diagnostics['6153_7741m_CBL代理均值']:.4f}",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    chart_path = output_dir / "呼101尾管_模拟剖面_vs_CBL代理剖面.png"
+    plt.figure(figsize=(7, 8))
+    plt.plot(simulated, cbl_profile["depth_md_m"], label="模拟有效顶替效率", linewidth=2.2)
+    plt.plot(observed, cbl_profile["depth_md_m"], label="CBL质量代理", linewidth=2.2)
+    plt.axhspan(6050.0, 6210.0, color="#EF4444", alpha=0.10, label="6050–6210m 强异常段")
+    plt.axhspan(6100.0, 6400.0, color="#F59E0B", alpha=0.08, label="6100–6400m 异常段")
+    plt.gca().invert_yaxis()
+    plt.xlabel("效率 / 质量代理")
+    plt.ylabel("井深 / m")
+    plt.title("呼101尾管模拟剖面与 CBL 代理剖面逐深度对比")
+    plt.grid(True, alpha=0.25)
+    plt.legend(fontsize=8)
+    plt.tight_layout()
+    plt.savefig(chart_path, dpi=220)
+    plt.close()
 
 
 def run_and_export(
@@ -105,6 +230,7 @@ def run_and_export(
     _ = plot_depth_time_contour(result, output_dir=output_dir)
     _ = plot_annulus_snapshots(result, output_dir=output_dir)
     _ = plot_final_fields_contour(result, output_dir=output_dir)
+    _export_cbl_profile_comparison(result, output_dir)
 
     npz_path = output_dir / f"呼101尾管_{mode_title}_2D场数据.npz"
     _ = np.savez(

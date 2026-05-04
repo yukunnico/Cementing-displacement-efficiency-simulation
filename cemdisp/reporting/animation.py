@@ -32,7 +32,8 @@ def animate_cement_field(
     """生成水泥与隔离液浓度场随时间演化的 GIF 或 MP4 动画。
 
     动画采用左右双面板热力图展示每个快照时刻的水泥与隔离液浓度场：横轴为井深，
-    纵轴为归一化方位角（0 表示宽边，1 表示窄边），颜色分别表示两类流体浓度。
+    纵轴为归一化方位角（0 表示宽边，1 表示窄边），求解器内部数组顺序与该显示方向一致，
+    因此这里不对快照做额外翻转。
 
     Args:
         result: 环空二维模拟结果，需包含 cement_snapshots、snapshot_times_s 和 geom["md"]，可选包含 spacer_snapshots。
@@ -80,6 +81,7 @@ def animate_cement_field(
     fig, axes = plt.subplots(1, 2, figsize=(14, 5.8), sharex=True, sharey=True)
     cement_ax, spacer_ax = axes
     # 多流体动画采用左右并列面板，避免透明叠加导致浓度色标难以判读。
+    # cement_snapshots / spacer_snapshots 的 index 0 就是宽边，末行就是窄边，直接显示即可。
     cement_image = cement_ax.imshow(
         cement_snapshots[0],
         vmin=0,

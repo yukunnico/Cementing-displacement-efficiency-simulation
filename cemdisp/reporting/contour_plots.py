@@ -199,9 +199,9 @@ def plot_annulus_snapshots(
         cement_ax = axes[base_row][col]
         spacer_ax = axes[base_row + time_rows][col]
         # 多流体采用上下两行对照：上排水泥、下排隔离液，避免透明叠加造成读数混淆。
-        # 原始数组按窄边到宽边存储；翻转后按“宽边→窄边”展示。
+        # 求解器内部数组按“宽边(index 0)→窄边(index -1)”存储，直接显示即可。
         cement_image = cement_ax.imshow(
-            snapshots[int(snapshot_index)][::-1, :],
+            snapshots[int(snapshot_index)],
             extent=_field_extent(depth),
             origin="lower",
             aspect="auto",
@@ -210,7 +210,7 @@ def plot_annulus_snapshots(
             vmax=1.0,
         )
         spacer_image = spacer_ax.imshow(
-            spacer_snapshots[int(snapshot_index)][::-1, :],
+            spacer_snapshots[int(snapshot_index)],
             extent=_field_extent(depth),
             origin="lower",
             aspect="auto",
@@ -276,9 +276,9 @@ def plot_final_fields_contour(
 
     for ax, (title, field, colormap) in zip(axes, panels):
         # 多流体最终场分面显示，保持每种物理量独立色标，避免把隔离液误读为顶替效率。
-        # 按宽边到窄边显示，避免用户读图时误解方位方向。
+        # 求解器内部数组已按宽边→窄边存储，因此这里不再做额外翻转。
         image = ax.imshow(
-            field[::-1, :],
+            field,
             extent=_field_extent(depth),
             origin="lower",
             aspect="auto",
