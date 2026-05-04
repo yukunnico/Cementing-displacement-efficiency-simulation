@@ -16,6 +16,7 @@
     接收(施工日程, 流体元组, 边界模式)，返回给定时间返回环空入口状态的函数
 
 当前支持的井：
+- 呼101: 通过 hu101_loader 模块加载
 - 呼102: 通过 hu102_loader 模块加载
 
 参考文档路径约定：
@@ -23,7 +24,7 @@
 """
 
 from pathlib import Path
-from typing import Callable, Tuple
+from typing import Callable
 
 from cemdisp.data.fluid_spec import FluidSpec
 from cemdisp.data.pumping_schedule import PumpingSchedule
@@ -31,6 +32,10 @@ from cemdisp.data.validation_data import ValidationData
 from cemdisp.data.well_spec import WellSpec
 from cemdisp.models2d.boundary_bridge import AnnulusInletState
 
+from cemdisp.data.loaders.hu101_loader import (
+    build_hu101_annulus_inlet_provider,
+    load_hu101_tailpipe,
+)
 from cemdisp.data.loaders.hu102_loader import (
     build_hu102_annulus_inlet_provider,
     load_hu102_tailpipe,
@@ -40,7 +45,7 @@ from cemdisp.data.loaders.hu102_loader import (
 REFERENCE_DOCS_ROOT = Path(__file__).resolve().parents[3] / "参考文档"
 
 
-def available_well_names() -> Tuple[str, ...]:
+def available_well_names() -> tuple[str, ...]:
     """返回当前参考文档目录中已识别的井名列表。"""
 
     if not REFERENCE_DOCS_ROOT.exists():
@@ -48,14 +53,20 @@ def available_well_names() -> Tuple[str, ...]:
     return tuple(sorted(entry.name for entry in REFERENCE_DOCS_ROOT.iterdir() if entry.is_dir()))
 
 
-Hu102LoaderResult = Tuple[WellSpec, Tuple[FluidSpec, ...], PumpingSchedule, ValidationData]
-Hu102InletProviderFactory = Callable[[PumpingSchedule, Tuple[FluidSpec, ...], str], Callable[[float], AnnulusInletState]]
+Hu101LoaderResult = tuple[WellSpec, tuple[FluidSpec, ...], PumpingSchedule, ValidationData]
+Hu102LoaderResult = tuple[WellSpec, tuple[FluidSpec, ...], PumpingSchedule, ValidationData]
+Hu101InletProviderFactory = Callable[[PumpingSchedule, tuple[FluidSpec, ...], str], Callable[[float], AnnulusInletState]]
+Hu102InletProviderFactory = Callable[[PumpingSchedule, tuple[FluidSpec, ...], str], Callable[[float], AnnulusInletState]]
 
 __all__ = [
+    "Hu101InletProviderFactory",
+    "Hu101LoaderResult",
     "Hu102InletProviderFactory",
     "Hu102LoaderResult",
     "REFERENCE_DOCS_ROOT",
     "available_well_names",
+    "build_hu101_annulus_inlet_provider",
     "build_hu102_annulus_inlet_provider",
+    "load_hu101_tailpipe",
     "load_hu102_tailpipe",
 ]

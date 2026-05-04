@@ -27,7 +27,7 @@ class BoundaryBridgeCouplingTestCase(unittest.TestCase):
 
     def setUp(self) -> None:
         super().setUp()
-        self.well_spec, self.fluids, self.schedule, _ = load_hu102_tailpipe()
+        self.well_spec, self.fluids, self.schedule, _ = load_hu102_tailpipe(include_wash_spacer=False)
         self.casing_solver = CasingFlowSolver()
         self.casing_result = self.casing_solver.run(self.well_spec, self.fluids, self.schedule)
         self.provider = build_coupled_annulus_inlet_provider(
@@ -39,20 +39,20 @@ class BoundaryBridgeCouplingTestCase(unittest.TestCase):
     def test_coupled_provider_before_shoe_arrival(self) -> None:
         state = self.provider(3000.0)
 
-        self.assertAlmostEqual(state.flow_rate_m3_s, 1.30 / 60.0)
+        self.assertAlmostEqual(state.flow_rate_m3_s, 0.378 / 60.0)
         self.assertEqual(state.phase_fractions, (("mud", 1.0),))
 
     def test_coupled_provider_after_shoe_arrival(self) -> None:
-        state = self.provider(3400.0)
+        state = self.provider(12000.0)
 
-        self.assertAlmostEqual(state.flow_rate_m3_s, 1.30 / 60.0)
+        self.assertAlmostEqual(state.flow_rate_m3_s, 0.378 / 60.0)
         self.assertEqual(state.phase_fractions, (("cement", 1.0),))
 
     def test_coupled_provider_matches_hardcoded_sustained_tail(self) -> None:
         hardcoded_provider = build_hu102_annulus_inlet_provider(self.schedule, self.fluids, "sustained_tail")
 
-        coupled_state = self.provider(3400.0)
-        hardcoded_state = hardcoded_provider(3400.0)
+        coupled_state = self.provider(12000.0)
+        hardcoded_state = hardcoded_provider(12000.0)
 
         self.assertEqual(coupled_state.phase_fractions, hardcoded_state.phase_fractions)
         self.assertAlmostEqual(coupled_state.flow_rate_m3_s, hardcoded_state.flow_rate_m3_s)

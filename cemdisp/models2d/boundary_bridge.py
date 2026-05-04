@@ -68,6 +68,8 @@ def build_coupled_annulus_inlet_provider(
     casing_result: CasingFlowResult,
     casing_solver: CasingFlowSolver,
     fluids: tuple[FluidSpec, ...],
+    *,
+    split_cement_phases: bool = False,
 ) -> Callable[[float], AnnulusInletState]:
     """构建1D-2D耦合的环空入口边界提供器。
 
@@ -84,10 +86,16 @@ def build_coupled_annulus_inlet_provider(
     role_by_name: dict[str, FluidRole] = {fluid.name: fluid.role for fluid in fluids}
 
     def _phase_fractions_for_fluid(fluid_name: str) -> tuple[tuple[str, float], ...]:
-        """根据流体角色映射为环空二维模型的三相名称。"""
+        """根据流体角色映射为环空二维模型入口相分数。"""
 
         role = role_by_name.get(fluid_name, FluidRole.MUD)
-        # 三相映射规则：领浆/尾浆归为水泥相，冲洗液/隔离液归为隔离液相，其余归为泥浆相。
+        # 默认保持历史三相口径：领浆/尾浆归为 cement，相容于 Hu102 既有逻辑。
+        # 当 split_cement_phases=True 时，领浆/尾浆分开送入 2D 层，供 Hu101 更真实地跟踪
+        # lead → tail → mud invasion 的现场顺序。
+        if split_cement_phases and role == FluidRole.LEAD:
+            return (("lead", 1.0),)
+        if split_cement_phases and role == FluidRole.TAIL:
+            return (("tail", 1.0),)
         if role in {FluidRole.LEAD, FluidRole.TAIL}:
             return (("cement", 1.0),)
         if role in {FluidRole.WASH, FluidRole.SPACER}:
