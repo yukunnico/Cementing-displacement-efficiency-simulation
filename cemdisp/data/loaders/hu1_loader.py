@@ -1,9 +1,11 @@
 """
-呼探1井（HT1-001）尾管段标准数据加载器
+呼探1井尾管段标准数据加载器
 
 本模块把呼探1井现场数据包中的尾管段资料整理为 cemdisp 标准输入结构。
-呼探1与呼101类似，均包含上部 168.3mm 与下部 139.7mm 双径尾管；当前
-求解目标为下部 139.7mm 尾管段，因此上部重叠井段用等效井眼直径保面积近似。
+呼探1井包含上部 168.3mm 与下部 139.7mm 双径尾管；当前求解目标为下部
+139.7mm 尾管段，因此上部重叠井段用等效井眼直径保面积近似。
+
+注意：呼探1井与 HT1-001井是两口不同的井，本模块专用于呼探1井。
 """
 
 from __future__ import annotations
@@ -23,7 +25,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_REFERENCE_ROOT = PROJECT_ROOT / "参考文档" / "呼探1"
 
 # 呼探1井段参数，来源：参考文档/呼探1/提取数据/呼探1井_固井顶替模型数据包.json。
-HU1_WELL_NAME = "呼探1井（HT1-001）"
+HU1_WELL_NAME = "呼探1井"
 HU1_DRILLED_DEPTH_MD_M = 7746.0  # 实际完钻井深/尾管鞋深度。
 HU1_HANGER_MD_M = 5469.711  # 尾管悬挂器位置。
 HU1_TOP_MD_M = HU1_HANGER_MD_M  # 模型剖面从悬挂器开始，兼容双径尾管等效处理。
@@ -154,7 +156,7 @@ def load_hu1_tailpipe(
     *,
     reference_root: Path | None = None,
 ) -> tuple[WellSpec, tuple[FluidSpec, ...], PumpingSchedule, ValidationData]:
-    """加载呼探1井（HT1-001）尾管段标准模型输入。"""
+    """加载呼探1井尾管段标准模型输入。"""
 
     resolved_reference_root = reference_root or DEFAULT_REFERENCE_ROOT
     well_spec = WellSpec(

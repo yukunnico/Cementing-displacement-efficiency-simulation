@@ -1,5 +1,894 @@
 {
-  "alias_of": "D:\\users\\desktop\\research\\控压固井项目\\参考文档\\呼探1\\提取数据\\呼探1井_固井顶替模型数据包.json",
-  "well_name": "呼探1-001井",
-  "note": "呼探1井、HT1-001、呼探1-001按同一口井处理，详见呼探1目录下正式数据包。"
+  "project": "呼探1-001井（HT1-001）139.7+168.3mm油层尾管固井",
+  "aliases": [
+    "HT1-001",
+    "呼探1-001"
+  ],
+  "goal": "以139.7mm下部完井尾管为优先目标，独立整理HT1-001井固井顶替过程、双径尾管几何、现场实际泵注参数、实验流变参数和质量弱监督标签；明确该井不同于呼探1井，严禁引用呼探1井数据。",
+  "model_scope": "面向类似 hu102_tail_d2dga_model.py 的尾管段 D2DGA 模型输入；当前推荐采用139.7mm下部完井尾管（约7174.938-7746m）作为目标段，同时保留168.3mm上部尾管与双径整体施工参数，避免双径段和单径模型口径混淆。",
+  "package_version": "1.0",
+  "recommended_inputs": {
+    "well_depth_md": {
+      "value": "7746",
+      "unit": "m",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm尾管固井施工小结（写实）.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\化验报告\\HT1-001 尾管  化验报告.docx",
+      "note": "实际井深/实际完井井深；设计井深7620m另行保留。"
+    },
+    "well_depth_md_design": {
+      "value": "7620",
+      "unit": "m",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm尾管固井施工小结（写实）.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7+168.3mm尾管完井固井施工设计（审核）.doc",
+      "note": "原设计完钻井深。"
+    },
+    "cement_top_md_design_original": {
+      "value": "5460.159",
+      "unit": "m",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm油层尾管技术总结.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm尾管固井施工小结（写实）.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7+168.3mm尾管完井固井施工设计（审核）.doc",
+      "note": "设计/现场会议制定水泥浆返至5460.159m。"
+    },
+    "cement_top_md_final_field": {
+      "value": "5460.159",
+      "unit": "m",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm油层尾管技术总结.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm尾管固井施工小结（写实）.doc",
+      "note": "技术总结和施工小结均表述最终采用水泥浆返至5460.159m；设计另有领浆附加超返至5185.7m的计算项。"
+    },
+    "cement_top_md_lead_excess_design": {
+      "value": "5185.7",
+      "unit": "m",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7+168.3mm尾管完井固井施工设计（审核）.doc",
+      "note": "施工设计中领浆附加9.5m³超返274.5m，返至5185.7m；与最终返高5460.159m分开保留。"
+    },
+    "cement_bottom_md": {
+      "value": "7746",
+      "unit": "m",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm尾管固井施工小结（写实）.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001套管数据表尾管168.3mm139,7，8.22-三方核对版.xlsx",
+      "note": "套管下深/引鞋位置/固井井段底部。"
+    },
+    "tail_interval_168_3_top_md": {
+      "value": "5469.711",
+      "unit": "m",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001套管数据表尾管168.3mm139,7，8.22-三方核对版.xlsx",
+      "note": "作业史给出168.3mm上部尾管顶部5469.711m；施工设计喇叭口/送入工具位置5460.159m，两者为不同管串参考点。"
+    },
+    "tail_interval_168_3_bottom_md": {
+      "value": "7174.938",
+      "unit": "m",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001套管数据表尾管168.3mm139,7，8.22-三方核对版.xlsx",
+      "note": "作业史与套管数据表中168.3mm段底/139.7mm段顶约7174.938m。"
+    },
+    "tail_interval_139_7_top_md": {
+      "value": "7174.938",
+      "unit": "m",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001套管数据表尾管168.3mm139,7，8.22-三方核对版.xlsx",
+      "note": "目标139.7mm下部完井尾管顶部；施工小结/设计近似值7174.941m/7176m。"
+    },
+    "tail_interval_139_7_bottom_md": {
+      "value": "7746",
+      "unit": "m",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm尾管固井施工小结（写实）.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001套管数据表尾管168.3mm139,7，8.22-三方核对版.xlsx",
+      "note": "139.7mm下部尾管下深/引鞋位置。"
+    },
+    "cementing_interval_dual_liner": {
+      "value": "5460.159-7746",
+      "unit": "m",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm尾管固井施工小结（写实）.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7+168.3mm尾管完井固井施工设计（审核）.doc",
+      "note": "139.7+168.3mm复合尾管整体封固段。"
+    },
+    "cementing_interval_139_7_target": {
+      "value": "7174.938-7746",
+      "unit": "m",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001套管数据表尾管168.3mm139,7，8.22-三方核对版.xlsx",
+      "note": "本包优先模型目标段为139.7mm下部完井尾管；水泥施工体积为双径尾管整体施工，使用时需注意口径。"
+    },
+    "hanger_position_md_history": {
+      "value": "5469.711",
+      "unit": "m",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001套管数据表尾管168.3mm139,7，8.22-三方核对版.xlsx",
+      "note": "作业史/套管表的悬挂器或提升短节附近位置。"
+    },
+    "hanger_bell_mouth_md_design": {
+      "value": "5460.159",
+      "unit": "m",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm尾管固井施工小结（写实）.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7+168.3mm尾管完井固井施工设计（审核）.doc",
+      "note": "施工设计称悬挂器喇叭口位置/水泥返至该位置。"
+    },
+    "overlap_interval_length": {
+      "value": "209.841",
+      "unit": "m",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm尾管固井施工小结（写实）.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7+168.3mm尾管完井固井施工设计（审核）.doc",
+      "note": "复合尾管重叠段长度。"
+    },
+    "float_shoe_or_plug_interval_length": {
+      "value": "103.326",
+      "unit": "m",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm尾管固井施工小结（写实）.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7+168.3mm尾管完井固井施工设计（审核）.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc",
+      "note": "下塞/阻流板至井底段长；阻流板位置约7642.674m。"
+    },
+    "perforation_bottom_md": {
+      "value": "7746",
+      "unit": "m",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc",
+      "note": "作业史射孔底界7746m。"
+    },
+    "perforation_or_target_top_md": {
+      "value": "6060",
+      "unit": "m",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc",
+      "note": "作业史油层顶界6060m；油气显示表也从K1s 6060m开始。"
+    },
+    "hole_diameter_upper": {
+      "value": "241.3",
+      "unit": "mm",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm尾管固井施工小结（写实）.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7+168.3mm尾管完井固井施工设计（审核）.doc",
+      "note": "上部168.3mm尾管对应钻头尺寸。"
+    },
+    "hole_diameter_lower": {
+      "value": "215.9",
+      "unit": "mm",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm尾管固井施工小结（写实）.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7+168.3mm尾管完井固井施工设计（审核）.doc",
+      "note": "下部139.7mm目标尾管对应钻头尺寸。"
+    },
+    "average_hole_diameter_upper": {
+      "value": "247.83",
+      "unit": "mm",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm尾管固井施工小结（写实）.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7+168.3mm尾管完井固井施工设计（审核）.doc",
+      "note": "5670-7441m电测平均井径。"
+    },
+    "average_hole_diameter_lower": {
+      "value": "229.46",
+      "unit": "mm",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm尾管固井施工小结（写实）.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7+168.3mm尾管完井固井施工设计（审核）.doc",
+      "note": "7441-7746m电测平均井径；目标139.7mm下部裸眼段模型可优先使用。"
+    },
+    "hole_enlargement_upper": {
+      "value": "2.71",
+      "unit": "%",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm尾管固井施工小结（写实）.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7+168.3mm尾管完井固井施工设计（审核）.doc",
+      "note": "5670-7441m扩大率。"
+    },
+    "hole_enlargement_lower": {
+      "value": "6.28",
+      "unit": "%",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm尾管固井施工小结（写实）.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7+168.3mm尾管完井固井施工设计（审核）.doc",
+      "note": "7441-7746m扩大率。"
+    },
+    "max_hole_diameter": {
+      "value": "271.22",
+      "unit": "mm",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm尾管固井施工小结（写实）.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7+168.3mm尾管完井固井施工设计（审核）.doc",
+      "note": "最大井径，对应井深5676m。"
+    },
+    "min_hole_diameter": {
+      "value": "220.91",
+      "unit": "mm",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm尾管固井施工小结（写实）.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7+168.3mm尾管完井固井施工设计（审核）.doc",
+      "note": "最小井径，对应井深7633m。"
+    },
+    "max_inclination": {
+      "value": "1.7665",
+      "unit": "deg",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm尾管固井施工小结（写实）.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7+168.3mm尾管完井固井施工设计（审核）.doc",
+      "note": "最大井斜，对应井深7665m。"
+    },
+    "liner_od_lower": {
+      "value": "139.7",
+      "unit": "mm",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm尾管固井施工小结（写实）.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001套管数据表尾管168.3mm139,7，8.22-三方核对版.xlsx / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\化验报告\\HT1-001 尾管  化验报告.docx",
+      "note": "目标完井尾管外径。"
+    },
+    "liner_wall_thickness_lower": {
+      "value": "15.88",
+      "unit": "mm",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm尾管固井施工小结（写实）.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001套管数据表尾管168.3mm139,7，8.22-三方核对版.xlsx",
+      "note": "139.7mm BG140V/BGT2套管壁厚；套管强度校核表也列15.88mm。"
+    },
+    "liner_od_upper": {
+      "value": "168.3",
+      "unit": "mm",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm尾管固井施工小结（写实）.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001套管数据表尾管168.3mm139,7，8.22-三方核对版.xlsx / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\化验报告\\HT1-001 尾管  化验报告.docx",
+      "note": "上部复合尾管外径。"
+    },
+    "liner_wall_thickness_upper": {
+      "value": "14.7",
+      "unit": "mm",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm尾管固井施工小结（写实）.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001套管数据表尾管168.3mm139,7，8.22-三方核对版.xlsx",
+      "note": "168.3mm套管数据表壁厚14.7mm；设计强度校核处出现14.27mm，按套管数据表和作业史保留14.7mm。"
+    },
+    "centralizer_count_139_7": {
+      "value": "24",
+      "unit": "ea",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm尾管固井施工小结（写实）.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7+168.3mm尾管完井固井施工设计（审核）.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\探井固井工程量清单（HT1-001 尾管）.doc",
+      "note": "Φ139.7*215.9mm整体式弹扶24只。"
+    },
+    "centralizer_count_168_3": {
+      "value": "77",
+      "unit": "ea",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm尾管固井施工小结（写实）.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7+168.3mm尾管完井固井施工设计（审核）.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\探井固井工程量清单（HT1-001 尾管）.doc",
+      "note": "Φ168.3*241.3mm整体式弹扶77只。"
+    },
+    "centralizer_count_total": {
+      "value": "101",
+      "unit": "ea",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm油层尾管技术总结.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm尾管固井施工小结（写实）.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7+168.3mm尾管完井固井施工设计（审核）.doc",
+      "note": "下套管过程中入整体式套管扶正器101只。"
+    },
+    "centralizer_spacing": {
+      "value": "2根/只",
+      "unit": "text",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm尾管固井施工小结（写实）.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7+168.3mm尾管完井固井施工设计（审核）.doc",
+      "note": "扶正器安放表中139.7mm和168.3mm均为2根/只。"
+    },
+    "standoff_simulated_open_hole": {
+      "value": "80.4",
+      "unit": "%",
+      "type": "代理/设计",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm尾管固井施工小结（写实）.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7+168.3mm尾管完井固井施工设计（审核）.doc",
+      "note": "裸眼井段居中度模拟图给出80.4%，不是实测standoff剖面。"
+    },
+    "mud_density_lab": {
+      "value": "1.93",
+      "unit": "g/cm³",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\化验报告\\HT1-001 尾管  化验报告.docx / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm尾管固井施工小结（写实）.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc",
+      "note": "实验报告/施工文件钻井液取样密度。"
+    },
+    "mud_density_before_cementing": {
+      "value": "1.92",
+      "unit": "g/cm³",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm尾管固井施工小结（写实）.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7+168.3mm尾管完井固井施工设计（审核）.doc",
+      "note": "承压试验与固井前/后期入口钻井液密度。"
+    },
+    "mud_viscosity": {
+      "value": "63",
+      "unit": "s",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\化验报告\\HT1-001 尾管  化验报告.docx / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm尾管固井施工小结（写实）.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7+168.3mm尾管完井固井施工设计（审核）.doc",
+      "note": "钻井液漏斗粘度；后效记录提钻前1.92g/cm³/72s另行保留。"
+    },
+    "mud_pv_lab": {
+      "value": "51",
+      "unit": "mPa·s",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\化验报告\\HT1-001 尾管  化验报告.docx / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm尾管固井施工小结（写实）.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7+168.3mm尾管完井固井施工设计（审核）.doc",
+      "note": "实验报告/施工设计钻井液塑性粘度。"
+    },
+    "mud_yp_lab": {
+      "value": "6",
+      "unit": "Pa",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm尾管固井施工小结（写实）.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7+168.3mm尾管完井固井施工设计（审核）.doc",
+      "note": "钻井液动切力。"
+    },
+    "mud_gel_initial_final": {
+      "value": "2.5/7.5",
+      "unit": "Pa",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\化验报告\\HT1-001 尾管  化验报告.docx / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm尾管固井施工小结（写实）.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7+168.3mm尾管完井固井施工设计（审核）.doc",
+      "note": "初切力/终切力。"
+    },
+    "mud_n_lab_docx": {
+      "value": "0.689",
+      "unit": "-",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\化验报告\\HT1-001 尾管  化验报告.docx",
+      "note": "化验报告流变表128℃降至93℃，钻井液n。"
+    },
+    "mud_k_pa_s_n_lab_docx": {
+      "value": "0.557",
+      "unit": "Pa·sⁿ",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\化验报告\\HT1-001 尾管  化验报告.docx",
+      "note": "化验报告流变表128℃降至93℃，钻井液K。"
+    },
+    "balance_fluid_density": {
+      "value": "1.75",
+      "unit": "g/cm³",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm油层尾管技术总结.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm尾管固井施工小结（写实）.doc",
+      "note": "现场实际注先导浆/平衡液密度。"
+    },
+    "balance_fluid_volume_actual": {
+      "value": "40",
+      "unit": "m³",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm油层尾管技术总结.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm尾管固井施工小结（写实）.doc",
+      "note": "21:15-21:50实际注先导浆40m³。"
+    },
+    "spacer_density_actual_sequence": {
+      "value": "1.98",
+      "unit": "g/cm³",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm油层尾管技术总结.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\化验报告\\HT1-001 尾管  化验报告.docx",
+      "note": "驱油隔离液/前置隔离液现场密度；化验报告前置液密度同为1.98g/cm³。"
+    },
+    "spacer_volume_actual": {
+      "value": "20",
+      "unit": "m³",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm油层尾管技术总结.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm尾管固井施工小结（写实）.doc",
+      "note": "22:05-22:30实际注驱油隔离液20m³。"
+    },
+    "lead_slurry_density_actual": {
+      "value": "2.05",
+      "unit": "g/cm³",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm油层尾管技术总结.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\化验报告\\HT1-001 尾管  化验报告.docx",
+      "note": "领浆现场密度/实验报告密度。"
+    },
+    "intermediate_slurry_density_actual": {
+      "value": "1.90",
+      "unit": "g/cm³",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm油层尾管技术总结.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\化验报告\\HT1-001 尾管  化验报告.docx",
+      "note": "中间浆现场密度/实验报告密度。"
+    },
+    "tail_slurry_density_actual": {
+      "value": "1.90",
+      "unit": "g/cm³",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm油层尾管技术总结.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\化验报告\\HT1-001 尾管  化验报告.docx",
+      "note": "尾浆现场密度/实验报告密度。"
+    },
+    "lead_slurry_volume_actual": {
+      "value": "20.6",
+      "unit": "m³",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc",
+      "note": "22:30-22:53实际注领浆20.6m³。"
+    },
+    "intermediate_slurry_volume_actual": {
+      "value": "28.7",
+      "unit": "m³",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc",
+      "note": "22:53-23:25实际注中间浆28.7m³。"
+    },
+    "tail_slurry_volume_actual": {
+      "value": "22.1",
+      "unit": "m³",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm尾管固井施工小结（写实）.doc",
+      "note": "23:25-23:51实际注尾浆22.1m³；技术总结设计段曾写21.4m³，应以作业史/现场实际为准。"
+    },
+    "tail_slurry_volume_design_original": {
+      "value": "21.4",
+      "unit": "m³",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm油层尾管技术总结.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm尾管固井施工小结（写实）.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7+168.3mm尾管完井固井施工设计（审核）.doc",
+      "note": "设计尾浆用量，已与实际22.1m³分开。"
+    },
+    "cement_volume_total_actual": {
+      "value": "20.6+28.7+22.1",
+      "unit": "m³",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc",
+      "note": "现场三段水泥浆体积表达式，合计71.4m³。"
+    },
+    "cement_mass_actual": {
+      "value": "100",
+      "unit": "t",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\探井固井工程量清单（HT1-001 尾管）.doc",
+      "note": "作业史和工程量清单均给出实际灰量100t。"
+    },
+    "g_cement_mass_materials": {
+      "value": "62.989",
+      "unit": "t",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\探井固井工程量清单（HT1-001 尾管）.doc",
+      "note": "工程量清单G级水泥用量。"
+    },
+    "plug_fluid_density_actual": {
+      "value": "1.98",
+      "unit": "g/cm³",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm油层尾管技术总结.doc",
+      "note": "压塞液/后置液密度。"
+    },
+    "plug_fluid_volume_actual": {
+      "value": "2",
+      "unit": "m³",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm油层尾管技术总结.doc",
+      "note": "00:00-00:03压塞2m³。"
+    },
+    "displacement_mud_density_actual": {
+      "value": "1.92",
+      "unit": "g/cm³",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm油层尾管技术总结.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm尾管固井施工小结（写实）.doc",
+      "note": "替钻井液密度。"
+    },
+    "displacement_mud_volume_actual": {
+      "value": "25+53.7",
+      "unit": "m³",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc",
+      "note": "00:03-00:22替钻井液25m³，00:35-01:34替钻井液53.7m³。"
+    },
+    "middle_fluid_density_actual": {
+      "value": "1.98",
+      "unit": "g/cm³",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm油层尾管技术总结.doc",
+      "note": "替保护液/中置液密度。"
+    },
+    "middle_fluid_volume_actual": {
+      "value": "10",
+      "unit": "m³",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm油层尾管技术总结.doc",
+      "note": "00:22-00:33替保护液/中置液10m³。"
+    },
+    "base_fluid_density_actual": {
+      "value": "1.02",
+      "unit": "g/cm³",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm油层尾管技术总结.doc",
+      "note": "隔离液基液密度。"
+    },
+    "base_fluid_volume_actual": {
+      "value": "3",
+      "unit": "m³",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm油层尾管技术总结.doc",
+      "note": "00:33-00:35替基液3m³。"
+    },
+    "displacement_volume_total_expression": {
+      "value": "2+25+10+3+53.7",
+      "unit": "m³",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc",
+      "note": "现场替浆包表达式，合计93.7m³；设计表中94.7m³/理论94.5m³另列为设计/理论口径。"
+    },
+    "displacement_volume_actual_table": {
+      "value": "93.7",
+      "unit": "m³",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc",
+      "note": "作业史顶替作业表：理论93.7m³、实际93.7m³。"
+    },
+    "pump_rate_main": {
+      "value": "1.0",
+      "unit": "m³/min",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm尾管固井施工小结（写实）.doc",
+      "note": "隔离液、领浆、中间浆、尾浆主排量；先导浆实际1.4m³/min。"
+    },
+    "pump_rate_pilot_actual": {
+      "value": "1.4",
+      "unit": "m³/min",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc",
+      "note": "实际注先导浆排量。"
+    },
+    "pump_rate_displacement_schedule": {
+      "value": "0.6/1.4/1.0/1.0/1.2-0.6",
+      "unit": "m³/min",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc",
+      "note": "压塞0.6，首段钻井液1.4，保护液1.0，基液1.0，末段钻井液1.2-0.6m³/min。"
+    },
+    "max_dynamic_equivalent_density": {
+      "value": "1.981",
+      "unit": "g/cm³",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm油层尾管技术总结.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7+168.3mm尾管完井固井施工设计（审核）.doc",
+      "note": "施工模拟最大动当量密度；安全窗口上限2.011g/cm³。"
+    },
+    "safe_density_window": {
+      "value": "1.936-2.011",
+      "unit": "g/cm³",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm尾管固井施工小结（写实）.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7+168.3mm尾管完井固井施工设计（审核）.doc",
+      "note": "地层求压和静态承压结论。"
+    },
+    "max_pump_pressure_actual_sequence": {
+      "value": "21",
+      "unit": "MPa",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc",
+      "note": "替钻井液阶段泵压21-19MPa为现场序列最高显式值；注水泥阶段最高约18MPa。"
+    },
+    "max_pump_pressure_design_simulation": {
+      "value": "15.9",
+      "unit": "MPa",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7+168.3mm尾管完井固井施工设计（审核）.doc",
+      "note": "施工设计软件模拟最高施工压力，不与现场替浆峰值混用。"
+    },
+    "bump_pressure": {
+      "value": "7.5-14.8",
+      "unit": "MPa",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm油层尾管技术总结.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm尾管固井施工小结（写实）.doc",
+      "note": "现场碰压7.5↑14.8MPa；作业史表格写7↑15MPa。"
+    },
+    "lead_thickening_time": {
+      "value": "427",
+      "unit": "min",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\化验报告\\HT1-001 尾管  化验报告.docx",
+      "note": "领浆稠化时间(min/70Bc)；扫描PDF复核读取为432min。"
+    },
+    "intermediate_thickening_time": {
+      "value": "314",
+      "unit": "min",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\化验报告\\HT1-001 尾管  化验报告.docx",
+      "note": "中间浆稠化时间(min/70Bc)；扫描PDF复核读取为302min。"
+    },
+    "tail_thickening_time": {
+      "value": "208",
+      "unit": "min",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\化验报告\\HT1-001 尾管  化验报告.docx",
+      "note": "尾浆稠化时间(min/70Bc)；扫描PDF复核读取为223min。"
+    },
+    "lead_fluid_loss": {
+      "value": "43",
+      "unit": "mL",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\化验报告\\HT1-001 尾管  化验报告.docx",
+      "note": "领浆API失水；扫描PDF复核Q30为46mL。"
+    },
+    "intermediate_fluid_loss": {
+      "value": "40",
+      "unit": "mL",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\化验报告\\HT1-001 尾管  化验报告.docx",
+      "note": "中间浆API失水；扫描PDF复核Q30为42mL。"
+    },
+    "tail_fluid_loss": {
+      "value": "43",
+      "unit": "mL",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\化验报告\\HT1-001 尾管  化验报告.docx",
+      "note": "尾浆API失水；扫描PDF复核Q30为42mL。"
+    },
+    "lead_24h_strength": {
+      "value": "3.7",
+      "unit": "MPa",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\化验报告\\HT1-001 尾管  化验报告.docx",
+      "note": "领浆底部24h强度；扫描PDF复核为4.5MPa。"
+    },
+    "intermediate_24h_strength": {
+      "value": "14.2",
+      "unit": "MPa",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\化验报告\\HT1-001 尾管  化验报告.docx",
+      "note": "中间浆底部24h强度；扫描PDF复核为15.2MPa。"
+    },
+    "tail_24h_strength": {
+      "value": "15.1",
+      "unit": "MPa",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\化验报告\\HT1-001 尾管  化验报告.docx",
+      "note": "尾浆底部24h强度；扫描PDF复核为17.7MPa。"
+    },
+    "lead_7d_strength": {
+      "value": "30.8",
+      "unit": "MPa",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\化验报告\\HT1-001 尾管  化验报告.docx",
+      "note": "领浆7d抗压强度。"
+    },
+    "intermediate_7d_strength": {
+      "value": "31.3",
+      "unit": "MPa",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\化验报告\\HT1-001 尾管  化验报告.docx",
+      "note": "中间浆顶部7d抗压强度。"
+    },
+    "tail_7d_strength": {
+      "value": "32.9",
+      "unit": "MPa",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\化验报告\\HT1-001 尾管  化验报告.docx",
+      "note": "尾浆顶部7d抗压强度。"
+    },
+    "lead_n": {
+      "value": "0.811",
+      "unit": "-",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\化验报告\\HT1-001 尾管  化验报告.docx",
+      "note": "128℃降至93℃流变表，领浆n。"
+    },
+    "lead_k_pa_s_n": {
+      "value": "0.876",
+      "unit": "Pa·sⁿ",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\化验报告\\HT1-001 尾管  化验报告.docx",
+      "note": "128℃降至93℃流变表，领浆K。"
+    },
+    "intermediate_n": {
+      "value": "0.871",
+      "unit": "-",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\化验报告\\HT1-001 尾管  化验报告.docx",
+      "note": "128℃降至93℃流变表，中间浆n。"
+    },
+    "intermediate_k_pa_s_n": {
+      "value": "0.504",
+      "unit": "Pa·sⁿ",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\化验报告\\HT1-001 尾管  化验报告.docx",
+      "note": "128℃降至93℃流变表，中间浆K。"
+    },
+    "tail_n": {
+      "value": "0.886",
+      "unit": "-",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\化验报告\\HT1-001 尾管  化验报告.docx",
+      "note": "128℃降至93℃流变表，尾浆n。"
+    },
+    "tail_k_pa_s_n": {
+      "value": "0.453",
+      "unit": "Pa·sⁿ",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\化验报告\\HT1-001 尾管  化验报告.docx",
+      "note": "128℃降至93℃流变表，尾浆K。"
+    },
+    "spacer_n": {
+      "value": "0.545",
+      "unit": "-",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\化验报告\\HT1-001 尾管  化验报告.docx",
+      "note": "128℃降至93℃流变表，隔离液n。"
+    },
+    "spacer_k_pa_s_n": {
+      "value": "1.338",
+      "unit": "Pa·sⁿ",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\化验报告\\HT1-001 尾管  化验报告.docx",
+      "note": "128℃降至93℃流变表，隔离液K。"
+    },
+    "spacer_wash_efficiency": {
+      "value": "97.5",
+      "unit": "%",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\化验报告\\HT1-001 尾管  化验报告.docx",
+      "note": "1.98g/cm³前置液冲洗效率。"
+    },
+    "schlumberger_simulated_average_cement_fill_rate": {
+      "value": "98",
+      "unit": "%",
+      "type": "代理/模拟",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7+168.3mm尾管完井固井施工设计（审核）.doc",
+      "note": "施工设计中‘斯伦贝谢模拟平均水泥充填率98%’，为模拟代理值，不是CBL实测合格率。"
+    },
+    "quality_label": {
+      "value": "合格",
+      "unit": "qualitative",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm油层尾管技术总结.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm尾管固井施工小结（写实）.doc",
+      "note": "固井质量统计为‘合格’；未见可直接引用的数值型CBL合格率。"
+    },
+    "data_acquisition_file_status": {
+      "value": "已读取，时间范围2025-08-14 01:08:36至02:54:34",
+      "unit": "text",
+      "type": "直接输入",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\数据采集\\HT1-001数采.xlsm",
+      "note": "数采文件含泵压、密度、排量、累计量等时序，但时间早于8月25-26日固井作业，疑似测试/非本次施工曲线；未作为现场体积主依据。"
+    }
+  },
+  "model_ready_candidate": {
+    "target_section": "lower_139_7mm_completion_liner_of_dual_diameter_tail",
+    "status": "可运行候选（弱监督标签，需注意双径整体泵注口径）",
+    "rationale": "HT1-001井为168.3mm+139.7mm双径油层尾管，目标段为139.7mm下部尾管。已有井段、井径、套管壁厚、扶正器、实际泵注体积与排量、实验流变n/K、稠化、失水、强度和定性质量标签；但现场体积为双径整体固井，若直接用于单一139.7mm模型需在边界条件中注明上部168.3mm段。",
+    "direct_fields": {
+      "well_top_md_m": 7174.938,
+      "well_bottom_md_m": 7746.0,
+      "well_depth_md_m": 7746.0,
+      "hanger_position_md_m": 5469.711,
+      "cement_top_md_m": 5460.159,
+      "bit_diameter_mm": 215.9,
+      "average_hole_diameter_mm": 229.46,
+      "liner_od_mm": 139.7,
+      "liner_wall_thickness_mm": 15.88,
+      "upper_liner_od_mm": 168.3,
+      "upper_liner_wall_thickness_mm": 14.7,
+      "upper_liner_interval_md_m": "5469.711-7174.938",
+      "mud_density_gcc": 1.92,
+      "mud_density_lab_gcc": 1.93,
+      "mud_pv_mpas": 51.0,
+      "mud_yp_pa": 6.0,
+      "mud_gel_initial_pa": 2.5,
+      "mud_gel_final_pa": 7.5,
+      "balance_fluid_density_gcc": 1.75,
+      "balance_fluid_volume_m3": 40.0,
+      "spacer_density_actual_gcc": 1.98,
+      "spacer_volume_m3": 20.0,
+      "lead_density_gcc": 2.05,
+      "intermediate_density_gcc": 1.9,
+      "tail_density_gcc": 1.9,
+      "lead_volume_m3": 20.6,
+      "intermediate_volume_m3": 28.7,
+      "tail_volume_m3": 22.1,
+      "cement_volume_total_m3": 71.4,
+      "displacement_package_m3": "2+25+10+3+53.7",
+      "field_rate_main_m3_min": 1.0,
+      "field_rate_pilot_m3_min": 1.4,
+      "field_rate_displacement_m3_min": "0.6/1.4/1.0/1.0/1.2-0.6",
+      "lead_n": 0.811,
+      "lead_k_pa_s_n": 0.876,
+      "intermediate_n": 0.871,
+      "intermediate_k_pa_s_n": 0.504,
+      "tail_n": 0.886,
+      "tail_k_pa_s_n": 0.453,
+      "spacer_n": 0.545,
+      "spacer_k_pa_s_n": 1.338,
+      "lead_thickening_time_min": 427.0,
+      "intermediate_thickening_time_min": 314.0,
+      "tail_thickening_time_min": 208.0,
+      "lead_fluid_loss_ml": 43.0,
+      "intermediate_fluid_loss_ml": 40.0,
+      "tail_fluid_loss_ml": 43.0,
+      "spacer_wash_efficiency_pct": 97.5,
+      "centralizer_count_139_7": 24,
+      "centralizer_count_168_3": 77,
+      "field_reference_label_text": "固井质量统计：合格"
+    },
+    "proxy_or_assumed_fields": {
+      "field_reference_efficiency_pct": {
+        "value": "",
+        "reason": "资料仅给出固井质量统计‘合格’和施工设计模拟平均水泥充填率98%，未见可直接引用的数值型CBL合格率；不得把模拟充填率当作实测顶替效率。"
+      },
+      "standoff_profile": {
+        "value": "139.7mm扶正器24只、168.3mm扶正器77只，2根/只，裸眼井段居中度模拟80.4%",
+        "reason": "这是扶正器布置和模拟居中度，不是分段standoff实测剖面。"
+      },
+      "hole_diameter_profile": {
+        "value": "上部平均井径247.83mm、下部平均井径229.46mm，并有30m/点井径表",
+        "reason": "作业史/设计中有井径点表，但本包暂未生成可直接导入模型的井径-井深CSV。"
+      },
+      "inclination_profile": {
+        "value": "最大井斜1.7665°/7665m，并有30m/点井斜表",
+        "reason": "已有摘要和点表文本，但尚未结构化为全剖面CSV。"
+      },
+      "data_acquisition_timeseries": {
+        "value": "HT1-001数采.xlsm已读取",
+        "reason": "数采文件时间为2025-08-14 01:08-02:54，早于8月25-26日固井作业，疑似测试/非本次固井曲线；当前仅作已读资料记录，不覆盖作业史现场实际体积。"
+      }
+    },
+    "sources": [
+      "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm油层尾管技术总结.doc",
+      "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc",
+      "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm尾管固井施工小结（写实）.doc",
+      "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7+168.3mm尾管完井固井施工设计（审核）.doc",
+      "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\化验报告\\HT1-001 尾管  化验报告.docx",
+      "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\化验报告\\HT1-001井油层尾管报告.pdf",
+      "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\数据采集\\HT1-001数采.xlsm",
+      "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\探井固井工程量清单（HT1-001 尾管）.doc",
+      "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001套管数据表尾管168.3mm139,7，8.22-三方核对版.xlsx"
+    ]
+  },
+  "quality_labels": {
+    "dual_diameter_tail_168_3_139_7mm": {
+      "interval_md": "5460.159-7746（封固段）；作业史套管段约5469.711-7746",
+      "qualification_rate_pct": null,
+      "overall_quality": "合格",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm油层尾管技术总结.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm尾管固井施工小结（写实）.doc",
+      "confidence": "HIGH_FOR_QUALITATIVE_LABEL",
+      "note": "技术总结和施工小结均有‘固井质量统计：合格’；未直接给出CBL数值合格率。"
+    },
+    "lower_139_7mm_completion_liner": {
+      "interval_md": "7174.938-7746",
+      "qualification_rate_pct": null,
+      "overall_quality": "合格（随双径尾管整体质量标签）",
+      "source": "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm油层尾管技术总结.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm尾管固井施工小结（写实）.doc / D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc",
+      "confidence": "MEDIUM_FOR_SECTION_SPECIFIC_LABEL",
+      "note": "质量结论按双径尾管整体给出，未见只针对139.7mm下部段的独立CBL合格率。"
+    }
+  },
+  "separated_sections": {
+    "upper_168_3mm_liner": {
+      "role": "复合尾管上部168.3mm段，参与本次固井但非单一139.7mm目标模型段",
+      "direct_summary": {
+        "interval_md": "5469.711-7174.938（作业史/套管表）；设计近似5460.159-7174.941",
+        "liner_od_mm": 168.3,
+        "liner_wall_thickness_mm": 14.7,
+        "hole_diameter_mm": 241.3,
+        "average_hole_diameter_mm": 247.83,
+        "centralizer_count": 77,
+        "centralizer_spec": "168.3*241.3mm整体式弹扶",
+        "cementing_role": "领浆/中间浆/尾浆先经双径整体环空，返至悬挂器/喇叭口附近"
+      },
+      "sources": [
+        "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc",
+        "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm尾管固井施工小结（写实）.doc",
+        "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7+168.3mm尾管完井固井施工设计（审核）.doc",
+        "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001套管数据表尾管168.3mm139,7，8.22-三方核对版.xlsx"
+      ]
+    },
+    "lower_139_7mm_liner": {
+      "role": "推荐模型目标段，下部139.7mm完井尾管",
+      "direct_summary": {
+        "interval_md": "7174.938-7746",
+        "liner_od_mm": 139.7,
+        "liner_wall_thickness_mm": 15.88,
+        "hole_diameter_mm": 215.9,
+        "average_hole_diameter_mm": 229.46,
+        "centralizer_count": 24,
+        "centralizer_spec": "139.7*215.9mm整体式弹扶",
+        "cementing_interval_target_md": "7174.938-7746",
+        "quality_label": "合格（整体双径尾管质量标签）"
+      },
+      "sources": [
+        "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井168.3+139.7mm尾管固井作业史.doc",
+        "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7mm尾管固井施工小结（写实）.doc",
+        "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001井139.7+168.3mm尾管完井固井施工设计（审核）.doc",
+        "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\HT1-001套管数据表尾管168.3mm139,7，8.22-三方核对版.xlsx"
+      ]
+    },
+    "lab_pdf_cross_check": {
+      "role": "扫描版检测分析报告复核，作为docx化验报告的补充，不覆盖主表除非后续人工复核原件",
+      "direct_summary": {
+        "lead_thickening_min_pdf": 432,
+        "intermediate_thickening_min_pdf": 302,
+        "tail_thickening_min_pdf": 223,
+        "lead_n_k_pdf": "0.825 / 0.842Pa·sⁿ",
+        "intermediate_n_k_pdf": "0.816 / 0.512Pa·sⁿ",
+        "tail_n_k_pdf": "0.807 / 0.527Pa·sⁿ（扫描读取存在异常，需复核）",
+        "note": "PDF为扫描件，pdfplumber无文本；使用图像快速读取，部分尾浆流变读数与常规递减规律不一致。"
+      },
+      "sources": [
+        "D:\\users\\desktop\\research\\控压固井项目\\0708\\2\\HT1-001完井交\\化验报告\\HT1-001井油层尾管报告.pdf"
+      ]
+    }
+  },
+  "known_gaps": [
+    "未见HT1-001井可直接引用的数值型CBL合格率/优质率；当前仅能作为‘合格’弱监督标签。",
+    "该井为168.3mm+139.7mm双径尾管，现场泵注体积为整体双径固井程序；若用于单一139.7mm模型，需要明确鞋口/环空入口边界和上部168.3mm段影响。",
+    "施工设计给出的水泥返深5460.159m、领浆附加超返至5185.7m、作业史套管顶部5469.711m为不同参考口径，已分开标注，不能混作同一深度。",
+    "设计尾浆体积21.4m³与现场作业史/小结实际尾浆22.1m³并存；推荐模型输入采用现场实际22.1m³。",
+    "井径/井斜资料存在30m/点文本表，但尚未转成可直接导入模型的井径-井深、井斜-井深CSV。",
+    "扶正器布置和裸眼居中度80.4%为设计/模拟代理，不是实测分段standoff剖面。",
+    "HT1-001数采.xlsm已读取，但时间为2025-08-14，与8月25-26日固井作业史不一致，疑似测试或非本次施工曲线；未用于覆盖现场实际体积和排量。",
+    "扫描PDF化验报告可读取部分复核值，但与docx实验报告存在小差异，且尾浆流变扫描识别存在异常；主输入优先采用docx化验报告。"
+  ],
+  "notes": [
+    "本数据包为HT1-001/呼探1-001井独立数据包，已覆盖原先指向呼探1井的错误alias文件。",
+    "推荐模型目标段为139.7mm下部完井尾管：7174.938-7746m；双径尾管整体封固段为5460.159-7746m。",
+    "现场实际泵注顺序为：1.75g/cm³先导浆40m³ + 1.98g/cm³驱油隔离液20m³ + 2.05g/cm³领浆20.6m³ + 1.90g/cm³中间浆28.7m³ + 1.90g/cm³尾浆22.1m³ + 后置/替浆2+25+10+3+53.7m³。",
+    "质量标签为技术总结/施工小结的后验固井质量代理标签，不是直接测得的水力顶替效率；施工设计中的98%为斯伦贝谢模拟平均水泥充填率，也不能等同于CBL合格率。",
+    "所有来源均来自HT1-001完井交目录，未使用参考文档/呼探1目录数据。"
+  ]
 }
