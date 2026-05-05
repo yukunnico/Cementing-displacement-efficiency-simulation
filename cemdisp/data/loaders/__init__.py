@@ -20,6 +20,8 @@
 - 呼102: 通过 hu102_loader 模块加载
 - 呼103: 通过 hu103_loader 模块加载
 - 呼探1: 通过 hu1_loader 模块加载
+- 呼探1-001（HT1-001）: 通过 ht1_001_loader 模块加载
+- 呼探1-002（HT1-002）: 通过 hu2_loader 模块加载
 
 参考文档路径约定：
 - REFERENCE_DOCS_ROOT: 项目根目录下"参考文档"文件夹
@@ -50,6 +52,14 @@ from cemdisp.data.loaders.hu1_loader import (
     build_hu1_annulus_inlet_provider,
     load_hu1_tailpipe,
 )
+from cemdisp.data.loaders.hu2_loader import (
+    build_hu2_annulus_inlet_provider,
+    load_hu2_tailpipe,
+)
+from cemdisp.data.loaders.ht1_001_loader import (
+    build_ht1_001_annulus_inlet_provider,
+    load_ht1_001_tailpipe,
+)
 
 
 REFERENCE_DOCS_ROOT = Path(__file__).resolve().parents[3] / "参考文档"
@@ -67,10 +77,14 @@ Hu101LoaderResult = tuple[WellSpec, tuple[FluidSpec, ...], PumpingSchedule, Vali
 Hu102LoaderResult = tuple[WellSpec, tuple[FluidSpec, ...], PumpingSchedule, ValidationData]
 Hu103LoaderResult = tuple[WellSpec, tuple[FluidSpec, ...], PumpingSchedule, ValidationData]
 Hu1LoaderResult = tuple[WellSpec, tuple[FluidSpec, ...], PumpingSchedule, ValidationData]
+Hu2LoaderResult = tuple[WellSpec, tuple[FluidSpec, ...], PumpingSchedule, ValidationData]
+Ht1_001LoaderResult = tuple[WellSpec, tuple[FluidSpec, ...], PumpingSchedule, ValidationData]
 Hu101InletProviderFactory = Callable[[PumpingSchedule, tuple[FluidSpec, ...], str], Callable[[float], AnnulusInletState]]
 Hu102InletProviderFactory = Callable[[PumpingSchedule, tuple[FluidSpec, ...], str], Callable[[float], AnnulusInletState]]
 Hu103InletProviderFactory = Callable[[PumpingSchedule, tuple[FluidSpec, ...], str], Callable[[float], AnnulusInletState]]
 Hu1InletProviderFactory = Callable[[PumpingSchedule, tuple[FluidSpec, ...], str], Callable[[float], AnnulusInletState]]
+Hu2InletProviderFactory = Callable[[PumpingSchedule, tuple[FluidSpec, ...], str], Callable[[float], AnnulusInletState]]
+Ht1_001InletProviderFactory = Callable[[PumpingSchedule, tuple[FluidSpec, ...], str], Callable[[float], AnnulusInletState]]
 
 __all__ = [
     "Hu101InletProviderFactory",
@@ -81,14 +95,22 @@ __all__ = [
     "Hu103LoaderResult",
     "Hu1InletProviderFactory",
     "Hu1LoaderResult",
+    "Hu2InletProviderFactory",
+    "Hu2LoaderResult",
+    "Ht1_001InletProviderFactory",
+    "Ht1_001LoaderResult",
     "REFERENCE_DOCS_ROOT",
     "available_well_names",
     "build_hu101_annulus_inlet_provider",
     "build_hu102_annulus_inlet_provider",
     "build_hu103_annulus_inlet_provider",
     "build_hu1_annulus_inlet_provider",
+    "build_hu2_annulus_inlet_provider",
+    "build_ht1_001_annulus_inlet_provider",
     "load_hu101_tailpipe",
     "load_hu102_tailpipe",
     "load_hu103_tailpipe",
     "load_hu1_tailpipe",
+    "load_hu2_tailpipe",
+    "load_ht1_001_tailpipe",
 ]

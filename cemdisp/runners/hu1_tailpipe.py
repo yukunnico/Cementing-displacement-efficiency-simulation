@@ -1,8 +1,10 @@
 """
-呼探1井（HT1-001）尾管段顶替效率模型运行器
+呼探1井尾管段顶替效率模型运行器
 
-严格按呼探1现场主作业运行 1D-2D 耦合模式并导出中文命名结果：
+严格按呼探1井现场主作业运行 1D-2D 耦合模式并导出中文命名结果：
 地面开泵 → 套管内前沿追踪 → 鞋口出流 → 环空入口 → 环空二维顶替
+
+注意：呼探1井与 HT1-001井是两口不同的井，本模块专用于呼探1井。
 
 输出目录：results/呼探1尾管_1D2D耦合模型/
 输出文件：CSV(时间序列/深度剖面) + JSON(摘要) + Markdown(摘要) + PNG(静态图) + NPZ(2D场数据) + GIF(动画)
@@ -63,7 +65,7 @@ def run_and_export(
     inlet_provider: Callable[[float], AnnulusInletState],
     total_t_s: float,
 ) -> None:
-    """运行呼探1环空二维模型并导出一套中文命名结果。
+    """运行呼探1井环空二维模型并导出一套中文命名结果。
 
     参数：
         mode_title: 模式标题（例如“1D2D耦合模型”），用于中文文件名和摘要标题。
@@ -160,7 +162,7 @@ def annulus_stop_time_s(
     casing_result: CasingFlowResult,
     fluids: tuple[FluidSpec, ...],
 ) -> float:
-    """确定呼探1环空二维顶替应停止的地面累计时间。
+    """确定呼探1井环空二维顶替应停止的地面累计时间。
 
     停止条件为：替浆液（FluidRole.DISPLACEMENT）第一次到达鞋口。
     该时刻对应水泥浆柱尾缘刚进入环空，二维模型不再继续注入后续替浆液。
@@ -170,7 +172,7 @@ def annulus_stop_time_s(
     for front in casing_result.fronts:
         if role_by_name.get(front.fluid_name) == FluidRole.DISPLACEMENT:
             return float(front.time_s)
-    raise ValueError("呼探1现场耦合模型未找到替浆液到鞋口时刻，无法确定环空顶替停止时间")
+    raise ValueError("呼探1井现场耦合模型未找到替浆液到鞋口时刻，无法确定环空顶替停止时间")
 
 
 def _is_cement_slurry_name(fluid_name: str) -> bool:
@@ -293,7 +295,7 @@ def _export_casing_flow_timing(
 
 
 def run_hu1_tailpipe_initial() -> None:
-    """呼探1尾管段现场实录 1D-2D 耦合模型运行入口。"""
+    """呼探1井尾管段现场实录 1D-2D 耦合模型运行入口。"""
 
     well_spec, fluids, schedule, _ = load_hu1_tailpipe()
     output_dir = PROJECT_ROOT / "results" / "呼探1尾管_1D2D耦合模型"

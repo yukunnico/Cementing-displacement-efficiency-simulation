@@ -14,6 +14,8 @@ from cemdisp.runners.hu101_tailpipe import run_hu101_tailpipe_initial
 from cemdisp.runners.hu102_tailpipe import run_hu102_tailpipe_initial
 from cemdisp.runners.hu103_tailpipe import run_hu103_tailpipe_initial
 from cemdisp.runners.hu1_tailpipe import run_hu1_tailpipe_initial
+from cemdisp.runners.hu2_tailpipe import run_hu2_tailpipe_initial
+from cemdisp.runners.ht1_001_tailpipe import run_ht1_001_tailpipe_initial
 
 
-__all__ = ["run_hu101_tailpipe_initial", "run_hu102_tailpipe_initial", "run_hu103_tailpipe_initial", "run_hu1_tailpipe_initial"]
+__all__ = ["run_hu101_tailpipe_initial", "run_hu102_tailpipe_initial", "run_hu103_tailpipe_initial", "run_hu1_tailpipe_initial", "run_hu2_tailpipe_initial", "run_ht1_001_tailpipe_initial"]
