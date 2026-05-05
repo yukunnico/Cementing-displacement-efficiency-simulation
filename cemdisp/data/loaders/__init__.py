@@ -18,6 +18,8 @@
 当前支持的井：
 - 呼101: 通过 hu101_loader 模块加载
 - 呼102: 通过 hu102_loader 模块加载
+- 呼103: 通过 hu103_loader 模块加载
+- 呼探1: 通过 hu1_loader 模块加载
 
 参考文档路径约定：
 - REFERENCE_DOCS_ROOT: 项目根目录下"参考文档"文件夹
@@ -40,6 +42,14 @@ from cemdisp.data.loaders.hu102_loader import (
     build_hu102_annulus_inlet_provider,
     load_hu102_tailpipe,
 )
+from cemdisp.data.loaders.hu103_loader import (
+    build_hu103_annulus_inlet_provider,
+    load_hu103_tailpipe,
+)
+from cemdisp.data.loaders.hu1_loader import (
+    build_hu1_annulus_inlet_provider,
+    load_hu1_tailpipe,
+)
 
 
 REFERENCE_DOCS_ROOT = Path(__file__).resolve().parents[3] / "参考文档"
@@ -55,18 +65,30 @@ def available_well_names() -> tuple[str, ...]:
 
 Hu101LoaderResult = tuple[WellSpec, tuple[FluidSpec, ...], PumpingSchedule, ValidationData]
 Hu102LoaderResult = tuple[WellSpec, tuple[FluidSpec, ...], PumpingSchedule, ValidationData]
+Hu103LoaderResult = tuple[WellSpec, tuple[FluidSpec, ...], PumpingSchedule, ValidationData]
+Hu1LoaderResult = tuple[WellSpec, tuple[FluidSpec, ...], PumpingSchedule, ValidationData]
 Hu101InletProviderFactory = Callable[[PumpingSchedule, tuple[FluidSpec, ...], str], Callable[[float], AnnulusInletState]]
 Hu102InletProviderFactory = Callable[[PumpingSchedule, tuple[FluidSpec, ...], str], Callable[[float], AnnulusInletState]]
+Hu103InletProviderFactory = Callable[[PumpingSchedule, tuple[FluidSpec, ...], str], Callable[[float], AnnulusInletState]]
+Hu1InletProviderFactory = Callable[[PumpingSchedule, tuple[FluidSpec, ...], str], Callable[[float], AnnulusInletState]]
 
 __all__ = [
     "Hu101InletProviderFactory",
     "Hu101LoaderResult",
     "Hu102InletProviderFactory",
     "Hu102LoaderResult",
+    "Hu103InletProviderFactory",
+    "Hu103LoaderResult",
+    "Hu1InletProviderFactory",
+    "Hu1LoaderResult",
     "REFERENCE_DOCS_ROOT",
     "available_well_names",
     "build_hu101_annulus_inlet_provider",
     "build_hu102_annulus_inlet_provider",
+    "build_hu103_annulus_inlet_provider",
+    "build_hu1_annulus_inlet_provider",
     "load_hu101_tailpipe",
     "load_hu102_tailpipe",
+    "load_hu103_tailpipe",
+    "load_hu1_tailpipe",
 ]

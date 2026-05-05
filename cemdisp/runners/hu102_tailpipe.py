@@ -1,24 +1,26 @@
 """
 呼102尾管段顶替效率模型运行器
 
-运行两种模式并导出中文命名结果：
-1. 硬编码环空入口(sustained_tail)：替浆期间环空入口保持尾浆
-2. 1D-2D耦合：套管内前沿追踪 → 鞋口出流 → 环空入口
+严格按呼102现场主作业运行 1D-2D 耦合模式并导出中文命名结果：
+地面开泵 → 套管内前沿追踪 → 鞋口出流 → 环空入口 → 环空二维顶替
 
-输出目录：results/呼102尾管_初版模型/ 和 results/呼102尾管_1D2D耦合模型/
+输出目录：results/呼102尾管_1D2D耦合模型/
 输出文件：CSV(时间序列/深度剖面) + JSON(摘要) + Markdown(摘要) + PNG(静态图) + NPZ(2D场数据) + GIF(动画)
 """
 
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
+import csv
 import json
 from pathlib import Path
 from typing import cast
 
 import numpy as np
 
-from cemdisp.data.loaders import build_hu102_annulus_inlet_provider, load_hu102_tailpipe
+from cemdisp.data.fluid_spec import FluidRole, FluidSpec
+from cemdisp.data.loaders import load_hu102_tailpipe
+from cemdisp.data.pumping_schedule import PumpingSchedule
 from cemdisp.models2d import AnnulusD2DGASolver
 from cemdisp.models2d.boundary_bridge import AnnulusInletState, build_coupled_annulus_inlet_provider
 from cemdisp.reporting.animation import animate_cement_field
@@ -34,6 +36,7 @@ from cemdisp.reporting.plots import (
     plot_time_series,
 )
 from cemdisp.transport1d import CasingFlowSolver
+from cemdisp.transport1d.casing_flow import CasingFlowResult
 
 
 # 项目根目录：从cemdisp/runners向上两级到达cement model根目录
@@ -46,6 +49,7 @@ def run_and_export(
     mode_title: str,
     output_dir: Path,
     inlet_provider: Callable[[float], AnnulusInletState],
+    total_t_s: float,
 ) -> None:
     """运行环空模型并导出一套中文命名结果。
 
@@ -53,15 +57,15 @@ def run_and_export(
         mode_title: 模式标题（如"初版模型"、"1D2D耦合模型"），用于文件名和打印
         output_dir: 结果输出目录
         inlet_provider: 环空入口边界状态提供器
+        total_t_s: 环空二维顶替总时长（秒）
     """
 
     output_dir.mkdir(parents=True, exist_ok=True)
     well_spec, fluids, _, _ = load_hu102_tailpipe()
-    # 前置液(10m³)+隔离液(15m³)+水泥(16.67m³)+替浆(74m³)=115.67m³
-    # 按0.378m³/min排量，总泵注时间≈306min=18360s
-    # total_t=20000s覆盖完整泵注(18360s)+约27min停泵后静置/候凝早期观察窗口
-    # enable_gravity=True启用停泵阶段密度驱动对流：高密度水泥浆下沉、低密度泥浆上返。
-    solver = AnnulusD2DGASolver(total_t=20000.0, enable_gravity=True)
+    # Hu102 严格现场模式下，这里的 total_t_s 由 1D 鞋口时序决定：
+    # 当替浆液第一次到达鞋口时，代表整段水泥浆已全部进入环空，
+    # 环空顶替计算到此结束，不再继续让替浆液入环空稀释既有水泥场。
+    solver = AnnulusD2DGASolver(total_t=total_t_s, enable_gravity=True)
     result = solver.run(well_spec, fluids, inlet_provider)
 
     # 导出CSV
@@ -136,26 +140,140 @@ def run_and_export(
     print(json.dumps(result.summary, ensure_ascii=False, indent=2))
 
 
+def annulus_stop_time_s(
+    *,
+    casing_result: CasingFlowResult,
+    fluids: tuple[FluidSpec, ...],
+) -> float:
+    """返回 Hu102 环空二维顶替应停止的地面累计时间。
+
+    对现场两步法，停止条件定义为：替浆液第一次到达鞋口。
+    这意味着整段水泥浆尾缘刚好全部进入环空，不再继续做环空顶替求解。
+    """
+
+    role_by_name = {fluid.name: fluid.role for fluid in fluids}
+    for front in casing_result.fronts:
+        if role_by_name.get(front.fluid_name) == FluidRole.DISPLACEMENT:
+            return float(front.time_s)
+    raise ValueError("Hu102 现场耦合模型未找到替浆液到鞋口时刻，无法确定环空顶替停止时间")
+
+
+def _export_casing_flow_timing(
+    *,
+    output_dir: Path,
+    schedule: PumpingSchedule,
+    casing_result: CasingFlowResult,
+    casing_solver: CasingFlowSolver,
+) -> None:
+    """导出地面泵注与鞋口出流时序，明确环空顶替时间口径。
+
+    该表用于解释 1D-2D 耦合边界：surface_time 从地面开泵算起，
+    annulus_time 从水泥浆首次到达鞋口、进入环空后算起。
+    """
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    timing_path = output_dir / "呼102尾管_1D2D耦合模型_鞋口出流时序.csv"
+    cumulative_volume_m3 = 0.0
+    elapsed_time_s = 0.0
+    scheduled_windows: list[tuple[str, float, float, float, float, float]] = []
+    for step in schedule.steps:
+        duration_s = 0.0 if step.rate_m3_min <= 0.0 else step.volume_m3 / step.rate_m3_min * 60.0
+        start_time_s = elapsed_time_s
+        end_time_s = start_time_s + duration_s
+        scheduled_windows.append(
+            (
+                step.fluid_name,
+                step.rate_m3_min,
+                start_time_s,
+                end_time_s,
+                cumulative_volume_m3,
+                cumulative_volume_m3 + step.volume_m3,
+            )
+        )
+        elapsed_time_s = end_time_s
+        cumulative_volume_m3 += step.volume_m3
+
+    pump_end_time_s = elapsed_time_s
+    pipe_volume_m3 = casing_result.shoe_md_m * casing_result.pipe_cross_section_m2
+
+    def _arrival_time_for_volume(target_volume_m3: float) -> float | None:
+        """按施工累计体积反算某体积坐标到达鞋口的地面累计时间。"""
+
+        for _, rate_m3_min, start_time_s, end_time_s, volume_start_m3, volume_end_m3 in scheduled_windows:
+            if target_volume_m3 <= volume_end_m3 + 1.0e-12:
+                if rate_m3_min <= 0.0:
+                    return end_time_s
+                volume_into_step_m3 = max(target_volume_m3 - volume_start_m3, 0.0)
+                return start_time_s + volume_into_step_m3 / rate_m3_min * 60.0
+        return None
+
+    arrival_times: list[float] = []
+    cement_arrival_time_s: float | None = None
+    for fluid_name, _, _, _, volume_start_m3, _ in scheduled_windows:
+        arrival_time_s = _arrival_time_for_volume(volume_start_m3 + pipe_volume_m3)
+        if arrival_time_s is None:
+            continue
+        arrival_times.append(arrival_time_s)
+        if fluid_name == "尾管水泥浆":
+            cement_arrival_time_s = arrival_time_s
+
+    annulus_start_time_s = cement_arrival_time_s if cement_arrival_time_s is not None else pump_end_time_s
+    sample_times = sorted({0.0, pump_end_time_s, *arrival_times})
+
+    with timing_path.open("w", encoding="utf-8-sig", newline="") as handle:
+        writer = csv.DictWriter(
+            handle,
+            fieldnames=(
+                "地面累计时间_s",
+                "地面累计时间_min",
+                "环空顶替时间_s",
+                "环空顶替时间_min",
+                "地面施工阶段",
+                "鞋口出流流体",
+                "环空入口相",
+                "排量_m3_min",
+            ),
+        )
+        writer.writeheader()
+        for time_s in sample_times:
+            state = casing_solver.pipe_exit_state_at(casing_result, time_s)
+            inlet_fluid = state.phase_fractions[0][0] if state.phase_fractions else "未知"
+            annulus_time_s = max(time_s - annulus_start_time_s, 0.0)
+            writer.writerow(
+                {
+                    "地面累计时间_s": f"{time_s:.3f}",
+                    "地面累计时间_min": f"{time_s / 60.0:.3f}",
+                    "环空顶替时间_s": f"{annulus_time_s:.3f}",
+                    "环空顶替时间_min": f"{annulus_time_s / 60.0:.3f}",
+                    "地面施工阶段": state.stage_name,
+                    "鞋口出流流体": inlet_fluid,
+                    "环空入口相": "水泥相" if inlet_fluid == "尾管水泥浆" else "泥浆相",
+                    "排量_m3_min": f"{state.flow_rate_m3_s * 60.0:.6f}",
+                }
+            )
+
+
 def run_hu102_tailpipe_initial() -> None:
-    """呼102尾管段顶替效率模型完整运行入口。"""
+    """呼102尾管段现场实录 1D-2D 耦合模型运行入口。"""
 
     well_spec, fluids, schedule, _ = load_hu102_tailpipe()
+    output_dir = PROJECT_ROOT / "results" / "呼102尾管_1D2D耦合模型"
 
-    # 硬编码环空入口模式（sustained_tail）：向后兼容，便于对比历史结果。
-    hardcoded_provider = build_hu102_annulus_inlet_provider(schedule, fluids)
-    run_and_export(
-        mode_title="初版模型",
-        output_dir=PROJECT_ROOT / "results" / "呼102尾管_初版模型",
-        inlet_provider=hardcoded_provider,
-    )
-
-    # 1D-2D耦合模式：套管内前沿追踪 → 鞋口出流 → 环空入口。
+    # 严格现场模式只使用 1D-2D 耦合：套管内前沿追踪 → 鞋口出流 → 环空入口。
     # 套管内同样启用重力项，使鞋口边界能反映停泵后的密度分异趋势。
     casing_solver = CasingFlowSolver(enable_gravity=True)
     casing_result = casing_solver.run(well_spec, fluids, schedule)
     coupled_provider = build_coupled_annulus_inlet_provider(casing_result, casing_solver, fluids)
+    annulus_stop_time_value_s = annulus_stop_time_s(casing_result=casing_result, fluids=fluids)
+    _export_casing_flow_timing(
+        output_dir=output_dir,
+        schedule=schedule,
+        casing_result=casing_result,
+        casing_solver=casing_solver,
+    )
     run_and_export(
         mode_title="1D2D耦合模型",
-        output_dir=PROJECT_ROOT / "results" / "呼102尾管_1D2D耦合模型",
+        output_dir=output_dir,
         inlet_provider=coupled_provider,
+        total_t_s=annulus_stop_time_value_s,
     )
