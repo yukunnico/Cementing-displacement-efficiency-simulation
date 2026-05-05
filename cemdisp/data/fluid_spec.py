@@ -51,6 +51,7 @@ class FluidRole(str, Enum):
     WASH = "wash"
     SPACER = "spacer"
     LEAD = "lead"
+    INTERMEDIATE = "intermediate"
     TAIL = "tail"
     DISPLACEMENT = "displacement"
     OTHER = "other"

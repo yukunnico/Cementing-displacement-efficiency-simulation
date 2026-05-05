@@ -20,6 +20,7 @@ import numpy as np
 from numpy.typing import NDArray
 import pandas as pd
 
+from cemdisp.data.fluid_spec import FluidRole, FluidSpec
 from cemdisp.data.loaders import build_hu101_annulus_inlet_provider, load_hu101_tailpipe
 from cemdisp.data.pumping_schedule import PumpingSchedule
 from cemdisp.models2d import AnnulusD2DGASolver, AnnulusSimulationResult
@@ -36,7 +37,7 @@ from cemdisp.reporting.plots import (
     plot_risk_indices,
     plot_time_series,
 )
-from cemdisp.transport1d import CasingFlowSolver
+from cemdisp.transport1d import CasingFlowResult, CasingFlowSolver
 
 
 _CEMDISP_ROOT = Path(__file__).resolve().parents[1]  # cemdisp/
@@ -48,6 +49,25 @@ def _schedule_total_time_s(schedule: PumpingSchedule) -> float:
     """按现场分段排量计算施工总时长。"""
 
     return sum(0.0 if step.rate_m3_min <= 0.0 else step.volume_m3 / step.rate_m3_min * 60.0 for step in schedule.steps)
+
+
+def annulus_stop_time_s(
+    *,
+    casing_result: CasingFlowResult,
+    fluids: tuple[FluidSpec, ...],
+) -> float:
+    """返回 Hu101 环空二维顶替应停止的地面累计时间。
+
+    对 Hu101 coupled 模式，停止条件定义为：最后一段水泥浆之后的第一种
+    DISPLACEMENT 流体第一次到达鞋口。此时整段水泥浆已全部进入环空，
+    不再继续让后续替浆流体进入环空稀释既有水泥场。
+    """
+
+    role_by_name = {fluid.name: fluid.role for fluid in fluids}
+    for front in casing_result.fronts:
+        if role_by_name.get(front.fluid_name) == FluidRole.DISPLACEMENT:
+            return float(front.time_s)
+    raise ValueError("Hu101 现场耦合模型未找到替浆流体到鞋口时刻，无法确定环空顶替停止时间")
 
 
 def _load_hu101_cbl_profile() -> pd.DataFrame:
@@ -176,6 +196,7 @@ def run_and_export(
     mode_title: str,
     output_dir: Path,
     inlet_provider: Callable[[float], AnnulusInletState],
+    total_t_s: float | None = None,
 ) -> None:
     """运行呼101环空模型并导出一套中文命名结果。"""
 
@@ -187,7 +208,7 @@ def run_and_export(
     # 另外沿用 Hu101 legacy 模型口径：
     # 1) nz=500：legacy 收敛检查以 500 作为主计算网格；
     # 2) quality_penalty_scale=0.671：按 Hu101 现场 CBL 合格率 62.77% 做单井校准。
-    total_t = _schedule_total_time_s(schedule) + 20.0 * 60.0
+    total_t = total_t_s if total_t_s is not None else _schedule_total_time_s(schedule) + 20.0 * 60.0
     solver = AnnulusD2DGASolver(
         total_t=total_t,
         enable_gravity=True,
@@ -279,6 +300,7 @@ def run_hu101_tailpipe_initial() -> None:
     # 1D-2D耦合模式：由现场分段施工程序先经过套管内前沿追踪，再转成环空入口边界。
     casing_solver = CasingFlowSolver(enable_gravity=True)
     casing_result = casing_solver.run(well_spec, fluids, schedule)
+    annulus_stop_time_value_s = annulus_stop_time_s(casing_result=casing_result, fluids=fluids)
     coupled_provider = build_coupled_annulus_inlet_provider(
         casing_result,
         casing_solver,
@@ -289,6 +311,7 @@ def run_hu101_tailpipe_initial() -> None:
         mode_title="1D2D耦合模型",
         output_dir=PROJECT_ROOT / "results" / "呼101尾管_1D2D耦合模型",
         inlet_provider=coupled_provider,
+        total_t_s=annulus_stop_time_value_s,
     )
 
 

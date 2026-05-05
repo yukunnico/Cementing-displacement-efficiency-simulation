@@ -44,11 +44,11 @@ class Hu102LoaderTestCase(unittest.TestCase):
         self.assertAlmostEqual(wash.density_kg_m3, 2050.0)
         self.assertAlmostEqual(spacer.density_kg_m3, 2050.0)
 
-        self.assertEqual(len(schedule.steps), 4)
-        self.assertAlmostEqual(schedule.steps[0].volume_m3, 10.0)
-        self.assertAlmostEqual(schedule.steps[1].volume_m3, 15.0)
-        self.assertEqual(schedule.steps[0].fluid_name, "冲洗液")
-        self.assertEqual(schedule.steps[1].fluid_name, "隔离液")
+        self.assertEqual(len(schedule.steps), 2)
+        self.assertEqual(schedule.steps[0].fluid_name, "尾管水泥浆")
+        self.assertEqual(schedule.steps[1].fluid_name, "替浆液")
+        self.assertAlmostEqual(schedule.steps[0].volume_m3, 35.0 / 2.10)
+        self.assertAlmostEqual(schedule.steps[1].volume_m3, 74.0)
         self.assertAlmostEqual(schedule.steps[0].rate_m3_min, 0.378)
         self.assertAlmostEqual(schedule.steps[1].rate_m3_min, 0.378)
 

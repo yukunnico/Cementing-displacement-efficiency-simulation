@@ -96,7 +96,7 @@ def build_coupled_annulus_inlet_provider(
             return (("lead", 1.0),)
         if split_cement_phases and role == FluidRole.TAIL:
             return (("tail", 1.0),)
-        if role in {FluidRole.LEAD, FluidRole.TAIL}:
+        if role in {FluidRole.LEAD, FluidRole.INTERMEDIATE, FluidRole.TAIL}:
             return (("cement", 1.0),)
         if role in {FluidRole.WASH, FluidRole.SPACER}:
             return (("spacer", 1.0),)
