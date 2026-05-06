@@ -53,6 +53,7 @@ class CasingFlowResult:
     schedule_steps: tuple[PumpingScheduleStep, ...] = field(default_factory=tuple)
     pipe_cross_section_m2: float = 0.0
     shoe_md_m: float = 0.0
+    pumping_end_time_s: float = 0.0
     notes: tuple[str, ...] = field(default_factory=tuple)
 
 
@@ -145,6 +146,7 @@ class CasingFlowSolver:
             schedule_steps=schedule.steps,
             pipe_cross_section_m2=pipe_area_m2,
             shoe_md_m=shoe_depth_m,
+            pumping_end_time_s=scheduled_steps[-1].end_time_s if scheduled_steps else 0.0,
             notes=(
                 "套管内采用理想界面前缘追踪，未加入管内扩散。",
                 f"初始管内流体按 {initial_fluid} 处理。",

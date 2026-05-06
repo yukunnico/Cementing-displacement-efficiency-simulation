@@ -21,13 +21,11 @@ from typing import Protocol, cast
 import numpy as np
 
 from cemdisp.data.fluid_spec import FluidRole, FluidSpec
-from cemdisp.data.loaders.ht1_001_loader import (
-    build_ht1_001_annulus_inlet_provider,
-    load_ht1_001_tailpipe,
-)
+from cemdisp.data.fluid_provenance import build_injected_fluid_provenance_summary, format_injected_fluid_provenance_markdown
+from cemdisp.data.loaders.ht1_001_loader import load_ht1_001_tailpipe
 from cemdisp.data.pumping_schedule import PumpingSchedule
 from cemdisp.models2d import AnnulusD2DGASolver
-from cemdisp.models2d.boundary_bridge import AnnulusInletState
+from cemdisp.models2d.boundary_bridge import AnnulusInletState, build_coupled_annulus_inlet_provider
 from cemdisp.reporting.animation import animate_cement_field
 from cemdisp.reporting.contour_plots import (
     plot_annulus_snapshots,
@@ -82,11 +80,11 @@ def run_and_export(
 
     # 创建结果目录并加载呼探1-001井尾管段标准数据。
     output_dir.mkdir(parents=True, exist_ok=True)
-    well_spec, fluids, _, _ = load_ht1_001_tailpipe()
+    well_spec, fluids, schedule, _ = load_ht1_001_tailpipe()
 
     # 呼探1-001严格现场模式下，二维求解时长由 1D 套管内前沿追踪确定：
     # 当替浆液第一次到达鞋口时，水泥浆柱已全部进入环空，随后不再让替浆液继续稀释水泥场。
-    solver = AnnulusD2DGASolver(total_t=total_t_s, enable_gravity=True)
+    solver = AnnulusD2DGASolver(total_t=total_t_s)
     result = solver.run(well_spec, fluids, inlet_provider)
 
     # 导出时间序列与深度剖面 CSV；列名由求解器保持中文口径。
@@ -95,10 +93,14 @@ def run_and_export(
     _export_table_csv(cast(_CsvWritable, result.metrics), metrics_path)
     _export_table_csv(cast(_CsvWritable, result.depth_profiles), profiles_path)
 
+    fluid_provenance_summary = build_injected_fluid_provenance_summary(well_spec.well_name, schedule, fluids)
+    summary_payload = dict(result.summary)
+    summary_payload["注入流体现场符合性检查"] = fluid_provenance_summary
+
     # 导出 JSON 摘要，保留机器可读的完整结果字典。
     summary_json_path = output_dir / f"呼探1-001尾管_{mode_title}_结果摘要.json"
     _ = summary_json_path.write_text(
-        json.dumps(result.summary, ensure_ascii=False, indent=2), encoding="utf-8"
+        json.dumps(summary_payload, ensure_ascii=False, indent=2), encoding="utf-8"
     )
 
     # 导出 Markdown 摘要，字段名严格使用中文，避免混淆顶替效率与质量响应效率。
@@ -114,8 +116,9 @@ def run_and_export(
                 f"- CBL评价井段模拟有效顶替效率：{final_result['CBL评价井段模拟有效顶替效率']:.4f}",
                 f"- 目标层段模拟有效顶替效率：{final_result['目标层段模拟有效顶替效率']:.4f}",
                 f"- 最终水泥浆占据率：{final_result['最终水泥浆占据率']:.4f}",
-                f"- 最终质量响应效率：{final_result['最终质量响应效率']:.4f}",
                 f"- 最终窜槽/混浆/失稳指数：{final_result['最终窜槽指数']:.4f} / {final_result['最终混浆指数']:.4f} / {final_result['最终失稳指数']:.4f}",
+                "",
+                *format_injected_fluid_provenance_markdown(fluid_provenance_summary),
             ]
         ),
         encoding="utf-8",
@@ -161,7 +164,7 @@ def run_and_export(
 
     # 控制台打印完整摘要，便于批处理运行后直接查看关键指标。
     print(f"\n=== {mode_title} ===")
-    print(json.dumps(result.summary, ensure_ascii=False, indent=2))
+    print(json.dumps(summary_payload, ensure_ascii=False, indent=2))
 
 
 # 停止时间判定：以替浆液首次到达鞋口作为二维环空计算截止时刻。
@@ -170,18 +173,10 @@ def annulus_stop_time_s(
     casing_result: CasingFlowResult,
     fluids: tuple[FluidSpec, ...],
 ) -> float:
-    """确定呼探1-001井环空二维顶替应停止的地面累计时间。
+    """确定呼探1-001井环空二维顶替应停止的地面累计时间。"""
 
-    停止条件为：替浆液（FluidRole.DISPLACEMENT）第一次到达鞋口。
-    该时刻对应水泥浆柱尾缘刚进入环空，二维模型不再继续注入后续替浆液。
-    """
-
-    # 通过 FluidSpec.role 识别替浆液，避免依赖流体中文名称的脆弱匹配。
-    role_by_name = {fluid.name: fluid.role for fluid in fluids}
-    for front in casing_result.fronts:
-        if role_by_name.get(front.fluid_name) == FluidRole.DISPLACEMENT:
-            return float(front.time_s)
-    raise ValueError("呼探1-001井现场耦合模型未找到替浆液到鞋口时刻，无法确定环空顶替停止时间")
+    del fluids
+    return float(casing_result.pumping_end_time_s)
 
 
 # 水泥浆名称识别：仅用于时序表中文展示，不替代 loader 中的角色定义。
@@ -325,8 +320,9 @@ def run_ht1_001_tailpipe_initial() -> None:
     # 启用重力项，使停泵和密度差对鞋口出流时序的影响能被保留到边界条件中。
     casing_solver = CasingFlowSolver(enable_gravity=True)
     casing_result = casing_solver.run(well_spec, fluids, schedule)
-    coupled_provider = build_ht1_001_annulus_inlet_provider(
-        schedule,
+    coupled_provider = build_coupled_annulus_inlet_provider(
+        casing_result,
+        casing_solver,
         fluids,
         split_cement_phases=True,
     )

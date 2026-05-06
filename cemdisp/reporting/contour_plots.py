@@ -245,10 +245,10 @@ def plot_final_fields_contour(
     result: AnnulusSimulationResult,
     output_dir: Path | str | None = None,
 ) -> Figure:
-    """绘制最终水泥、隔离液、有效顶替效率和壁面泥饼场分布图。
+    """绘制最终水泥、隔离液与顶替效率场分布图。
 
     Args:
-        result: 环空二维模拟结果，需包含最终水泥浓度场、隔离液浓度场和壁面泥饼场。
+        result: 环空二维模拟结果，需包含最终水泥浓度场和隔离液浓度场。
         output_dir: 可选输出目录；若提供则自动保存 PNG 图表。
 
     Returns:
@@ -265,16 +265,19 @@ def plot_final_fields_contour(
     _validate_field_shape(spacer_field, depth, azimuth, "spacer_field")
     _validate_field_shape(wall_field, depth, azimuth, "wall_field")
 
-    panels = [
+    panels: list[tuple[str, Array, str]] = [
         ("水泥浓度", cement_field, "viridis"),
         ("隔离液浓度", spacer_field, "coolwarm"),
         ("有效顶替效率", effective_field, "RdYlGn"),
-        ("壁面泥饼", wall_field, "YlOrRd"),
     ]
-    well_name = _safe_filename_component(result.well_name)
-    fig, axes = plt.subplots(1, 4, figsize=(19.2, 4.8), sharex=True, sharey=True)
+    if float(np.max(np.abs(wall_field))) > 1.0e-12:
+        panels.append(("壁面泥饼", wall_field, "YlOrRd"))
 
-    for ax, (title, field, colormap) in zip(axes, panels):
+    well_name = _safe_filename_component(result.well_name)
+    fig, axes = plt.subplots(1, len(panels), figsize=(4.8 * len(panels), 4.8), sharex=True, sharey=True)
+    axes_array = np.atleast_1d(axes)
+
+    for ax, (title, field, colormap) in zip(axes_array, panels):
         # 多流体最终场分面显示，保持每种物理量独立色标，避免把隔离液误读为顶替效率。
         # 求解器内部数组已按宽边→窄边存储，因此这里不再做额外翻转。
         image = ax.imshow(

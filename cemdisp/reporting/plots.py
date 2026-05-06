@@ -239,16 +239,16 @@ def plot_efficiency_summary_bar(
     result: AnnulusSimulationResult,
     output_dir: Optional[Path | str] = None,
 ) -> Figure:
-    """绘制最终有效顶替效率、水泥浆占据率与质量响应效率对比柱状图。
+    """绘制最终顶替指标对比柱状图。
 
-    绘制五个最终指标的柱状对比图：
+    默认绘制四个最终指标的柱状对比图：
     - 全井段有效顶替效率
     - CBL评价井段有效顶替效率
     - 目标层段有效顶替效率
     - 水泥浆占据率（水泥体积占环空体积的比例）
-    - 质量响应效率（基于CBL代理值计算，与有效顶替效率不同）
 
-    图表底部注释说明：质量响应效率 ≠ 有效顶替效率
+    若旧结果对象仍包含 ``cbl_quality_proxy`` 列，则附加显示第五根柱，
+    以兼容历史结果可视化。
 
     Args:
         result: 环空二维模拟结果
@@ -265,7 +265,6 @@ def plot_efficiency_summary_bar(
             "cbl_eval_interval_efficiency",
             "target_interval_efficiency",
             "bulk_cement_fill",
-            "cbl_quality_proxy",
         ],
         "metrics",
     )
@@ -275,16 +274,19 @@ def plot_efficiency_summary_bar(
         "CBL评价井段有效顶替效率",
         "目标层段有效顶替效率",
         "水泥浆占据率",
-        "质量响应效率",
     ]
     values = [
         final_row["effective_efficiency"],
         final_row["cbl_eval_interval_efficiency"],
         final_row["target_interval_efficiency"],
         final_row["bulk_cement_fill"],
-        final_row["cbl_quality_proxy"],
     ]
-    colors = ["#2f80ed", "#2f80ed", "#2f80ed", "#27ae60", "#f2994a"]
+    colors = ["#2f80ed", "#2f80ed", "#2f80ed", "#27ae60"]
+
+    if "cbl_quality_proxy" in metrics.columns:
+        labels.append("质量响应效率")
+        values.append(final_row["cbl_quality_proxy"])
+        colors.append("#f2994a")
 
     well_name = _safe_filename_component(result.well_name)
     fig, ax = plt.subplots(figsize=(11, 6))
@@ -305,16 +307,17 @@ def plot_efficiency_summary_bar(
             fontsize=10,
         )
 
-    ax.text(
-        0.01,
-        -0.22,
-        "* 质量响应效率 ≠ 有效顶替效率，基于 CBL 代理值计算",
-        transform=ax.transAxes,
-        ha="left",
-        va="top",
-        fontsize=10,
-        color="#8a4b08",
-    )
+    if "cbl_quality_proxy" in metrics.columns:
+        ax.text(
+            0.01,
+            -0.22,
+            "* 质量响应效率 ≠ 有效顶替效率，基于 CBL 代理值计算",
+            transform=ax.transAxes,
+            ha="left",
+            va="top",
+            fontsize=10,
+            color="#8a4b08",
+        )
 
     fig.tight_layout()
     _save_figure(fig, output_dir, f"{well_name}_最终结果对比.png")

@@ -21,7 +21,8 @@ from numpy.typing import NDArray
 import pandas as pd
 
 from cemdisp.data.fluid_spec import FluidRole, FluidSpec
-from cemdisp.data.loaders import build_hu101_annulus_inlet_provider, load_hu101_tailpipe
+from cemdisp.data.fluid_provenance import build_injected_fluid_provenance_summary, format_injected_fluid_provenance_markdown
+from cemdisp.data.loaders import load_hu101_tailpipe
 from cemdisp.data.pumping_schedule import PumpingSchedule
 from cemdisp.models2d import AnnulusD2DGASolver, AnnulusSimulationResult
 from cemdisp.models2d.boundary_bridge import AnnulusInletState, build_coupled_annulus_inlet_provider
@@ -56,18 +57,10 @@ def annulus_stop_time_s(
     casing_result: CasingFlowResult,
     fluids: tuple[FluidSpec, ...],
 ) -> float:
-    """返回 Hu101 环空二维顶替应停止的地面累计时间。
+    """返回 Hu101 环空二维顶替应停止的地面累计时间。"""
 
-    对 Hu101 coupled 模式，停止条件定义为：最后一段水泥浆之后的第一种
-    DISPLACEMENT 流体第一次到达鞋口。此时整段水泥浆已全部进入环空，
-    不再继续让后续替浆流体进入环空稀释既有水泥场。
-    """
-
-    role_by_name = {fluid.name: fluid.role for fluid in fluids}
-    for front in casing_result.fronts:
-        if role_by_name.get(front.fluid_name) == FluidRole.DISPLACEMENT:
-            return float(front.time_s)
-    raise ValueError("Hu101 现场耦合模型未找到替浆流体到鞋口时刻，无法确定环空顶替停止时间")
+    del fluids
+    return float(casing_result.pumping_end_time_s)
 
 
 def _load_hu101_cbl_profile() -> pd.DataFrame:
@@ -205,15 +198,11 @@ def run_and_export(
     # 呼101现场施工存在多段排量：1.2、1.5、1.0、0.55 m³/min，并非 Hu102 的单一平均排量。
     # 因此 total_t 不写死为固定小时数，而按现场施工程序逐段累加得到碰压前总时长，
     # 再增加20分钟窗口，覆盖停泵后早期重力分异与场数据导出快照。
-    # 另外沿用 Hu101 legacy 模型口径：
-    # 1) nz=500：legacy 收敛检查以 500 作为主计算网格；
-    # 2) quality_penalty_scale=0.671：按 Hu101 现场 CBL 合格率 62.77% 做单井校准。
+    # 另外沿用 Hu101 legacy 模型的主计算网格口径：nz=500。
     total_t = total_t_s if total_t_s is not None else _schedule_total_time_s(schedule) + 20.0 * 60.0
     solver = AnnulusD2DGASolver(
         total_t=total_t,
-        enable_gravity=True,
         nz=500,
-        quality_penalty_scale=0.671,
     )
     result = solver.run(well_spec, fluids, inlet_provider)
 
@@ -222,8 +211,12 @@ def run_and_export(
     _ = result.metrics.to_csv(metrics_path, index=False, encoding="utf-8-sig")  # pyright: ignore[reportUnknownMemberType]
     _ = result.depth_profiles.to_csv(profiles_path, index=False, encoding="utf-8-sig")  # pyright: ignore[reportUnknownMemberType]
 
+    fluid_provenance_summary = build_injected_fluid_provenance_summary(well_spec.well_name, schedule, fluids)
+    summary_payload = dict(result.summary)
+    summary_payload["注入流体现场符合性检查"] = fluid_provenance_summary
+
     summary_json_path = output_dir / f"呼101尾管_{mode_title}_结果摘要.json"
-    _ = summary_json_path.write_text(json.dumps(result.summary, ensure_ascii=False, indent=2), encoding="utf-8")
+    _ = summary_json_path.write_text(json.dumps(summary_payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
     summary_md_path = output_dir / f"呼101尾管_{mode_title}_结果摘要.md"
     final_result = cast(Mapping[str, float], result.summary["最终结果"])
@@ -237,8 +230,9 @@ def run_and_export(
                 f"- CBL评价井段模拟有效顶替效率：{final_result['CBL评价井段模拟有效顶替效率']:.4f}",
                 f"- 目标层段模拟有效顶替效率：{final_result['目标层段模拟有效顶替效率']:.4f}",
                 f"- 最终水泥浆占据率：{final_result['最终水泥浆占据率']:.4f}",
-                f"- 最终质量响应效率：{final_result['最终质量响应效率']:.4f}",
                 f"- 最终窜槽/混浆/失稳指数：{final_result['最终窜槽指数']:.4f} / {final_result['最终混浆指数']:.4f} / {final_result['最终失稳指数']:.4f}",
+                "",
+                *format_injected_fluid_provenance_markdown(fluid_provenance_summary),
             ]
         ),
         encoding="utf-8",
@@ -275,27 +269,13 @@ def run_and_export(
     _ = animate_cement_field(result, output_dir=output_dir, save_format="gif")
 
     print(f"\n=== {mode_title} ===")
-    print(json.dumps(result.summary, ensure_ascii=False, indent=2))
+    print(json.dumps(summary_payload, ensure_ascii=False, indent=2))
 
 
 def run_hu101_tailpipe_initial() -> None:
     """呼101尾管段顶替效率模型完整运行入口。"""
 
     well_spec, fluids, schedule, _ = load_hu101_tailpipe()
-
-    # 硬编码环空入口模式：保留 52m³ 鞋口滞后，但不再把尾浆无限持续送入环空；
-    # 尾浆越鞋后，后续轻泥浆/中置液/井浆按 mud invasion 真实进入环空，贴近现场过替过程。
-    hardcoded_provider = build_hu101_annulus_inlet_provider(
-        schedule,
-        fluids,
-        annulus_boundary_mode="field_order_realistic",
-        split_cement_phases=True,
-    )
-    run_and_export(
-        mode_title="初版模型",
-        output_dir=PROJECT_ROOT / "results" / "呼101尾管_初版模型",
-        inlet_provider=hardcoded_provider,
-    )
 
     # 1D-2D耦合模式：由现场分段施工程序先经过套管内前沿追踪，再转成环空入口边界。
     casing_solver = CasingFlowSolver(enable_gravity=True)
