@@ -19,6 +19,7 @@ from typing import cast
 import numpy as np
 
 from cemdisp.data.fluid_spec import FluidRole, FluidSpec
+from cemdisp.data.fluid_provenance import build_injected_fluid_provenance_summary, format_injected_fluid_provenance_markdown
 from cemdisp.data.loaders.hu103_loader import load_hu103_tailpipe
 from cemdisp.data.pumping_schedule import PumpingSchedule
 from cemdisp.models2d import AnnulusD2DGASolver
@@ -60,11 +61,11 @@ def run_and_export(
     """
 
     output_dir.mkdir(parents=True, exist_ok=True)
-    well_spec, fluids, _, _ = load_hu103_tailpipe()
+    well_spec, fluids, schedule, _ = load_hu103_tailpipe()
     # 呼103严格现场模式下，这里的 total_t_s 由 1D 鞋口时序决定：
     # 当替浆液第一次到达鞋口时，代表整段水泥浆已全部进入环空，
     # 环空顶替计算到此结束，不再继续让替浆液入环空稀释既有水泥场。
-    solver = AnnulusD2DGASolver(total_t=total_t_s, enable_gravity=True)
+    solver = AnnulusD2DGASolver(total_t=total_t_s)
     result = solver.run(well_spec, fluids, inlet_provider)
 
     # 导出CSV
@@ -73,10 +74,14 @@ def run_and_export(
     _ = result.metrics.to_csv(metrics_path, index=False, encoding="utf-8-sig")  # pyright: ignore[reportUnknownMemberType]
     _ = result.depth_profiles.to_csv(profiles_path, index=False, encoding="utf-8-sig")  # pyright: ignore[reportUnknownMemberType]
 
+    fluid_provenance_summary = build_injected_fluid_provenance_summary(well_spec.well_name, schedule, fluids)
+    summary_payload = dict(result.summary)
+    summary_payload["注入流体现场符合性检查"] = fluid_provenance_summary
+
     # 导出JSON摘要
     summary_json_path = output_dir / f"呼103尾管_{mode_title}_结果摘要.json"
     _ = summary_json_path.write_text(
-        json.dumps(result.summary, ensure_ascii=False, indent=2), encoding="utf-8"
+        json.dumps(summary_payload, ensure_ascii=False, indent=2), encoding="utf-8"
     )
 
     # 导出Markdown摘要
@@ -92,8 +97,9 @@ def run_and_export(
                 f"- CBL评价井段模拟有效顶替效率：{final_result['CBL评价井段模拟有效顶替效率']:.4f}",
                 f"- 目标层段模拟有效顶替效率：{final_result['目标层段模拟有效顶替效率']:.4f}",
                 f"- 最终水泥浆占据率：{final_result['最终水泥浆占据率']:.4f}",
-                f"- 最终质量响应效率：{final_result['最终质量响应效率']:.4f}",
                 f"- 最终窜槽/混浆/失稳指数：{final_result['最终窜槽指数']:.4f} / {final_result['最终混浆指数']:.4f} / {final_result['最终失稳指数']:.4f}",
+                "",
+                *format_injected_fluid_provenance_markdown(fluid_provenance_summary),
             ]
         ),
         encoding="utf-8",
@@ -136,7 +142,7 @@ def run_and_export(
 
     # 打印摘要
     print(f"\n=== {mode_title} ===")
-    print(json.dumps(result.summary, ensure_ascii=False, indent=2))
+    print(json.dumps(summary_payload, ensure_ascii=False, indent=2))
 
 
 def annulus_stop_time_s(
@@ -144,17 +150,10 @@ def annulus_stop_time_s(
     casing_result: CasingFlowResult,
     fluids: tuple[FluidSpec, ...],
 ) -> float:
-    """返回呼103环空二维顶替应停止的地面累计时间。
+    """返回呼103环空二维顶替应停止的地面累计时间。"""
 
-    对现场两步法，停止条件定义为：替浆液第一次到达鞋口。
-    这意味着整段水泥浆尾缘刚好全部进入环空，不再继续做环空顶替求解。
-    """
-
-    role_by_name = {fluid.name: fluid.role for fluid in fluids}
-    for front in casing_result.fronts:
-        if role_by_name.get(front.fluid_name) == FluidRole.DISPLACEMENT:
-            return float(front.time_s)
-    raise ValueError("呼103现场耦合模型未找到替浆液到鞋口时刻，无法确定环空顶替停止时间")
+    del fluids
+    return float(casing_result.pumping_end_time_s)
 
 
 def _export_casing_flow_timing(
@@ -262,7 +261,12 @@ def run_hu103_tailpipe_initial() -> None:
     # 套管内同样启用重力项，使鞋口边界能反映停泵后的密度分异趋势。
     casing_solver = CasingFlowSolver(enable_gravity=True)
     casing_result = casing_solver.run(well_spec, fluids, schedule)
-    coupled_provider = build_coupled_annulus_inlet_provider(casing_result, casing_solver, fluids)
+    coupled_provider = build_coupled_annulus_inlet_provider(
+        casing_result,
+        casing_solver,
+        fluids,
+        split_cement_phases=True,
+    )
     annulus_stop_time_value_s = annulus_stop_time_s(casing_result=casing_result, fluids=fluids)
     _export_casing_flow_timing(
         output_dir=output_dir,

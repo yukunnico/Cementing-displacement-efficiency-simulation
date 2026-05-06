@@ -89,10 +89,10 @@ def build_coupled_annulus_inlet_provider(
         """根据流体角色映射为环空二维模型入口相分数。"""
 
         role = role_by_name.get(fluid_name, FluidRole.MUD)
-        # 默认保持历史三相口径：领浆/尾浆归为 cement，相容于 Hu102 既有逻辑。
-        # 当 split_cement_phases=True 时，领浆/尾浆分开送入 2D 层，供 Hu101 更真实地跟踪
-        # lead → tail → mud invasion 的现场顺序。
-        if split_cement_phases and role == FluidRole.LEAD:
+        # 默认保持历史三相口径：领浆/中间浆/尾浆统一归为 cement。
+        # 当 split_cement_phases=True 时，把领浆与中间浆并入 lead，相当于“前导水泥相”；
+        # 尾浆单独进入 tail，相容于现有 2D 层的 lead/tail 两段水泥跟踪能力。
+        if split_cement_phases and role in {FluidRole.LEAD, FluidRole.INTERMEDIATE}:
             return (("lead", 1.0),)
         if split_cement_phases and role == FluidRole.TAIL:
             return (("tail", 1.0),)
