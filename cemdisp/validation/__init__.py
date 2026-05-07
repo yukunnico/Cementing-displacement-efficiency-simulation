@@ -10,7 +10,7 @@
    - 能量/动量守恒检查
 
 2. 与现场数据对比
-   - CBL合格率对比
+   - CBL合格率对比（仅用于后验验证，不反向校准）
    - 水泥面位置对比
    - 泵压曲线对比
 
@@ -25,7 +25,25 @@
 
 使用流程：
 1. 运行模型获得预测结果
-2. 与现场CBL/施工数据对比
+2. 与现场CBL/施工数据对比（仅验证，不校准）
 3. 进行误差分析和敏感性评估
 4. 生成验证报告
+
+注意：CBL 合格率 ≠ 流体力学顶替效率，两者物理定义不同。
+验证结果只反映模型预测与现场实测的差异，不用于修改求解器参数。
 """
+
+from cemdisp.validation.cbl_comparison import (
+    CBLValidationResult,
+    summarize_validation,
+    validate_against_cbl,
+)
+from cemdisp.validation.mass_balance import CementMassBalanceDiagnostics, validate_cement_mass_balance
+
+__all__ = [
+    "CementMassBalanceDiagnostics",
+    "validate_cement_mass_balance",
+    "CBLValidationResult",
+    "validate_against_cbl",
+    "summarize_validation",
+]

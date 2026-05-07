@@ -21,3 +21,21 @@
 - 回退到 SimSun（宋体）或系统默认 sans-serif
 - 负号显示正常（axes.unicode_minus=False）
 """
+
+from cemdisp.reporting.reference_figures import (
+    export_reference_figure_set,
+    plot_reference_depth_profile,
+    plot_reference_efficiency_timeseries,
+    plot_reference_final_cement_field,
+    plot_reference_front_progress,
+    plot_reference_segment_efficiency,
+)
+
+__all__ = [
+    "export_reference_figure_set",
+    "plot_reference_depth_profile",
+    "plot_reference_efficiency_timeseries",
+    "plot_reference_final_cement_field",
+    "plot_reference_front_progress",
+    "plot_reference_segment_efficiency",
+]

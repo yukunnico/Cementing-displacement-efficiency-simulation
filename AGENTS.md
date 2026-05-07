@@ -123,12 +123,7 @@
 - `PumpingSchedule`
 - per-well loader
 
-### 2. 区分“求解域”和“解释层”
 
-必须清楚区分：
-
-- **水力学直接输出**：由输运与流动计算直接得到；
-- **质量解释输出**：基于 CBL / 胶结质量资料映射得到。
 
 `quality_proxy` 不是顶替效率真值，不能与 `effective_displacement_efficiency` 混为一谈。
 

@@ -20,7 +20,7 @@ import numpy as np
 from numpy.typing import NDArray
 import pandas as pd
 
-from cemdisp.data.fluid_spec import FluidRole, FluidSpec
+from cemdisp.data.fluid_spec import FluidSpec
 from cemdisp.data.fluid_provenance import build_injected_fluid_provenance_summary, format_injected_fluid_provenance_markdown
 from cemdisp.data.loaders import load_hu101_tailpipe
 from cemdisp.data.pumping_schedule import PumpingSchedule
@@ -38,6 +38,7 @@ from cemdisp.reporting.plots import (
     plot_risk_indices,
     plot_time_series,
 )
+from cemdisp.reporting.reference_figures import export_reference_figure_set
 from cemdisp.transport1d import CasingFlowResult, CasingFlowSolver
 
 
@@ -60,7 +61,7 @@ def annulus_stop_time_s(
     """返回 Hu101 环空二维顶替应停止的地面累计时间。"""
 
     del fluids
-    return float(casing_result.pumping_end_time_s)
+    return float(casing_result.cement_end_time_s)
 
 
 def _load_hu101_cbl_profile() -> pd.DataFrame:
@@ -211,9 +212,7 @@ def run_and_export(
     _ = result.metrics.to_csv(metrics_path, index=False, encoding="utf-8-sig")  # pyright: ignore[reportUnknownMemberType]
     _ = result.depth_profiles.to_csv(profiles_path, index=False, encoding="utf-8-sig")  # pyright: ignore[reportUnknownMemberType]
 
-    fluid_provenance_summary = build_injected_fluid_provenance_summary(well_spec.well_name, schedule, fluids)
     summary_payload = dict(result.summary)
-    summary_payload["注入流体现场符合性检查"] = fluid_provenance_summary
 
     summary_json_path = output_dir / f"呼101尾管_{mode_title}_结果摘要.json"
     _ = summary_json_path.write_text(json.dumps(summary_payload, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -227,12 +226,10 @@ def run_and_export(
                 "",
                 f"- 模拟对象：{result.summary['模拟对象']}",
                 f"- 全井段最终有效顶替效率：{final_result['全井段最终有效顶替效率']:.4f}",
-                f"- CBL评价井段模拟有效顶替效率：{final_result['CBL评价井段模拟有效顶替效率']:.4f}",
-                f"- 目标层段模拟有效顶替效率：{final_result['目标层段模拟有效顶替效率']:.4f}",
+                f"- CBL评价井段模拟有效顶替效率：{final_result['CBL评价井段水力有效顶替效率']:.4f}",
+                f"- 目标层段模拟有效顶替效率：{final_result['目标层段水力有效顶替效率']:.4f}",
                 f"- 最终水泥浆占据率：{final_result['最终水泥浆占据率']:.4f}",
                 f"- 最终窜槽/混浆/失稳指数：{final_result['最终窜槽指数']:.4f} / {final_result['最终混浆指数']:.4f} / {final_result['最终失稳指数']:.4f}",
-                "",
-                *format_injected_fluid_provenance_markdown(fluid_provenance_summary),
             ]
         ),
         encoding="utf-8",
@@ -242,6 +239,7 @@ def run_and_export(
     _ = plot_depth_profiles(result, well_spec=well_spec, output_dir=output_dir)
     _ = plot_risk_indices(result, output_dir=output_dir)
     _ = plot_efficiency_summary_bar(result, output_dir=output_dir)
+    _ = export_reference_figure_set(result, well_spec, output_dir=output_dir)
     _ = plot_depth_time_contour(result, output_dir=output_dir)
     _ = plot_annulus_snapshots(result, output_dir=output_dir)
     _ = plot_final_fields_contour(result, output_dir=output_dir)

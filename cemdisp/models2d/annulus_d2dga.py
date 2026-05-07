@@ -30,6 +30,7 @@ import pandas as pd
 from cemdisp.data.fluid_spec import FluidRole, FluidSpec
 from cemdisp.data.well_spec import DepthValuePoint, WellSpec
 from cemdisp.models2d.boundary_bridge import AnnulusInletState
+from cemdisp.models2d.d2dga_flux import d2dga_flux_amplification
 
 
 Array = NDArray[np.float64]
@@ -60,6 +61,25 @@ def _phase_fraction(inlet_state: AnnulusInletState, phase_name: str) -> float:
 def _trapez2d(arr: Array, geom: Dict[str, Array]) -> float:
     """使用梯形法则计算二维数组在网格上的积分。"""
     return float(np.trapezoid(np.trapezoid(arr, x=geom["s"], axis=1), x=geom["y"], axis=0))
+
+
+def _phase_volume(field: Array, geom: Dict[str, Array]) -> float:
+    """计算某一相在全环空中的实际占据体积。
+
+    当前求解器在 ``y`` 方向按半环空展开，因此这里对半环空积分结果乘以 2，
+    与真实全环空体积口径保持一致。
+    """
+    return 2.0 * _trapez2d(geom["b"] * np.clip(field, 0.0, 1.0), geom)
+
+
+def _limit_phase_volume(field: Array, geom: Dict[str, Array], target_volume_m3: float) -> Array:
+    """按累计入环空体积限制场量，避免数值扩散凭空放大相体积。"""
+    if target_volume_m3 <= 0.0:
+        return np.zeros_like(field)
+    current_volume_m3 = _phase_volume(field, geom)
+    if current_volume_m3 <= target_volume_m3 + 1.0e-9 or current_volume_m3 <= 1.0e-12:
+        return np.clip(field, 0.0, 1.0)
+    return np.clip(field * (target_volume_m3 / current_volume_m3), 0.0, 1.0)
 
 
 def _bilinear_interp(field: Array, ysrc: Array, ssrc: Array, geom: Dict[str, Array], inlet_value: float) -> Array:
@@ -388,6 +408,38 @@ class AnnulusD2DGASolver:
             raise ValueError(f"Unsupported rheology model: {fluid.rheology_model}")
         return np.clip(mu, 1.0e-5, 3.0)
 
+    def _smooth_dispersion(
+        self,
+        field: Array,
+        *,
+        axial: float = 0.018,
+        azimuthal: float = 0.015,
+    ) -> Array:
+        """显式小系数拉普拉斯平滑，模拟D2DGA间隙尺度弥散。
+
+        论文版采用显式二阶差分在轴向和方位角方向添加小系数弥散：
+        - 轴向弥散系数通常 0.012–0.020；
+        - 方位角弥散系数通常 0.012–0.018；
+        - 边界处用一阶差分保持单侧稳定性。
+
+        Args:
+            field: 二维浓度场 (ny, nz)
+            axial: 轴向弥散系数，默认 0.018
+            azimuthal: 方位角弥散系数，默认 0.015
+
+        Returns:
+            平滑后的浓度场，裁剪到 [0, 1]
+        """
+        f = field.copy()
+        # 轴向平滑（井深方向）：内部用二阶中心差分
+        f[:, 1:-1] += axial * (field[:, 2:] - 2.0 * field[:, 1:-1] + field[:, :-2])
+        # 方位角平滑（宽边→窄边方向）：内部用二阶中心差分
+        f[1:-1, :] += azimuthal * (field[2:, :] - 2.0 * field[1:-1, :] + field[:-2, :])
+        # 边界处理：用一阶差分避免越界
+        f[0, :] += azimuthal * (field[1, :] - field[0, :])
+        f[-1, :] += azimuthal * (field[-2, :] - field[-1, :])
+        return np.clip(f, 0.0, 1.0)
+
     def _compute_props(
         self,
         lead: Array,
@@ -439,14 +491,14 @@ class AnnulusD2DGASolver:
         gel_strength: Array | None = None,
         temperature_correction: Array | None = None,
     ) -> Tuple[Array, Array, Array, Array, Array, Array, Array]:
-        """计算环空速度场。
+        """计算环空速度场（论文D2DGA口径）。
 
-        计算步骤：
+        采用 Zhang & Frigaard (2022) 的Hele-Shaw风格速度场：
         1. 计算局部混合流体的表观粘度与密度；
-        2. 以 ``b³/μ`` 构造 Hele-Shaw 风格局部流动度；
-        3. 由截面排量约束得到轴向速度 ``w``；
-        4. 由连续性方程求解方位角方向速度 ``v``；
-        5. 叠加基于密度差的横向浮力速度近似，保留论文所强调的浮力影响。
+        2. 以 ``b²/μ`` 构造偏心通道主导局部流动度；
+        3. 根据密度差（顶替液 vs 被顶替液）计算浮力稳定系数；
+        4. 用浮力修正项调整宽边/窄边速度分配；
+        5. 由截面排量约束得到轴向速度 ``w``。
 
         Returns:
             w: 井深方向速度（轴向速度）
@@ -480,33 +532,49 @@ class AnnulusD2DGASolver:
         rho_kg_m3 = rho * 1000.0
         Re = rho_kg_m3 * np.abs(w_prev) * D_h / np.maximum(mu, 1.0e-6)
         mu_turbulent = np.zeros_like(mu)
-        mobility = b**3 / np.maximum(mu, 1.0e-6)
-        int_mobility = np.trapezoid(b * mobility, x=y, axis=0)
-        w = (q_half / np.maximum(int_mobility, 1.0e-12))[None, :] * mobility
 
+        # === 论文D2DGA口径速度场：偏心通道主导 + 浮力修正 ===
+        # 基础流动度：偏心通道主导 (b/mean(b))^2 / mu
+        b_mean = np.mean(b, axis=0, keepdims=True)
+        base = (b / np.maximum(b_mean, 1.0e-12)) ** 2 / np.maximum(mu, 1.0e-6)
+
+        # 浮力修正：基于顶替液与被顶替液的整体密度对比
+        # density_contrast > 0 表示顶替液更重（水泥重 vs 泥浆轻），有助于窄边推进
+        # density_contrast < 0 表示顶替液更轻，加剧宽边窜流
+        if lead_fluid is not None and tail_fluid is not None:
+            # 用领浆和尾浆的加权平均密度作为顶替液密度
+            rho_disp = lead_fluid.density_kg_m3 * 0.67 + tail_fluid.density_kg_m3 * 0.33
+        elif lead_fluid is not None:
+            rho_disp = lead_fluid.density_kg_m3
+        elif tail_fluid is not None:
+            rho_disp = tail_fluid.density_kg_m3
+        else:
+            rho_disp = mud_fluid.density_kg_m3
+
+        density_contrast = (rho_disp - mud_fluid.density_kg_m3) / mud_fluid.density_kg_m3
+        # stable 系数：正值表示密度稳定（重顶替液推轻泥浆），负值表示不稳定
+        stable = float(np.clip(8.0 * density_contrast, -0.35, 0.45))
+        phi = geom["phi"][:, None]
+        ebar = geom["e"][None, :]
+        # buoyancy_shape: 在窄边(phi=1)处 = 1 + stable*ebar，在宽边(phi=0)处 = 1 - stable*ebar
+        buoyancy_shape = 1.0 + stable * ebar * (2.0 * phi - 1.0)
+        pref = np.maximum(base * buoyancy_shape, 1.0e-8)
+
+        # 由截面排量约束得到轴向速度 w
+        dy = np.gradient(geom["y"])[:, None]
+        area_weight = np.sum(pref * b * dy * 2.0, axis=0, keepdims=True)
+        w = q_half * pref / np.maximum(area_weight, 1.0e-12)
+
+        # 横向速度 v 由连续性方程求解（简化处理，论文版未显式计算 v）
         ds = geom["s"][1] - geom["s"][0]
-        dy = y[1] - y[0]
         bw = b * w
         dbw_ds = np.gradient(bw, ds, axis=1)
         bv = np.zeros_like(w)
         for i in range(1, len(y)):
-            bv[i, :] = bv[i - 1, :] - 0.5 * (dbw_ds[i, :] + dbw_ds[i - 1, :]) * dy
+            bv[i, :] = bv[i - 1, :] - 0.5 * (dbw_ds[i, :] + dbw_ds[i - 1, :]) * dy[i - 1, 0]
         bv -= (y[:, None] / y[-1]) * bv[-1, :]
         v = bv / np.maximum(b, 1.0e-8)
 
-        # 论文强调浮力是垂直偏心环空中的关键驱动之一。当前求解器未显式求解
-        # 流函数椭圆方程，因此这里采用 Hele-Shaw 风格的横向浮力速度近似，
-        # 用物理量纲而非经验调参系数把密度差影响保留在核心层。
-        density_delta_kg_m3 = rho_kg_m3 - mud_fluid.density_kg_m3
-        phi = geom["phi"][:, None]
-        v_buoyancy = (
-            b**2
-            / (12.0 * np.maximum(mu, 1.0e-6))
-            * density_delta_kg_m3
-            * self.g_constant
-            * np.sin(np.pi * phi)
-        )
-        v = v + v_buoyancy
         return w, v, mu, rho, mud, Re, mu_turbulent
 
     def _depth_profiles(self, geom: Dict[str, Array], lead: Array, tail: Array, spacer: Array, wall: Array) -> pd.DataFrame:
@@ -574,6 +642,9 @@ class AnnulusD2DGASolver:
         reynolds_snapshots: list[Array] = []
         turbulent_viscosity_snapshots: list[Array] = []
         snapshot_times: list[float] = []
+        cumulative_lead_in_m3 = 0.0
+        cumulative_tail_in_m3 = 0.0
+        cumulative_spacer_in_m3 = 0.0
 
         mud_cake_thickness: Array = np.zeros((self.ny, self.nz), dtype=float)
         self._update_effective_gap(geom, mud_cake_thickness)
@@ -614,10 +685,7 @@ class AnnulusD2DGASolver:
 
                 cement = np.clip(lead + tail, 0.0, 1.0)
                 if self.enable_d2dga:
-                    m_ratio = self.d2dga_viscosity_ratio
-                    c_safe = np.clip(cement, 0.01, 0.99)
-                    f_amp = (m_ratio * c_safe**2 + 1.5 * (1.0 - c_safe**2)) / (m_ratio * c_safe**3 + (1.0 - c_safe**3))
-                    f_amp = np.clip(f_amp, 0.5, 2.0)
+                    f_amp = d2dga_flux_amplification(cement, self.d2dga_viscosity_ratio)
                 else:
                     f_amp = 1.0
 
@@ -637,6 +705,20 @@ class AnnulusD2DGASolver:
                 lead[overfilled] /= tracked_total[overfilled]
                 tail[overfilled] /= tracked_total[overfilled]
                 spacer[overfilled] /= tracked_total[overfilled]
+
+                # D2DGA间隙尺度弥散：在低浓度前锋更强，模拟间隙尺度分散效应
+                lead = self._smooth_dispersion(lead, axial=0.018, azimuthal=0.015)
+                tail = self._smooth_dispersion(tail, axial=0.018, azimuthal=0.015)
+                spacer = self._smooth_dispersion(spacer, axial=0.012, azimuthal=0.012)
+
+                # D2DGA 通量放大会改变前锋形态，但不应让各相总量超过累计入环空体积。
+                # 这里按入口累计体积对领浆、尾浆和前置液/隔离液分别做体积上限约束。
+                cumulative_lead_in_m3 += inlet_state.flow_rate_m3_s * inlet_lead_fraction * self.dt
+                cumulative_tail_in_m3 += inlet_state.flow_rate_m3_s * inlet_tail_fraction * self.dt
+                cumulative_spacer_in_m3 += inlet_state.flow_rate_m3_s * inlet_spacer_fraction * self.dt
+                lead = _limit_phase_volume(lead, geom, cumulative_lead_in_m3)
+                tail = _limit_phase_volume(tail, geom, cumulative_tail_in_m3)
+                spacer = _limit_phase_volume(spacer, geom, cumulative_spacer_in_m3)
 
             else:
                 # === 泵停阶段：冻结浓度场，仅记录指标 ===
@@ -744,8 +826,8 @@ class AnnulusD2DGASolver:
             "物理环空体积_m3": self._physical_annular_volume(well_spec),
             "最终结果": {
                 "全井段最终有效顶替效率": float(final["effective_efficiency"]),
-                "CBL评价井段模拟有效顶替效率": float(final["cbl_eval_interval_efficiency"]),
-                "目标层段模拟有效顶替效率": float(final["target_interval_efficiency"]),
+                "CBL评价井段水力有效顶替效率": float(final["cbl_eval_interval_efficiency"]),
+                "目标层段水力有效顶替效率": float(final["target_interval_efficiency"]),
                 "最终水泥浆占据率": float(final["bulk_cement_fill"]),
                 "最终窜槽指数": float(final["channeling_index"]),
                 "最终混浆指数": float(final["mixing_index"]),

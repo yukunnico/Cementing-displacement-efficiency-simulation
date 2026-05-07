@@ -77,21 +77,15 @@ SPACER_YP_PA = 8.0
 ANNULUS_BOUNDARY_MODE = "sustained_tail"
 
 # ========== 质量惩罚标定参数 ==========
-# 三项惩罚的相对权重（保留原物理比例关系 11:7:5）
-CHANNELING_PENALTY_WEIGHT = 0.55    # 窜槽对质量因子的相对权重
-MIXING_PENALTY_WEIGHT = 0.35        # 混浆对质量因子的相对权重
-INSTABILITY_PENALTY_WEIGHT = 0.25   # 失稳对质量因子的相对权重
+# 三项风险指标的相对权重（仅用于后验风险评估，不再用于CBL质量惩罚）
+CHANNELING_PENALTY_WEIGHT = 0.55    # 窜槽风险权重
+MIXING_PENALTY_WEIGHT = 0.35        # 混浆风险权重
+INSTABILITY_PENALTY_WEIGHT = 0.25   # 失稳风险权重
 INSTABILITY_DECAY_SCALE = 5.0       # 失稳指数指数衰减尺度参数
 
-# 质量惩罚全局标定系数 α
-# 标定方法：利用HU102现场唯一可用数据点——
-#   CBL合格率 = 0.6665（100413.PDF），模型水动力效率 = 0.7257
-#   目标 quality_factor = 0.6665 / 0.7257 ≈ 0.918
-#   原始惩罚总和 S = 0.55×0.964 + 0.35×0.136 + 0.25×0.994 ≈ 0.826
-#   α = (1 − 0.918) / 0.826 ≈ 0.099
-# 含义：原始惩罚总和的约 9.9% 被实际应用为质量折减。
-# 其他井重新标定方法：α_new = (1 − CBL合格率 / 水动力效率) / S_new
-QUALITY_PENALTY_SCALE = 0.099
+# 注意：旧版质量惩罚全局标定系数 α 已移除。
+# CBL 合格率 ≠ 流体力学顶替效率，不能用水力指标线性惩罚出"假CBL值"。
+# 现场 CBL/合格率只允许用于验证与对比，不允许反向校准求解器。
 
 
 @dataclass(frozen=True)
@@ -749,19 +743,12 @@ def simulate(dt: float = 4.0, nz: int = 140, ny: int = 40, alpha_clean: float = 
         instability_proxy = channeling * max(mobility_wide / (mobility_narrow + 1e-9) - 1.0, 0.0) * (1.0 + 0.4 * mixing)
         # 失稳指数：指数映射到[0,1]
         instability_index = 1.0 - np.exp(-instability_proxy / INSTABILITY_DECAY_SCALE)
-        # 质量因子：综合窜槽、混浆、失稳的惩罚（α × 加权和）
-        raw_penalty = (CHANNELING_PENALTY_WEIGHT * channeling
-                       + MIXING_PENALTY_WEIGHT * mixing
-                       + INSTABILITY_PENALTY_WEIGHT * instability_index)
-        quality_factor = np.clip(1.0 - QUALITY_PENALTY_SCALE * raw_penalty, 0.0, 1.0)
-        # CBL质量响应效率 = 水动力效率 × 质量因子（与CBL合格率同口径）
-        cbl_quality_proxy = cbl_eff * quality_factor
 
         # 记录本时间步的指标
-        rows.append([t, t / 60.0, stage, bulk_fill, eff_eta, target_eff, cbl_eff, cbl_quality_proxy, front_wide, front_narrow, front_mid, channeling, mixing, instability_proxy, instability_index, float(np.mean(wall)), float(np.mean(cement)), float(np.mean(mud))])
+        rows.append([t, t / 60.0, stage, bulk_fill, eff_eta, target_eff, cbl_eff, front_wide, front_narrow, front_mid, channeling, mixing, instability_proxy, instability_index, float(np.mean(wall)), float(np.mean(cement)), float(np.mean(mud))])
 
     # 构建时间序列指标DataFrame
-    metric_columns = ["time_s", "time_min", "stage", "bulk_cement_fill", "effective_efficiency", "target_interval_efficiency", "cbl_eval_interval_efficiency", "cbl_quality_proxy", "front_wide_m", "front_narrow_m", "front_mid_m", "channeling_index", "mixing_index", "instability_proxy", "instability_index", "mean_wall_mud", "mean_cement", "mean_mud"]
+    metric_columns = ["time_s", "time_min", "stage", "bulk_cement_fill", "effective_efficiency", "target_interval_efficiency", "cbl_eval_interval_efficiency", "front_wide_m", "front_narrow_m", "front_mid_m", "channeling_index", "mixing_index", "instability_proxy", "instability_index", "mean_wall_mud", "mean_cement", "mean_mud"]
     metrics = pd.DataFrame({name: [row[index] for row in rows] for index, name in enumerate(metric_columns)})
     return geom, x, wall, metrics
 
@@ -824,8 +811,7 @@ def save_outputs(geom: dict[str, Array], x: Array, wall: Array, metrics: pd.Data
 
     # ===== 结果摘要 =====
     final = metrics.iloc[-1]
-    delta = float(final["cbl_quality_proxy"] - FIELD_REFERENCE_EFFICIENCY)  # 质量响应效率与资料值的偏差
-    hydraulic_delta = float(final["cbl_eval_interval_efficiency"] - FIELD_REFERENCE_EFFICIENCY)  # 水动力效率与资料值的偏差
+    hydraulic_delta = float(final["cbl_eval_interval_efficiency"] - FIELD_REFERENCE_EFFICIENCY)  # 水动力效率与资料CBL合格率的偏差
     summary: dict[str, object] = {
         "模型名称": "呼102尾管_D2DGA_二维方位-轴向顶替模型",
         "模拟对象": "呼102井139.70mm尾管，6823.10-7735.00m",
@@ -852,25 +838,21 @@ def save_outputs(geom: dict[str, Array], x: Array, wall: Array, metrics: pd.Data
         "最终结果": {
             "全井段最终有效顶替效率": float(final["effective_efficiency"]),
             "CBL评价井段模拟有效顶替效率": float(final["cbl_eval_interval_efficiency"]),
-            "CBL评价井段质量响应效率": float(final["cbl_quality_proxy"]),
-            "资料CBL合格率_代理顶替效率": FIELD_REFERENCE_EFFICIENCY,
-            "质量响应_minus_资料": delta,
-            "质量响应_minus_资料_百分点": delta * 100.0,
-            "水动力效率_minus_资料": hydraulic_delta,
-            "水动力效率_minus_资料_百分点": hydraulic_delta * 100.0,
+            "资料CBL合格率": FIELD_REFERENCE_EFFICIENCY,
+            "水动力效率_minus_资料CBL": hydraulic_delta,
+            "水动力效率_minus_资料CBL_百分点": hydraulic_delta * 100.0,
             "油气水层段模拟有效顶替效率": float(final["target_interval_efficiency"]),
             "最终水泥浆占据率": float(final["bulk_cement_fill"]),
             "最终窜槽指数": float(final["channeling_index"]),
             "最终混浆指数": float(final["mixing_index"]),
             "最终失稳指数": float(final["instability_index"]),
         },
-        "质量惩罚标定": {
+        "风险指标口径": {
             "窜槽权重": CHANNELING_PENALTY_WEIGHT,
             "混浆权重": MIXING_PENALTY_WEIGHT,
             "失稳权重": INSTABILITY_PENALTY_WEIGHT,
             "失稳衰减尺度": INSTABILITY_DECAY_SCALE,
-            "全局标定系数α": QUALITY_PENALTY_SCALE,
-            "标定方法": "单数据点反演：α=(1−CBL合格率/水动力效率)/Σ(w_i×index_i)，基于HU102现场CBL=0.6665",
+            "说明": "风险指标仅用于后验评估施工质量风险，不等同于CBL质量，也不用于反向校准求解器",
         },
         "资料来源": {
             "CBL评价": "参考文档\\呼102\\1004\\10041\\100413.PDF",
@@ -902,10 +884,8 @@ def save_outputs(geom: dict[str, Array], x: Array, wall: Array, metrics: pd.Data
                 f"- 模拟对象：{summary['模拟对象']}",
                 f"- 全井段最终有效顶替效率：{final['effective_efficiency']:.4f}",
                 f"- CBL评价井段模拟有效顶替效率：{final['cbl_eval_interval_efficiency']:.4f}",
-                f"- CBL评价井段质量响应效率：{final['cbl_quality_proxy']:.4f}",
-                f"- 资料CBL合格率代理值：{FIELD_REFERENCE_EFFICIENCY:.4f}",
-                f"- 质量响应-资料差值：{delta:.4f}",
-                f"- 水动力效率-资料差值：{hydraulic_delta:.4f}",
+                f"- 资料CBL合格率：{FIELD_REFERENCE_EFFICIENCY:.4f}",
+                f"- 水动力效率-资料CBL差值：{hydraulic_delta:.4f}",
                 f"- 油气水层段模拟有效顶替效率：{final['target_interval_efficiency']:.4f}",
                 f"- 最终窜槽/混浆/失稳指数：{final['channeling_index']:.4f} / {final['mixing_index']:.4f} / {final['instability_index']:.4f}",
                 f"- 水泥浆体积：{CEMENT_MASS_T / CEMENT_DENSITY_GCC:.2f} m³；替浆量：{DISPLACEMENT_VOLUME_M3:.2f} m³；排量：{FIELD_RATE_M3_MIN:.2f} m³/min",
@@ -913,23 +893,25 @@ def save_outputs(geom: dict[str, Array], x: Array, wall: Array, metrics: pd.Data
                 f"- 钻井液流变：Bingham，PV={MUD_PV_PA_S * 1000.0:.0f} mPa·s，YP={MUD_YP_PA:.1f} Pa（模型假设）",
                 "",
                 "## 说明",
-                "资料对比值来自 `100413.PDF` 的尾管 CBL 固井质量合格率 66.65%，此处作为顶替/胶结效果代理。",
+                "资料对比值来自 `100413.PDF` 的尾管 CBL 固井质量合格率 66.65%，仅用于验证与对比。",
+                "CBL 合格率反映的是套管-水泥环和水泥环-地层的声学胶结质量，受顶替效率、泥饼残留、水泥收缩、温度、气体窜槽等多因素影响。",
+                "本模型输出的'有效顶替效率'是水力学意义上的水泥浆体积占据率，与 CBL 合格率物理定义不同，不可混为一谈。",
                 "新增图表参考文献中常见的时程曲线、环空体积数曲线、沿深度多轨诊断、二维云图和敏感性主效应/热图表达。",
             ]
         ),
         encoding="utf-8",
     )
 
-    # ===== 图表1：模拟效率与资料CBL合格率对比柱状图 =====
+    # ===== 图表1：模拟水动力效率与资料CBL合格率对比柱状图 =====
     plt.figure(figsize=(7, 5))
-    names = ["水动力效率", "质量响应效率", "资料CBL合格率"]
-    vals = [float(final["cbl_eval_interval_efficiency"]), float(final["cbl_quality_proxy"]), FIELD_REFERENCE_EFFICIENCY]
-    bars = plt.bar(names, vals, color=["#3B82F6", "#10B981", "#F97316"])
+    names = ["CBL井段水动力效率", "资料CBL合格率"]
+    vals = [float(final["cbl_eval_interval_efficiency"]), FIELD_REFERENCE_EFFICIENCY]
+    bars = plt.bar(names, vals, color=["#3B82F6", "#F97316"])
     for bar, val in zip(bars, vals):
         plt.text(bar.get_x() + bar.get_width() / 2, val + 0.02, f"{val:.3f}", ha="center")
     plt.ylim(0, 1.1)
     plt.ylabel("效率/合格率")
-    plt.title("呼102尾管模拟顶替效率与资料CBL合格率对比")
+    plt.title("呼102尾管模拟水动力效率与资料CBL合格率对比")
     plt.tight_layout()
     comparison_path = charts / "呼102尾管_模拟与资料效率对比.png"
     plt.savefig(comparison_path, dpi=220)
@@ -957,7 +939,6 @@ def save_outputs(geom: dict[str, Array], x: Array, wall: Array, metrics: pd.Data
     time_min = metrics["time_min"]
     axes[0, 0].plot(time_min, metrics["effective_efficiency"], label="全井段有效效率", color="#2563EB")
     axes[0, 0].plot(time_min, metrics["cbl_eval_interval_efficiency"], label="CBL井段水动力效率", color="#059669")
-    axes[0, 0].plot(time_min, metrics["cbl_quality_proxy"], label="质量响应效率", color="#7C3AED")
     axes[0, 0].axhline(FIELD_REFERENCE_EFFICIENCY, color="#F97316", linestyle="--", label="资料CBL合格率")
     axes[0, 0].set_ylabel("效率/合格率")
     axes[0, 0].set_title("效率时程")
@@ -998,7 +979,6 @@ def save_outputs(geom: dict[str, Array], x: Array, wall: Array, metrics: pd.Data
     annular_pore_volumes = injected_volume_m3 / physical_annular_volume_m3()
     plt.figure(figsize=(8, 5))
     plt.plot(annular_pore_volumes, metrics["cbl_eval_interval_efficiency"], label="CBL井段水动力效率", color="#2563EB", linewidth=2)
-    plt.plot(annular_pore_volumes, metrics["cbl_quality_proxy"], label="质量响应效率", color="#7C3AED", linewidth=2)
     plt.plot(annular_pore_volumes, metrics["target_interval_efficiency"], label="油气水层段有效效率", color="#059669", linewidth=1.8)
     plt.axhline(FIELD_REFERENCE_EFFICIENCY, color="#F97316", linestyle="--", label="资料CBL合格率")
     plt.axvline((CEMENT_MASS_T / CEMENT_DENSITY_GCC + DISPLACEMENT_VOLUME_M3) / physical_annular_volume_m3(), color="#94A3B8", linestyle=":", label="水泥+替浆总PV")
@@ -1084,16 +1064,16 @@ def save_outputs(geom: dict[str, Array], x: Array, wall: Array, metrics: pd.Data
                 ("yp_pa", "钻井液YP / Pa"),
             ]
             baseline = sensitivity[sensitivity["scenario_type"] == "baseline_original"]
-            baseline_quality = float(baseline["cbl_quality_proxy"].iloc[0]) if not baseline.empty else float(final["cbl_quality_proxy"])
+            baseline_eff = float(baseline["cbl_eval_interval_efficiency"].iloc[0]) if not baseline.empty else float(final["cbl_eval_interval_efficiency"])
             for ax, (factor, label) in zip(axes, factor_specs):
-                grouped = factorial.groupby(factor, as_index=False)["cbl_quality_proxy"].mean().sort_values(factor)
-                ax.plot(grouped[factor], grouped["cbl_quality_proxy"], marker="o", color="#2563EB")
+                grouped = factorial.groupby(factor, as_index=False)["cbl_eval_interval_efficiency"].mean().sort_values(factor)
+                ax.plot(grouped[factor], grouped["cbl_eval_interval_efficiency"], marker="o", color="#2563EB")
                 ax.axhline(FIELD_REFERENCE_EFFICIENCY, color="#F97316", linestyle="--", linewidth=1, label="资料CBL")
-                ax.axhline(baseline_quality, color="#7C3AED", linestyle=":", linewidth=1, label="基准模型")
+                ax.axhline(baseline_eff, color="#059669", linestyle=":", linewidth=1, label="基准模型")
                 ax.set_xlabel(label)
                 ax.set_title(label.split(" /")[0])
                 ax.grid(True, alpha=0.3)
-            axes[0].set_ylabel("平均质量响应效率")
+            axes[0].set_ylabel("平均CBL井段水动力效率")
             axes[0].legend(fontsize=8)
             fig.suptitle("呼102尾管三因素敏感性主效应")
             fig.tight_layout()
@@ -1106,7 +1086,7 @@ def save_outputs(geom: dict[str, Array], x: Array, wall: Array, metrics: pd.Data
             axes_array = np.array(axes, ndmin=1)
             for ax, rate in zip(axes_array, rates):
                 subset = factorial[factorial["rate_m3_min"] == rate]
-                grid = subset.pivot_table(index="yp_pa", columns="pv_mpa_s", values="cbl_quality_proxy", aggfunc="mean")
+                grid = subset.pivot_table(index="yp_pa", columns="pv_mpa_s", values="cbl_eval_interval_efficiency", aggfunc="mean")
                 image = ax.imshow(grid.to_numpy(), vmin=0.0, vmax=1.0, cmap="YlGnBu", aspect="auto", origin="lower")
                 ax.set_xticks(range(len(grid.columns)))
                 ax.set_xticklabels([f"{value:g}" for value in grid.columns])
@@ -1118,7 +1098,7 @@ def save_outputs(geom: dict[str, Array], x: Array, wall: Array, metrics: pd.Data
                     for x_index, pv_value in enumerate(grid.columns):
                         ax.text(x_index, y_index, f"{grid.loc[yp_value, pv_value]:.2f}", ha="center", va="center", fontsize=8)
             axes_array[0].set_ylabel("YP / Pa")
-            fig.colorbar(image, ax=axes_array.tolist(), label="质量响应效率")
+            fig.colorbar(image, ax=axes_array.tolist(), label="CBL井段水动力效率")
             fig.suptitle("呼102尾管三因素敏感性热图")
             fig.savefig(sensitivity_heatmap_path, dpi=220, bbox_inches="tight")
             plt.close(fig)

@@ -5,12 +5,12 @@
 本脚本对呼102井尾管固井顶替模型进行三因素全因子敏感性分析，
 评估排量、塑性黏度(PV)和屈服值(YP)对顶替效率的影响程度。
 
-分析流程：
-1. 将原始模型的幂律流变参数(n, k)等效转换为Bingham参数(PV, YP)
-2. 定义三因素三水平（3×3×3=27个场景）的全因子实验设计
-3. 对每个场景：将Bingham参数反算为幂律参数→修改模型流体物性→运行模拟
-4. 分析各因素对CBL质量响应效率(cbl_quality_proxy)的主效应和重要度排序
-5. 从高性能场景中提取建议参数区间
+    分析流程：
+    1. 将原始模型的幂律流变参数(n, k)等效转换为Bingham参数(PV, YP)
+    2. 定义三因素三水平（3×3×3=27个场景）的全因子实验设计
+    3. 对每个场景：将Bingham参数反算为幂律参数→修改模型流体物性→运行模拟
+    4. 分析各因素对CBL评价井段水动力效率(cbl_eval_interval_efficiency)的主效应和重要度排序
+    5. 从高性能场景中提取建议参数区间
 
 因素水平设置：
 - 排量：1.00, 1.30, 1.60 m³/min
@@ -63,7 +63,7 @@ YP_LEVELS_PA = [15.0, 22.0, 30.0]          # 屈服值水平，单位 Pa
 
 # ========== 目标指标 ==========
 # 用于评估因素影响和选择最优场景的指标
-TARGET_METRIC = "cbl_quality_proxy"  # CBL评价井段质量响应效率
+TARGET_METRIC = "cbl_eval_interval_efficiency"  # CBL评价井段水动力有效顶替效率
 FULL_WELL_TARGET_METRIC = "effective_efficiency"  # 全井段有效顶替效率
 
 
@@ -297,7 +297,6 @@ def baseline_result() -> dict[str, float | str]:
         "k_fit": float(base_k),
         "effective_efficiency": float(baseline["effective_efficiency"]),
         "cbl_eval_interval_efficiency": float(baseline["cbl_eval_interval_efficiency"]),
-        "cbl_quality_proxy": float(baseline["cbl_quality_proxy"]),
         "target_interval_efficiency": float(baseline["target_interval_efficiency"]),
         "channeling_index": float(baseline["channeling_index"]),
         "mixing_index": float(baseline["mixing_index"]),
@@ -394,7 +393,6 @@ def summarize_factorial_results(
             "yp_pa": float(best_row["yp_pa"]),
             "effective_efficiency": float(best_row["effective_efficiency"]),
             "cbl_eval_interval_efficiency": float(best_row["cbl_eval_interval_efficiency"]),
-            "cbl_quality_proxy": float(best_row["cbl_quality_proxy"]),
             "target_interval_efficiency": float(best_row["target_interval_efficiency"]),
         },
         "recommended_ranges": recommendation,
