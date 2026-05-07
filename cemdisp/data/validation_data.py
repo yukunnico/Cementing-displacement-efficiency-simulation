@@ -29,6 +29,8 @@ class ValidationData:
 
     cbl_profile_path: Optional[Path] = None
     cbl_summary_path: Optional[Path] = None
+    # 实测 CBL 合格率（如 0.6665 表示 66.65%），若已知可直接填入，用于后验验证
+    cbl_pass_rate: Optional[float] = None
     job_report_path: Optional[Path] = None
     pump_pressure_series_path: Optional[Path] = None
     returns_report_path: Optional[Path] = None

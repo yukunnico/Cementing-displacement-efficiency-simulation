@@ -54,6 +54,7 @@ class CasingFlowResult:
     pipe_cross_section_m2: float = 0.0
     shoe_md_m: float = 0.0
     pumping_end_time_s: float = 0.0
+    cement_end_time_s: float = 0.0
     notes: tuple[str, ...] = field(default_factory=tuple)
 
 
@@ -124,6 +125,7 @@ class CasingFlowSolver:
         pipe_volume_m3 = shoe_depth_m * pipe_area_m2
         scheduled_steps = self._build_scheduled_steps(schedule)
         initial_fluid = self._initial_fluid_name(fluids, schedule)
+        fluid_by_name = {fluid.name: fluid for fluid in fluids}
 
         # 为每个注入步骤建立“前缘”：前缘位置由累计泵入体积推动，
         # 而不是只由该流体自身注入体积决定。
@@ -141,12 +143,30 @@ class CasingFlowSolver:
                 )
             )
 
+        # 水泥浆停止时刻定义为“最后一段水泥浆尾缘越过鞋口”的地面累计时间。
+        # 这与参考项目的环空终止口径一致：后续替浆刚到环空入口时停止二维顶替评价。
+        cement_end_time_s: float | None = None
+        for scheduled in scheduled_steps:
+            fluid = fluid_by_name.get(scheduled.step.fluid_name)
+            if fluid is None or fluid.role not in {FluidRole.LEAD, FluidRole.INTERMEDIATE, FluidRole.TAIL}:
+                continue
+            rear_arrival_time_s = self._rear_arrival_time(scheduled, scheduled_steps, pipe_volume_m3)
+            if rear_arrival_time_s is not None:
+                if self.enable_gravity:
+                    rear_arrival_time_s = self._gravity_corrected_arrival_time(
+                        rear_arrival_time_s,
+                        scheduled.step.fluid_name,
+                        fluids,
+                    )
+                cement_end_time_s = rear_arrival_time_s
+
         result = CasingFlowResult(
             fronts=tuple(fronts),
             schedule_steps=schedule.steps,
             pipe_cross_section_m2=pipe_area_m2,
             shoe_md_m=shoe_depth_m,
             pumping_end_time_s=scheduled_steps[-1].end_time_s if scheduled_steps else 0.0,
+            cement_end_time_s=cement_end_time_s if cement_end_time_s is not None else (scheduled_steps[-1].end_time_s if scheduled_steps else 0.0),
             notes=(
                 "套管内采用理想界面前缘追踪，未加入管内扩散。",
                 f"初始管内流体按 {initial_fluid} 处理。",
@@ -244,6 +264,23 @@ class CasingFlowSolver:
         """计算某个流体前缘到达鞋口的时间。"""
 
         target_volume_m3 = front_step.cumulative_volume_start_m3 + pipe_volume_m3
+        for scheduled in scheduled_steps:
+            if target_volume_m3 <= scheduled.cumulative_volume_end_m3 + 1.0e-12:
+                if scheduled.step.rate_m3_min <= 0.0:
+                    return scheduled.end_time_s
+                volume_into_step_m3 = max(target_volume_m3 - scheduled.cumulative_volume_start_m3, 0.0)
+                return scheduled.start_time_s + volume_into_step_m3 / scheduled.step.rate_m3_min * 60.0
+        return None
+
+    @staticmethod
+    def _rear_arrival_time(
+        rear_step: _ScheduledStep,
+        scheduled_steps: tuple[_ScheduledStep, ...],
+        pipe_volume_m3: float,
+    ) -> float | None:
+        """计算某个流体尾缘到达鞋口的时间。"""
+
+        target_volume_m3 = rear_step.cumulative_volume_end_m3 + pipe_volume_m3
         for scheduled in scheduled_steps:
             if target_volume_m3 <= scheduled.cumulative_volume_end_m3 + 1.0e-12:
                 if scheduled.step.rate_m3_min <= 0.0:

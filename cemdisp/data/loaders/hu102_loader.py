@@ -287,6 +287,7 @@ def load_hu102_tailpipe(
 
     validation_data = ValidationData(
         cbl_summary_path=resolved_reference_root / "1004" / "10041" / "100413.PDF",
+        cbl_pass_rate=0.6665,
         job_report_path=resolved_reference_root / "1004" / "10042.xlsx",
         pump_pressure_series_path=resolved_reference_root / "1004" / "100492.xlsx",
         notes=(

@@ -128,7 +128,6 @@ def save_user_outputs(result_df: pd.DataFrame, summary: dict[str, object]) -> di
         f"- 屈服值：{number_field(best_case, 'yp_pa'):.3f} Pa",
         f"- 全井段有效顶替效率：{number_field(best_case, 'effective_efficiency'):.4f}",
         f"- CBL评价井段水动力效率：{number_field(best_case, 'cbl_eval_interval_efficiency'):.4f}",
-        f"- CBL评价井段质量响应效率：{number_field(best_case, 'cbl_quality_proxy'):.4f}",
         "",
         "## 影响因素排序",
         *rank_lines,
@@ -198,7 +197,6 @@ class ParameterApp:
             "yp_pa",
             "effective_efficiency",
             "cbl_eval_interval_efficiency",
-            "cbl_quality_proxy",
             "target_interval_efficiency",
             "channeling_index",
         )
@@ -209,7 +207,6 @@ class ParameterApp:
             "yp_pa": "YP",
             "effective_efficiency": "全井段效率",
             "cbl_eval_interval_efficiency": "CBL井段效率",
-            "cbl_quality_proxy": "质量响应效率",
             "target_interval_efficiency": "油气水层效率",
             "channeling_index": "窜槽指数",
         }

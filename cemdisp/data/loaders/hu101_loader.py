@@ -59,7 +59,7 @@ HU101_SPACER_DENSITY_KG_M3 = 2000.0
 HU101_LEAD_DENSITY_KG_M3 = 2100.0
 HU101_TAIL_DENSITY_KG_M3 = 1900.0
 HU101_MUD_PV_PA_S = 0.058
-HU101_MUD_YP_PA = 5.0
+HU101_MUD_YP_PA = 9.2  # 现场数据：65℃下YP=9.2 Pa（来自尾管设计）
 HU101_BALANCE_PV_PA_S = 0.030
 HU101_BALANCE_YP_PA = 3.0
 HU101_SPACER_PV_PA_S = 0.030
@@ -135,30 +135,21 @@ def load_hu101_tailpipe(
         ),
         inclination_profile=_depth_points(
             (
-                (HU101_TOP_MD_M, 2.0),
-                (5700.0, 2.8),
-                (6050.0, 4.2),
-                (6210.0, 4.9),
-                (6400.0, 5.6),
-                (HU101_UPPER_SECTION_BOTTOM_MD_M - 1.0, 6.23),
-                (HU101_UPPER_SECTION_BOTTOM_MD_M, 6.23),
-                (7400.0, 8.19),
-                (7735.0, 7.4),
-                (HU101_BOTTOM_MD_M, 7.0),
+                (HU101_TOP_MD_M, 0.6),
+                (6100.0, 1.1),
+                (6796.0, 1.4),
+                (7400.0, 1.7),
+                (HU101_BOTTOM_MD_M, 1.9),
             )
         ),
         standoff_profile=_depth_points(
             (
-                (HU101_TOP_MD_M, 0.63),
-                (5700.0, 0.63),
-                (6050.0, 0.63),
-                (6210.0, 0.34),
-                (6400.0, 0.48),
-                (HU101_UPPER_SECTION_BOTTOM_MD_M - 1.0, 0.63),
-                (HU101_UPPER_SECTION_BOTTOM_MD_M, 0.61),
-                (7400.0, 0.61),
-                (7735.0, 0.57),
-                (HU101_BOTTOM_MD_M, 0.59),
+                (HU101_TOP_MD_M, 0.45),
+                (6100.0, 0.38),
+                (6796.0, 0.44),
+                (7200.0, 0.48),
+                (7600.0, 0.42),
+                (HU101_BOTTOM_MD_M, 0.46),
             )
         ),
         evaluation_windows=(
