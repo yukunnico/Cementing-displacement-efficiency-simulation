@@ -23,32 +23,33 @@ from cemdisp.models2d.boundary_bridge import AnnulusInletState
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_REFERENCE_ROOT = PROJECT_ROOT / "参考文档" / "呼探1-002"
 
-# 呼探1-002井段参数，来源：参考文档/呼探1-002/提取数据/呼探1-002井_固井顶替模型数据包.json。
+# 呼探1-002井段参数，来源：参考文档/呼探1-002/提取数据/（well_spec.csv, fluid_spec.csv, pumping_schedule.csv）
+# 除非特别注明，均为A级证据（作业史/施工记录表/化验报告）
 HU2_WELL_NAME = "呼探1-002井（HT1-002）"
-HU2_WELL_DEPTH_MD_M = 7559.0  # 实际完钻井深，鞋以下留有约 5m 口袋段。
-HU2_HANGER_MD_M = 5292.5  # 139.7mm 完井尾管顶部/悬挂器位置。
+HU2_WELL_DEPTH_MD_M = 7559.0  # 实际完钻井深，鞋以下留有约5m口袋段。来源: well_spec.csv
+HU2_HANGER_MD_M = 5292.5  # 139.7mm完井尾管顶部/悬挂位置。来源: well_spec.csv
 HU2_TOP_MD_M = HU2_HANGER_MD_M  # 模型剖面从尾管悬挂器开始。
-HU2_BOTTOM_MD_M = 7554.0  # 139.7mm 尾管下深/固井井段底部。
+HU2_BOTTOM_MD_M = 7554.0  # 139.7mm尾管下深/固井井段底部。来源: well_spec.csv
 HU2_SHOE_MD_M = HU2_BOTTOM_MD_M  # 环空入口对应尾管鞋深度。
-HU2_BIT_DIAMETER_MM = 190.5  # 五开钻头尺寸，仅作资料留痕。
-HU2_AVERAGE_HOLE_DIAMETER_MM = 193.05  # 目标尾管段平均井径。
-HU2_CASING_ID_MM = 195.0  # 上部 219.1mm 技术套管内径代理值。
-HU2_LINER_OD_MM = 139.7  # 完井尾管外径，本井为单一口径。
-HU2_LINER_WALL_THICKNESS_MM = 15.88  # 139.7mm BG140V/BG-T2 套管壁厚。
+HU2_BIT_DIAMETER_MM = 190.5  # 五开钻头尺寸。来源: well_spec.csv
+HU2_AVERAGE_HOLE_DIAMETER_MM = 193.05  # 目标尾管段平均井径。来源: well_spec.csv（作业史）
+HU2_CASING_ID_MM = 195.0  # 上部219.1mm技术套管内径代理值（用于鞋口滞后体积估算）。
+HU2_LINER_OD_MM = 139.7  # 完井尾管外径，本井为单一口径。来源: well_spec.csv
+HU2_LINER_WALL_THICKNESS_MM = 15.88  # 139.7mm BG140V/BG-T2套管壁厚。来源: well_spec.csv（五开尾管原始记录7-1.xlsx）
 HU2_LINER_ID_ACTUAL_MM = HU2_LINER_OD_MM - 2.0 * HU2_LINER_WALL_THICKNESS_MM
-HU2_CENTRALIZER_COUNT = 95  # φ139.7*190.5mm 整体式弹扶数量。
-HU2_TARGET_CENTRALIZER_SPACING_M = 44.0  # 目的层扶正器间距。
-HU2_NON_TARGET_CENTRALIZER_SPACING_M = 55.0  # 非目的层扶正器间距。
-HU2_LARGE_HOLE_1_TOP_MD_M = 5631.0  # 第一段大肚子井眼起点。
-HU2_LARGE_HOLE_1_BOTTOM_MD_M = 5940.0  # 第一段大肚子井眼终点。
-HU2_LARGE_HOLE_1_AVERAGE_DIAMETER_MM = 206.65  # 第一段大肚子平均井径。
-HU2_LARGE_HOLE_1_MAX_DIAMETER_MM = 268.48  # 第一段大肚子最大井径，作为资料备注。
-HU2_LARGE_HOLE_2_TOP_MD_M = 7355.0  # 第二段大肚子井眼起点。
-HU2_LARGE_HOLE_2_BOTTOM_MD_M = 7360.0  # 第二段大肚子井眼终点。
-HU2_LARGE_HOLE_2_AVERAGE_DIAMETER_MM = 226.59  # 第二段大肚子平均井径。
-HU2_LARGE_HOLE_2_MAX_DIAMETER_MM = 249.90  # 第二段大肚子最大井径，作为资料备注。
-HU2_MAX_INCLINATION_DEG = 3.9  # 最大井斜，表明本井近垂直。
-HU2_MAX_INCLINATION_MD_M = 7443.0  # 最大井斜所在测深。
+HU2_CENTRALIZER_COUNT = 95  # φ139.7*190.5mm整体式弹扶数量。来源: well_spec.csv
+HU2_TARGET_CENTRALIZER_SPACING_M = 44.0  # 目的层扶正器间距。来源: well_spec.csv
+HU2_NON_TARGET_CENTRALIZER_SPACING_M = 55.0  # 非目的层扶正器间距。来源: well_spec.csv
+HU2_LARGE_HOLE_1_TOP_MD_M = 5631.0  # 第一段大肚子井眼起点。来源: well_spec.csv（作业史）
+HU2_LARGE_HOLE_1_BOTTOM_MD_M = 5940.0  # 第一段大肚子井眼终点。来源: well_spec.csv
+HU2_LARGE_HOLE_1_AVERAGE_DIAMETER_MM = 206.65  # 第一段大肚子平均井径。来源: well_spec.csv
+HU2_LARGE_HOLE_1_MAX_DIAMETER_MM = 268.48  # 第一段大肚子最大井径，作为资料备注。来源: well_spec.csv
+HU2_LARGE_HOLE_2_TOP_MD_M = 7355.0  # 第二段大肚子井眼起点。来源: well_spec.csv
+HU2_LARGE_HOLE_2_BOTTOM_MD_M = 7360.0  # 第二段大肚子井眼终点。来源: well_spec.csv
+HU2_LARGE_HOLE_2_AVERAGE_DIAMETER_MM = 226.59  # 第二段大肚子平均井径。来源: well_spec.csv
+HU2_LARGE_HOLE_2_MAX_DIAMETER_MM = 249.90  # 第二段大肚子最大井径，作为资料备注。来源: well_spec.csv
+HU2_MAX_INCLINATION_DEG = 3.9  # 最大井斜，表明本井近垂直。来源: well_spec.csv（完井尾管固井施工记录表）
+HU2_MAX_INCLINATION_MD_M = 7443.0  # 最大井斜所在测深。来源: well_spec.csv
 
 
 def _pipe_volume_m3(length_m: float, inner_diameter_mm: float) -> float:
@@ -72,46 +73,48 @@ HU2_SHOE_LAG_VOLUME_M3 = _pipe_volume_m3(
 HU2_LINER_ID_MM = HU2_LINER_ID_ACTUAL_MM
 
 # 呼探1-002现场流体参数；Bingham 参数按实验值或代理值，水泥浆按实验幂律参数。
-HU2_MUD_DENSITY_KG_M3 = 2060.0
-HU2_DISPLACEMENT_DENSITY_KG_M3 = 2060.0
-HU2_BALANCE_DENSITY_KG_M3 = 1850.0
-HU2_SPACER_DENSITY_KG_M3 = 2100.0
-HU2_LEAD_DENSITY_KG_M3 = 2100.0
-HU2_INTERMEDIATE_DENSITY_KG_M3 = 1950.0
-HU2_TAIL_DENSITY_KG_M3 = 1950.0
-HU2_MUD_PV_PA_S = 0.058  # 钻井液 PV：58mPa·s。
-HU2_MUD_YP_PA = 5.0  # 钻井液终切力 5Pa，作为 Bingham 屈服值。
+# 数据来源: 参考文档/呼探1-002/提取数据/fluid_spec.csv（化验报告/作业史，A级证据）
+HU2_MUD_DENSITY_KG_M3 = 2060.0  # 替泥浆/重泥浆密度2.06g/cm³，来源: fluid_spec.csv
+HU2_DISPLACEMENT_DENSITY_KG_M3 = 2060.0  # 替泥浆密度2.06g/cm³，来源: fluid_spec.csv
+HU2_BALANCE_DENSITY_KG_M3 = 1850.0  # 平衡液/先导泥浆密度1.85g/cm³，来源: fluid_spec.csv / well_spec.csv
+HU2_SPACER_DENSITY_KG_M3 = 2100.0  # 隔离液现场实际密度2.10g/cm³，来源: fluid_spec.csv（现场施工简述）
+HU2_LEAD_DENSITY_KG_M3 = 2100.0  # 领浆密度2.10g/cm³，来源: fluid_spec.csv
+HU2_INTERMEDIATE_DENSITY_KG_M3 = 1950.0  # 中间浆密度1.95g/cm³，来源: fluid_spec.csv（作业史/化验报告）
+HU2_TAIL_DENSITY_KG_M3 = 1950.0  # 尾浆密度1.95g/cm³，来源: fluid_spec.csv（作业史/化验报告）
+HU2_MUD_PV_PA_S = 0.058  # 钻井液 PV：58mPa·s，来源: fluid_spec.csv
+HU2_MUD_YP_PA = 5.0  # 钻井液终切力5Pa，作为 Bingham 屈服值代理。
 HU2_DISPLACEMENT_PV_PA_S = 0.058  # 替浆液按同密度钻井液流变处理。
-HU2_DISPLACEMENT_YP_PA = 5.0
+HU2_DISPLACEMENT_YP_PA = 6.0  # 替泥浆屈服值6Pa，来源: fluid_spec.csv（施工记录表）
 HU2_BALANCE_PV_PA_S = 0.030  # 平衡液缺流变实测，使用代理 PV。
 HU2_BALANCE_YP_PA = 3.0  # 平衡液缺流变实测，使用代理 YP。
 HU2_SPACER_PV_PA_S = 0.030  # 隔离液缺流变实测，使用代理 PV。
 HU2_SPACER_YP_PA = 5.0  # 隔离液缺流变实测，使用代理 YP。
-HU2_LEAD_POWER_LAW_N = 0.811
-HU2_LEAD_CONSISTENCY_K = 0.876
-HU2_INTERMEDIATE_POWER_LAW_N = 0.871
-HU2_INTERMEDIATE_CONSISTENCY_K = 0.504
-HU2_TAIL_POWER_LAW_N = 0.886
-HU2_TAIL_CONSISTENCY_K = 0.453
-HU2_PLUG_DENSITY_KG_M3 = 1900.0  # 作业史记录压塞液实际密度 1.90g/cm³。
-HU2_MIDDLE_FLUID_DENSITY_KG_M3 = 1900.0  # 作业史记录中置液/中间保护液实际密度 1.90g/cm³。
+HU2_LEAD_POWER_LAW_N = 0.811  # 领浆幂律指数n，来源: fluid_spec.csv
+HU2_LEAD_CONSISTENCY_K = 0.876  # 领浆稠度系数K(Pa·s^n)，来源: fluid_spec.csv
+HU2_INTERMEDIATE_POWER_LAW_N = 0.871  # 中间浆幂律指数n，来源: fluid_spec.csv
+HU2_INTERMEDIATE_CONSISTENCY_K = 0.504  # 中间浆稠度系数K(Pa·s^n)，来源: fluid_spec.csv
+HU2_TAIL_POWER_LAW_N = 0.886  # 尾浆幂律指数n，来源: fluid_spec.csv
+HU2_TAIL_CONSISTENCY_K = 0.453  # 尾浆稠度系数K(Pa·s^n)，来源: fluid_spec.csv
+HU2_PLUG_DENSITY_KG_M3 = 1900.0  # 压塞液密度1.90g/cm³，来源: fluid_spec.csv（作业史）
+HU2_MIDDLE_FLUID_DENSITY_KG_M3 = 1900.0  # 中置液密度1.90g/cm³，来源: fluid_spec.csv（作业史）
 
 # 呼探1-002现场施工程序参数，按地面注入顺序排列。
-HU2_BALANCE_VOLUME_M3 = 20.0
-HU2_SPACER_VOLUME_M3 = 15.0
-HU2_LEAD_VOLUME_M3 = 12.0
-HU2_INTERMEDIATE_VOLUME_M3 = 14.0
-HU2_TAIL_VOLUME_M3 = 12.0
-HU2_PLUG_VOLUME_M3 = 5.0
-HU2_FIRST_DISPLACEMENT_VOLUME_M3 = 12.0
-HU2_MIDDLE_DISPLACEMENT_VOLUME_M3 = 15.0
-HU2_FAST_DISPLACEMENT_VOLUME_M3 = 30.0
-HU2_SLOW_DISPLACEMENT_VOLUME_M3 = 17.0
-HU2_MAIN_RATE_M3_MIN = 0.8
-HU2_PLUG_RATE_M3_MIN = 0.6
-HU2_MIDDLE_DISPLACEMENT_RATE_M3_MIN = 0.6
-HU2_FAST_DISPLACEMENT_RATE_M3_MIN = 0.8
-HU2_SLOW_DISPLACEMENT_RATE_M3_MIN = 0.3
+# 数据来源: 参考文档/呼探1-002/提取数据/pumping_schedule.csv（作业史/施工记录表，A级证据）
+HU2_BALANCE_VOLUME_M3 = 20.0  # 平衡液/先导泥浆20m³，来源: pumping_schedule.csv
+HU2_SPACER_VOLUME_M3 = 15.0  # 驱油隔离液15m³，来源: pumping_schedule.csv
+HU2_LEAD_VOLUME_M3 = 12.0  # 领浆12m³，来源: pumping_schedule.csv
+HU2_INTERMEDIATE_VOLUME_M3 = 14.0  # 中间浆14m³，来源: pumping_schedule.csv
+HU2_TAIL_VOLUME_M3 = 12.0  # 尾浆12m³，来源: pumping_schedule.csv
+HU2_PLUG_VOLUME_M3 = 5.0  # 压塞液5m³，来源: pumping_schedule.csv
+HU2_FIRST_DISPLACEMENT_VOLUME_M3 = 12.0  # 首段替泥浆12m³，来源: pumping_schedule.csv
+HU2_MIDDLE_DISPLACEMENT_VOLUME_M3 = 15.0  # 替中置液15m³，来源: pumping_schedule.csv
+HU2_FAST_DISPLACEMENT_VOLUME_M3 = 30.0  # 替重泥浆（快替）30m³，来源: pumping_schedule.csv
+HU2_SLOW_DISPLACEMENT_VOLUME_M3 = 17.0  # 替重泥浆（慢替）17m³，来源: pumping_schedule.csv
+HU2_MAIN_RATE_M3_MIN = 0.8  # 主排量0.8m³/min，来源: pumping_schedule.csv
+HU2_PLUG_RATE_M3_MIN = 0.6  # 压塞液排量代理值0.6m³/min
+HU2_MIDDLE_DISPLACEMENT_RATE_M3_MIN = 0.6  # 中置液排量代理值0.6m³/min
+HU2_FAST_DISPLACEMENT_RATE_M3_MIN = 0.8  # 快替排量0.8m³/min，来源: pumping_schedule.csv
+HU2_SLOW_DISPLACEMENT_RATE_M3_MIN = 0.3  # 慢替排量0.3m³/min，来源: pumping_schedule.csv（作业史0.8-0.3m³/min）
 
 
 def _depth_points(values: tuple[tuple[float, float], ...]) -> tuple[DepthValuePoint, ...]:

@@ -24,22 +24,23 @@ from cemdisp.models2d.boundary_bridge import AnnulusInletState
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_REFERENCE_ROOT = PROJECT_ROOT / "参考文档" / "呼探1"
 
-# 呼探1井段参数，来源：参考文档/呼探1/提取数据/呼探1井_固井顶替模型数据包.json。
-HU1_WELL_NAME = "呼探1井"
+# 呼探1井段参数，数据来源：参考文档/呼探1/提取数据/well_spec.csv（证据等级A）。
+HU1_WELL_NAME = "呼探1井"  # 呼探1井（HT1-001为另一口井）。
 HU1_DRILLED_DEPTH_MD_M = 7746.0  # 实际完钻井深/尾管鞋深度。
 HU1_HANGER_MD_M = 5469.711  # 尾管悬挂器位置。
 HU1_TOP_MD_M = HU1_HANGER_MD_M  # 模型剖面从悬挂器开始，兼容双径尾管等效处理。
 HU1_UPPER_SECTION_BOTTOM_MD_M = 7174.938  # 168.3mm 上段尾管底界/变径位置。
 HU1_BOTTOM_MD_M = HU1_DRILLED_DEPTH_MD_M  # 下段 139.7mm 尾管鞋。
 HU1_SHOE_MD_M = HU1_DRILLED_DEPTH_MD_M
-HU1_CASING_ID_MM = 273.1  # 技术套管内径暂用值，参考呼101类似深井。
-HU1_UPPER_HOLE_NOMINAL_DIAMETER_MM = 241.3  # 上段井眼名义尺寸。
-HU1_LOWER_HOLE_DIAMETER_MM = 215.9  # 下段目标井段名义井眼尺寸。
-HU1_UPPER_LINER_OD_MM = 168.3  # 上段尾管外径。
-HU1_LOWER_LINER_OD_MM = 139.7  # 下段尾管外径，作为通用求解器参考外径。
-HU1_LOWER_LINER_WALL_THICKNESS_MM = 15.8  # 139.7mm 管壁厚，参考呼102同口径。
+# 呼探1井段参数，数据来源：参考文档/呼探1/提取数据/well_spec.csv（作业史 + 套管数据表，证据等级A）。
+HU1_CASING_ID_MM = 273.1  # 技术套管内径暂用值，参考呼101类似深井（well_spec.csv未提供此值）。
+HU1_UPPER_HOLE_NOMINAL_DIAMETER_MM = 241.3  # 上段井眼名义尺寸（well_spec.csv未提供）。
+HU1_LOWER_HOLE_DIAMETER_MM = 215.9  # 下段五开钻头尺寸（作业史，证据等级A）。
+HU1_UPPER_LINER_OD_MM = 168.3  # 168.3mm上段尾管外径（作业史）。
+HU1_LOWER_LINER_OD_MM = 139.7  # 139.7mm下段尾管外径（作业史）。
+HU1_LOWER_LINER_WALL_THICKNESS_MM = 15.88  # 139.7mm BG140V/BGT2套管壁厚（套管数据表，证据等级A）。
 HU1_LOWER_LINER_ID_MM = HU1_LOWER_LINER_OD_MM - 2.0 * HU1_LOWER_LINER_WALL_THICKNESS_MM
-HU1_UPPER_LINER_ID_PROXY_MM = 150.42  # 168.3mm 上段尾管内径代理，沿用呼103上段估算口径。
+HU1_UPPER_LINER_ID_PROXY_MM = 138.90  # 168.3mm上段尾管内径（套管数据表壁厚14.7mm，证据等级A）。
 HU1_CENTRALIZER_COUNT = 101  # 现场整体式套管扶正器数量。
 
 
@@ -76,46 +77,60 @@ HU1_SHOE_LAG_VOLUME_M3 = (
 HU1_LINER_ID_MM = math.sqrt(4.0 * HU1_SHOE_LAG_VOLUME_M3 / (math.pi * HU1_SHOE_MD_M)) * 1000.0
 
 # 呼探1现场流体参数；密度由 g/cm³ 换算为 kg/m³，流变缺项按题设代理值补齐。
-HU1_MUD_DENSITY_KG_M3 = 1930.0
-HU1_DISPLACEMENT_DENSITY_KG_M3 = 1920.0
-HU1_BALANCE_DENSITY_KG_M3 = 1750.0
-HU1_SPACER_DENSITY_KG_M3 = 1980.0
-HU1_LEAD_DENSITY_KG_M3 = 2050.0
-HU1_INTERMEDIATE_DENSITY_KG_M3 = 1900.0
-HU1_TAIL_DENSITY_KG_M3 = 1900.0
-HU1_MUD_PV_PA_S = 0.058  # 钻井液 PV 暂缺，参考呼101类似工况。
-HU1_MUD_YP_PA = 5.0  # 钻井液 YP 暂缺，参考呼101类似工况。
-HU1_DISPLACEMENT_PV_PA_S = 0.058
-HU1_DISPLACEMENT_YP_PA = 5.0
-HU1_BALANCE_PV_PA_S = 0.030
-HU1_BALANCE_YP_PA = 3.0
-HU1_SPACER_PV_PA_S = 0.030
-HU1_SPACER_YP_PA = 5.0
-HU1_LEAD_POWER_LAW_N = 0.825
-HU1_LEAD_CONSISTENCY_K = 0.842
-HU1_INTERMEDIATE_POWER_LAW_N = 0.816
-HU1_INTERMEDIATE_CONSISTENCY_K = 0.512
-HU1_TAIL_POWER_LAW_N = 0.807
-HU1_TAIL_CONSISTENCY_K = 0.527
+# 呼探1现场流体参数；密度由 g/cm³ 换算为 kg/m³。
+# 数据来源：参考文档/呼探1/提取数据/fluid_spec.csv（化验报告 + 技术总结，证据等级A）。
+# 驱油隔离液：化验报告密度1.98 g/cm³，n=0.545，K=1.338 Pa·s^n。
+# 水泥浆（领/中/尾浆）：化验报告密度与流变参数。
+# 压塞液/平衡液/替浆泥浆：同一油基钻井液体系，PV=51 mPa·s，YP=6 Pa（化验报告）。
+HU1_MUD_DENSITY_KG_M3 = 1930.0  # 替浆泥浆密度1.92 g/cm³（技术总结）。
+HU1_DISPLACEMENT_DENSITY_KG_M3 = 1920.0  # 替浆泥浆密度1.92 g/cm³（技术总结）。
+HU1_BALANCE_DENSITY_KG_M3 = 1750.0  # 平衡液密度1.75 g/cm³（技术总结）。
+HU1_SPACER_DENSITY_KG_M3 = 1980.0  # 驱油隔离液现场实际密度1.98 g/cm³（化验报告）。
+HU1_LEAD_DENSITY_KG_M3 = 2050.0  # 领浆密度2.05 g/cm³（化验报告）。
+HU1_INTERMEDIATE_DENSITY_KG_M3 = 1900.0  # 中间浆密度1.90 g/cm³（化验报告）。
+HU1_TAIL_DENSITY_KG_M3 = 1900.0  # 尾浆密度1.90 g/cm³（化验报告）。
+HU1_PLUG_DENSITY_KG_M3 = 1600.0  # 压塞液密度1.60 g/cm³（作业史）。
+HU1_MUD_PV_PA_S = 0.051  # 替浆泥浆 PV=51 mPa·s（化验报告油基体系）。
+HU1_MUD_YP_PA = 6.0  # 替浆泥浆 YP=6 Pa（化验报告油基体系）。
+HU1_DISPLACEMENT_PV_PA_S = 0.051  # 替浆泥浆 PV=51 mPa·s（同上）。
+HU1_DISPLACEMENT_YP_PA = 6.0  # 替浆泥浆 YP=6 Pa（同上）。
+HU1_BALANCE_PV_PA_S = 0.051  # 平衡液 PV=51 mPa·s（化验报告油基体系）。
+HU1_BALANCE_YP_PA = 6.0  # 平衡液 YP=6 Pa（化验报告油基体系）。
+HU1_SPACER_PV_PA_S = 0.051  # 驱油隔离液 PV 代理（同油基体系实测PV=51 mPa·s）。
+HU1_SPACER_YP_PA = 6.0  # 驱油隔离液 YP 代理（同油基体系实测YP=6 Pa）。
+HU1_SPACER_POWER_LAW_N = 0.545  # 驱油隔离液幂律指数（化验报告）。
+HU1_SPACER_CONSISTENCY_K = 1.338  # 驱油隔离液稠度系数 Pa·s^n（化验报告）。
+HU1_LEAD_POWER_LAW_N = 0.825  # 领浆幂律指数（化验报告）。
+HU1_LEAD_CONSISTENCY_K = 0.842  # 领浆稠度系数 Pa·s^n（化验报告）。
+HU1_INTERMEDIATE_POWER_LAW_N = 0.816  # 中间浆幂律指数（化验报告）。
+HU1_INTERMEDIATE_CONSISTENCY_K = 0.512  # 中间浆稠度系数 Pa·s^n（化验报告）。
+HU1_TAIL_POWER_LAW_N = 0.807  # 尾浆幂律指数（化验报告）。
+HU1_TAIL_CONSISTENCY_K = 0.527  # 尾浆稠度系数 Pa·s^n（化验报告）。
 
 # 呼探1现场施工程序参数，按地面注入顺序排列。
-HU1_BALANCE_VOLUME_M3 = 40.0
-HU1_SPACER_VOLUME_M3 = 20.0
-HU1_LEAD_VOLUME_M3 = 20.6
-HU1_INTERMEDIATE_VOLUME_M3 = 28.7
-HU1_TAIL_VOLUME_M3 = 22.1
-HU1_PLUG_VOLUME_M3 = 2.0
-HU1_LIGHT_MUD_VOLUME_M3 = 26.0
-HU1_BUFFER_VOLUME_M3 = 10.0
-HU1_FAST_DISPLACEMENT_VOLUME_M3 = 40.0
-HU1_SLOW_DISPLACEMENT_VOLUME_M3 = 17.7
-HU1_FRONT_RATE_M3_MIN = 1.4
-HU1_CEMENT_RATE_M3_MIN = 1.0
-HU1_PLUG_RATE_M3_MIN = 0.6
-HU1_LIGHT_MUD_RATE_M3_MIN = 1.4
-HU1_BUFFER_RATE_M3_MIN = 1.2
-HU1_FAST_DISPLACEMENT_RATE_M3_MIN = 1.0
-HU1_SLOW_DISPLACEMENT_RATE_M3_MIN = 0.6
+# 数据来源：参考文档/呼探1/提取数据/pumping_schedule.csv（作业史，证据等级A）。
+# 体积为实际施工值：平衡液40m³、隔离液20m³（作业史"注先导浆40m³（含平衡液）"），
+# 领浆20.6m³、中间浆28.7m³、尾浆22.1m³、压塞液2m³（作业史），
+# 首段替泥浆25m³（00:03-00:22替钻井液25m³）、
+# 中置液10m³（00:22-00:33替保护液/中置液10m³）、
+# 末段替泥浆53.7m³（00:35-01:34替钻井液53.7m³，合计替浆88.8m³）。
+HU1_BALANCE_VOLUME_M3 = 40.0  # 平衡液实际40m³（作业史）。
+HU1_SPACER_VOLUME_M3 = 20.0  # 驱油隔离液实际20m³（作业史）。
+HU1_LEAD_VOLUME_M3 = 20.6  # 领浆实际20.6m³（作业史）。
+HU1_INTERMEDIATE_VOLUME_M3 = 28.7  # 中间浆实际28.7m³（作业史）。
+HU1_TAIL_VOLUME_M3 = 22.1  # 尾浆实际22.1m³（作业史）。
+HU1_PLUG_VOLUME_M3 = 2.0  # 压塞液实际2m³（作业史，设计5m³）。
+HU1_LIGHT_MUD_VOLUME_M3 = 25.0  # 首段替泥浆25m³@1.4m³/min（作业史）。
+HU1_BUFFER_VOLUME_M3 = 10.0  # 中置液10m³@1.0m³/min（作业史替保护液/中置液）。
+HU1_FAST_DISPLACEMENT_VOLUME_M3 = 25.0  # 快替段25m³（归入首段替泥浆，总量25m³）。
+HU1_SLOW_DISPLACEMENT_VOLUME_M3 = 53.7  # 末段替泥浆53.7m³@1.2-0.6m³/min（作业史）。
+HU1_FRONT_RATE_M3_MIN = 1.4  # 平衡液/隔离液/首段替浆排量1.4m³/min。
+HU1_CEMENT_RATE_M3_MIN = 1.0  # 水泥浆排量1.0m³/min。
+HU1_PLUG_RATE_M3_MIN = 0.6  # 压塞液排量0.6m³/min。
+HU1_LIGHT_MUD_RATE_M3_MIN = 1.4  # 首段替泥浆排量1.4m³/min。
+HU1_BUFFER_RATE_M3_MIN = 1.0  # 中置液排量1.0m³/min。
+HU1_FAST_DISPLACEMENT_RATE_M3_MIN = 1.0  # 快替排量1.0m³/min。
+HU1_SLOW_DISPLACEMENT_RATE_M3_MIN = 0.6  # 末段替泥浆排量0.6m³/min。
 
 
 def _depth_points(values: tuple[tuple[float, float], ...]) -> tuple[DepthValuePoint, ...]:
@@ -220,7 +235,7 @@ def load_hu1_tailpipe(
         ),
         reference_root=resolved_reference_root,
         notes=(
-            "呼探1缺实测井径/井斜 CSV，当前按名义井径、呼101类似井斜和 101 只扶正器代理构造剖面。",
+            "呼探1缺实测井径/井斜 CSV，井眼直径按名义钻头尺寸 215.9mm（作业史），井斜按呼101类似深井代理。",
             "上段 168.3mm 尾管按等效井眼直径保面积处理，下段 139.7mm 尾管为模型目标井段。",
             f"鞋口滞后体积估算为 {HU1_SHOE_LAG_VOLUME_M3:.2f}m³，并反推等效 liner_id_mm={HU1_LINER_ID_MM:.2f}mm。",
             "CBL评价井段 5700–7710m 与目标层段 7400–7500m 为首版暂定，后续应随 CBL 数据确认调整。",
@@ -235,7 +250,7 @@ def load_hu1_tailpipe(
         FluidSpec("领浆", FluidRole.LEAD, HU1_LEAD_DENSITY_KG_M3, RheologyModel.POWER_LAW, power_law_n=HU1_LEAD_POWER_LAW_N, consistency_k=HU1_LEAD_CONSISTENCY_K),
         FluidSpec("中间浆", FluidRole.INTERMEDIATE, HU1_INTERMEDIATE_DENSITY_KG_M3, RheologyModel.POWER_LAW, power_law_n=HU1_INTERMEDIATE_POWER_LAW_N, consistency_k=HU1_INTERMEDIATE_CONSISTENCY_K),
         FluidSpec("尾浆", FluidRole.TAIL, HU1_TAIL_DENSITY_KG_M3, RheologyModel.POWER_LAW, power_law_n=HU1_TAIL_POWER_LAW_N, consistency_k=HU1_TAIL_CONSISTENCY_K),
-        FluidSpec("压塞液", FluidRole.OTHER, HU1_DISPLACEMENT_DENSITY_KG_M3, RheologyModel.BINGHAM, HU1_DISPLACEMENT_PV_PA_S, HU1_DISPLACEMENT_YP_PA),
+        FluidSpec("压塞液", FluidRole.OTHER, HU1_PLUG_DENSITY_KG_M3, RheologyModel.POWER_LAW, power_law_n=0.689, consistency_k=0.557),
         FluidSpec("轻泥浆", FluidRole.DISPLACEMENT, HU1_DISPLACEMENT_DENSITY_KG_M3, RheologyModel.BINGHAM, HU1_DISPLACEMENT_PV_PA_S, HU1_DISPLACEMENT_YP_PA),
         FluidSpec("中置液", FluidRole.DISPLACEMENT, HU1_DISPLACEMENT_DENSITY_KG_M3, RheologyModel.BINGHAM, HU1_DISPLACEMENT_PV_PA_S, HU1_DISPLACEMENT_YP_PA),
         FluidSpec("井浆", FluidRole.DISPLACEMENT, HU1_DISPLACEMENT_DENSITY_KG_M3, RheologyModel.BINGHAM, HU1_DISPLACEMENT_PV_PA_S, HU1_DISPLACEMENT_YP_PA),
@@ -243,20 +258,20 @@ def load_hu1_tailpipe(
 
     schedule = PumpingSchedule(
         steps=(
-            PumpingScheduleStep("注入平衡液", "平衡液", HU1_BALANCE_VOLUME_M3, HU1_FRONT_RATE_M3_MIN, remarks="平衡液 40m³@1.4m³/min，角色 WASH。"),
-            PumpingScheduleStep("注入隔离液", "隔离液", HU1_SPACER_VOLUME_M3, HU1_FRONT_RATE_M3_MIN, remarks="隔离液 20m³@1.4m³/min，角色 SPACER。"),
-            PumpingScheduleStep("注入领浆", "领浆", HU1_LEAD_VOLUME_M3, HU1_CEMENT_RATE_M3_MIN, remarks="领浆 20.6m³@1.0m³/min。"),
-            PumpingScheduleStep("注入中间浆", "中间浆", HU1_INTERMEDIATE_VOLUME_M3, HU1_CEMENT_RATE_M3_MIN, remarks="中间浆 28.7m³@1.0m³/min，角色 INTERMEDIATE。"),
-            PumpingScheduleStep("注入尾浆", "尾浆", HU1_TAIL_VOLUME_M3, HU1_CEMENT_RATE_M3_MIN, remarks="尾浆 22.1m³@1.0m³/min。"),
-            PumpingScheduleStep("注入压塞液（管内）", "压塞液", HU1_PLUG_VOLUME_M3, HU1_PLUG_RATE_M3_MIN, remarks="压塞液 2m³@0.6m³/min，仅作为管内占位，不作为水泥入环空体积。"),
-            PumpingScheduleStep("替浆轻泥浆", "轻泥浆", HU1_LIGHT_MUD_VOLUME_M3, HU1_LIGHT_MUD_RATE_M3_MIN, remarks="替浆方案：轻泥浆 26m³@1.4m³/min。"),
-            PumpingScheduleStep("替浆中置液", "中置液", HU1_BUFFER_VOLUME_M3, HU1_BUFFER_RATE_M3_MIN, remarks="替浆方案：中置液 10m³@1.2m³/min。"),
-            PumpingScheduleStep("井浆快替", "井浆", HU1_FAST_DISPLACEMENT_VOLUME_M3, HU1_FAST_DISPLACEMENT_RATE_M3_MIN, remarks="替浆方案：井浆快替 40m³@1.0m³/min。"),
-            PumpingScheduleStep("井浆慢替", "井浆", HU1_SLOW_DISPLACEMENT_VOLUME_M3, HU1_SLOW_DISPLACEMENT_RATE_M3_MIN, remarks="替浆方案：井浆慢替 17.7m³@0.6m³/min。"),
+            PumpingScheduleStep("注入平衡液", "平衡液", HU1_BALANCE_VOLUME_M3, HU1_FRONT_RATE_M3_MIN, remarks="平衡液 40m³@1.4m³/min，密度1.75g/cm³（作业史实际值）。"),
+            PumpingScheduleStep("注入隔离液", "隔离液", HU1_SPACER_VOLUME_M3, HU1_FRONT_RATE_M3_MIN, remarks="驱油隔离液 20m³@1.4m³/min，密度1.98g/cm³（作业史实际值）。"),
+            PumpingScheduleStep("注入领浆", "领浆", HU1_LEAD_VOLUME_M3, HU1_CEMENT_RATE_M3_MIN, remarks="领浆 20.6m³@1.0m³/min，密度2.05g/cm³（作业史实际值）。"),
+            PumpingScheduleStep("注入中间浆", "中间浆", HU1_INTERMEDIATE_VOLUME_M3, HU1_CEMENT_RATE_M3_MIN, remarks="中间浆 28.7m³@1.0m³/min，密度1.90g/cm³（作业史实际值）。"),
+            PumpingScheduleStep("注入尾浆", "尾浆", HU1_TAIL_VOLUME_M3, HU1_CEMENT_RATE_M3_MIN, remarks="尾浆 22.1m³@1.0m³/min，密度1.90g/cm³（作业史实际值）。"),
+            PumpingScheduleStep("注入压塞液（管内）", "压塞液", HU1_PLUG_VOLUME_M3, HU1_PLUG_RATE_M3_MIN, remarks="压塞液 2m³@0.6m³/min（设计5m³），密度1.60g/cm³，仅管内占位不进入环空。"),
+            PumpingScheduleStep("替浆首段", "轻泥浆", HU1_LIGHT_MUD_VOLUME_M3, HU1_LIGHT_MUD_RATE_M3_MIN, remarks="首段替泥浆 25m³@1.4m³/min（作业史00:03-00:22替钻井液25m³）。"),
+            PumpingScheduleStep("替浆中置液", "中置液", HU1_BUFFER_VOLUME_M3, HU1_BUFFER_RATE_M3_MIN, remarks="中置液 10m³@1.0m³/min（作业史00:22-00:33替保护液/中置液10m³）。"),
+            PumpingScheduleStep("井浆快替", "井浆", HU1_FAST_DISPLACEMENT_VOLUME_M3, HU1_FAST_DISPLACEMENT_RATE_M3_MIN, remarks="快替 25m³@1.0m³/min（归入首段替浆，总量25m³）。"),
+            PumpingScheduleStep("井浆慢替", "井浆", HU1_SLOW_DISPLACEMENT_VOLUME_M3, HU1_SLOW_DISPLACEMENT_RATE_M3_MIN, remarks="末段替泥浆 53.7m³@1.2→0.6m³/min（作业史00:35-01:34，合计替浆88.7m³）。"),
         ),
         notes=(
-            "施工顺序按现场数据：平衡液→隔离液→领浆→中间浆→尾浆→压塞液→四段替浆。",
-            "替浆总量 93.7m³ = 26 + 10 + 40 + 17.7m³，排量从 1.4 递减至 0.6m³/min。",
+            "施工顺序按现场数据（作业史）：平衡液40m³→隔离液20m³→领浆20.6m³→中间浆28.7m³→尾浆22.1m³→压塞液2m³→四段替浆。",
+            "替浆总量 88.7m³ = 首段替泥浆25 + 中置液10 + 末段替泥浆53.7m³（作业史合计替钻井液88.8m³）。",
             "压塞液保留在 PumpingSchedule 中用于管内时序占位；环空入口分相映射时按 mud 相处理。",
         ),
     )
