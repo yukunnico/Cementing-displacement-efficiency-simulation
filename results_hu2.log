@@ -1,0 +1,82 @@
+﻿python : C:\Users\30525\.config\superpowers\worktrees\cement-model\multiwell-boundary-sync\cemdisp\reporting\contour_plots.py:239: UserWarning: This figure includes Axes that are not compa
+tible with tight_layout, so results might be incorrect.
+所在位置 行:1 字符: 1
++ python scripts/run_hu2_tailpipe_initial.py 2>&1 | Out-File -Encoding  ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (C:\Users\30525\...t be incorrect.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  fig.tight_layout(rect=(0, 0, 1, 0.95))
+正在生成动画帧 1/52
+正在生成动画帧 1/52
+正在生成动画帧 2/52
+正在生成动画帧 3/52
+正在生成动画帧 4/52
+正在生成动画帧 5/52
+正在生成动画帧 6/52
+正在生成动画帧 7/52
+正在生成动画帧 8/52
+正在生成动画帧 9/52
+正在生成动画帧 10/52
+正在生成动画帧 11/52
+正在生成动画帧 12/52
+正在生成动画帧 13/52
+正在生成动画帧 14/52
+正在生成动画帧 15/52
+正在生成动画帧 16/52
+正在生成动画帧 17/52
+正在生成动画帧 18/52
+正在生成动画帧 19/52
+正在生成动画帧 20/52
+正在生成动画帧 21/52
+正在生成动画帧 22/52
+正在生成动画帧 23/52
+正在生成动画帧 24/52
+正在生成动画帧 25/52
+正在生成动画帧 26/52
+正在生成动画帧 27/52
+正在生成动画帧 28/52
+正在生成动画帧 29/52
+正在生成动画帧 30/52
+正在生成动画帧 31/52
+正在生成动画帧 32/52
+正在生成动画帧 33/52
+正在生成动画帧 34/52
+正在生成动画帧 35/52
+正在生成动画帧 36/52
+正在生成动画帧 37/52
+正在生成动画帧 38/52
+正在生成动画帧 39/52
+正在生成动画帧 40/52
+正在生成动画帧 41/52
+正在生成动画帧 42/52
+正在生成动画帧 43/52
+正在生成动画帧 44/52
+正在生成动画帧 45/52
+正在生成动画帧 46/52
+正在生成动画帧 47/52
+正在生成动画帧 48/52
+正在生成动画帧 49/52
+正在生成动画帧 50/52
+正在生成动画帧 51/52
+正在生成动画帧 52/52
+
+=== 1D2D耦合模型 ===
+Traceback (most recent call last):
+  File "D:\users\desktop\research\控压固井项目\cement model\scripts\run_hu2_tailpipe_initial.py", line 6, in <module>
+    run_hu2_tailpipe_initial()
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\30525\.config\superpowers\worktrees\cement-model\multiwell-boundary-sync\cemdisp\runners\hu2_tailpipe.py", line 327, in run_hu2_tailpipe_initial
+    run_and_export(
+    ~~~~~~~~~~~~~~^
+        mode_title="1D2D耦合模型",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        total_t_s=annulus_stop_time_value_s,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\30525\.config\superpowers\worktrees\cement-model\multiwell-boundary-sync\cemdisp\runners\hu2_tailpipe.py", line 162, in run_and_export
+    print(json.dumps(summary_payload, ensure_ascii=False, indent=2))
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'gbk' codec can't encode character '\xb3' in position 1294: illegal multibyte sequence
