@@ -7,26 +7,24 @@
 - 从井径/井斜CSV文件读取剖面数据
 - 构建井筒几何参数（井段范围、套管尺寸、偏心度等）
 - 定义钻井液、替浆液、尾管水泥浆，以及可选冲洗液/隔离液的物性参数
-- 构建现场记录施工日程（默认两步：尾浆注入+替浆液推进；提取数据实际为五步）
+- 构建现场记录施工日程（默认严格按现场：尾浆注入+替浆液推进两步）
 - 提供 legacy 环空入口边界状态提供器（仅用于旧模型对比）
 
 物理参数说明：
 - 井段范围: 6823.10m - 7735.00m
 - 尾管尺寸: 139.70mm OD, 108.10mm ID (考虑壁厚后)
-- 尾管水泥浆: 密度1.90g/cm³；幂律流变 n=0.766, K=1.093（提取数据）
-- 替浆液: 74m³, 密度2.02g/cm³, 排量0.8m³/min（提取数据）
+- 水泥浆: 35t, 密度2.10g/cm³；幂律流变 n=0.722, K=0.684 当前仍为 legacy 占位
+- 替浆液: 74m³, 密度2.02g/cm³, 排量0.378m³/min
 - 钻井液（环空初始液）: 密度2.02g/cm³, Bingham PV=80mPa·s, YP=15Pa
 
-数据来源：
-- well_spec.csv: 井号、井段范围、套管尺寸、评价窗口（100413.PDF）
-- fluid_spec.csv: 流体密度、流变参数（well_spacer_summary_fixed.csv汇总表）
-- pumping_schedule.csv: 五步施工程序（well_spacer_summary_fixed.csv汇总表）
-- validation_data.csv: CBL合格率66.65%（100413.PDF）
+现场记录来源（10042.xlsx Row 26, 2022-11-22）：
+- 注水泥35.00t, 水泥浆平均密度2.10g/cm³, 替浆液密度2.02g/cm³, 井液74.00m³
+- 泵注时间：2022-11-21 17:00–21:00（4小时）
+- 现场记录中无冲洗液/隔离液/领浆的注入量（方案A：按现场记录）
 
-关于施工程序：
-- 提取数据显示实际为五步：先导浆(52m³)→驱油隔离液(42m³)→领浆(81m³)→尾浆(139m³)→替浆(74m³)
-- 当前loader默认两步（尾浆+替浆）以保持向后兼容
-- include_wash_spacer=True时使用五步程序参数（但不包含先导浆/领浆步骤，仅平衡液+隔离液）
+可选补充流体（0708邻井代理，严格现场模式下不注入）：
+- 冲洗液(WASH): ρ=1880, PV=0.025, YP=1.5 (呼103邻井)
+- 隔离液(SPACER): ρ=1850, PV=0.035, YP=8 (呼103邻井)
 
 legacy 边界模式选项：
 - "sustained_tail": 替浆期间环空入口保持尾浆（默认）
@@ -35,6 +33,8 @@ legacy 边界模式选项：
 """
 
 from __future__ import annotations
+
+import warnings
 
 import csv
 from collections.abc import Callable, Iterable
@@ -45,69 +45,55 @@ from cemdisp.data.pumping_schedule import PumpingSchedule, PumpingScheduleStep
 from cemdisp.data.validation_data import ValidationData
 from cemdisp.data.well_spec import DepthValuePoint, EvaluationWindow, WellSpec
 from cemdisp.models2d.boundary_bridge import AnnulusInletState
+from cemdisp.data.provenance import WELL_PROVENANCE
+from cemdisp.models2d.boundary_bridge import build_sync_card
+from cemdisp.transport1d.casing_flow import CasingFlowSolver
+
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_REFERENCE_ROOT = PROJECT_ROOT / "参考文档" / "呼102"
 DEFAULT_CALIPER_CSV = PROJECT_ROOT / "hu102model" / "hu102_tail_caliper_inclination.csv"
 
-# 呼102尾管段井段参数（来源: well_spec.csv → 100413.PDF）
-# 井段范围: 6823.10m - 7735.00m
-# 尾管尺寸: 139.70mm OD, 108.10mm ID (壁厚15.8mm)
+# 呼102尾管段井段参数（单位：m, mm）
 HU102_TOP_MD_M = 6823.10        # 井段顶部测深
 HU102_BOTTOM_MD_M = 7735.00     # 井段底部测深
 HU102_SHOE_MD_M = 7735.00       # 套管鞋深度
 HU102_HANGER_MD_M = 6823.10     # 悬挂器位置深度
-HU102_CASING_ID_MM = 219.10     # 套管内径（双层套管等效内径）
+HU102_CASING_ID_MM = 219.10     # 套管内径
 HU102_LINER_OD_MM = 139.70      # 尾管外径
 HU102_LINER_WALL_THICKNESS_MM = 15.80  # 尾管壁厚
 HU102_LINER_ID_MM = HU102_LINER_OD_MM - 2.0 * HU102_LINER_WALL_THICKNESS_MM  # 尾管内径
 
-# 呼102尾管段施工参数（来源: pumping_schedule.csv → well_spacer_summary_fixed.csv汇总表）
-# 提取数据显示实际为五步程序：先导浆(52m³)→驱油隔离液(42m³)→领浆(81m³)→尾浆(139m³)→替浆(74m³)
-# 当前loader默认两步（尾浆+替浆）保持向后兼容；include_wash_spacer=True时使用提取的五步参数
-HU102_CEMENT_VOLUME_M3 = 139.0       # 尾管尾浆体积（提取数据）
-HU102_CEMENT_DENSITY_KG_M3 = 1900.0  # 尾管尾浆密度（提取数据）
-HU102_LEAD_CEMENT_VOLUME_M3 = 81.0   # 尾管领浆体积（提取数据）
-HU102_LEAD_CEMENT_DENSITY_KG_M3 = 1900.0  # 尾管领浆密度（提取数据）
-HU102_DISPLACEMENT_VOLUME_M3 = 74.0  # 替浆体积（提取数据）
-HU102_DISPLACEMENT_DENSITY_KG_M3 = 2020.0  # 替浆液密度（提取数据）
-# 注意：旧loader使用35t水泥+2.10g/cm³（由10042.xlsx推算），现更新为提取的139m³+1.90g/cm³
-HU102_RATE_M3_MIN = 0.8              # 泵注排量（提取数据）
+# 呼102施工参数
+HU102_CEMENT_MASS_T = 35.0              # 水泥浆质量
+HU102_CEMENT_DENSITY_KG_M3 = 2100.0     # 水泥浆密度
+HU102_DISPLACEMENT_VOLUME_M3 = 74.0    # 替浆体积
+HU102_DISPLACEMENT_DENSITY_KG_M3 = 2020.0  # 钻井液密度（替浆用）
+# 按现场 17:00–21:00 累计 90.67m³ / 240min 校正平均排量，避免原1.30m³/min压缩顶替过程。
+HU102_RATE_M3_MIN = 0.378               # 泵注排量
 
-# 呼102五步程序参数（来源: pumping_schedule.csv）
-# 仅在include_wash_spacer=True时使用，与当前默认两步程序共存
-HU102_PILOT_VOLUME_M3 = 52.0         # 先导浆体积
-HU102_PILOT_DENSITY_KG_M3 = 1600.0   # 先导浆密度
-HU102_SPACER_OIL_VOLUME_M3 = 42.0    # 驱油隔离液体积
-HU102_SPACER_OIL_DENSITY_KG_M3 = 1850.0  # 驱油隔离液密度
-
-# 呼102流变参数（来源: fluid_spec.csv → well_spacer_summary_fixed.csv汇总表）
-# 钻井液/替浆液：Bingham模型
-HU102_MUD_PV_PA_S = 0.080            # 环空初始钻井液塑性粘度
-HU102_MUD_YP_PA = 15.0              # 环空初始钻井液屈服值
+# 呼102流变参数 — 钻井液/替浆液/水泥浆
+HU102_MUD_PV_PA_S = 0.080            # 环空初始钻井液塑性粘度（文献暂定）
+HU102_MUD_YP_PA = 15.0               # 环空初始钻井液屈服值（文献暂定）
 HU102_DISPLACEMENT_PV_PA_S = 0.080   # 替浆液塑性粘度（与钻井液一致）
 HU102_DISPLACEMENT_YP_PA = 15.0      # 替浆液屈服值（与钻井液一致）
-# 尾管尾浆：幂律模型（提取数据）
-HU102_CEMENT_POWER_LAW_N = 0.766     # 水泥浆流性指数（提取数据）
-HU102_CEMENT_CONSISTENCY_K = 1.093   # 水泥浆稠度系数（提取数据）
-# 尾管领浆：幂律模型（提取数据）
-HU102_LEAD_POWER_LAW_N = 0.838       # 领浆流性指数（提取数据）
-HU102_LEAD_CONSISTENCY_K = 0.587     # 领浆稠度系数（提取数据）
-# 驱油隔离液：幂律模型（提取数据）
-HU102_SPACER_POWER_LAW_N = 0.587     # 隔离液流性指数（提取数据）
-HU102_SPACER_CONSISTENCY_K = 0.880   # 隔离液稠度系数（提取数据）
+HU102_CEMENT_POWER_LAW_N = 0.722     # 水泥浆流性指数（幂律，占位值；本井主作业未见实测 n）
+HU102_CEMENT_CONSISTENCY_K = 0.684   # 水泥浆稠度系数（幂律，占位值；本井主作业未见实测 K）
 
-# 呼102前置液参数（来源: fluid_spec.csv）
-# 平衡液/冲洗液（邻井呼103代理）
-HU102_WASH_DENSITY_KG_M3 = 1880.0    # 冲洗液密度（提取数据）
-HU102_WASH_PV_PA_S = 0.035           # 冲洗液塑性粘度（邻井代理）
-HU102_WASH_YP_PA = 8.0              # 冲洗液屈服值（邻井代理）
-HU102_WASH_VOLUME_M3 = 10.0          # 冲洗液体积（邻井代理）
-
-# 注意：呼102尾管主作业（10042.xlsx Row 26）仅记录尾浆+替浆两步，未见先导浆/领浆/隔离液
-# 当前loader保留两步默认程序以向后兼容；五步参数来源于well_spacer_summary_fixed.csv汇总表
-# 隔离液密度来自fluid_spec.csv（1.85g/cm³），与旧loader（2.05g/cm³）不同
+# 呼102前置液/隔离液参数 — 基于呼探1-002邻井同口径139.7mm尾管数据
+# 数据来源：
+#   - 呼探1-002 139.7mm尾管：隔离液 2.05g/cm³(设计)/2.10g/cm³(现场)，15m³，冲洗效率97.7%
+#   - 呼探1-002 数据抽取报告：化验报告+技术总结+作业史
+#   - 注：Hu102尾管主作业日报(10042.xlsx)未找到隔离液记录，此处使用邻井代理
+HU102_WASH_DENSITY_KG_M3 = 2050.0    # 平衡液/冲洗液密度（呼探1-002邻井代理，与隔离液同体系）
+HU102_WASH_PV_PA_S = 0.035           # 平衡液/冲洗液塑性粘度（呼探1-002邻井代理）
+HU102_WASH_YP_PA = 8.0               # 平衡液/冲洗液屈服值（呼探1-002邻井代理）
+HU102_WASH_VOLUME_M3 = 10.0          # 平衡液/冲洗液设计体积（呼探1-002邻井代理）
+HU102_SPACER_DENSITY_KG_M3 = 2050.0  # 驱油隔离液密度（呼探1-002设计值2.05g/cm³）
+HU102_SPACER_PV_PA_S = 0.035         # 驱油隔离液塑性粘度（呼探1-002邻井代理）
+HU102_SPACER_YP_PA = 8.0             # 驱油隔离液屈服值（呼探1-002邻井代理）
+HU102_SPACER_VOLUME_M3 = 15.0        # 驱油隔离液体积（呼探1-002现场记录15m³）
 
 
 def _read_profile_rows(caliper_csv_path: Path) -> tuple[tuple[float, float, float], ...]:
@@ -215,62 +201,48 @@ def load_hu102_tailpipe(
         ),
     )
 
-    # 钻井液/替浆液：Bingham模型（提取数据）
-    mud_fluid = FluidSpec(
-        name="钻井液",
-        role=FluidRole.MUD,
-        density_kg_m3=HU102_DISPLACEMENT_DENSITY_KG_M3,
-        rheology_model=RheologyModel.BINGHAM,
-        plastic_viscosity_pa_s=HU102_MUD_PV_PA_S,
-        yield_stress_pa=HU102_MUD_YP_PA,
+    fluids = (
+        FluidSpec(
+            name="钻井液",
+            role=FluidRole.MUD,
+            density_kg_m3=HU102_DISPLACEMENT_DENSITY_KG_M3,
+            rheology_model=RheologyModel.BINGHAM,
+            plastic_viscosity_pa_s=HU102_MUD_PV_PA_S,
+            yield_stress_pa=HU102_MUD_YP_PA,
+        ),
+        FluidSpec(
+            name="替浆液",
+            role=FluidRole.DISPLACEMENT,
+            density_kg_m3=HU102_DISPLACEMENT_DENSITY_KG_M3,
+            rheology_model=RheologyModel.BINGHAM,
+            plastic_viscosity_pa_s=HU102_DISPLACEMENT_PV_PA_S,
+            yield_stress_pa=HU102_DISPLACEMENT_YP_PA,
+        ),
+        FluidSpec(
+            name="尾管水泥浆",
+            role=FluidRole.TAIL,
+            density_kg_m3=HU102_CEMENT_DENSITY_KG_M3,
+            rheology_model=RheologyModel.POWER_LAW,
+            power_law_n=HU102_CEMENT_POWER_LAW_N,
+            consistency_k=HU102_CEMENT_CONSISTENCY_K,
+        ),
+        FluidSpec(
+            name="冲洗液",
+            role=FluidRole.WASH,
+            density_kg_m3=HU102_WASH_DENSITY_KG_M3,
+            rheology_model=RheologyModel.BINGHAM,
+            plastic_viscosity_pa_s=HU102_WASH_PV_PA_S,
+            yield_stress_pa=HU102_WASH_YP_PA,
+        ),
+        FluidSpec(
+            name="隔离液",
+            role=FluidRole.SPACER,
+            density_kg_m3=HU102_SPACER_DENSITY_KG_M3,
+            rheology_model=RheologyModel.BINGHAM,
+            plastic_viscosity_pa_s=HU102_SPACER_PV_PA_S,
+            yield_stress_pa=HU102_SPACER_YP_PA,
+        ),
     )
-    displacement_fluid = FluidSpec(
-        name="替浆液",
-        role=FluidRole.DISPLACEMENT,
-        density_kg_m3=HU102_DISPLACEMENT_DENSITY_KG_M3,
-        rheology_model=RheologyModel.BINGHAM,
-        plastic_viscosity_pa_s=HU102_DISPLACEMENT_PV_PA_S,
-        yield_stress_pa=HU102_DISPLACEMENT_YP_PA,
-    )
-    # 冲洗液：Bingham模型（邻井呼103代理）
-    wash_fluid = FluidSpec(
-        name="冲洗液",
-        role=FluidRole.WASH,
-        density_kg_m3=HU102_WASH_DENSITY_KG_M3,
-        rheology_model=RheologyModel.BINGHAM,
-        plastic_viscosity_pa_s=HU102_WASH_PV_PA_S,
-        yield_stress_pa=HU102_WASH_YP_PA,
-    )
-    # 隔离液：幂律模型（提取数据）
-    spacer_fluid = FluidSpec(
-        name="隔离液",
-        role=FluidRole.SPACER,
-        density_kg_m3=HU102_SPACER_OIL_DENSITY_KG_M3,
-        rheology_model=RheologyModel.POWER_LAW,
-        power_law_n=HU102_SPACER_POWER_LAW_N,
-        consistency_k=HU102_SPACER_CONSISTENCY_K,
-    )
-    # 尾管领浆：幂律模型（提取数据）
-    lead_fluid = FluidSpec(
-        name="尾管领浆",
-        role=FluidRole.LEAD,
-        density_kg_m3=HU102_LEAD_CEMENT_DENSITY_KG_M3,
-        rheology_model=RheologyModel.POWER_LAW,
-        power_law_n=HU102_LEAD_POWER_LAW_N,
-        consistency_k=HU102_LEAD_CONSISTENCY_K,
-    )
-    # 尾管尾浆：幂律模型（提取数据）
-    cement_fluid = FluidSpec(
-        name="尾管水泥浆",
-        role=FluidRole.TAIL,
-        density_kg_m3=HU102_CEMENT_DENSITY_KG_M3,
-        rheology_model=RheologyModel.POWER_LAW,
-        power_law_n=HU102_CEMENT_POWER_LAW_N,
-        consistency_k=HU102_CEMENT_CONSISTENCY_K,
-    )
-
-    # 组装流体列表（顺序：泥浆、替浆液、领浆、尾浆、冲洗液、隔离液）
-    fluids = (mud_fluid, displacement_fluid, lead_fluid, cement_fluid, wash_fluid, spacer_fluid)
 
     # 前置液/隔离液步骤：仅在显式要求敏感性分析时加入。
     # 呼102主作业日报未记录该两类流体，严格现场模式默认不使用邻井代理值。
@@ -288,9 +260,9 @@ def load_hu102_tailpipe(
             PumpingScheduleStep(
                 step_name="注入驱油隔离液",
                 fluid_name="隔离液",
-                volume_m3=HU102_SPACER_OIL_VOLUME_M3,
+                volume_m3=HU102_SPACER_VOLUME_M3,
                 rate_m3_min=HU102_RATE_M3_MIN,
-                remarks=f"驱油隔离液 {HU102_SPACER_OIL_VOLUME_M3}m³，密度{HU102_SPACER_OIL_DENSITY_KG_M3/1000:.2f}g/cm³（提取数据）。",
+                remarks=f"驱油隔离液 {HU102_SPACER_VOLUME_M3}m³，密度{HU102_SPACER_DENSITY_KG_M3/1000:.2f}g/cm³（Hu102二次技套/呼103邻井代理）。",
             ),
         )
 
@@ -299,23 +271,23 @@ def load_hu102_tailpipe(
             PumpingScheduleStep(
                 step_name="注入尾管水泥浆",
                 fluid_name="尾管水泥浆",
-                volume_m3=HU102_CEMENT_VOLUME_M3,
+                volume_m3=HU102_CEMENT_MASS_T / (HU102_CEMENT_DENSITY_KG_M3 / 1000.0),
                 rate_m3_min=HU102_RATE_M3_MIN,
-                remarks=f"尾管尾浆 {HU102_CEMENT_VOLUME_M3}m³，密度{HU102_CEMENT_DENSITY_KG_M3/1000:.2f}g/cm³（提取数据）。",
+                remarks="基于 35t 与 2.10g/cm3 换算 ≈ 16.67m3。",
             ),
             PumpingScheduleStep(
                 step_name="替浆液推进",
                 fluid_name="替浆液",
                 volume_m3=HU102_DISPLACEMENT_VOLUME_M3,
                 rate_m3_min=HU102_RATE_M3_MIN,
-                remarks=f"替浆液 {HU102_DISPLACEMENT_VOLUME_M3}m³，密度{HU102_DISPLACEMENT_DENSITY_KG_M3/1000:.2f}g/cm³（提取数据）。",
+                remarks="主作业直接记录替浆量 74m3，替浆液密度 2.02g/cm3。",
             ),
         ),
         notes=(
-            "提取数据（pumping_schedule.csv）显示实际为五步：先导浆(52m³)→驱油隔离液(42m³)→领浆(81m³)→尾浆(139m³)→替浆(74m³)。",
-            "当前loader默认两步（尾浆+替浆）保持向后兼容；include_wash_spacer=True时使用邻井代理的前置液参数。",
-            "五步参数来源：well_spacer_summary_fixed.csv汇总表；两步参数来源：10042.xlsx Row 26。",
-            "水泥浆密度从旧版2.10g/cm³更新为1.90g/cm³（提取数据），体积从16.67m³更新为139m³。",
+            "按现场记录（10042.xlsx Row 26）：尾浆+替浆液两步为主程序。",
+            "严格现场模式默认不注入前置液/隔离液；10042.xlsx 主作业记录未见冲洗液、隔离液或领浆注入量。",
+            "平衡液/隔离液参数仅保留为 include_wash_spacer=True 时的邻井代理敏感性输入，不作为呼102现场实录。",
+            "include_wash_spacer=True 时才加入邻井代理的平衡液(10m³)与驱油隔离液(15m³)。",
         ),
     )
 
@@ -326,9 +298,8 @@ def load_hu102_tailpipe(
         pump_pressure_series_path=resolved_reference_root / "1004" / "100492.xlsx",
         notes=(
             "100413.PDF 给出 CBL 合格率 66.65%，评价井段 6840–7665m。",
-            "10042.xlsx Row 26 提供尾管固井主作业实录：水泥浆35t、密度2.10g/cm³、替浆量74m³（现场记录）。",
-            "提取数据（well_spacer_summary_fixed.csv汇总表）显示实际水泥浆密度1.90g/cm³、体积139m³（方案设计）。",
-            "流变参数（n、K）已从占位值更新为提取数据值。",
+            "10042.xlsx 提供尾管固井主作业水泥浆 35t、平均密度 2.10g/cm3、替浆量 74m3。",
+            "钻井液与水泥浆流变参数仍为首版暂定值，需后续继续用 0708 或文献补强。",
         ),
     )
     return well_spec, fluids, schedule, validation_data
@@ -341,6 +312,11 @@ def build_hu102_annulus_inlet_provider(
 ) -> Callable[[float], AnnulusInletState]:
     """为 Hu102 尾管段首版模型构建环空入口边界提供器。"""
 
+    warnings.warn(
+        "build_hu102_annulus_inlet_provider 已废弃，请改用 CasingFlowSolver + build_coupled_annulus_inlet_provider",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     fluid_role_by_name: dict[str, FluidRole] = {fluid.name: fluid.role for fluid in fluids}
     cement_fluid_names = {fluid.name for fluid in fluids if fluid.role in {FluidRole.LEAD, FluidRole.TAIL}}
     if not cement_fluid_names:
@@ -425,3 +401,36 @@ def build_hu102_annulus_inlet_provider(
         )
 
     return _provider
+
+
+def export_hu102_sync_card_markdown(output_dir: Path) -> Path:
+    """导出 呼102 同步画像卡为 Markdown 文件。"""
+
+    well_spec, fluids, schedule, _ = load_hu102_tailpipe()
+    solver = CasingFlowSolver()
+    result = solver.run(well_spec, fluids, schedule)
+    provenance = WELL_PROVENANCE.get("呼102")
+    if provenance is None:
+        from cemdisp.data.provenance import _WELL_NAME_ALIASES
+        canonical = _WELL_NAME_ALIASES.get("呼102", "呼102")
+        provenance = WELL_PROVENANCE[canonical]
+    sync_card = build_sync_card("呼102", result.shoe_timeline, provenance)
+
+    output_path = output_dir / ("呼102_同步画像卡.md")
+    lines = [
+        "# 呼102 同步画像卡",
+        "",
+        "- 井名：" + str(sync_card["井名"]),
+        "- 鞋口同步事件数：" + str(sync_card["鞋口同步口径"]["事件数"]),
+    ]
+    first_time = sync_card["鞋口同步口径"]["首事件时间_s"]
+    last_time = sync_card["鞋口同步口径"]["末事件时间_s"]
+    if first_time is not None:
+        lines.append("- 首事件时间：{:.1f} s".format(first_time))
+    if last_time is not None:
+        lines.append("- 末事件时间：{:.1f} s".format(last_time))
+    proxy_note = sync_card["代理提醒"]
+    if proxy_note:
+        lines.append("- 代理提醒：" + proxy_note)
+    output_path.write_text("\n".join(lines), encoding="utf-8")
+    return output_path

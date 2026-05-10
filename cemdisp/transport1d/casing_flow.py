@@ -36,10 +36,11 @@ from dataclasses import dataclass, field
 import math
 
 from cemdisp.data.fluid_spec import FluidRole, FluidSpec
-from cemdisp.data.pumping_schedule import PumpingSchedule, PumpingScheduleStep
+from cemdisp.data.pumping_schedule import PumpingSchedule, PumpingScheduleStep, PumpingStageEvent
 from cemdisp.data.well_spec import WellSpec
 from cemdisp.transport1d.interface_tracking import InterfaceFront
 from cemdisp.transport1d.pipe_exit_state import PipeExitState
+from cemdisp.transport1d.shoe_timeline import ShoeEvent, ShoeEventKind, ShoeTimeline
 
 
 @dataclass(frozen=True)
@@ -55,6 +56,7 @@ class CasingFlowResult:
     shoe_md_m: float = 0.0
     pumping_end_time_s: float = 0.0
     cement_end_time_s: float = 0.0
+    shoe_timeline: ShoeTimeline = field(default_factory=lambda: ShoeTimeline(events=[]))
     notes: tuple[str, ...] = field(default_factory=tuple)
 
 
@@ -127,7 +129,7 @@ class CasingFlowSolver:
         initial_fluid = self._initial_fluid_name(fluids, schedule)
         fluid_by_name = {fluid.name: fluid for fluid in fluids}
 
-        # 为每个注入步骤建立“前缘”：前缘位置由累计泵入体积推动，
+        # 为每个注入步骤建立"前缘"：前缘位置由累计泵入体积推动，
         # 而不是只由该流体自身注入体积决定。
         fronts: list[InterfaceFront] = []
         for scheduled in scheduled_steps:
@@ -143,7 +145,7 @@ class CasingFlowSolver:
                 )
             )
 
-        # 水泥浆停止时刻定义为“最后一段水泥浆尾缘越过鞋口”的地面累计时间。
+        # 水泥浆停止时刻定义为"最后一段水泥浆尾缘越过鞋口"的地面累计时间。
         # 这与参考项目的环空终止口径一致：后续替浆刚到环空入口时停止二维顶替评价。
         cement_end_time_s: float | None = None
         for scheduled in scheduled_steps:
@@ -167,6 +169,13 @@ class CasingFlowSolver:
             shoe_md_m=shoe_depth_m,
             pumping_end_time_s=scheduled_steps[-1].end_time_s if scheduled_steps else 0.0,
             cement_end_time_s=cement_end_time_s if cement_end_time_s is not None else (scheduled_steps[-1].end_time_s if scheduled_steps else 0.0),
+            shoe_timeline=self._build_shoe_timeline(
+                well_spec=well_spec,
+                fluids=fluids,
+                scheduled_steps=scheduled_steps,
+                initial_fluid=initial_fluid,
+                legacy_pipe_volume_m3=pipe_volume_m3,
+            ),
             notes=(
                 "套管内采用理想界面前缘追踪，未加入管内扩散。",
                 f"初始管内流体按 {initial_fluid} 处理。",
@@ -185,26 +194,114 @@ class CasingFlowSolver:
 
         scheduled_steps = self._scheduled_steps_for_result(result)
         pipe_volume_m3 = result.shoe_md_m * result.pipe_cross_section_m2
-        active_step = self._active_step_at(scheduled_steps, time_s)
-        flow_rate_m3_s = 0.0 if active_step is None else active_step.step.rate_m3_min / 60.0
-        stage_name = "施工结束后保持" if active_step is None else active_step.step.step_name
+        initial_fluid = self._initial_fluid_by_result_id.get(id(result), "初始管内流体")
+        state = self._pipe_exit_state_from_volume(
+            scheduled_steps=scheduled_steps,
+            time_s=time_s,
+            pipe_volume_m3=pipe_volume_m3,
+            initial_fluid=initial_fluid,
+        )
 
-        # 鞋口流出流体由“当前时间前，累计泵入体积超过管内容积的最近步骤”决定。
-        cumulative_at_time = self._cumulative_volume_at(scheduled_steps, time_s)
-        fluid_name = self._initial_fluid_by_result_id.get(id(result), "初始管内流体")
-        if cumulative_at_time >= pipe_volume_m3:
-            delayed_volume_m3 = cumulative_at_time - pipe_volume_m3
-            fluid_name = self._fluid_by_injected_volume(scheduled_steps, delayed_volume_m3)
-
-        if self.enable_gravity and flow_rate_m3_s < 1.0e-9:
+        if self.enable_gravity and state.flow_rate_m3_s < 1.0e-9:
+            cumulative_at_time = self._cumulative_volume_at(scheduled_steps, time_s)
             fluid_name = self._settled_exit_fluid_name(
                 result=result,
                 scheduled_steps=scheduled_steps,
                 time_s=time_s,
                 cumulative_at_time=cumulative_at_time,
                 pipe_volume_m3=pipe_volume_m3,
-                default_fluid_name=fluid_name,
+                default_fluid_name=state.phase_fractions[0][0],
             )
+            return PipeExitState(
+                time_s=time_s,
+                flow_rate_m3_s=state.flow_rate_m3_s,
+                stage_name=state.stage_name,
+                phase_fractions=((fluid_name, 1.0),),
+            )
+
+        return state
+
+    def _build_shoe_timeline(
+        self,
+        *,
+        well_spec: WellSpec,
+        fluids: tuple[FluidSpec, ...],
+        scheduled_steps: tuple[_ScheduledStep, ...],
+        initial_fluid: str,
+        legacy_pipe_volume_m3: float,
+    ) -> ShoeTimeline:
+        """按现有体积追踪数学生成鞋口出流事件时间轴。
+
+        时间轴只记录状态发生变化的关键时刻：施工步骤切换、流体前缘到达、
+        流体尾缘离开以及施工结束；不引入新的扩散或混合物理模型。
+        """
+
+        pipe_volume_m3 = self._timeline_pipe_volume(well_spec, legacy_pipe_volume_m3)
+        event_points: list[tuple[float, ShoeEventKind, tuple[tuple[str, float], ...] | None]] = []
+        for scheduled in scheduled_steps:
+            event_points.append((scheduled.start_time_s, self._event_kind_for_step(scheduled.step), None))
+            front_time_s = self._front_arrival_time(scheduled, scheduled_steps, pipe_volume_m3)
+            if front_time_s is not None:
+                if self.enable_gravity:
+                    front_time_s = self._gravity_corrected_arrival_time(front_time_s, scheduled.step.fluid_name, fluids)
+                event_points.append((front_time_s, ShoeEventKind.FRONT_ARRIVAL, ((scheduled.step.fluid_name, 1.0),)))
+            rear_time_s = self._rear_arrival_time(scheduled, scheduled_steps, pipe_volume_m3)
+            if rear_time_s is not None:
+                if self.enable_gravity:
+                    rear_time_s = self._gravity_corrected_arrival_time(rear_time_s, scheduled.step.fluid_name, fluids)
+                event_points.append((rear_time_s, ShoeEventKind.REAR_EXIT, None))
+        if scheduled_steps:
+            event_points.append((scheduled_steps[-1].end_time_s, ShoeEventKind.END, None))
+
+        events: list[ShoeEvent] = []
+        for time_s, kind, phase_override in sorted(event_points, key=lambda item: item[0]):
+            state = self._pipe_exit_state_from_volume(
+                scheduled_steps=scheduled_steps,
+                time_s=time_s,
+                pipe_volume_m3=pipe_volume_m3,
+                initial_fluid=initial_fluid,
+            )
+            events.append(
+                ShoeEvent(
+                    time_s=time_s,
+                    kind=kind,
+                    flow_rate_m3_s=state.flow_rate_m3_s,
+                    stage_name=state.stage_name,
+                    phase_fractions=phase_override if phase_override is not None else state.phase_fractions,
+                )
+            )
+        return ShoeTimeline(events=events)
+
+    @staticmethod
+    def _event_kind_for_step(step: PumpingScheduleStep) -> ShoeEventKind:
+        """把地面施工事件标签映射为鞋口时间轴事件类型。"""
+
+        if step.event_tag == PumpingStageEvent.SHUTDOWN:
+            return ShoeEventKind.SHUTDOWN
+        if step.event_tag == PumpingStageEvent.RESTART:
+            return ShoeEventKind.RESTART
+        return ShoeEventKind.RATE_SWITCH
+
+    @staticmethod
+    def _pipe_exit_state_from_volume(
+        *,
+        scheduled_steps: tuple[_ScheduledStep, ...],
+        time_s: float,
+        pipe_volume_m3: float,
+        initial_fluid: str,
+    ) -> PipeExitState:
+        """用体积迟到量查询鞋口出流状态，复用旧求解器的核心口径。"""
+
+        active_step = CasingFlowSolver._active_step_at(scheduled_steps, time_s)
+        flow_rate_m3_s = 0.0 if active_step is None else active_step.step.rate_m3_min / 60.0
+        stage_name = "施工结束后保持" if active_step is None else active_step.step.step_name
+
+        # 鞋口流出流体由"累计泵入体积 - 管内容积"定位到地面注入体积坐标。
+        cumulative_at_time = CasingFlowSolver._cumulative_volume_at(scheduled_steps, time_s)
+        fluid_name = initial_fluid
+        if cumulative_at_time >= pipe_volume_m3:
+            delayed_volume_m3 = cumulative_at_time - pipe_volume_m3
+            fluid_name = CasingFlowSolver._fluid_by_injected_volume(scheduled_steps, delayed_volume_m3)
 
         return PipeExitState(
             time_s=time_s,
@@ -212,6 +309,23 @@ class CasingFlowSolver:
             stage_name=stage_name,
             phase_fractions=((fluid_name, 1.0),),
         )
+
+    @staticmethod
+    def _timeline_pipe_volume(well_spec: WellSpec, legacy_pipe_volume_m3: float) -> float:
+        """计算时间轴使用的鞋口迟到体积，兼容双径向井上段内径。"""
+
+        if well_spec.shoe_lag_volume_m3 is not None:
+            return well_spec.shoe_lag_volume_m3
+        if not well_spec.is_dual_diameter:
+            return legacy_pipe_volume_m3
+        assert well_spec.upper_section_bottom_md_m is not None
+        assert well_spec.upper_liner_id_mm is not None
+        assert well_spec.liner_id_mm is not None
+        upper_area_m2 = math.pi * (well_spec.upper_liner_id_mm / 1000.0) ** 2 / 4.0
+        lower_area_m2 = math.pi * (well_spec.liner_id_mm / 1000.0) ** 2 / 4.0
+        upper_length_m = min(well_spec.upper_section_bottom_md_m, well_spec.shoe_md_m)
+        lower_length_m = max(well_spec.shoe_md_m - well_spec.upper_section_bottom_md_m, 0.0)
+        return upper_length_m * upper_area_m2 + lower_length_m * lower_area_m2
 
     @staticmethod
     def _pipe_cross_section_area(well_spec: WellSpec) -> float:
@@ -250,6 +364,8 @@ class CasingFlowSolver:
     def _initial_fluid_name(fluids: tuple[FluidSpec, ...], schedule: PumpingSchedule) -> str:
         """确定开泵前套管内默认流体名称。"""
 
+        if not schedule.steps:
+            raise ValueError("施工程序不能为空，至少需要一个注入步骤")
         mud = next((fluid for fluid in fluids if fluid.role == FluidRole.MUD), None)
         if mud is not None:
             return mud.name

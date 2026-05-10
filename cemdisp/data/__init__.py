@@ -12,9 +12,13 @@ cemdisp.data - 标准输入数据结构模块
 """
 
 from cemdisp.data.fluid_spec import FluidRole, FluidSpec, RheologyModel
-from cemdisp.data.fluid_provenance import (
+from cemdisp.data.provenance import (
     FluidProvenance,
+    SectionProvenance,
+    WellProvenance,
+    WELL_PROVENANCE,
     build_injected_fluid_provenance_summary,
+    build_multiwell_provenance_summary,
     format_injected_fluid_provenance_markdown,
 )
 from cemdisp.data.pumping_schedule import PumpingSchedule, PumpingScheduleStep
@@ -30,8 +34,12 @@ __all__ = [
     "PumpingSchedule",
     "PumpingScheduleStep",
     "RheologyModel",
+    "SectionProvenance",
     "ValidationData",
+    "WellProvenance",
     "WellSpec",
+    "WELL_PROVENANCE",
     "build_injected_fluid_provenance_summary",
+    "build_multiwell_provenance_summary",
     "format_injected_fluid_provenance_markdown",
 ]
