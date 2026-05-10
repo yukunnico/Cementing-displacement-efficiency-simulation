@@ -197,8 +197,8 @@
 
 本项目的结构、建模和开发路线，优先参考以下文档：
 
-1. `baogao/multiwell_primary_cementing_model_scheme.md`
-2. `baogao/multiwell_primary_cementing_development_task_list.md`
+1. `docs/multiwell_primary_cementing_model_scheme.md`
+2. `docs/multiwell_primary_cementing_development_task_list.md`
 3. `README.md`
 
 新增实现如果与上述文档不一致，应优先更新文档或在实现说明中解释偏差原因。

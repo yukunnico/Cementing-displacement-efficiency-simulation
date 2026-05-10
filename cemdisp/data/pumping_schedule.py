@@ -25,6 +25,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from enum import Enum
 from typing import Optional, Tuple
 import math
 
@@ -41,6 +42,28 @@ def _require_finite_positive(name: str, value: float) -> None:
         raise ValueError(f"{name}必须为大于0的有限数值")
 
 
+class PumpingStageEvent(Enum):
+    """
+    地面泵注作业阶段事件枚举。
+
+    用于标识 PumpingScheduleStep.event_tag，以区分不同的施工作业阶段：
+    - INJECT_CEMENT: 注入水泥浆（领浆/尾管浆）
+    - INJECT_SPACER: 注入前置液/隔离液
+    - INJECT_DISPLACEMENT: 注入顶替液（如盐水、泥浆）
+    - PLUG_RELEASE: 释放胶塞
+    - SHUTDOWN: 停泵
+    - RESTART: 重新启动泵
+    - RATE_SWITCH: 排量切换
+    """
+    INJECT_CEMENT = "INJECT_CEMENT"
+    INJECT_SPACER = "INJECT_SPACER"
+    INJECT_DISPLACEMENT = "INJECT_DISPLACEMENT"
+    PLUG_RELEASE = "PLUG_RELEASE"
+    SHUTDOWN = "SHUTDOWN"
+    RESTART = "RESTART"
+    RATE_SWITCH = "RATE_SWITCH"
+
+
 @dataclass(frozen=True)
 class PumpingScheduleStep:
     """地面施工程序中的单个注入步骤。"""
@@ -52,6 +75,8 @@ class PumpingScheduleStep:
     start_time_s: Optional[float] = None
     end_time_s: Optional[float] = None
     remarks: str = ""
+    # event_tag: 可选的作业阶段标签，用于标识步骤所属的泵注阶段
+    event_tag: Optional[PumpingStageEvent] = None
 
     def __post_init__(self) -> None:
         if not self.step_name.strip():
@@ -69,6 +94,8 @@ class PumpingScheduleStep:
                 raise ValueError("end_time_s 必须大于 start_time_s")
         if self.volume_m3 > 0.0 and self.rate_m3_min <= 0.0:
             raise ValueError("存在实际注入体积时，rate_m3_min 必须大于0")
+        if self.event_tag is not None and not isinstance(self.event_tag, PumpingStageEvent):
+            raise ValueError("event_tag 必须为 PumpingStageEvent 枚举值或 None")
 
 
 @dataclass(frozen=True)
@@ -95,3 +122,16 @@ class PumpingSchedule:
     @property
     def total_volume_m3(self) -> float:
         return sum(step.volume_m3 for step in self.steps)
+
+    @property
+    def total_injected_volume_m3(self) -> float:
+        """返回所有施工步骤的注入体积之和。"""
+        return sum(step.volume_m3 for step in self.steps)
+
+    @property
+    def cement_phase_steps(self) -> Tuple[PumpingScheduleStep, ...]:
+        """返回所有 INJECT_CEMENT 阶段的步骤元组。"""
+        return tuple(
+            step for step in self.steps
+            if step.event_tag == PumpingStageEvent.INJECT_CEMENT
+        )

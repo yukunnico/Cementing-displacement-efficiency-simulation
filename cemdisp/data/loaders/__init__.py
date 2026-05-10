@@ -38,26 +38,32 @@ from cemdisp.models2d.boundary_bridge import AnnulusInletState
 
 from cemdisp.data.loaders.hu101_loader import (
     build_hu101_annulus_inlet_provider,
+    export_hu101_sync_card_markdown,
     load_hu101_tailpipe,
 )
 from cemdisp.data.loaders.hu102_loader import (
     build_hu102_annulus_inlet_provider,
+    export_hu102_sync_card_markdown,
     load_hu102_tailpipe,
 )
 from cemdisp.data.loaders.hu103_loader import (
     build_hu103_annulus_inlet_provider,
+    export_hu103_sync_card_markdown,
     load_hu103_tailpipe,
 )
 from cemdisp.data.loaders.hu1_loader import (
     build_hu1_annulus_inlet_provider,
+    export_hu1_sync_card_markdown,
     load_hu1_tailpipe,
 )
 from cemdisp.data.loaders.hu2_loader import (
     build_hu2_annulus_inlet_provider,
+    export_hu2_sync_card_markdown,
     load_hu2_tailpipe,
 )
 from cemdisp.data.loaders.ht1_001_loader import (
     build_ht1_001_annulus_inlet_provider,
+    export_ht1_001_sync_card_markdown,
     load_ht1_001_tailpipe,
 )
 
@@ -107,6 +113,12 @@ __all__ = [
     "build_hu1_annulus_inlet_provider",
     "build_hu2_annulus_inlet_provider",
     "build_ht1_001_annulus_inlet_provider",
+    "export_hu101_sync_card_markdown",
+    "export_hu102_sync_card_markdown",
+    "export_hu103_sync_card_markdown",
+    "export_hu1_sync_card_markdown",
+    "export_hu2_sync_card_markdown",
+    "export_ht1_001_sync_card_markdown",
     "load_hu101_tailpipe",
     "load_hu102_tailpipe",
     "load_hu103_tailpipe",

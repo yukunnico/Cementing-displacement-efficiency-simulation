@@ -24,6 +24,7 @@
 from cemdisp.transport1d.casing_flow import CasingFlowResult, CasingFlowSolver
 from cemdisp.transport1d.interface_tracking import InterfaceFront, InterfaceTracker
 from cemdisp.transport1d.pipe_exit_state import PipeExitState
+from cemdisp.transport1d.shoe_timeline import ShoeEvent, ShoeEventKind, ShoeTimeline
 
 __all__ = [
     "CasingFlowResult",
@@ -31,4 +32,7 @@ __all__ = [
     "InterfaceFront",
     "InterfaceTracker",
     "PipeExitState",
+    "ShoeEvent",
+    "ShoeEventKind",
+    "ShoeTimeline",
 ]

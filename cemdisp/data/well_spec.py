@@ -36,6 +36,25 @@ def _require_positive(name: str, value: float) -> None:
         raise ValueError(f"{name}必须大于0")
 
 
+def _check_dual_diameter_fields(spec: "WellSpec") -> None:
+    """校验双径向井上段字段是否满足全有或全无约束。"""
+    any_present = (
+        spec.upper_section_bottom_md_m is not None
+        or spec.upper_liner_od_mm is not None
+        or spec.upper_liner_id_mm is not None
+    )
+    all_present = (
+        spec.upper_section_bottom_md_m is not None
+        and spec.upper_liner_od_mm is not None
+        and spec.upper_liner_id_mm is not None
+    )
+    if any_present and not all_present:
+        raise ValueError(
+            "upper_section_bottom_md_m、upper_liner_od_mm、upper_liner_id_mm "
+            "须全部提供或全部省略（全有或全无约束）"
+        )
+
+
 @dataclass(frozen=True)
 class DepthValuePoint:
     """测深-数值剖面点。"""
@@ -68,7 +87,15 @@ class EvaluationWindow:
 
 @dataclass(frozen=True)
 class WellSpec:
-    """单口井的标准输入规格。"""
+    """单口井的标准输入规格。
+
+    支持双径向井（dual-diameter）可选字段，用于描述上段套管/衬管参数。
+    上段字段（upper_section_bottom_md_m、upper_liner_od_mm、upper_liner_id_mm）
+    须同时提供或同时省略，违反此约束将触发 ValueError。
+
+    属性：
+        is_dual_diameter: 上段字段全部提供时返回 True，否则返回 False
+    """
 
     well_name: str
     top_md_m: float
@@ -78,12 +105,30 @@ class WellSpec:
     casing_id_mm: Optional[float] = None
     liner_od_mm: Optional[float] = None
     liner_id_mm: Optional[float] = None
+    # --- 剖面数据 ---
     hole_diameter_profile: Tuple[DepthValuePoint, ...] = field(default_factory=tuple)
     inclination_profile: Tuple[DepthValuePoint, ...] = field(default_factory=tuple)
     standoff_profile: Tuple[DepthValuePoint, ...] = field(default_factory=tuple)
     evaluation_windows: Tuple[EvaluationWindow, ...] = field(default_factory=tuple)
     reference_root: Optional[Path] = None
     notes: Tuple[str, ...] = field(default_factory=tuple)
+    # --- 双径向井上段标识字段（全有或全无） ---
+    upper_section_bottom_md_m: Optional[float] = None  # 上段底部深度（测深）
+    upper_liner_od_mm: Optional[float] = None         # 上段衬管外径
+    upper_liner_id_mm: Optional[float] = None         # 上段衬管内径
+    # --- 鞋口延迟体积 ---
+    shoe_lag_volume_m3: Optional[float] = None        # 鞋口处迟到体积（m³）
+    # --- 衬管壁厚 ---
+    liner_wall_thickness_mm: Optional[float] = None   # 衬管壁厚（mm）
+
+    @property
+    def is_dual_diameter(self) -> bool:
+        """上段字段（upper_section_bottom_md_m / upper_liner_od_mm / upper_liner_id_mm）全部提供时返回 True。"""
+        return (
+            self.upper_section_bottom_md_m is not None
+            and self.upper_liner_od_mm is not None
+            and self.upper_liner_id_mm is not None
+        )
 
     def __post_init__(self) -> None:
         if not self.well_name.strip():
@@ -111,3 +156,23 @@ class WellSpec:
         for window in self.evaluation_windows:
             if window.top_md_m < self.top_md_m or window.bottom_md_m > self.bottom_md_m:
                 raise ValueError(f"评价窗口 {window.name} 超出井段范围")
+        # --- 双径向井上段字段：全有或全无约束 ---
+        _check_dual_diameter_fields(self)
+        # --- 上段底部深度须位于井段范围内 ---
+        if self.upper_section_bottom_md_m is not None:
+            _require_positive("upper_section_bottom_md_m", self.upper_section_bottom_md_m)
+            if not (self.top_md_m < self.upper_section_bottom_md_m < self.bottom_md_m):
+                raise ValueError("upper_section_bottom_md_m 必须在井段范围内")
+        # --- 上段衬管尺寸须为正数 ---
+        for name, value in (
+            ("upper_liner_od_mm", self.upper_liner_od_mm),
+            ("upper_liner_id_mm", self.upper_liner_id_mm),
+        ):
+            if value is not None:
+                _require_positive(name, value)
+        # --- shoe_lag_volume_m3 须为正有限值 ---
+        if self.shoe_lag_volume_m3 is not None:
+            _require_positive("shoe_lag_volume_m3", self.shoe_lag_volume_m3)
+        # --- liner_wall_thickness_mm 须为正数 ---
+        if self.liner_wall_thickness_mm is not None:
+            _require_positive("liner_wall_thickness_mm", self.liner_wall_thickness_mm)

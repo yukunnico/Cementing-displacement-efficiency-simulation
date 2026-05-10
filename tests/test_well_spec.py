@@ -1,0 +1,348 @@
+"""
+WellSpec 扩展功能测试
+
+测试新增功能：
+- 双径向井（dual-diameter）标识字段：upper_section_bottom_md_m、upper_liner_od_mm、upper_liner_id_mm
+- 衬管壁厚字段：liner_wall_thickness_mm
+- 鞋口延迟体积（shoe-lag）字段：shoe_lag_volume_m3
+- WellSpec.is_dual_diameter 属性
+- 全有或全无（all-present / all-absent）校验逻辑
+
+验证点：
+1. 全部上段字段缺失时 is_dual_diameter == False
+2. 全部上段字段完整时 is_dual_diameter == True
+3. 上段字段部分提供时触发 ValueError
+4. shoe_lag_volume_m3 为正有限值
+5. liner_wall_thickness_mm 为正有限值（当提供时）
+6. 向后兼容：不含新字段的现有实例仍可正常构造
+"""
+
+import unittest
+from pathlib import Path
+from cemdisp.data.well_spec import WellSpec, DepthValuePoint, EvaluationWindow
+
+
+class TestWellSpecDualDiameterFields(unittest.TestCase):
+    """测试双径向井可选字段的添加与 is_dual_diameter 逻辑。"""
+
+    def test_dual_diameter_false_when_no_upper_fields(self):
+        """
+        上段字段全部缺失时 is_dual_diameter 为 False。
+        """
+        spec = WellSpec(
+            well_name="呼101",
+            top_md_m=0.1,
+            bottom_md_m=3000.0,
+            shoe_md_m=3000.0,
+        )
+        self.assertFalse(spec.is_dual_diameter)
+
+    def test_dual_diameter_true_when_all_upper_fields_present(self):
+        """
+        上段字段全部提供时 is_dual_diameter 为 True。
+        """
+        spec = WellSpec(
+            well_name="呼101",
+            top_md_m=0.1,
+            bottom_md_m=3000.0,
+            shoe_md_m=3000.0,
+            upper_section_bottom_md_m=1500.0,
+            upper_liner_od_mm=244.5,
+            upper_liner_id_mm=224.5,
+        )
+        self.assertTrue(spec.is_dual_diameter)
+
+    def test_dual_diameter_raises_when_upper_fields_partial(self):
+        """
+        上段字段只提供部分时触发 ValueError（全有或全无约束）。
+        """
+        cases = [
+            # 只提供 upper_section_bottom_md_m
+            {
+                "upper_section_bottom_md_m": 1500.0,
+            },
+# 只提供 upper_liner_od_mm
+            {
+                "upper_liner_od_mm": 244.5,
+            },
+            # 只提供 upper_liner_id_mm
+            {
+                "upper_liner_id_mm": 224.5,
+            },
+            # 只提供 upper_section_bottom_md_m 和 upper_liner_od_mm（缺少 upper_liner_id_mm）
+            {
+                "upper_section_bottom_md_m": 1500.0,
+                "upper_liner_od_mm": 244.5,
+            },
+            # upper_section_bottom_md_m + upper_liner_id_mm（缺少 upper_liner_od_mm）
+            {
+                "upper_section_bottom_md_m": 1500.0,
+                "upper_liner_id_mm": 224.5,
+            },
+            # upper_liner_od_mm + upper_liner_id_mm（缺少 upper_section_bottom_md_m）
+            {
+                "upper_liner_od_mm": 244.5,
+                "upper_liner_id_mm": 224.5,
+            },
+        ]
+        for kwargs in cases:
+            with self.subTest(kwargs=kwargs):
+                with self.assertRaises(ValueError) as ctx:
+                    WellSpec(
+                        well_name="呼101",
+                        top_md_m=0.1,
+                        bottom_md_m=3000.0,
+                        shoe_md_m=3000.0,
+                        **kwargs,
+                    )
+                self.assertIn("全有或全无", str(ctx.exception))
+
+    def test_upper_section_bottom_md_m_must_be_positive(self):
+        """
+        upper_section_bottom_md_m 必须为正数。
+        """
+        with self.assertRaises(ValueError):
+            WellSpec(
+                well_name="呼101",
+                top_md_m=0.1,
+                bottom_md_m=3000.0,
+                shoe_md_m=3000.0,
+                upper_section_bottom_md_m=-100.0,
+                upper_liner_od_mm=244.5,
+                upper_liner_id_mm=224.5,
+            )
+
+    def test_upper_section_bottom_md_m_must_be_within_section(self):
+        """
+        upper_section_bottom_md_m 必须在井段范围内。
+        """
+        with self.assertRaises(ValueError):
+            WellSpec(
+                well_name="呼101",
+                top_md_m=0.1,
+                bottom_md_m=3000.0,
+                shoe_md_m=3000.0,
+                upper_section_bottom_md_m=4000.0,  # > bottom_md_m
+                upper_liner_od_mm=244.5,
+                upper_liner_id_mm=224.5,
+            )
+
+    def test_upper_liner_od_mm_must_be_positive(self):
+        """
+        upper_liner_od_mm 必须为正数。
+        """
+        with self.assertRaises(ValueError):
+            WellSpec(
+                well_name="呼101",
+                top_md_m=0.1,
+                bottom_md_m=3000.0,
+                shoe_md_m=3000.0,
+                upper_section_bottom_md_m=1500.0,
+                upper_liner_od_mm=-1.0,
+                upper_liner_id_mm=224.5,
+            )
+
+    def test_upper_liner_id_mm_must_be_positive(self):
+        """
+        upper_liner_id_mm 必须为正数。
+        """
+        with self.assertRaises(ValueError):
+            WellSpec(
+                well_name="呼101",
+                top_md_m=0.1,
+                bottom_md_m=3000.0,
+                shoe_md_m=3000.0,
+                upper_section_bottom_md_m=1500.0,
+                upper_liner_od_mm=244.5,
+                upper_liner_id_mm=-1.0,
+            )
+
+
+class TestWellSpecShoeLagVolume(unittest.TestCase):
+    """测试 shoe_lag_volume_m3 字段的校验。"""
+
+    def test_shoe_lag_volume_optional(self):
+        """
+        shoe_lag_volume_m3 未提供时为 None（向后兼容）。
+        """
+        spec = WellSpec(
+            well_name="呼101",
+            top_md_m=0.1,
+            bottom_md_m=3000.0,
+            shoe_md_m=3000.0,
+        )
+        self.assertIsNone(spec.shoe_lag_volume_m3)
+
+    def test_shoe_lag_volume_must_be_positive(self):
+        """
+        shoe_lag_volume_m3 提供时必须大于零。
+        """
+        with self.assertRaises(ValueError):
+            WellSpec(
+                well_name="呼101",
+                top_md_m=0.1,
+                bottom_md_m=3000.0,
+                shoe_md_m=3000.0,
+                shoe_lag_volume_m3=0.0,
+            )
+        with self.assertRaises(ValueError):
+            WellSpec(
+                well_name="呼101",
+                top_md_m=0.1,
+                bottom_md_m=3000.0,
+                shoe_md_m=3000.0,
+                shoe_lag_volume_m3=-5.0,
+            )
+
+    def test_shoe_lag_volume_must_be_finite(self):
+        """
+        shoe_lag_volume_m3 提供时必须为有限值。
+        """
+        with self.assertRaises(ValueError):
+            WellSpec(
+                well_name="呼101",
+                top_md_m=0.1,
+                bottom_md_m=3000.0,
+                shoe_md_m=3000.0,
+                shoe_lag_volume_m3=float("inf"),
+            )
+
+
+class TestWellSpecLinerWallThickness(unittest.TestCase):
+    """测试 liner_wall_thickness_mm 字段的校验。"""
+
+    def test_liner_wall_thickness_optional(self):
+        """
+        liner_wall_thickness_mm 未提供时为 None。
+        """
+        spec = WellSpec(
+            well_name="呼101",
+            top_md_m=0.1,
+            bottom_md_m=3000.0,
+            shoe_md_m=3000.0,
+        )
+        self.assertIsNone(spec.liner_wall_thickness_mm)
+
+    def test_liner_wall_thickness_must_be_positive(self):
+        """
+        liner_wall_thickness_mm 提供时必须大于零。
+        """
+        with self.assertRaises(ValueError):
+            WellSpec(
+                well_name="呼101",
+                top_md_m=0.1,
+                bottom_md_m=3000.0,
+                shoe_md_m=3000.0,
+                liner_wall_thickness_mm=0.0,
+            )
+        with self.assertRaises(ValueError):
+            WellSpec(
+                well_name="呼101",
+                top_md_m=0.1,
+                bottom_md_m=3000.0,
+                shoe_md_m=3000.0,
+                liner_wall_thickness_mm=-2.0,
+            )
+
+
+class TestWellSpecPositionalBackwardCompatibility(unittest.TestCase):
+    """验证旧代码使用位置参数构造 WellSpec 时，剖面/窗口/reference_root/notes 仍正确落地。"""
+
+    def test_positional_profile_and_windows_land_correctly(self):
+        """
+        通过位置参数传入 hole_diameter_profile、evaluation_windows，
+        验证它们仍落入正确的现有字段，而非被新字段吸收。
+        """
+        pt = DepthValuePoint(depth_md_m=500.0, value=215.0)
+        win = EvaluationWindow(name="目的层", top_md_m=800.0, bottom_md_m=1200.0)
+        spec = WellSpec(
+            "呼102",          # well_name (pos 0)
+            0.1,              # top_md_m (pos 1)
+            2500.0,           # bottom_md_m (pos 2)
+            2500.0,           # shoe_md_m (pos 3)
+            None,             # hanger_md_m (kwarg, optional)
+            None,             # casing_id_mm (kwarg, optional)
+            None,             # liner_od_mm (kwarg, optional)
+            None,             # liner_id_mm (kwarg, optional)
+            (pt,),            # hole_diameter_profile (pos 8, old tail start)
+            (),               # inclination_profile (pos 9)
+            (),               # standoff_profile (pos 10)
+            (win,),           # evaluation_windows (pos 11)
+        )
+        self.assertEqual(len(spec.hole_diameter_profile), 1)
+        self.assertEqual(spec.hole_diameter_profile[0].depth_md_m, 500.0)
+        self.assertEqual(len(spec.evaluation_windows), 1)
+        self.assertEqual(spec.evaluation_windows[0].name, "目的层")
+
+    def test_positional_notes_land_correctly(self):
+        """
+        通过位置参数传入 notes，验证仍落入正确的现有字段。
+        """
+        spec = WellSpec(
+            "呼102",
+            0.1,
+            2500.0,
+            2500.0,
+            None, None, None, None,
+            (), (), (),
+            (),           # evaluation_windows (pos 11)
+            None,         # reference_root (pos 12)
+            ("备注1", "备注2"),  # notes (pos 13)
+        )
+        self.assertEqual(spec.notes, ("备注1", "备注2"))
+
+    def test_positional_reference_root_land_correctly(self):
+        """
+        通过位置参数传入 reference_root（Path），验证仍落入正确的现有字段。
+        """
+        ref = Path("C:/Users/30525/Documents")
+        spec = WellSpec(
+            "呼102",
+            0.1,
+            2500.0,
+            2500.0,
+            None, None, None, None,
+            (), (), (),
+            (),           # evaluation_windows
+            ref,          # reference_root (pos 12)
+            ("note",),    # notes (pos 13)
+        )
+        self.assertEqual(spec.reference_root, ref)
+
+    def test_minimal_spec_still_works(self):
+        """
+        只含必选字段的实例仍可正常构造。
+        """
+        spec = WellSpec(
+            well_name="呼102",
+            top_md_m=0.1,
+            bottom_md_m=2500.0,
+            shoe_md_m=2500.0,
+        )
+        self.assertEqual(spec.well_name, "呼102")
+        self.assertFalse(spec.is_dual_diameter)
+        self.assertIsNone(spec.shoe_lag_volume_m3)
+        self.assertIsNone(spec.liner_wall_thickness_mm)
+
+    def test_existing_optional_fields_still_work(self):
+        """
+        原有可选字段（hanger_md_m、casing_id_mm、liner_od_mm、liner_id_mm）仍可用。
+        """
+        spec = WellSpec(
+            well_name="呼102",
+            top_md_m=0.1,
+            bottom_md_m=2500.0,
+            shoe_md_m=2500.0,
+            hanger_md_m=100.0,
+            casing_id_mm=250.0,
+            liner_od_mm=244.5,
+            liner_id_mm=224.5,
+        )
+        self.assertEqual(spec.hanger_md_m, 100.0)
+        self.assertEqual(spec.casing_id_mm, 250.0)
+        self.assertEqual(spec.liner_od_mm, 244.5)
+        self.assertEqual(spec.liner_id_mm, 224.5)
+
+
+if __name__ == "__main__":
+    unittest.main()

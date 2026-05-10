@@ -33,10 +33,13 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from typing import overload
 
 from cemdisp.data.fluid_spec import FluidRole, FluidSpec
+from cemdisp.data.provenance import WellProvenance
 from cemdisp.transport1d.casing_flow import CasingFlowResult, CasingFlowSolver
 from cemdisp.transport1d.pipe_exit_state import PipeExitState
+from cemdisp.transport1d.shoe_timeline import ShoeEventKind, ShoeTimeline
 
 
 @dataclass(frozen=True)
@@ -64,34 +67,95 @@ def pipe_exit_to_annulus_inlet(pipe_exit_state: PipeExitState) -> AnnulusInletSt
     )
 
 
+def _phase_fractions_for_fluid(
+    fluid_name: str,
+    fluids: tuple[FluidSpec, ...],
+    *,
+    split_cement_phases: bool = False,
+) -> tuple[tuple[str, float], ...]:
+    """根据流体角色映射为环空二维模型入口相分数。
+
+    默认保持历史三相口径：领浆/中间浆/尾浆统一归为 cement。
+    当 split_cement_phases=True 时，把领浆与中间浆并入 lead，相当于"前导水泥相"；
+    尾浆单独进入 tail，相容于现有 2D 层的 lead/tail 两段水泥跟踪能力。
+    """
+
+    role_by_name: dict[str, FluidRole] = {fluid.name: fluid.role for fluid in fluids}
+    role = role_by_name.get(fluid_name, FluidRole.MUD)
+    if split_cement_phases and role in {FluidRole.LEAD, FluidRole.INTERMEDIATE}:
+        return (("lead", 1.0),)
+    if split_cement_phases and role == FluidRole.TAIL:
+        return (("tail", 1.0),)
+    if role in {FluidRole.LEAD, FluidRole.INTERMEDIATE, FluidRole.TAIL}:
+        return (("cement", 1.0),)
+    if role in {FluidRole.WASH, FluidRole.SPACER}:
+        return (("spacer", 1.0),)
+    return (("mud", 1.0),)
+
+
+@overload
+def build_coupled_annulus_inlet_provider(
+    shoe_timeline: ShoeTimeline,
+    provenance: WellProvenance,
+    fluids: tuple[FluidSpec, ...],
+    *,
+    split_cement_phases: bool = False,
+) -> Callable[[float], AnnulusInletState]: ...
+
+
+@overload
 def build_coupled_annulus_inlet_provider(
     casing_result: CasingFlowResult,
     casing_solver: CasingFlowSolver,
     fluids: tuple[FluidSpec, ...],
     *,
     split_cement_phases: bool = False,
-) -> Callable[[float], AnnulusInletState]:
+) -> Callable[[float], AnnulusInletState]: ...
+
+
+def build_coupled_annulus_inlet_provider(
+    arg1,
+    arg2,
+    fluids,
+    *,
+    split_cement_phases: bool = False,
+):
     """构建1D-2D耦合的环空入口边界提供器。
 
-    该桥接函数只负责把套管鞋口出流状态转换为环空入口边界，
-    不改变环空二维求解器接口，从而保持 1D 层可插拔。
+    支持两种调用方式：
+    1. 新方式：build_coupled_annulus_inlet_provider(timeline, provenance, fluids)
+    2. 旧方式：build_coupled_annulus_inlet_provider(casing_result, casing_solver, fluids)
 
-    注意：这里采用“鞋口实际出流”作为环空入口边界。水泥从地面进入套管
-    到到达鞋口之间存在管内容积延迟，因此延迟期间环空入口仍为初始钻井液；
-    水泥前缘到达鞋口后才映射为 cement 相。若需要让水泥在环空内有足够
-    顶替时间，应延长环空二维求解器 total_t（例如 12000 s），而不是修改
-    本桥接逻辑或相分数映射。
+    该桥接函数把套管鞋口出流状态转换为环空入口边界，
+    不改变环空二维求解器接口，从而保持 1D 层可插拔。
     """
 
+    if isinstance(arg1, ShoeTimeline):
+        shoe_timeline = arg1
+        provenance = arg2
+
+        def _provider(time_s: float) -> AnnulusInletState:
+            pipe_exit_state = shoe_timeline.at(time_s)
+            fluid_name = pipe_exit_state.phase_fractions[0][0] if pipe_exit_state.phase_fractions else ""
+            mapped_fractions = _phase_fractions_for_fluid(
+                fluid_name, fluids, split_cement_phases=split_cement_phases
+            )
+            return AnnulusInletState(
+                time_s=pipe_exit_state.time_s,
+                flow_rate_m3_s=pipe_exit_state.flow_rate_m3_s,
+                stage_name=pipe_exit_state.stage_name,
+                phase_fractions=mapped_fractions,
+            )
+
+        return _provider
+
+    # 旧方式：arg1=casing_result, arg2=casing_solver
+    casing_result = arg1
+    casing_solver = arg2
     role_by_name: dict[str, FluidRole] = {fluid.name: fluid.role for fluid in fluids}
 
-    def _phase_fractions_for_fluid(fluid_name: str) -> tuple[tuple[str, float], ...]:
-        """根据流体角色映射为环空二维模型入口相分数。"""
-
+    def _legacy_phase_fractions_for_fluid(fluid_name: str) -> tuple[tuple[str, float], ...]:
         role = role_by_name.get(fluid_name, FluidRole.MUD)
-        # 默认保持历史三相口径：领浆/中间浆/尾浆统一归为 cement。
-        # 当 split_cement_phases=True 时，把领浆与中间浆并入 lead，相当于“前导水泥相”；
-        # 尾浆单独进入 tail，相容于现有 2D 层的 lead/tail 两段水泥跟踪能力。
         if split_cement_phases and role in {FluidRole.LEAD, FluidRole.INTERMEDIATE}:
             return (("lead", 1.0),)
         if split_cement_phases and role == FluidRole.TAIL:
@@ -102,16 +166,42 @@ def build_coupled_annulus_inlet_provider(
             return (("spacer", 1.0),)
         return (("mud", 1.0),)
 
-    def _provider(time_s: float) -> AnnulusInletState:
-        # 先查询套管内 1D 鞋口出流，再把流体名称映射为环空三相分数。
+    def _legacy_provider(time_s: float) -> AnnulusInletState:
         pipe_exit_state = casing_solver.pipe_exit_state_at(casing_result, time_s)
         fluid_name = pipe_exit_state.phase_fractions[0][0] if pipe_exit_state.phase_fractions else ""
         mapped_pipe_exit = PipeExitState(
             time_s=pipe_exit_state.time_s,
             flow_rate_m3_s=pipe_exit_state.flow_rate_m3_s,
             stage_name=pipe_exit_state.stage_name,
-            phase_fractions=_phase_fractions_for_fluid(fluid_name),
+            phase_fractions=_legacy_phase_fractions_for_fluid(fluid_name),
         )
         return pipe_exit_to_annulus_inlet(mapped_pipe_exit)
 
-    return _provider
+    return _legacy_provider
+
+
+def build_sync_card(
+    well_name: str,
+    shoe_timeline: ShoeTimeline,
+    provenance: WellProvenance,
+) -> dict[str, object]:
+    """构造单井同步画像卡。
+
+    汇总鞋口时间轴事件统计与 provenance 中的代理提醒，
+    用于快速判断本井边界同步的主要不确定性来源。
+    """
+
+    events = shoe_timeline.events
+    sync_note = ""
+    if provenance.sync.status != "field":
+        sync_note = provenance.sync.note
+
+    return {
+        "井名": well_name,
+        "鞋口同步口径": {
+            "事件数": len(events),
+            "首事件时间_s": events[0].time_s if events else None,
+            "末事件时间_s": events[-1].time_s if events else None,
+        },
+        "代理提醒": sync_note,
+    }
