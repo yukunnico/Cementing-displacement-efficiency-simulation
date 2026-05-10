@@ -1,0 +1,22 @@
+字段名,字段值,单位,适用井段/套管段,来源文件,页码/图号,证据等级,备注
+well_name,呼102,,尾管段,,,-,A,井号
+top_md_m,6823.10,m,6823.10-7735.00m尾管段,100413.PDF,-,A,尾管悬挂器位置/模拟顶界
+bottom_md_m,7735.00,m,6823.10-7735.00m尾管段,100413.PDF,-,A,尾管鞋深度/模拟底界
+shoe_md_m,7735.00,m,6823.10-7735.00m尾管段,100413.PDF,-,A,套管鞋深度
+casing_od_mm,,mm,,-,-,-,,-,双层套管外径，待从原始资料补
+casing_id_mm,219.10,mm,6840-7119.8m双层套管等效段,100413.PDF;主模型,-,A,双层套管等效内径
+liner_od_mm,139.70,mm,6823.10-7735.00m尾管段,20215.xlsx套管组合,-,A,尾管外径
+liner_id_mm,108.10,mm,6823.10-7735.00m尾管段,壁厚15.8mm推导,-,A,可由139.70mm-2×15.8mm推得
+hole_diameter_mm,,mm,,-,-,-,,-,井径剖面需从20215.xlsx Sheet4提取
+hanger_depth_m,6823.10,m,6823.10-7735.00m尾管段,100413.PDF,-,A,悬挂器位置
+packer_depth_m,,m,,-,-,-,,-,分级箍位置，待补
+evaluation_window_top_m,6840.00,m,6840-7665m CBL评价井段,100413.PDF;-,-,A,CBL评价窗口顶部
+evaluation_window_bottom_m,7665.00,m,6840-7665m CBL评价井段,100413.PDF,-,A,CBL评价窗口底部
+cementing_method,尾管单级,,尾管段,,,-,A,固井方式
+hole_diameter_profile,7120-7735m实测,,,20215.xlsx Sheet4派生CSV,-,A,7120-7735m井径实测；6823.10-7119.80m双层套管段等效处理
+inclination_profile,7120-7735m实测,,,20215.xlsx Sheet4派生CSV,-,A,7120-7735m井斜实测；上部段假设4.82°
+standoff_profile,代理估算,,,主模型扶正器假设,-,B,基于邻井呼探1-002扶正器数据估算
+target_window_1_top_m,7405.00,m,7405-7480m目标层段一,100413.PDF;-,-,A,目标油气层段
+target_window_1_bottom_m,7480.00,m,7405-7480m目标层段一,100413.PDF;-,-,A,-
+target_window_2_top_m,7502.00,m,7502-7540m目标层段二,100413.PDF;-,-,A,目标油气层段
+target_window_2_bottom_m,7540.00,m,7502-7540m目标层段二,100413.PDF;-,-,A,-

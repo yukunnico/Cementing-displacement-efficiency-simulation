@@ -1,0 +1,34 @@
+字段名,字段值,单位,适用井段/套管段,来源文件,页码/图号,证据等级,备注
+well_name,呼101,-,整体,-,-,A,井号
+top_md_m,5400.0,m,整体,呼101井固井设计.pdf/技术总结,-,A,固井井段顶部
+bottom_md_m,7868.0,m,整体,呼101井固井设计.pdf/技术总结,-,A,实际完钻井深
+shoe_md_m,7868.0,m,尾管鞋位,技术总结 Page 1 尾管结构表,-,A,鞋深（测深）
+hanger_md_m,5407.46,m,悬挂器位置,技术总结 Page 1,-,A,悬挂器测深
+casing_od_mm,273.05,mm,悬挂器上,技术总结 Page 1,-,A,悬挂器本体外径
+casing_id_mm,273.10,mm,悬挂器上,hu101_loader.py,-,A/B,技术套管内径
+liner_od_mm,139.70,mm,下段尾管,技术总结/尾管设计,-,A,下段尾管外径
+liner_id_mm,等效值,m,m,hu101_loader.py,-,B,52m³鞋口滞后反推的等效内径
+liner_wall_thickness_mm,15.8,mm,下段尾管,技术总结 Page 1,-,A,139.7mm尾管壁厚
+upper_section_bottom_md_m,6796.329,m,双径变径点,技术总结 Page 1 尾管结构表,-,A,变径变扣位置
+upper_liner_od_mm,168.30,mm,上段尾管,技术总结/尾管设计,-,A,上段尾管外径
+upper_liner_id_mm,142.30,mm,上段尾管,技术总结（由壁厚13mm推算）,-,B,上段尾管内径，上段壁厚13mm
+shoe_lag_volume_m3,52.0,m³,鞋口,hu101_loader.py/技术总结 Page 4,-,A,特殊参数，平衡液设计值
+hole_diameter_mm（上部）,260.35,mm,5400-6796m,尾管设计,-,A,上段井眼直径
+hole_diameter_mm（下部）,215.90,mm,6796-7868m,尾管设计,-,A,下段井眼直径
+packer_depth_m,-,m,-,-,-,C,分级箍位置，呼101为单级固井，无分级箍
+evaluation_window_top_m,5700.0,m,CBL评价井段,hu101_loader.py,-,A/B,来自legacy模型
+evaluation_window_bottom_m,7810.0,m,CBL评价井段,hu101_loader.py,-,A/B,来自legacy模型
+cementing_method,单级固井,-,整体,-,-,A,控压尾管固井工艺
+max_inclination_deg,8.19,deg,7440m,尾管设计,-,A,最大井斜
+inclination_top_md_m,5400.0,m,井斜起始,hu101_loader.py,-,A/B,井斜剖面
+inclination_bottom_md_m,7868.0,m,井斜末端,hu101_loader.py,-,A/B,井斜剖面
+centralizer_count,132,只,整体,技术总结 Page 2,-,A,整体式套管扶正器总数
+hanger_single_side_clearance,6.69,mm,悬挂器,尾管设计,-,A,偏心/卡阻风险修正量
+sensitive_depth_gas_m,7492.0,m,气层,呼101井_固井顶替模型数据包.json,-,A,气层顶深
+sensitive_depth_loss_m,7598.0,m,漏层,呼101井_固井顶替模型数据包.json,-,A,漏层敏感点
+safe_density_window_lower_g_cm3,2.00,g/cm³,整体,尾管设计,-,A,压稳下限密度
+safe_density_window_upper_g_cm3,2.04,g/cm³,整体,尾管设计,-,A,漏失上限密度
+annular_velocity_upper_nominal_m_s,0.645,m/s,168.3mm段@1.2m³/min,呼101井_固井顶替模型数据包.json,-,B,计算值，名义井眼×尾管外径
+annular_velocity_lower_nominal_m_s,0.94,m/s,139.7mm段@1.2m³/min,呼101井_固井顶替模型数据包.json,-,B,计算值，名义井眼×尾管外径
+cement_top_design_m,5400.0,m,设计返深,呼101井_固井顶替模型数据包.json,-,A,设计水泥浆返深
+cement_top_actual_m,5407.5,m,实际返深,井史总结,-,A,实际返深
