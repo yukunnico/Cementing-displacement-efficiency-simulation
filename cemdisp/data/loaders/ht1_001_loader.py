@@ -33,17 +33,17 @@ HT1_001_TOP_MD_M = HT1_001_HANGER_MD_M  # 模型剖面从悬挂器开始，兼�
 HT1_001_UPPER_SECTION_BOTTOM_MD_M = 7174.938  # 168.3mm 上段尾管底界/变径位置。
 HT1_001_BOTTOM_MD_M = HT1_001_DRILLED_DEPTH_MD_M  # 下段 139.7mm 尾管鞋。
 HT1_001_SHOE_MD_M = HT1_001_DRILLED_DEPTH_MD_M
-HT1_001_CASING_ID_MM = 273.1  # 技术套管内径暂用与呼探1相同代理值。
+HT1_001_CASING_ID_MM = 107.94  # 技术套管内径；来源：提取数据/well_spec.csv 证据等级A，139.7mm尾管套管数据表。
 HT1_001_UPPER_HOLE_NOMINAL_DIAMETER_MM = 241.3  # 上段井眼名义尺寸。
 HT1_001_LOWER_HOLE_DIAMETER_MM = 229.46  # HT1-001 下段平均井径，不使用呼探1井 215.9mm。
 HT1_001_BIT_DIAMETER_LOWER_MM = 215.9  # 下段钻头尺寸，仅作为现场设计口径记录。
 HT1_001_UPPER_LINER_OD_MM = 168.3  # 上段尾管外径。
 HT1_001_LOWER_LINER_OD_MM = 139.7  # 下段尾管外径，作为通用求解器参考外径。
 HT1_001_LOWER_LINER_WALL_THICKNESS_MM = 15.88  # HT1-001 明确 139.7mm 管壁厚。
-# 按 HT1-001 数据包给定口径使用 108.04mm，避免后续鞋口滞后体积与资料口径不一致。
-HT1_001_LOWER_LINER_ID_MM = 108.04
+# 按 HT1-001 数据包给定口径使用 107.94mm（套管数据表直接取值，壁厚15.88mm）。
+HT1_001_LOWER_LINER_ID_MM = 107.94
 HT1_001_UPPER_LINER_WALL_THICKNESS_MM = 14.7  # HT1-001 明确 168.3mm 管壁厚。
-HT1_001_UPPER_LINER_ID_MM = HT1_001_UPPER_LINER_OD_MM - 2.0 * HT1_001_UPPER_LINER_WALL_THICKNESS_MM
+HT1_001_UPPER_LINER_ID_MM = 138.90  # 168.3mm上段尾管内径；来源：提取数据/well_spec.csv 证据等级A，壁厚14.7mm。
 HT1_001_LOWER_CENTRALIZER_COUNT = 24  # 139.7mm 下段整体式扶正器数量。
 HT1_001_UPPER_CENTRALIZER_COUNT = 77  # 168.3mm 上段整体式扶正器数量。
 HT1_001_CENTRALIZER_COUNT = HT1_001_LOWER_CENTRALIZER_COUNT + HT1_001_UPPER_CENTRALIZER_COUNT
@@ -90,22 +90,24 @@ HT1_001_LINER_ID_MM = HT1_001_LOWER_LINER_ID_MM
 
 # 呼探1-001现场流体参数；HT1-001 与呼探1井不同，缺项仅按题设代理值补齐。
 HT1_001_MUD_DENSITY_KG_M3 = 1920.0
-HT1_001_BALANCE_DENSITY_KG_M3 = 1750.0
-HT1_001_SPACER_DENSITY_KG_M3 = 1980.0
+HT1_001_BALANCE_DENSITY_KG_M3 = 1750.0  # 平衡液/先导泥浆密度；来源：提取数据/fluid_spec.csv 证据等级A。
+HT1_001_SPACER_DENSITY_KG_M3 = 1980.0  # 驱油隔离液实际密度1.98g/cm³；来源：提取数据/fluid_spec.csv 证据等级A，设计密度2.05g/cm³。
 HT1_001_LEAD_DENSITY_KG_M3 = 2050.0
 HT1_001_INTERMEDIATE_DENSITY_KG_M3 = 1900.0
 HT1_001_TAIL_DENSITY_KG_M3 = 1900.0
-HT1_001_DISPLACEMENT_DENSITY_KG_M3 = 1920.0
-HT1_001_PLUG_DENSITY_KG_M3 = 1980.0
-HT1_001_BUFFER_DENSITY_KG_M3 = 1980.0
-HT1_001_BASE_FLUID_DENSITY_KG_M3 = 1020.0
+HT1_001_DISPLACEMENT_DENSITY_KG_M3 = 1920.0  # 替钻井液实际密度；来源：提取数据/fluid_spec.csv 证据等级A。
+HT1_001_PLUG_DENSITY_KG_M3 = 1980.0  # 压塞液实际密度1.98g/cm³；来源：提取数据/fluid_spec.csv 证据等级A。
+HT1_001_BUFFER_DENSITY_KG_M3 = 1980.0  # 中置液/保护液同驱油隔离液，密度1.98g/cm³。
+HT1_001_BASE_FLUID_DENSITY_KG_M3 = 1020.0  # 基液（隔离液基液）实际密度1.02g/cm³；来源：提取数据/fluid_spec.csv。
 HT1_001_WELL_MUD_DENSITY_KG_M3 = 1920.0
-HT1_001_MUD_PV_PA_S = 0.051
-HT1_001_MUD_YP_PA = 6.0
-HT1_001_BALANCE_PV_PA_S = 0.030
-HT1_001_BALANCE_YP_PA = 3.0
-HT1_001_DISPLACEMENT_PV_PA_S = 0.051
-HT1_001_DISPLACEMENT_YP_PA = 6.0
+HT1_001_MUD_PV_PA_S = 0.051  # 钻井液PV=51mPa·s；来源：提取数据/fluid_spec.csv 证据等级A。
+HT1_001_MUD_YP_PA = 6.0  # 钻井液YP=6Pa；来源：提取数据/fluid_spec.csv 证据等级A。
+# 平衡液(先导泥浆)流变参数，幂律模型n=0.689、K=0.557；来源：提取数据/fluid_spec.csv 证据等级A。
+# 注意：CSV中平衡液PV=51mPa·s、YP=6Pa（Bingham参考值），实际使用幂律模型描述。
+HT1_001_BALANCE_PV_PA_S = 0.051
+HT1_001_BALANCE_YP_PA = 6.0
+HT1_001_DISPLACEMENT_PV_PA_S = 0.051  # 替钻井液PV=51mPa·s；来源：fluid_spec.csv。
+HT1_001_DISPLACEMENT_YP_PA = 6.0  # 替钻井液YP=6Pa；来源：fluid_spec.csv。
 HT1_001_BASE_FLUID_PV_PA_S = 0.030
 HT1_001_BASE_FLUID_YP_PA = 3.0
 HT1_001_SPACER_POWER_LAW_N = 0.545
@@ -118,6 +120,8 @@ HT1_001_TAIL_POWER_LAW_N = 0.886
 HT1_001_TAIL_CONSISTENCY_K = 0.453
 
 # 呼探1-001现场施工程序参数，按地面注入顺序排列。
+# 替钻井液末段实际体积53.7m³（施工小结）或53.7m³（作业史），合并为单一步骤。
+# 来源：提取数据/pumping_schedule.csv（证据等级A），实际排量1.2-0.6m³/min。
 HT1_001_BALANCE_VOLUME_M3 = 40.0
 HT1_001_SPACER_VOLUME_M3 = 20.0
 HT1_001_LEAD_VOLUME_M3 = 20.6
@@ -127,8 +131,7 @@ HT1_001_PLUG_VOLUME_M3 = 2.0
 HT1_001_FAST_MUD_VOLUME_M3 = 25.0
 HT1_001_BUFFER_VOLUME_M3 = 10.0
 HT1_001_BASE_FLUID_VOLUME_M3 = 3.0
-HT1_001_WELL_MUD_FAST_VOLUME_M3 = 35.0
-HT1_001_WELL_MUD_SLOW_VOLUME_M3 = 18.7
+HT1_001_WELL_MUD_FINAL_VOLUME_M3 = 53.7  # 替钻井液末段总替量（设计值），替代原有快慢拆分。
 HT1_001_BALANCE_RATE_M3_MIN = 1.4
 HT1_001_SPACER_RATE_M3_MIN = 1.0
 HT1_001_CEMENT_RATE_M3_MIN = 1.0
@@ -136,8 +139,8 @@ HT1_001_PLUG_RATE_M3_MIN = 0.6
 HT1_001_FAST_MUD_RATE_M3_MIN = 1.4
 HT1_001_BUFFER_RATE_M3_MIN = 1.0
 HT1_001_BASE_FLUID_RATE_M3_MIN = 1.0
-HT1_001_WELL_MUD_FAST_RATE_M3_MIN = 1.0
-HT1_001_WELL_MUD_SLOW_RATE_M3_MIN = 0.6
+# 替钻井液末段排量1.2-0.6m³/min（非固定值）；来源：pumping_schedule.csv。
+HT1_001_WELL_MUD_FINAL_RATE_M3_MIN = 1.0  # 代理值（速率范围内取代表性值1.0m³/min）。
 
 
 def _depth_points(values: tuple[tuple[float, float], ...]) -> tuple[DepthValuePoint, ...]:
@@ -268,7 +271,8 @@ def load_ht1_001_tailpipe(
         FluidSpec("井浆", FluidRole.DISPLACEMENT, HT1_001_WELL_MUD_DENSITY_KG_M3, RheologyModel.BINGHAM, HT1_001_DISPLACEMENT_PV_PA_S, HT1_001_DISPLACEMENT_YP_PA),
     )
 
-    # HT1-001 地面施工程序：与呼探1井不同，含 3m³ 基液步骤，井浆替浆总量拆分为 35+18.7m³。
+    # HT1-001 地面施工程序：与呼探1井不同，含 3m³ 基液步骤，替钻井液末段总替量53.7m³。
+# 来源：提取数据/pumping_schedule.csv（证据等级A）。
     schedule = PumpingSchedule(
         steps=(
             PumpingScheduleStep("注入平衡液", "平衡液", HT1_001_BALANCE_VOLUME_M3, HT1_001_BALANCE_RATE_M3_MIN, remarks="平衡液 40m³@1.4m³/min，角色 WASH。"),
@@ -277,15 +281,14 @@ def load_ht1_001_tailpipe(
             PumpingScheduleStep("注入中间浆", "中间浆", HT1_001_INTERMEDIATE_VOLUME_M3, HT1_001_CEMENT_RATE_M3_MIN, remarks="中间浆 28.7m³@1.0m³/min，角色 INTERMEDIATE。"),
             PumpingScheduleStep("注入尾浆", "尾浆", HT1_001_TAIL_VOLUME_M3, HT1_001_CEMENT_RATE_M3_MIN, remarks="尾浆 22.1m³@1.0m³/min，使用现场实际体积。"),
             PumpingScheduleStep("注入压塞液（管内）", "压塞液", HT1_001_PLUG_VOLUME_M3, HT1_001_PLUG_RATE_M3_MIN, remarks="压塞液 2m³@0.6m³/min，仅作为管内占位，不作为水泥入环空体积。"),
-            PumpingScheduleStep("替钻井液(快)", "替钻井液", HT1_001_FAST_MUD_VOLUME_M3, HT1_001_FAST_MUD_RATE_M3_MIN, remarks="替钻井液快替 25m³@1.4m³/min。"),
+            PumpingScheduleStep("替钻井液(首段)", "替钻井液", HT1_001_FAST_MUD_VOLUME_M3, HT1_001_FAST_MUD_RATE_M3_MIN, remarks="替钻井液首段 25m³@1.4m³/min。"),
             PumpingScheduleStep("替保护液/中置液", "中置液", HT1_001_BUFFER_VOLUME_M3, HT1_001_BUFFER_RATE_M3_MIN, remarks="替保护液/中置液 10m³@1.0m³/min。"),
             PumpingScheduleStep("替基液", "基液", HT1_001_BASE_FLUID_VOLUME_M3, HT1_001_BASE_FLUID_RATE_M3_MIN, remarks="基液 3m³@1.0m³/min，密度 1020kg/m³。"),
-            PumpingScheduleStep("井浆快替", "井浆", HT1_001_WELL_MUD_FAST_VOLUME_M3, HT1_001_WELL_MUD_FAST_RATE_M3_MIN, remarks="井浆快替 35m³@1.0m³/min。"),
-            PumpingScheduleStep("井浆慢替", "井浆", HT1_001_WELL_MUD_SLOW_VOLUME_M3, HT1_001_WELL_MUD_SLOW_RATE_M3_MIN, remarks="井浆慢替 18.7m³@0.6m³/min。"),
+            PumpingScheduleStep("替钻井液(末段)", "替钻井液", HT1_001_WELL_MUD_FINAL_VOLUME_M3, HT1_001_WELL_MUD_FINAL_RATE_M3_MIN, remarks="替钻井液末段 53.7m³@1.2-0.6m³/min，排量递减至碰压。"),
         ),
         notes=(
             "施工顺序按 HT1-001 现场数据：平衡液→隔离液→领浆→中间浆→尾浆→压塞液→四段替浆并含基液步骤。",
-            "替浆总量 91.7m³ = 25 + 10 + 3 + 35 + 18.7m³，排量从 1.4 递减至 0.6m³/min。",
+            "替钻井液总量 78.7m³ = 25（首段）+ 10 + 3 + 53.7（末段），末段排量1.2-0.6m³/min递减至碰压。",
             "压塞液保留在 PumpingSchedule 中用于管内时序占位；环空入口分相映射时按 mud 相处理。",
         ),
     )

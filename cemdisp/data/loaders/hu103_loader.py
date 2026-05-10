@@ -15,17 +15,19 @@
 - 尾管尺寸: 139.70mm OD, 121.36mm ID（缺实测壁厚，首版暂用9.17mm）
 - 上段尾管内径代理: 150.42mm（φ168.30mm 上段尾管 ID 代理值，假设壁厚8.94mm）
 - 井眼尺寸: 215.90mm（下段尾管井眼名义尺寸）
-- 钻井液（环空初始液）: 密度1.98g/cm³, Bingham PV=54mPa·s, YP=12.5Pa
-- 领浆: 91m³, 密度2.05g/cm³, 幂律流变 n=0.82, K=0.67
-- 中间浆: 10m³代理, 密度2.05g/cm³, 幂律流变 n=0.76, K=1.11
-- 尾浆: 19m³, 密度2.05g/cm³, 幂律流变 n=0.76, K=1.14
+- 钻井液（环空初始液）: 密度2.02g/cm³, 幂律 n=0.647, K=0.590（A级数据，203211.docx 表1）
+- 领浆: 91m³, 密度1.90g/cm³, 幂律 n=0.838, K=0.587（A级数据，203211.docx 表1）
+- 中间浆: 10m³代理, 密度2.05g/cm³, 幂律 n=0.76, K=1.11（代理值，数据包未单独给出）
+- 尾浆: 19m³, 密度1.90g/cm³, 幂律 n=0.766, K=1.093（A级数据，203211.docx 表1）
 - 替浆液: 110m³, 密度1.50g/cm³, 四段排量 1.5/1.0/0.8/0.6m³/min
 
 现场资料来源（呼103井数据包第二版）：
 - φ139.70mm 完井尾管顶部/变扣位置 7330.6m，尾管鞋/完钻井深 7770.0m
 - CBL 评价井段 7338.0–7712.0m，CBL 合格率 12.06%
-- 流体物性来自 model_ready_candidate 与 recommended_inputs
-- 中间浆体积与替浆分段体积为首版代理值，已在施工步骤备注中标注
+- 流体物性：A级数据来自 203211.docx 表1（钻井液、驱油隔离液、领浆、尾浆已确认）
+- 领浆密度1.90g/cm³（A级），尾浆密度1.90g/cm³（A级），水泥浆配方已确认
+- 施工体积：B级数据来自 well_spacer_summary_fixed.csv（平衡液、隔离液、冲洗液、领浆、尾浆设计值）
+- 中间浆体积与替浆分段体积为代理值，已在施工步骤备注中标注（B级）
 
 legacy 边界模式选项：
 - "sustained_tail": 替浆期间环空入口保持尾浆（默认）
@@ -63,46 +65,52 @@ HU103_BIT_DIAMETER_MM = 215.9    # 下段尾管井眼名义尺寸
 HU103_STANDOFF_PROXY_PCT = 86.5  # 设计居中度代理值
 
 # 呼103施工参数
-HU103_PUMP_RATE_INJECTION_M3_MIN = 1.3       # 注前置液及水泥浆主排量
-HU103_PUMP_RATE_DISP_HIGH_M3_MIN = 1.5       # 替浆第一阶段排量
-HU103_PUMP_RATE_DISP_MED_M3_MIN = 1.0        # 替浆第二阶段排量
-HU103_PUMP_RATE_DISP_LOW_M3_MIN = 0.8        # 替浆第三阶段排量
-HU103_PUMP_RATE_DISP_FINAL_M3_MIN = 0.6      # 替浆第四阶段排量
-HU103_BALANCE_VOLUME_M3 = 18.0               # 平衡液体积
-HU103_FLUSH_VOLUME_M3 = 14.0                 # 驱油冲洗液体积
-HU103_SPACER_VOLUME_M3 = 18.0                # 驱油隔离液体积
-HU103_LEAD_VOLUME_M3 = 91.0                  # 领浆设计量，含附加10m³
-HU103_INTERMEDIATE_VOLUME_M3 = 10.0          # 中间浆体积代理值，数据包未单独给出
-HU103_TAIL_VOLUME_M3 = 19.0                  # 尾浆设计量，含下塞1.18m³
+HU103_PUMP_RATE_INJECTION_M3_MIN = 1.3       # 注前置液及水泥浆主排量（设计值，B级）
+HU103_PUMP_RATE_DISP_HIGH_M3_MIN = 1.5       # 替浆第一阶段排量（设计值）
+HU103_PUMP_RATE_DISP_MED_M3_MIN = 1.0        # 替浆第二阶段排量（设计值）
+HU103_PUMP_RATE_DISP_LOW_M3_MIN = 0.8        # 替浆第三阶段排量（设计值）
+HU103_PUMP_RATE_DISP_FINAL_M3_MIN = 0.6      # 替浆第四阶段排量（设计值）
+HU103_BALANCE_VOLUME_M3 = 18.0               # 平衡液设计体积（B级）
+HU103_FLUSH_VOLUME_M3 = 14.0                 # 驱油冲洗液设计体积（B级）
+HU103_SPACER_VOLUME_M3 = 18.0                # 驱油隔离液设计体积（B级）
+HU103_LEAD_VOLUME_M3 = 91.0                  # 领浆设计量，含附加10m³（B级）
+HU103_INTERMEDIATE_VOLUME_M3 = 10.0          # 中间浆体积代理值，数据包未单独给出（B级）
+HU103_TAIL_VOLUME_M3 = 19.0                  # 尾浆设计量，含下塞1.18m³（B级）
 HU103_PLUG_VOLUME_M3 = 5.0                   # 压塞液体积
-HU103_DISPLACEMENT_VOLUME_M3 = 110.0         # 顶替轻泥浆体积
+HU103_DISPLACEMENT_VOLUME_M3 = 110.0         # 顶替轻泥浆设计体积（B级）
 
-# 呼103流变参数 — 钻井液/环空初始液
-HU103_MUD_DENSITY_KG_M3 = 1980.0             # 固井时井液密度
-HU103_MUD_PV_PA_S = 0.054                    # 54mPa·s 换算为 Pa·s
-HU103_MUD_YP_PA = 12.5                       # 10min 凝胶值作为屈服值代理
+# 呼103流变参数 — 钻井液/环空初始液（A级数据，来源：203211.docx 表1）
+HU103_MUD_DENSITY_KG_M3 = 2020.0             # 固井时井液密度 2.02g/cm³（A级）
+HU103_MUD_PV_PA_S = 0.047                    # 47mPa·s 换算为 Pa·s（A级）
+HU103_MUD_YP_PA = 12.5                        # 10min 凝胶值作为屈服值代理（C级，缺实测数据）
 
 # 呼103流变参数 — 平衡液/冲洗液/隔离液
-HU103_BALANCE_DENSITY_KG_M3 = 1750.0         # 平衡液密度 1.75g/cm³
+# 注：B级数据来自 well_spacer_summary_fixed.csv，代理值说明见备注列
+HU103_BALANCE_DENSITY_KG_M3 = 1750.0         # 平衡液密度 1.75g/cm³（B级）
 HU103_BALANCE_PV_PA_S = 0.025                # 缺实测，暂用冲洗液体系代理
 HU103_BALANCE_YP_PA = 1.5                    # 缺实测，暂用冲洗液体系代理
-HU103_FLUSH_DENSITY_KG_M3 = 1020.0           # 冲洗液密度 1.02g/cm³
+HU103_FLUSH_DENSITY_KG_M3 = 1020.0           # 冲洗液密度 1.02g/cm³（B级）
 HU103_FLUSH_PV_PA_S = 0.025                  # 冲洗液塑性粘度代理
 HU103_FLUSH_YP_PA = 1.5                      # 冲洗液屈服值代理
-HU103_SPACER_DENSITY_KG_M3 = 1800.0          # 隔离液设计密度 1.80g/cm³
-HU103_SPACER_PV_PA_S = 0.035                 # 35mPa·s 换算为 Pa·s
-HU103_SPACER_YP_PA = 8.0                     # 隔离液现场屈服值
+HU103_SPACER_DENSITY_KG_M3 = 1800.0          # 隔离液设计密度 1.80g/cm³（A级，203211.docx 表1已确认）
+# 注意：CSV提取数据（203211.docx 表1）显示隔离液为幂律模型（n=0.587, K=0.880）。
+# 首版loader误用BINGHAM模型描述隔离液；此处添加幂律参数，供后续修正模型使用。
+HU103_SPACER_POWER_LAW_N = 0.587             # 隔离液幂律流性指数（A级，203211.docx 表1）
+HU103_SPACER_CONSISTENCY_K = 0.880           # 隔离液幂律稠度系数 Pa·s^n（A级，203211.docx 表1）
+# 保留BINGHAM参数作为向下兼容参考（well_spacer_summary有PV/YP参考值）
+HU103_SPACER_PV_PA_S = 0.035                 # 35mPa·s 换算为 Pa·s（B级参考值）
+HU103_SPACER_YP_PA = 8.0                      # 隔离液现场屈服值（B级代理）
 
-# 呼103流变参数 — 三段水泥浆
-HU103_LEAD_DENSITY_KG_M3 = 2050.0            # 领浆密度 2.05g/cm³
-HU103_LEAD_N = 0.82                          # 领浆幂律流性指数
-HU103_LEAD_K_PA_S_N = 0.67                   # 领浆幂律稠度系数
-HU103_INTERMEDIATE_DENSITY_KG_M3 = 2050.0    # 中间浆密度 2.05g/cm³
-HU103_INTERMEDIATE_N = 0.76                  # 中间浆幂律流性指数
-HU103_INTERMEDIATE_K_PA_S_N = 1.11           # 中间浆幂律稠度系数
-HU103_TAIL_DENSITY_KG_M3 = 2050.0            # 尾浆密度 2.05g/cm³
-HU103_TAIL_N = 0.76                          # 尾浆幂律流性指数
-HU103_TAIL_K_PA_S_N = 1.14                   # 尾浆幂律稠度系数
+# 呼103流变参数 — 三段水泥浆（A级数据，来源：203211.docx 表1，已确认）
+HU103_LEAD_DENSITY_KG_M3 = 1900.0            # 领浆密度 1.90g/cm³（A级）
+HU103_LEAD_N = 0.838                          # 领浆幂律流性指数（A级）
+HU103_LEAD_K_PA_S_N = 0.587                  # 领浆幂律稠度系数（A级）
+HU103_INTERMEDIATE_DENSITY_KG_M3 = 2050.0    # 中间浆密度 2.05g/cm³（代理值，数据包未单独给出）
+HU103_INTERMEDIATE_N = 0.76                  # 中间浆幂律流性指数（代理值）
+HU103_INTERMEDIATE_K_PA_S_N = 1.11           # 中间浆幂律稠度系数（代理值）
+HU103_TAIL_DENSITY_KG_M3 = 1900.0            # 尾浆密度 1.90g/cm³（A级）
+HU103_TAIL_N = 0.766                          # 尾浆幂律流性指数（A级）
+HU103_TAIL_K_PA_S_N = 1.093                   # 尾浆幂律稠度系数（A级）
 
 # 呼103流变参数 — 压塞液/替浆液
 HU103_PLUG_DENSITY_KG_M3 = 1500.0            # 压塞液密度 1.50g/cm³
@@ -218,9 +226,9 @@ def load_hu103_tailpipe(
             name="钻井液",
             role=FluidRole.MUD,
             density_kg_m3=HU103_MUD_DENSITY_KG_M3,
-            rheology_model=RheologyModel.BINGHAM,
-            plastic_viscosity_pa_s=HU103_MUD_PV_PA_S,
-            yield_stress_pa=HU103_MUD_YP_PA,
+            rheology_model=RheologyModel.POWER_LAW,
+            power_law_n=0.647,
+            consistency_k=0.590,
         ),
         FluidSpec(
             name="平衡液",
@@ -377,11 +385,17 @@ def load_hu103_tailpipe(
     )
 
     validation_data = ValidationData(
-        cbl_summary_path=resolved_reference_root / "呼103井_CBL评价报告.pdf",
+        cbl_summary_path=resolved_reference_root / "0708" / "1" / "1005" / "10051" / "100516.pdf",
         notes=(
-            "呼103井数据包第二版给出 CBL 合格率 12.06%，评价井段 7338.0–7712.0m。",
-            "cbl_summary_path 指向参考文档/呼103下的 CBL PDF；若原始文件名不同，后续仅需更新路径。",
-            "流体物性来自 model_ready_candidate 与 recommended_inputs；代理值已在对应常量和施工步骤备注中标注。",
+            "呼103井 φ139.70mm 完井尾管段 CBL 评价：",
+            "- CBL 合格率 12.06%（不合格），评价井段 7338.0–7712.0m，来源：100516.pdf（A级）",
+            "- 上段 φ168.30mm 尾管 CBL 合格率 0.04%（不合格），评价井段 5540.0–7330.6m，来源：100515.pdf（A级）",
+            "- 回接段 CBL 评价：11.0–5472.0m，合格，来源：100511.pdf（A级）",
+            "- 油层尾管 CBL 评价：15.0–3959.0m，合格，来源：100512.pdf（A级）",
+            "- 流体物性（A级）来自 203211.docx 表1：钻井液、驱油隔离液、领浆、尾浆已确认",
+            "- 水泥浆密度：领浆1.90g/cm³、尾浆1.90g/cm³（A级）；中间浆密度代理值2.05g/cm³",
+            "- 施工体积（B级）来自 well_spacer_summary_fixed.csv：平衡液/隔离液/冲洗液/领浆/尾浆设计值已确认",
+            "- 中间浆体积与替浆分段体积为代理值（B级），备注中已标注",
         ),
     )
     return well_spec, fluids, schedule, validation_data

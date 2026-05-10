@@ -27,7 +27,7 @@ HU101_BOTTOM_MD_M = 7868.0
 HU101_SHOE_MD_M = 7868.0
 HU101_HANGER_MD_M = 5407.46
 HU101_TECH_CASING_EQUIV_ID_MM = 273.10
-HU101_UPPER_SECTION_BOTTOM_MD_M = 6796.0
+HU101_UPPER_SECTION_BOTTOM_MD_M = 6796.329  # 来自提取数据/well_spec.csv，第12行（A级，尾管结构表）
 HU101_UPPER_ACTUAL_HOLE_DIAMETER_MM = 260.35
 HU101_UPPER_ACTUAL_LINER_OD_MM = 168.30
 HU101_LOWER_HOLE_DIAMETER_MM = 215.90
@@ -50,9 +50,10 @@ HU101_UPPER_HOLE_DIAMETER_MM = _equivalent_hole_diameter_mm(
 )
 HU101_LINER_ID_MM = math.sqrt(4.0 * HU101_SHOE_LAG_VOLUME_M3 / (math.pi * HU101_SHOE_MD_M)) * 1000.0
 
-# 呼101现场施工与流体参数，来自 h101 抽取报告和 legacy 现场顺序脚本。
-HU101_LEAD_VOLUME_M3 = 47.0
-HU101_TAIL_VOLUME_M3 = 23.0
+# 呼101现场施工与流体参数，来自提取数据/pumping_schedule.csv 和 fluid_spec.csv。
+# 施工体积注释格式："设计X m³ / 实际Y m³，来自提取数据/pumping_schedule.csv"
+HU101_LEAD_VOLUME_M3 = 46.0  # 设计47.0 / 实际46.0，来自提取数据/pumping_schedule.csv（第6行，A级）
+HU101_TAIL_VOLUME_M3 = 23.0  # 设计23.0 / 实际23.0，来自提取数据/pumping_schedule.csv（第7行，A级）
 HU101_MUD_DENSITY_KG_M3 = 1960.0
 HU101_BALANCE_DENSITY_KG_M3 = 1850.0
 HU101_SPACER_DENSITY_KG_M3 = 2000.0
@@ -64,10 +65,10 @@ HU101_BALANCE_PV_PA_S = 0.030
 HU101_BALANCE_YP_PA = 3.0
 HU101_SPACER_PV_PA_S = 0.030
 HU101_SPACER_YP_PA = 5.0
-HU101_LEAD_POWER_LAW_N = 0.719
-HU101_LEAD_CONSISTENCY_K = 0.815
-HU101_TAIL_POWER_LAW_N = 0.722
-HU101_TAIL_CONSISTENCY_K = 0.684
+HU101_LEAD_POWER_LAW_N = 0.719  # 来自提取数据/fluid_spec.csv（第5行，领浆主值，A级）
+HU101_LEAD_CONSISTENCY_K = 0.815  # 来自提取数据/fluid_spec.csv（第5行，Pa·sn，A级）
+HU101_TAIL_POWER_LAW_N = 0.722  # 来自提取数据/fluid_spec.csv（第7行，尾浆主值，A级）
+HU101_TAIL_CONSISTENCY_K = 0.684  # 来自提取数据/fluid_spec.csv（第7行，Pa·sn，A级）
 
 
 def _depth_points(values: tuple[tuple[float, float], ...]) -> tuple[DepthValuePoint, ...]:
@@ -177,15 +178,15 @@ def load_hu101_tailpipe(
 
     schedule = PumpingSchedule(
         steps=(
-            PumpingScheduleStep("注平衡液", "平衡液", 25.0, 1.2, remarks="呼101现场抽取：25m³。"),
-            PumpingScheduleStep("注驱油隔离液", "驱油隔离液", 25.0, 1.2, remarks="呼101现场抽取：25m³。"),
-            PumpingScheduleStep("注领浆", "领浆", HU101_LEAD_VOLUME_M3, 1.2, remarks="呼101现场抽取：47m³。"),
-            PumpingScheduleStep("注尾浆", "尾浆", HU101_TAIL_VOLUME_M3, 1.2, remarks="呼101现场抽取：23m³。"),
-            PumpingScheduleStep("注后置液(管内)", "井浆", 2.0, 0.6, remarks="仅作为管内压塞/占位流体。"),
-            PumpingScheduleStep("注轻泥浆", "轻泥浆", 26.0, 1.5, remarks="按现场轻泥浆排量建模。"),
-            PumpingScheduleStep("注中置液", "中置液", 10.0, 1.2, remarks="按主替浆排量建模。"),
-            PumpingScheduleStep("井浆快替", "井浆", 40.0, 1.0, remarks="设计表40m³@1.0m³/min。"),
-            PumpingScheduleStep("井浆慢替", "井浆", 23.4, 0.55, remarks="补足现场总替量101.4m³。"),
+            PumpingScheduleStep("注平衡液", "平衡液", 25.0, 1.2, remarks="设计25m³/实际25m³，来自提取数据/pumping_schedule.csv（第2行，A级）。"),
+            PumpingScheduleStep("注驱油隔离液", "驱油隔离液", 25.0, 1.0, remarks="设计25m³/实际25m³，设计排量1.2/实际1.0，来自提取数据/pumping_schedule.csv（第4行，A级）。"),
+            PumpingScheduleStep("注领浆", "领浆", HU101_LEAD_VOLUME_M3, 1.0, remarks="设计47m³/实际46m³，设计排量1.2/实际1.0，来自提取数据/pumping_schedule.csv（第6行，A级）。"),
+            PumpingScheduleStep("注尾浆", "尾浆", HU101_TAIL_VOLUME_M3, 1.0, remarks="设计23m³/实际23m³，设计排量1.2/实际1.0，与领浆连续注入，来自提取数据/pumping_schedule.csv（第7行，A级）。"),
+            PumpingScheduleStep("注后置液(管内)", "井浆", 2.0, 0.6, remarks="设计2m³/实际2m³，作为管内压塞，来自提取数据/pumping_schedule.csv（第9行，A级）。"),
+            PumpingScheduleStep("注轻泥浆", "轻泥浆", 24.0, 1.5, remarks="设计26m³/实际24m³，设计排量1.5/实际0.8-1.5，来自提取数据/pumping_schedule.csv（第11行，A级）。"),
+            PumpingScheduleStep("注中置液", "中置液", 7.5, 1.2, remarks="设计10m³/实际7.5m³，保护液部分计入中置液体系，来自提取数据/pumping_schedule.csv（第12行，A/B级）。"),
+            PumpingScheduleStep("井浆快替", "井浆", 37.5, 1.5, remarks="设计40m³/实际37.5m³，设计排量1.0/实际0.8-1.5，来自提取数据/pumping_schedule.csv（第13行，A级）。"),
+            PumpingScheduleStep("井浆慢替", "井浆", 20.0, 0.55, remarks="设计23.4m³/实际20.0m³，补足现场总替量101.4m³，来自提取数据/pumping_schedule.csv（第14行，A级）。"),
         ),
         notes=(
             "现场顺序：平衡液→驱油隔离液→领浆→尾浆→后置液→轻泥浆→中置液→井浆快替/慢替。",
