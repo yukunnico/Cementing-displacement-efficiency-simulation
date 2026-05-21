@@ -91,6 +91,8 @@ class CasingFlowSolver:
         enable_gravity: bool = False,
         g_constant: float = 9.81,
         settling_velocity_factor: float = 0.001,
+        enable_axial_dispersion: bool = False,
+        dispersion_alpha: float = 0.2,
     ) -> None:
         """初始化求解器。
 
@@ -99,6 +101,8 @@ class CasingFlowSolver:
             enable_gravity: 是否启用套管内重力修正；默认关闭以保持旧模型行为
             g_constant: 重力加速度（m/s²），用于按现场重力条件缩放简化修正项
             settling_velocity_factor: 沉降速度系数，单位为 m/s 每 kg/m³ 密度差
+            enable_axial_dispersion: 是否启用管内轴向弥散；默认关闭以保持旧模型行为
+            dispersion_alpha: 无量纲弥散系数，默认 0.2
         """
         if not math.isfinite(dt) or dt <= 0.0:
             raise ValueError("dt 必须为大于0的有限数值")
@@ -106,10 +110,14 @@ class CasingFlowSolver:
             raise ValueError("g_constant 必须为大于0的有限数值")
         if not math.isfinite(settling_velocity_factor) or settling_velocity_factor < 0.0:
             raise ValueError("settling_velocity_factor 必须为非负有限数值")
+        if not math.isfinite(dispersion_alpha) or dispersion_alpha < 0.0:
+            raise ValueError("dispersion_alpha 必须为非负有限数值")
         self.dt: float = dt
         self.enable_gravity: bool = enable_gravity
         self.g_constant: float = g_constant
         self.settling_velocity_factor: float = settling_velocity_factor
+        self.enable_axial_dispersion: bool = enable_axial_dispersion
+        self.dispersion_alpha: float = dispersion_alpha
         self._scheduled_steps_by_result_id: dict[int, tuple[_ScheduledStep, ...]] = {}
         self._initial_fluid_by_result_id: dict[int, str] = {}
         self._fluids_by_result_id: dict[int, tuple[FluidSpec, ...]] = {}
@@ -221,6 +229,119 @@ class CasingFlowSolver:
 
         return state
 
+    def _compute_dispersion_coefficient(
+        self,
+        pipe_radius_m: float,
+        fluid: FluidSpec,
+        mean_velocity_m_s: float,
+    ) -> float:
+        """计算管内层流轴向弥散系数（Taylor-Aris 型）。
+
+        Args:
+            pipe_radius_m: 套管内半径 (m)
+            fluid: 当前管内流体规格
+            mean_velocity_m_s: 截面平均速度 (m/s)
+
+        Returns:
+            有效轴向弥散系数 D_eff (m²/s)
+        """
+        if mean_velocity_m_s < 1e-9:
+            return 0.0
+
+        from cemdisp.data.fluid_spec import RheologyModel
+
+        if fluid.rheology_model == RheologyModel.NEWTONIAN:
+            # 牛顿流体: D_eff = U²R² / (192 × D_mol)
+            # D_mol ~ 1e-9 for typical fluids
+            d_mol = 1.0e-9
+            return (mean_velocity_m_s ** 2) * (pipe_radius_m ** 2) / (192.0 * d_mol)
+
+        elif fluid.rheology_model == RheologyModel.POWER_LAW:
+            n = fluid.power_law_n if fluid.power_law_n is not None else 1.0
+            # 幂律修正: κ ≈ 48n + 144 (拟合)
+            k_factor = 48.0 * n + 144.0
+            d_mol = 1.0e-9
+            return (mean_velocity_m_s ** 2) * (pipe_radius_m ** 2) / (k_factor * d_mol)
+
+        elif fluid.rheology_model in (RheologyModel.BINGHAM, RheologyModel.HERSCHEL_BULKLEY):
+            # 有屈服应力流体：中心塞流区抑制弥散 → 用更小的 D_eff
+            return self.dispersion_alpha * mean_velocity_m_s * pipe_radius_m
+
+        else:
+            return self.dispersion_alpha * mean_velocity_m_s * pipe_radius_m
+
+    def _apply_dispersion_to_timeline(
+        self,
+        events: list[ShoeEvent],
+        well_spec: WellSpec,
+        scheduled_steps: tuple[_ScheduledStep, ...],
+        fluids: tuple[FluidSpec, ...],
+    ) -> list[ShoeEvent]:
+        """对离散鞋口时间线施加轴向弥散。
+
+        在每个流体前缘 (FRONT_ARRIVAL) 附近，用弥散宽度 σ_t 生成过渡态事件，
+        将阶跃切换转换为平滑的 S 形过渡带。
+        """
+        if not self.enable_axial_dispersion:
+            return events
+
+        pipe_radius_m = (well_spec.liner_id_mm or 100.0) / 2000.0
+        fluid_by_name = {f.name: f for f in fluids}
+
+        dispersed_events: list[ShoeEvent] = []
+
+        for i, event in enumerate(events):
+            if event.kind != ShoeEventKind.FRONT_ARRIVAL:
+                dispersed_events.append(event)
+                continue
+
+            fluid_name = event.phase_fractions[0][0] if event.phase_fractions else ""
+            fluid = fluid_by_name.get(fluid_name)
+            if fluid is None:
+                dispersed_events.append(event)
+                continue
+
+            U = event.flow_rate_m3_s / (math.pi * pipe_radius_m ** 2)
+            D_eff = self._compute_dispersion_coefficient(pipe_radius_m, fluid, U)
+            if D_eff < 1e-12:
+                dispersed_events.append(event)
+                continue
+
+            # 到达时间（活塞流）
+            t_arrival = event.time_s
+            # 弥散时间宽度: σ_t = sqrt(2 × D_eff × t_travel) / U
+            # t_travel = pipe_volume / Q ≈ shoe_md_m / U
+            t_travel = well_spec.shoe_md_m / max(U, 1e-9)
+            sigma_t = math.sqrt(2.0 * D_eff * t_travel) / max(U, 1e-9)
+            sigma_t = max(sigma_t, self.dt)  # 至少一个时间步
+
+            # 找到前一个流体
+            prev_fluid = ""
+            for j in range(i - 1, -1, -1):
+                if events[j].phase_fractions:
+                    prev_fluid = events[j].phase_fractions[0][0]
+                    break
+            next_fluid = fluid_name
+
+            # 在 [t_arrival - σ, t_arrival + σ] 范围内生成过渡子事件
+            n_sub = 5  # 每个过渡带的子事件数
+            for k in range(n_sub):
+                t_sub = t_arrival + sigma_t * (2.0 * k / (n_sub - 1) - 1.0)  # [-σ, +σ]
+                frac = 0.5 * (1.0 + math.erf(k / (n_sub - 1.0) * 2.0 - 1.0))  # erf 过渡
+
+                dispersed_events.append(ShoeEvent(
+                    time_s=t_sub,
+                    kind=ShoeEventKind.FRONT_ARRIVAL,
+                    flow_rate_m3_s=event.flow_rate_m3_s,
+                    stage_name=event.stage_name,
+                    phase_fractions=(
+                        (next_fluid, frac),
+                        (prev_fluid, 1.0 - frac),
+                    ),
+                ))
+
+        return sorted(dispersed_events, key=lambda e: e.time_s)
+
     def _build_shoe_timeline(
         self,
         *,
@@ -270,6 +391,8 @@ class CasingFlowSolver:
                     phase_fractions=phase_override if phase_override is not None else state.phase_fractions,
                 )
             )
+        # 应用轴向弥散处理：将尖锐的阶跃前缘转换为平滑的 S 形过渡带
+        events = self._apply_dispersion_to_timeline(events, well_spec, scheduled_steps, fluids)
         return ShoeTimeline(events=events)
 
     @staticmethod

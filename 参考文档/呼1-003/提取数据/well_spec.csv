@@ -1,0 +1,25 @@
+字段名,字段值,单位,适用井段/套管段,来源文件,页码/图号,证据等级,备注
+well_name,呼1-003(HT1-003), -,全井,-,-,A,井号；双径复合尾管固井
+top_md_m,0,m,全井,呼1-003井身结构.csv / HT1-003施工设计,-,A,井口深度
+bottom_md_m,7586.000,m,全井,呼1-003井身结构.csv / HT1-003施工设计,-,A,完钻井深/井底深度
+shoe_md_m,7586.000,m,全井,HT1-003施工设计,-,A,引鞋位置/固井井段底部
+hanger_md_m,5277.754,m,168.3mm悬挂器,HT1-003施工设计,-,A,尾管悬挂器位置（127mm钻杆变168.3mm尾管）
+liner_od_mm,139.7,mm,139.7mm下部尾管,HT1-003施工设计,-,A,下部完井尾管外径
+liner_id_mm,107.94,mm,139.7mm下部尾管,HT1-003施工设计,-,A,139.7mm尾管内径（壁厚15.88mm）
+liner_wall_thickness_mm,15.88,mm,139.7mm下部尾管,HT1-003施工设计,-,A,BG140V/BGT2套管壁厚
+upper_section_bottom_md_m,5277.754,m,168.3mm上段尾管底界,HT1-003施工设计,-,A,双径井必填；上段底界=下段顶界（168.3mm变139.7mm）
+upper_liner_od_mm,168.3,mm,168.3mm上段尾管,HT1-003施工设计,-,A,上部复合尾管外径
+upper_liner_id_mm,138.90,mm,168.3mm上段尾管,HT1-003施工设计,-,A,上段尾管内径（壁厚14.7mm）
+upper_liner_wall_thickness_mm,14.7,mm,168.3mm上段尾管,HT1-003施工设计,-,A,168.3mm套管壁厚
+shoe_lag_volume_m3,-,m³,-,-,-,C,缺失；未提供鞋口滞后体积直接数据
+hole_diameter_upper,241.3,mm,上部井眼（5568m以上）,HT1-003施工设计,-,A,五开钻头尺寸；168.3mm尾管段
+hole_diameter_lower,215.9,mm,下部井眼（7096m以下）,HT1-003施工设计,-,A,目标139.7mm尾管对应钻头尺寸
+average_hole_diameter_upper,241.3,mm,上部裸眼段,呼1-003井身结构.csv,-,A,基于井身结构CSV的平均井径
+average_hole_diameter_lower,215.9,mm,下部裸眼段,呼1-003井身结构.csv,-,A,基于井身结构CSV的平均井径
+max_inclination,4.077923,deg,全井,呼1-003井身结构.csv,-,A,最大井斜；对应井深约7430m
+casing_program_summary,钻杆+双径尾管,-,全井,HT1-003施工设计,-,A,0-3291m: 149.2mm钻杆；3291-5277m: 127mm钻杆；5277-5568m: 168.3mm尾管在273.1mm套管内；5568-7059m: 168.3mm尾管在241.3mm裸眼；7059-7096m: 139.7mm尾管在241.3mm裸眼；7096-7586m: 139.7mm尾管在215.9mm裸眼
+packer_depth_m,-,m,-,-,-,C,缺失；未提供分级箍/封隔器位置
+evaluation_window_top_m,-,m,-,-,-,C,缺失；未提供评价窗口顶部
+evaluation_window_bottom_m,-,m,-,-,-,C,缺失；未提供评价窗口底部
+cementing_method,单级,-,整体尾管,HT1-003施工设计,-,A,单级固井
+well_structure_file,呼1-003井身结构.csv,-,全井,-,-,A,井身结构CSV文件路径
