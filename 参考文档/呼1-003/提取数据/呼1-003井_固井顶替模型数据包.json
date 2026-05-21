@@ -1,0 +1,679 @@
+{
+  "project": "呼1-003井（HT1-003）168.3+139.7mm油层尾管控压固井",
+  "aliases": ["HT1-003", "呼1-003", "呼探1-003"],
+  "goal": "整理HT1-003井固井顶替过程、双径尾管几何、现场实际泵注参数、实验流变参数；基于untitled.m和呼1-003井身结构.csv提取模型输入数据",
+  "model_scope": "面向类似 hu102_tail_d2dga_model.py 的尾管段 D2DGA 模型输入；当前井为168.3mm+139.7mm双径复合尾管，目标段为139.7mm下部完井尾管（约7059-7586m），同时保留168.3mm上部尾管与双径整体施工参数",
+  "package_version": "1.0",
+  "extraction_date": "2026-05-22",
+  "data_sources": [
+    "参考文档/呼1-003/呼1-003井身结构.csv",
+    "参考文档/呼1-003/untitled.m",
+    "参考文档/呼1-003/HT1-003井168.3+139.7mm油层尾管控压固井施工设计 (1.95) -初稿.doc"
+  ],
+  "recommended_inputs": {
+    "well_depth_md": {
+      "value": "7586",
+      "unit": "m",
+      "type": "直接输入",
+      "source": "untitled.m / 呼1-003井身结构.csv",
+      "note": "实际完钻井深/井底深度"
+    },
+    "well_depth_md_design": {
+      "value": "7586",
+      "unit": "m",
+      "type": "直接输入",
+      "source": "untitled.m",
+      "note": "设计井深与实际完钻一致"
+    },
+    "cement_top_md": {
+      "value": "5277.754",
+      "unit": "m",
+      "type": "直接输入",
+      "source": "untitled.m",
+      "note": "水泥浆返至悬挂器位置（127mm钻杆变168.3mm尾管）"
+    },
+    "cement_bottom_md": {
+      "value": "7586",
+      "unit": "m",
+      "type": "直接输入",
+      "source": "untitled.m / 呼1-003井身结构.csv",
+      "note": "固井井段底部/引鞋位置"
+    },
+    "tail_interval_168_3_top_md": {
+      "value": "5277.754",
+      "unit": "m",
+      "type": "直接输入",
+      "source": "untitled.m",
+      "note": "168.3mm上部尾管顶部/悬挂器位置"
+    },
+    "tail_interval_168_3_bottom_md": {
+      "value": "7059.016",
+      "unit": "m",
+      "type": "直接输入",
+      "source": "untitled.m",
+      "note": "168.3mm上部尾管底部/139.7mm尾管顶部"
+    },
+    "tail_interval_139_7_top_md": {
+      "value": "7059.016",
+      "unit": "m",
+      "type": "直接输入",
+      "source": "untitled.m",
+      "note": "139.7mm下部尾管顶部"
+    },
+    "tail_interval_139_7_bottom_md": {
+      "value": "7586",
+      "unit": "m",
+      "type": "直接输入",
+      "source": "untitled.m / 呼1-003井身结构.csv",
+      "note": "139.7mm下部尾管底部/引鞋位置"
+    },
+    "hanger_position_md": {
+      "value": "5277.754",
+      "unit": "m",
+      "type": "直接输入",
+      "source": "untitled.m",
+      "note": "尾管悬挂器位置（第二变径点）"
+    },
+    "hole_diameter_upper": {
+      "value": "241.3",
+      "unit": "mm",
+      "type": "直接输入",
+      "source": "untitled.m",
+      "note": "168.3mm尾管段对应钻头尺寸（裸眼段）"
+    },
+    "hole_diameter_lower": {
+      "value": "215.9",
+      "unit": "mm",
+      "type": "直接输入",
+      "source": "untitled.m",
+      "note": "139.7mm尾管段对应钻头尺寸（裸眼段）"
+    },
+    "casing_program_drill_pipe_1": {
+      "value": "149.2mm钻杆在273.1mm套管内(0-3291.897m)",
+      "unit": "text",
+      "type": "直接输入",
+      "source": "untitled.m",
+      "note": "第一段管柱结构"
+    },
+    "casing_program_drill_pipe_2": {
+      "value": "127mm钻杆在273.1mm套管内(3291.897-5277.754m)",
+      "unit": "text",
+      "type": "直接输入",
+      "source": "untitled.m",
+      "note": "第二段管柱结构"
+    },
+    "casing_program_overlap": {
+      "value": "168.3mm尾管在273.1mm套管内(5277.754-5568m)",
+      "unit": "text",
+      "type": "直接输入",
+      "source": "untitled.m",
+      "note": "重叠段（第三段）"
+    },
+    "liner_od_lower": {
+      "value": "139.7",
+      "unit": "mm",
+      "type": "直接输入",
+      "source": "untitled.m",
+      "note": "下部完井尾管外径"
+    },
+    "liner_wall_thickness_lower": {
+      "value": "15.88",
+      "unit": "mm",
+      "type": "直接输入",
+      "source": "untitled.m",
+      "note": "139.7mm尾管壁厚"
+    },
+    "liner_od_upper": {
+      "value": "168.3",
+      "unit": "mm",
+      "type": "直接输入",
+      "source": "untitled.m",
+      "note": "上部复合尾管外径"
+    },
+    "liner_wall_thickness_upper": {
+      "value": "14.7",
+      "unit": "mm",
+      "type": "直接输入",
+      "source": "untitled.m",
+      "note": "168.3mm尾管壁厚"
+    },
+    "max_inclination": {
+      "value": "4.077923",
+      "unit": "deg",
+      "type": "直接输入",
+      "source": "呼1-003井身结构.csv",
+      "note": "最大井斜，对应井深约7430m"
+    },
+    "mud_density": {
+      "value": "1.95",
+      "unit": "g/cm³",
+      "type": "直接输入",
+      "source": "untitled.m",
+      "note": "钻井液密度 rou0=1.95g/cm³"
+    },
+    "mud_viscosity_pv": {
+      "value": "51",
+      "unit": "mPa·s",
+      "type": "直接输入",
+      "source": "untitled.m / 施工设计",
+      "note": "钻井液塑性黏度 miu0=51mPa·s (实验测定)"
+    },
+    "mud_yield_stress": {
+      "value": "10",
+      "unit": "Pa",
+      "type": "直接输入",
+      "source": "untitled.m / 施工设计",
+      "note": "钻井液屈服应力 tau0=10Pa (实验测定)"
+    },
+    "mud_rheology_n": {
+      "value": "0.82",
+      "unit": "无量纲",
+      "type": "实验值",
+      "source": "施工设计-油基钻井液流变参数表",
+      "note": "流性指数n (Power Law)"
+    },
+    "mud_rheology_K": {
+      "value": "0.21",
+      "unit": "Pa·s^n",
+      "type": "实验值",
+      "source": "施工设计-油基钻井液流变参数表",
+      "note": "稠度系数K (Power Law)"
+    },
+    "mud_gel_strength_initial": {
+      "value": "4",
+      "unit": "Pa",
+      "type": "实验值",
+      "source": "施工设计-油基钻井液流变参数表",
+      "note": "初切力"
+    },
+    "mud_gel_strength_final": {
+      "value": "7.5",
+      "unit": "Pa",
+      "type": "实验值",
+      "source": "施工设计-油基钻井液流变参数表",
+      "note": "终切力"
+    },
+    "mud_hthp_filtrate": {
+      "value": "1.2",
+      "unit": "mL",
+      "type": "实验值",
+      "source": "施工设计-油基钻井液流变参数表",
+      "note": "HTHP失水量 (150℃, 3.5MPa)"
+    },
+    "mud_hthp_cake_thickness": {
+      "value": "1.5",
+      "unit": "mm",
+      "type": "实验值",
+      "source": "施工设计-油基钻井液流变参数表",
+      "note": "HTHP泥饼厚度"
+    },
+    "mud_oil_water_ratio": {
+      "value": "85:15",
+      "unit": "ratio",
+      "type": "实验值",
+      "source": "施工设计-油基钻井液流变参数表",
+      "note": "油水比"
+    },
+    "balance_fluid_density": {
+      "value": "1.75",
+      "unit": "g/cm³",
+      "type": "直接输入",
+      "source": "untitled.m",
+      "note": "先导浆/平衡液密度 rou1=1.75g/cm³"
+    },
+    "balance_fluid_volume": {
+      "value": "28",
+      "unit": "m³",
+      "type": "直接输入",
+      "source": "untitled.m",
+      "note": "先导浆体积 v1=28m³"
+    },
+    "spacer_density": {
+      "value": "2.00",
+      "unit": "g/cm³",
+      "type": "直接输入",
+      "source": "untitled.m",
+      "note": "驱油隔离液密度 rou2=2.00g/cm³"
+    },
+    "spacer_volume": {
+      "value": "26",
+      "unit": "m³",
+      "type": "直接输入",
+      "source": "untitled.m",
+      "note": "隔离液体积 v2=26m³"
+    },
+    "lead_slurry_density": {
+      "value": "2.05",
+      "unit": "g/cm³",
+      "type": "直接输入",
+      "source": "untitled.m / 施工设计",
+      "note": "领浆密度 rou3=2.05g/cm³"
+    },
+    "lead_slurry_volume": {
+      "value": "26",
+      "unit": "m³",
+      "type": "设计值",
+      "source": "施工设计-水泥浆体积设计表",
+      "note": "领浆设计用量26m³（含附加量0.1，附加后26m³）"
+    },
+    "lead_slurry_thickening_time": {
+      "value": "430-490",
+      "unit": "min",
+      "type": "实验值",
+      "source": "施工设计-水泥浆实验数据表",
+      "note": "稠化时间，实验条件：152℃/145.1MPa，升温80min"
+    },
+    "lead_slurry_fluid_loss": {
+      "value": "<50",
+      "unit": "mL",
+      "type": "实验值",
+      "source": "施工设计-水泥浆实验数据表",
+      "note": "API失水量"
+    },
+    "lead_slurry_compressive_strength_24h": {
+      "value": ">3.5",
+      "unit": "MPa",
+      "type": "实验值",
+      "source": "施工设计-水泥浆实验数据表",
+      "note": "24小时抗压强度"
+    },
+    "lead_slurry_compressive_strength_48h": {
+      "value": ">7",
+      "unit": "MPa",
+      "type": "实验值",
+      "source": "施工设计-水泥浆实验数据表",
+      "note": "48小时抗压强度"
+    },
+    "intermediate_slurry_density": {
+      "value": "1.95",
+      "unit": "g/cm³",
+      "type": "直接输入",
+      "source": "untitled.m / 施工设计",
+      "note": "中间浆密度 rou4=1.95g/cm³"
+    },
+    "intermediate_slurry_volume": {
+      "value": "26",
+      "unit": "m³",
+      "type": "设计值",
+      "source": "施工设计-水泥浆体积设计表",
+      "note": "中间浆设计用量26m³（含附加量0.25，附加后26m³）"
+    },
+    "intermediate_slurry_thickening_time": {
+      "value": "270-330",
+      "unit": "min",
+      "type": "实验值",
+      "source": "施工设计-水泥浆实验数据表",
+      "note": "稠化时间，实验条件：152℃/145.1MPa，升温80min"
+    },
+    "intermediate_slurry_fluid_loss": {
+      "value": "<50",
+      "unit": "mL",
+      "type": "实验值",
+      "source": "施工设计-水泥浆实验数据表",
+      "note": "API失水量"
+    },
+    "intermediate_slurry_compressive_strength_24h": {
+      "value": ">14",
+      "unit": "MPa",
+      "type": "实验值",
+      "source": "施工设计-水泥浆实验数据表",
+      "note": "24小时抗压强度"
+    },
+    "intermediate_slurry_compressive_strength_48h": {
+      "value": ">18",
+      "unit": "MPa",
+      "type": "实验值",
+      "source": "施工设计-水泥浆实验数据表",
+      "note": "48小时抗压强度"
+    },
+    "tail_slurry_density": {
+      "value": "1.95",
+      "unit": "g/cm³",
+      "type": "直接输入",
+      "source": "untitled.m / 施工设计",
+      "note": "尾浆密度 rou5=1.95g/cm³"
+    },
+    "tail_slurry_volume": {
+      "value": "15",
+      "unit": "m³",
+      "type": "设计值",
+      "source": "施工设计-水泥浆体积设计表",
+      "note": "尾浆设计用量15m³（含附加量0.15，附加后15m³）"
+    },
+    "tail_slurry_thickening_time": {
+      "value": "200-260",
+      "unit": "min",
+      "type": "实验值",
+      "source": "施工设计-水泥浆实验数据表",
+      "note": "稠化时间，实验条件：152℃/145.1MPa，升温80min"
+    },
+    "tail_slurry_fluid_loss": {
+      "value": "<50",
+      "unit": "mL",
+      "type": "实验值",
+      "source": "施工设计-水泥浆实验数据表",
+      "note": "API失水量"
+    },
+    "tail_slurry_compressive_strength_24h": {
+      "value": ">14",
+      "unit": "MPa",
+      "type": "实验值",
+      "source": "施工设计-水泥浆实验数据表",
+      "note": "24小时抗压强度"
+    },
+    "tail_slurry_compressive_strength_48h": {
+      "value": ">18",
+      "unit": "MPa",
+      "type": "实验值",
+      "source": "施工设计-水泥浆实验数据表",
+      "note": "48小时抗压强度"
+    },
+    "plug_fluid_density": {
+      "value": "1.97",
+      "unit": "g/cm³",
+      "type": "直接输入",
+      "source": "untitled.m",
+      "note": "压塞液密度 rou6=1.97g/cm³"
+    },
+    "plug_fluid_volume": {
+      "value": "2",
+      "unit": "m³",
+      "type": "直接输入",
+      "source": "untitled.m",
+      "note": "压塞液体积 v6=2m³"
+    },
+    "displacement_mud_density": {
+      "value": "1.95",
+      "unit": "g/cm³",
+      "type": "直接输入",
+      "source": "untitled.m",
+      "note": "替浆钻井液密度 rou7=1.95g/cm³"
+    },
+    "displacement_mud_volume_total": {
+      "value": "93.53",
+      "unit": "m³",
+      "type": "计算值",
+      "source": "untitled.m / 呼1-003井身结构.csv",
+      "note": "替浆钻井液总体积=套管内容积=93.53m³"
+    },
+    "pump_rate_main": {
+      "value": "1.2",
+      "unit": "m³/min",
+      "type": "直接输入",
+      "source": "untitled.m",
+      "note": "先导浆、隔离液、领浆、中间浆、尾浆主排量"
+    },
+    "pump_rate_plug": {
+      "value": "1.6",
+      "unit": "m³/min",
+      "type": "直接输入",
+      "source": "untitled.m",
+      "note": "压塞液及首段替浆钻井液排量"
+    },
+    "pump_rate_displacement_schedule": {
+      "value": "1.4/1.2/1.0/0.8/0.7",
+      "unit": "m³/min",
+      "type": "直接输入",
+      "source": "untitled.m",
+      "note": "替浆分段排量：保护液1.4、替浆1分段1.4、替浆2分段1.2、替浆3分段1.0、替浆4分段0.8、替浆5分段0.7m³/min"
+    },
+    "casing_internal_volume": {
+      "value": "93.53",
+      "unit": "m³",
+      "type": "计算值",
+      "source": "呼1-003井身结构.csv",
+      "note": "套管内总容积（含钻杆+尾管段内腔）"
+    },
+    "annular_volume": {
+      "value": "约1800",
+      "unit": "m³",
+      "type": "估算",
+      "source": "呼1-003井身结构.csv",
+      "note": "环空总容积（含钻杆/尾管与井眼/套管间环空）"
+    },
+    "centralizer_upper_liner_count": {
+      "value": "21",
+      "unit": "个",
+      "type": "设计值",
+      "source": "施工设计-扶正器数据表",
+      "note": "168.3mm尾管段(5286-7057m)扶正器数量，整体弹扶，间距2根/只"
+    },
+    "centralizer_lower_liner_count": {
+      "value": "78",
+      "unit": "个",
+      "type": "设计值",
+      "source": "施工设计-扶正器数据表",
+      "note": "139.7mm尾管段(7057-7586m)扶正器数量，整体弹扶，间距2根/只"
+    },
+    "centralizer_total_count": {
+      "value": "99",
+      "unit": "个",
+      "type": "设计值",
+      "source": "施工设计-扶正器数据表",
+      "note": "扶正器总数=21+78"
+    },
+    "backpressure_control": {
+      "value": "0",
+      "unit": "MPa",
+      "type": "直接输入",
+      "source": "untitled.m",
+      "note": "控压固井回压设置为0MPa"
+    },
+    "cement_volume_total": {
+      "value": "66.07",
+      "unit": "m³",
+      "type": "计算值",
+      "source": "untitled.m / 呼1-003井身结构.csv",
+      "note": "三段水泥浆总体积=25.32+25.03+15.72=66.07m³"
+    },
+    "total_injected_volume": {
+      "value": "约213.6",
+      "unit": "m³",
+      "type": "计算值",
+      "source": "untitled.m",
+      "note": "总注入体积=28+26+25.32+25.03+15.72+2+93.53=215.6m³"
+    }
+  },
+  "model_ready_candidate": {
+    "target_section": "lower_139_7mm_completion_liner_of_dual_diameter_tail",
+    "status": "可运行候选（需补充流变实验数据）",
+    "rationale": "HT1-003井为168.3mm+139.7mm双径油层尾管，目标段为139.7mm下部尾管。已有井段、井径、套管壁厚、实际泵注体积与排量、基于untitled.m的流变参数；但缺乏实验室流变n/K值和稠化/失水/强度数据。",
+    "direct_fields": {
+      "well_top_md_m": 0,
+      "well_bottom_md_m": 7586.0,
+      "well_depth_md_m": 7586.0,
+      "hanger_position_md_m": 5277.754,
+      "cement_top_md_m": 5277.754,
+      "bit_diameter_mm_upper": 241.3,
+      "bit_diameter_mm_lower": 215.9,
+      "liner_od_mm": 139.7,
+      "liner_id_mm": 107.94,
+      "liner_wall_thickness_mm": 15.88,
+      "upper_liner_od_mm": 168.3,
+      "upper_liner_id_mm": 138.90,
+      "upper_liner_wall_thickness_mm": 14.7,
+      "upper_liner_interval_md_m": "5277.754-7059.016",
+      "lower_liner_interval_md_m": "7059.016-7586",
+      "mud_density_gcc": 1.95,
+      "mud_pv_mpas": 51,
+      "mud_yp_pa": 10,
+      "balance_fluid_density_gcc": 1.75,
+      "balance_fluid_volume_m3": 28.0,
+      "spacer_density_gcc": 2.00,
+      "spacer_volume_m3": 26.0,
+      "lead_density_gcc": 2.05,
+      "intermediate_density_gcc": 1.95,
+      "tail_density_gcc": 1.95,
+      "lead_volume_m3": 25.32,
+      "intermediate_volume_m3": 25.03,
+      "tail_volume_m3": 15.72,
+      "cement_volume_total_m3": 66.07,
+      "plug_fluid_density_gcc": 1.97,
+      "plug_fluid_volume_m3": 2.0,
+      "displacement_mud_density_gcc": 1.95,
+      "displacement_volume_total_m3": 93.53,
+      "casing_internal_volume_m3": 93.53,
+      "field_rate_main_m3_min": 1.2,
+      "field_rate_plug_m3_min": 1.6,
+      "field_rate_displacement_m3_min": "1.4/1.2/1.0/0.8/0.7",
+      "backpressure_mpa": 0,
+      "drill_pipe_1": "149.2mm(0-3291.897m)",
+      "drill_pipe_2": "127mm(3291.897-5277.754m)",
+      "overlap_section": "168.3mm in 273.1mm casing(5277.754-5568m)",
+      "open_hole_168_section": "168.3mm in 241.3mm open hole(5568-7059.016m)",
+      "open_hole_139_section_1": "139.7mm in 241.3mm open hole(7059.016-7096m)",
+      "open_hole_139_section_2": "139.7mm in 215.9mm open hole(7096-7586m)"
+    },
+    "proxy_or_assumed_fields": {
+      "field_reference_efficiency_pct": {
+        "value": "",
+        "reason": "当前资料未见CBL测井数据或固井质量评价结论，无顶替效率验证数据"
+      },
+      "standoff_profile": {
+        "value": "",
+        "reason": "无扶正器布置数据或居中度实测/模拟剖面"
+      },
+      "inclination_profile": {
+        "value": "呼1-003井身结构.csv中deg_for_logging_degree_列",
+        "reason": "井身结构CSV中提供了分段井斜角数据，但未经平滑处理形成连续剖面"
+      },
+      "rheology_n_k_lab": {
+        "value": "n=0.82, K=0.21 Pa·s^n",
+        "reason": "施工设计提供钻井液Power Law参数；水泥浆n/K值未提供具体数值"
+      },
+      "thickening_time": {
+        "value": "领浆430-490min/中间浆270-330min/尾浆200-260min",
+        "reason": "已补充施工设计实验数据（152℃/145.1MPa）"
+      },
+      "fluid_loss": {
+        "value": "均<50mL",
+        "reason": "已补充施工设计实验数据"
+      },
+      "compressive_strength": {
+        "value": "领浆24h>3.5MPa/中间浆24h>14MPa/尾浆24h>14MPa",
+        "reason": "已补充施工设计实验数据"
+      },
+      "centralizer_placement": {
+        "value": "168.3mm段21个(5286-7057m)/139.7mm段78个(7057-7586m)",
+        "reason": "已补充施工设计扶正器数据"
+      }
+    }
+  },
+  "well_structure_segments": [
+    {
+      "segment_id": 1,
+      "name": "149.2mm钻杆段",
+      "depth_top_m": 0,
+      "depth_bottom_m": 3291.897,
+      "inner_pipe_od_mm": 149.2,
+      "inner_pipe_id_mm": 129.9,
+      "inner_pipe_wall_thickness_mm": 9.65,
+      "outer_casing_id_mm": 245.42,
+      "outer_casing_od_mm": 273.1,
+      "interval_type": "钻杆在套管内"
+    },
+    {
+      "segment_id": 2,
+      "name": "127mm钻杆段",
+      "depth_top_m": 3291.897,
+      "depth_bottom_m": 5277.754,
+      "inner_pipe_od_mm": 127.0,
+      "inner_pipe_id_mm": 107.7,
+      "inner_pipe_wall_thickness_mm": 9.65,
+      "outer_casing_id_mm": 245.42,
+      "outer_casing_od_mm": 273.1,
+      "interval_type": "钻杆在套管内"
+    },
+    {
+      "segment_id": 3,
+      "name": "168.3mm尾管重叠段",
+      "depth_top_m": 5277.754,
+      "depth_bottom_m": 5568.0,
+      "inner_pipe_od_mm": 168.3,
+      "inner_pipe_id_mm": 138.9,
+      "inner_pipe_wall_thickness_mm": 14.7,
+      "outer_casing_id_mm": 245.42,
+      "outer_casing_od_mm": 273.1,
+      "interval_type": "尾管在套管内（重叠段）"
+    },
+    {
+      "segment_id": 4,
+      "name": "168.3mm尾管裸眼段",
+      "depth_top_m": 5568.0,
+      "depth_bottom_m": 7059.016,
+      "inner_pipe_od_mm": 168.3,
+      "inner_pipe_id_mm": 138.9,
+      "inner_pipe_wall_thickness_mm": 14.7,
+      "outer_hole_diameter_mm": 241.3,
+      "interval_type": "尾管在裸眼中"
+    },
+    {
+      "segment_id": 5,
+      "name": "139.7mm尾管裸眼段（上）",
+      "depth_top_m": 7059.016,
+      "depth_bottom_m": 7096.0,
+      "inner_pipe_od_mm": 139.7,
+      "inner_pipe_id_mm": 107.94,
+      "inner_pipe_wall_thickness_mm": 15.88,
+      "outer_hole_diameter_mm": 241.3,
+      "interval_type": "尾管在裸眼中"
+    },
+    {
+      "segment_id": 6,
+      "name": "139.7mm尾管裸眼段（下）",
+      "depth_top_m": 7096.0,
+      "depth_bottom_m": 7586.0,
+      "inner_pipe_od_mm": 139.7,
+      "inner_pipe_id_mm": 107.94,
+      "inner_pipe_wall_thickness_mm": 15.88,
+      "outer_hole_diameter_mm": 215.9,
+      "interval_type": "尾管在裸眼中"
+    },
+    {
+      "segment_id": 7,
+      "name": "井底口袋段",
+      "depth_top_m": 7586.0,
+      "depth_bottom_m": 7586.0,
+      "inner_pipe_od_mm": 0,
+      "inner_pipe_id_mm": 0,
+      "outer_hole_diameter_mm": 215.9,
+      "interval_type": "纯裸眼口袋（无内管）"
+    }
+  ],
+  "pumping_schedule_summary": [
+    {"step": 1, "fluid": "先导浆", "volume_m3": 28, "rate_m3_min": 1.2, "density_g_cc": 1.75},
+    {"step": 2, "fluid": "驱油隔离液", "volume_m3": 26, "rate_m3_min": 1.2, "density_g_cc": 2.00},
+    {"step": 3, "fluid": "领浆", "volume_m3": 25.32, "rate_m3_min": 1.2, "density_g_cc": 2.05},
+    {"step": 4, "fluid": "中间浆", "volume_m3": 25.03, "rate_m3_min": 1.2, "density_g_cc": 1.95},
+    {"step": 5, "fluid": "尾浆", "volume_m3": 15.72, "rate_m3_min": 1.2, "density_g_cc": 1.95},
+    {"step": 6, "fluid": "压塞液", "volume_m3": 2, "rate_m3_min": 1.6, "density_g_cc": 1.97},
+    {"step": 7, "fluid": "替浆钻井液（首段）", "volume_m3": 25, "rate_m3_min": 1.6, "density_g_cc": 1.95},
+    {"step": 8, "fluid": "保护液", "volume_m3": 14, "rate_m3_min": 1.4, "density_g_cc": 1.97},
+    {"step": 9, "fluid": "基液", "volume_m3": 1, "rate_m3_min": 1.4, "density_g_cc": 1.02},
+    {"step": 10, "fluid": "替浆钻井液1", "volume_m3": 10, "rate_m3_min": 1.4, "density_g_cc": 1.95},
+    {"step": 11, "fluid": "替浆钻井液2", "volume_m3": 5, "rate_m3_min": 1.2, "density_g_cc": 1.95},
+    {"step": 12, "fluid": "替浆钻井液3", "volume_m3": 15, "rate_m3_min": 1.0, "density_g_cc": 1.95},
+    {"step": 13, "fluid": "替浆钻井液4", "volume_m3": 10, "rate_m3_min": 0.8, "density_g_cc": 1.95},
+    {"step": 14, "fluid": "替浆钻井液5（碰压）", "volume_m3": 11.53, "rate_m3_min": 0.7, "density_g_cc": 1.95}
+  ],
+  "known_gaps": [
+    "已补充部分实验室数据：钻井液n/K、稠化时间、API失水、抗压强度、扶正器数据",
+    "水泥浆流变参数（n/K值）未提供具体数值，设计文档仅提及'流变：水泥浆高温和常温流变'",
+    "未提供CBL/VDL固井质量测井数据",
+    "未提供分段井斜/方位连续剖面（仅有CSV中的分段角度）",
+    "未提供施工过程中的实时泵压/排量数字化时序",
+    "untitled.m中回压均设为0MPa，实际控压固井可能有动态回压",
+    "水泥浆体积按施工设计取值(领浆26/中间浆26/尾浆15m³)，与untitled.m计算值略有差异"
+  ],
+  "notes": [
+    "呼1-003井（HT1-003）为168.3mm+139.7mm双径复合尾管控压固井，井深7586m",
+    "数据来源于untitled.m、呼1-003井身结构.csv和施工设计.doc（已转换提取）",
+    "施工设计.doc已通过LibreOffice转换为docx并提取关键表格数据",
+    "水泥浆设计用量：领浆26m³/中间浆26m³/尾浆15m³（含附加量）",
+    "untitled.m中七段式管柱结构已完整提取，包含钻杆段、重叠段、裸眼段",
+    "钻井液流变参数：n=0.82, K=0.21 Pa·s^n (Power Law)，PV=51mPa·s, YP=10Pa",
+    "扶正器布置：168.3mm段21个(5286-7057m)，139.7mm段78个(7057-7586m)",
+    "稠化时间(152℃/145.1MPa)：领浆430-490min/中间浆270-330min/尾浆200-260min",
+    "API失水量均<50mL；24h抗压强度：领浆>3.5MPa/中间浆>14MPa/尾浆>14MPa"
+  ]
+}

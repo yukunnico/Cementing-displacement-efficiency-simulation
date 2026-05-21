@@ -66,6 +66,9 @@ from cemdisp.data.loaders.ht1_001_loader import (
     export_ht1_001_sync_card_markdown,
     load_ht1_001_tailpipe,
 )
+from cemdisp.data.loaders.ht1_003_loader import (
+    load_ht1_003_tailpipe,
+)
 
 
 REFERENCE_DOCS_ROOT = Path(__file__).resolve().parents[3] / "参考文档"
@@ -85,6 +88,7 @@ Hu103LoaderResult = tuple[WellSpec, tuple[FluidSpec, ...], PumpingSchedule, Vali
 Hu1LoaderResult = tuple[WellSpec, tuple[FluidSpec, ...], PumpingSchedule, ValidationData]
 Hu2LoaderResult = tuple[WellSpec, tuple[FluidSpec, ...], PumpingSchedule, ValidationData]
 Ht1_001LoaderResult = tuple[WellSpec, tuple[FluidSpec, ...], PumpingSchedule, ValidationData]
+Ht1_003LoaderResult = tuple[WellSpec, tuple[FluidSpec, ...], PumpingSchedule, ValidationData]
 Hu101InletProviderFactory = Callable[[PumpingSchedule, tuple[FluidSpec, ...], str], Callable[[float], AnnulusInletState]]
 Hu102InletProviderFactory = Callable[[PumpingSchedule, tuple[FluidSpec, ...], str], Callable[[float], AnnulusInletState]]
 Hu103InletProviderFactory = Callable[[PumpingSchedule, tuple[FluidSpec, ...], str], Callable[[float], AnnulusInletState]]
@@ -105,6 +109,7 @@ __all__ = [
     "Hu2LoaderResult",
     "Ht1_001InletProviderFactory",
     "Ht1_001LoaderResult",
+    "Ht1_003LoaderResult",
     "REFERENCE_DOCS_ROOT",
     "available_well_names",
     "build_hu101_annulus_inlet_provider",
@@ -125,4 +130,5 @@ __all__ = [
     "load_hu1_tailpipe",
     "load_hu2_tailpipe",
     "load_ht1_001_tailpipe",
+    "load_ht1_003_tailpipe",
 ]

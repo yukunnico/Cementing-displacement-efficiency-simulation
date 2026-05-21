@@ -93,6 +93,25 @@ def _phase_fractions_for_fluid(
     return (("mud", 1.0),)
 
 
+def _phase_fractions_from_state(
+    pipe_exit_state: PipeExitState,
+    fluids: tuple[FluidSpec, ...],
+    *,
+    split_cement_phases: bool = False,
+) -> tuple[tuple[str, float], ...]:
+    """将鞋口出流状态映射为环空相分数，支持多相共存。
+
+    当管内轴向弥散开启时，PipeExitState 可能包含多个相的共存分数。
+    本函数将每个流体名称映射为环空相后，按体积分数加权合并。
+    """
+    mapped: dict[str, float] = {}
+    for fluid_name, frac in pipe_exit_state.phase_fractions:
+        sub_fractions = _phase_fractions_for_fluid(fluid_name, fluids, split_cement_phases=split_cement_phases)
+        for phase_name, phase_frac in sub_fractions:
+            mapped[phase_name] = mapped.get(phase_name, 0.0) + frac * phase_frac
+    return tuple(sorted(mapped.items()))
+
+
 @overload
 def build_coupled_annulus_inlet_provider(
     shoe_timeline: ShoeTimeline,
@@ -136,9 +155,9 @@ def build_coupled_annulus_inlet_provider(
 
         def _provider(time_s: float) -> AnnulusInletState:
             pipe_exit_state = shoe_timeline.at(time_s)
-            fluid_name = pipe_exit_state.phase_fractions[0][0] if pipe_exit_state.phase_fractions else ""
-            mapped_fractions = _phase_fractions_for_fluid(
-                fluid_name, fluids, split_cement_phases=split_cement_phases
+            # 使用多相映射支持管内轴向弥散后的多相共存状态
+            mapped_fractions = _phase_fractions_from_state(
+                pipe_exit_state, fluids, split_cement_phases=split_cement_phases
             )
             return AnnulusInletState(
                 time_s=pipe_exit_state.time_s,
@@ -168,12 +187,13 @@ def build_coupled_annulus_inlet_provider(
 
     def _legacy_provider(time_s: float) -> AnnulusInletState:
         pipe_exit_state = casing_solver.pipe_exit_state_at(casing_result, time_s)
-        fluid_name = pipe_exit_state.phase_fractions[0][0] if pipe_exit_state.phase_fractions else ""
+        # 使用多相映射支持管内轴向弥散后的多相共存状态
+        mapped_fractions = _phase_fractions_from_state(pipe_exit_state, fluids, split_cement_phases=split_cement_phases)
         mapped_pipe_exit = PipeExitState(
             time_s=pipe_exit_state.time_s,
             flow_rate_m3_s=pipe_exit_state.flow_rate_m3_s,
             stage_name=pipe_exit_state.stage_name,
-            phase_fractions=_legacy_phase_fractions_for_fluid(fluid_name),
+            phase_fractions=mapped_fractions,
         )
         return pipe_exit_to_annulus_inlet(mapped_pipe_exit)
 

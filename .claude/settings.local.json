@@ -1,4 +1,27 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(python -m unittest discover -s tests -v)",
+      "mcp__MiniMax__web_search",
+      "WebSearch",
+      "Bash(python -m pytest tests/test_yield_deadzone.py tests/test_axial_dispersion.py -v)",
+      "Bash(python -m pytest tests/ -v --ignore=tests/test_yield_deadzone.py --ignore=tests/test_axial_dispersion.py)",
+      "Bash(python *)",
+      "Bash(pandoc *)",
+      "Read(//c/Program Files/LibreOffice/program/**)",
+      "Read(//c/Program Files \\(x86\\)/LibreOffice/program/**)",
+      "Bash(antiword *)",
+      "Read(//d/users/desktop/固井顶替效率专利文件/专利撰写/**)",
+      "Bash(mkdir -p \"D:\\\\users\\\\desktop\\\\固井顶替效率专利文件\\\\专利撰写\")",
+      "Bash(npm list *)",
+      "Bash(npm install *)",
+      "Bash(node generate_report.js)",
+      "Bash(node generate_patent.js)",
+      "Bash(node generate_disclosure.js)",
+      "mcp__MiniMax__understand_image",
+      "Bash(Copy-Item *)"
+    ]
+  },
   "enabledPlugins": {
     "frontend-design@claude-plugins-official": true
   }

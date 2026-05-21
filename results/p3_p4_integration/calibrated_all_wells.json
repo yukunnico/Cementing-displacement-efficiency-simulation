@@ -1,0 +1,62 @@
+[
+  {
+    "well_key": "hu101",
+    "cbl_predicted": 0.6283701617054407,
+    "cbl_measured": 0.6277,
+    "deviation": 0.0006701617054406528,
+    "effective_efficiency": 0.5964232095549834,
+    "channeling_index": 0.9699398797591261,
+    "mean_cement": 0.4784390659592742,
+    "mean_mud": 0.5142102459231922
+  },
+  {
+    "well_key": "hu102",
+    "cbl_predicted": 0.4850567547908709,
+    "cbl_measured": 0.6665,
+    "deviation": 0.18144324520912908,
+    "effective_efficiency": 0.5013348775464208,
+    "channeling_index": 0.9899799599187541,
+    "mean_cement": 0.3722777534479486,
+    "mean_mud": 0.6278660856593208
+  },
+  {
+    "well_key": "hu103",
+    "cbl_predicted": 0.9999999999999998,
+    "cbl_measured": 0.1206,
+    "deviation": 0.8793999999999997,
+    "effective_efficiency": 0.9999999999999996,
+    "channeling_index": 0.0,
+    "mean_cement": 1.0,
+    "mean_mud": 1.7452150835595148e-16
+  },
+  {
+    "well_key": "hu1",
+    "cbl_predicted": 0.914507149334865,
+    "cbl_measured": null,
+    "deviation": null,
+    "effective_efficiency": 0.8663434174521022,
+    "channeling_index": 0.4328657314627356,
+    "mean_cement": 0.837879342027372,
+    "mean_mud": 0.11603752500605531
+  },
+  {
+    "well_key": "hu2",
+    "cbl_predicted": 0.7030385763652032,
+    "cbl_measured": null,
+    "deviation": null,
+    "effective_efficiency": 0.7030385763652032,
+    "channeling_index": 0.4629258517032021,
+    "mean_cement": 0.665948270602583,
+    "mean_mud": 0.29149635947790037
+  },
+  {
+    "well_key": "ht1_001",
+    "cbl_predicted": 0.896089503011701,
+    "cbl_measured": null,
+    "deviation": null,
+    "effective_efficiency": 0.8302246605690107,
+    "channeling_index": 0.4609218436871724,
+    "mean_cement": 0.7933396697784266,
+    "mean_mud": 0.166273460341195
+  }
+]

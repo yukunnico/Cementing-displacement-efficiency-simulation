@@ -205,6 +205,7 @@ class AnnulusD2DGASolver:
         enable_gravity: bool = False,
         g_constant: float = 9.81,
         gravity_yield_factor: float = 0.5,
+        yield_regularization_M: float = 100.0,
     ) -> None:
         """初始化环空二维求解器参数。
 
@@ -268,6 +269,7 @@ class AnnulusD2DGASolver:
         self.enable_gravity: bool = enable_gravity
         self.g_constant: float = g_constant
         self.gravity_yield_factor: float = gravity_yield_factor
+        self.yield_regularization_M: float = yield_regularization_M
 
     def _build_geom(self, well_spec: WellSpec, mud_cake_thickness: Array | None = None) -> Dict[str, Array]:
         """根据井筒规格构建环空二维网格几何参数。
@@ -368,6 +370,13 @@ class AnnulusD2DGASolver:
             raise ValueError("需要钻井液和至少一个水泥浆流体")
         return mud, lead, tail, spacer
 
+    @staticmethod
+    def _fluid_yield_stress(fluid: FluidSpec) -> float:
+        """返回流体的屈服应力。幂律和牛顿流体返回 0。"""
+        if fluid.yield_stress_pa is not None:
+            return fluid.yield_stress_pa
+        return 0.0
+
     def _apparent_viscosity(
         self,
         fluid: FluidSpec,
@@ -453,8 +462,8 @@ class AnnulusD2DGASolver:
         spacer_fluid: FluidSpec | None,
         gel_strength: Array | None = None,
         temperature_correction: Array | None = None,
-    ) -> Tuple[Array, Array, Array]:
-        """计算四相混合物系的表观粘度、密度和钻井液分数。"""
+    ) -> Tuple[Array, Array, Array, Array]:
+        """计算四相混合物系的表观粘度、密度、钻井液分数和混合屈服应力。"""
         # 四相体积分数闭合：显式跟踪领浆、尾浆和前置/隔离液，钻井液由守恒关系反算。
         mud = np.clip(1.0 - lead - tail - spacer, 0.0, 1.0)
         effective_b = geom.get("effective_b", geom["b"])
@@ -474,7 +483,15 @@ class AnnulusD2DGASolver:
             rho += tail * (tail_fluid.density_kg_m3 / 1000.0)
         if spacer_fluid is not None:
             rho += spacer * (spacer_fluid.density_kg_m3 / 1000.0)
-        return mu, rho, mud
+        # 新增：混合屈服应力（相体积加权）
+        tau_y = mud * self._fluid_yield_stress(mud_fluid)
+        if lead_fluid is not None:
+            tau_y += lead * self._fluid_yield_stress(lead_fluid)
+        if tail_fluid is not None:
+            tau_y += tail * self._fluid_yield_stress(tail_fluid)
+        if spacer_fluid is not None:
+            tau_y += spacer * self._fluid_yield_stress(spacer_fluid)
+        return mu, rho, mud, tau_y
 
     def _compute_velocity(
         self,
@@ -513,7 +530,7 @@ class AnnulusD2DGASolver:
         effective_b = geom.get("effective_b", geom["b"])
         b = effective_b
         q_half = q_m3s / 2.0
-        mu, rho, mud = self._compute_props(
+        mu, rho, mud, tau_y = self._compute_props(
             lead,
             tail,
             spacer,
@@ -528,15 +545,27 @@ class AnnulusD2DGASolver:
         )
 
         shear_rate = np.maximum(6.0 * np.abs(w_prev) / np.maximum(effective_b, 1.0e-5), 1.0e-6)
+        # 新增：Papanastasiou 正则化屈服应力模型
+        # 在低剪切区（窄边死区）显著增大有效黏度，使局部流度趋近于零
+        # 注意：_apparent_viscosity 对 Bingham/HB 已包含 tau_y/gamma 项，
+        # 正则化应替换此项而非叠加，故先减去纯屈服应力贡献
+        gamma_safe = np.maximum(shear_rate, 1.0e-8)
+        regularization_factor = (1.0 - np.exp(-self.yield_regularization_M * shear_rate)) / gamma_safe
+        # 减去 _apparent_viscosity 中的纯屈服应力贡献（tau_y / gamma），
+        # 再用 Papanastasiou 正则化项替代；对牛顿/幂律流体 tau_y=0，不影响
+        mu_shear = np.maximum(mu - tau_y / gamma_safe, 1.0e-6)
+        mu_reg = mu_shear + tau_y * regularization_factor
+
         D_h = 2.0 * geom["b"]
         rho_kg_m3 = rho * 1000.0
-        Re = rho_kg_m3 * np.abs(w_prev) * D_h / np.maximum(mu, 1.0e-6)
-        mu_turbulent = np.zeros_like(mu)
+        Re = rho_kg_m3 * np.abs(w_prev) * D_h / np.maximum(mu_reg, 1.0e-6)
+        mu_turbulent = np.zeros_like(mu_reg)
 
         # === 论文D2DGA口径速度场：偏心通道主导 + 浮力修正 ===
-        # 基础流动度：偏心通道主导 (b/mean(b))^2 / mu
+        # 基础流动度：偏心通道主导 (b/mean(b))^2 / mu_reg
+        # 使用正则化黏度 mu_reg，在低剪切死区自动抑制流动
         b_mean = np.mean(b, axis=0, keepdims=True)
-        base = (b / np.maximum(b_mean, 1.0e-12)) ** 2 / np.maximum(mu, 1.0e-6)
+        base = (b / np.maximum(b_mean, 1.0e-12)) ** 2 / np.maximum(mu_reg, 1.0e-6)
 
         # 浮力修正：基于顶替液与被顶替液的整体密度对比
         # density_contrast > 0 表示顶替液更重（水泥重 vs 泥浆轻），有助于窄边推进
@@ -575,7 +604,8 @@ class AnnulusD2DGASolver:
         bv -= (y[:, None] / y[-1]) * bv[-1, :]
         v = bv / np.maximum(b, 1.0e-8)
 
-        return w, v, mu, rho, mud, Re, mu_turbulent
+        # 返回正则化后的黏度 mu_reg，确保下游 mobility 指标反映屈服死区效应
+        return w, v, mu_reg, rho, mud, Re, mu_turbulent
 
     def _depth_profiles(self, geom: Dict[str, Array], lead: Array, tail: Array, spacer: Array, wall: Array) -> pd.DataFrame:
         """计算深度方向的平均剖面数据。"""

@@ -193,13 +193,8 @@
 
 本项目所写的代码同时要附上中文的注释，确保后续维护个修改时能读懂每块代码的含义，所实现的功能以及各个变量名字所指代的含义。
 
-## 文档优先级
 
-本项目的结构、建模和开发路线，优先参考以下文档：
 
-1. `docs/multiwell_primary_cementing_model_scheme.md`
-2. `docs/multiwell_primary_cementing_development_task_list.md`
-3. `README.md`
 
-新增实现如果与上述文档不一致，应优先更新文档或在实现说明中解释偏差原因。
+
 
