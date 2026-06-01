@@ -217,11 +217,21 @@ def annulus_stop_time_s(
 ) -> float:
     """返回 HT1-003 环空二维顶替应停止的地面累计时间。
 
-    当水泥浆前缘到达鞋口时，代表整段水泥浆已全部进入环空，
-    环空顶替计算到此结束，不再继续让替浆液入环空稀释既有水泥场。
+    当替浆液（水泥浆之后的首个非水泥流体）到达鞋口时停止，
+    此时水泥浆已完全进入环空，继续泵入会稀释既有水泥场。
     """
-
-    del fluids
+    cement_roles = {FluidRole.LEAD, FluidRole.INTERMEDIATE, FluidRole.TAIL}
+    fluid_by_name = {f.name: f for f in fluids}
+    found_cement = False
+    for front in casing_result.fronts:
+        fluid = fluid_by_name.get(front.fluid_name)
+        if fluid is None:
+            continue
+        if fluid.role in cement_roles:
+            found_cement = True
+            continue
+        if found_cement:
+            return float(front.time_s)
     return float(casing_result.cement_end_time_s)
 
 
@@ -281,8 +291,9 @@ def _export_casing_flow_timing(
         if arrival_time_s is None:
             continue
         arrival_times.append(arrival_time_s)
-        if fluid_name == "尾管水泥浆":
-            cement_arrival_time_s = arrival_time_s
+        if fluid_name in ("领浆", "尾浆", "尾管水泥浆"):
+            if cement_arrival_time_s is None:
+                cement_arrival_time_s = arrival_time_s
 
     annulus_start_time_s = cement_arrival_time_s if cement_arrival_time_s is not None else pump_end_time_s
     sample_times = sorted({0.0, pump_end_time_s, *arrival_times})

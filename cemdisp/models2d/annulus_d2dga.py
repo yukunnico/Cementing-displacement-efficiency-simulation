@@ -307,7 +307,11 @@ class AnnulusD2DGASolver:
         hole = np.interp(md, cal_md, cal_hole)
         inc_deg = np.interp(md, inc_md, inc_values)
         standoff = np.interp(md, standoff_md, standoff_values)
-        od_mm = np.full_like(md, float(well_spec.liner_od_mm or 0.0), dtype=float)
+        if well_spec.liner_od_profile:
+            od_md, od_values = _profile_to_arrays(well_spec.liner_od_profile)
+            od_mm = np.interp(md, od_md, od_values)
+        else:
+            od_mm = np.full_like(md, float(well_spec.liner_od_mm or 0.0), dtype=float)
 
         e = np.clip(1.0 - standoff, 0.05, 0.55)
         clearance = (hole - od_mm) / 1000.0
@@ -353,7 +357,11 @@ class AnnulusD2DGASolver:
     def _physical_annular_volume(self, well_spec: WellSpec) -> float:
         """计算井段物理环空体积（用于体积校正）。"""
         cal_md, cal_hole = _profile_to_arrays(well_spec.hole_diameter_profile)
-        od = np.full_like(cal_md, float(well_spec.liner_od_mm or 0.0), dtype=float)
+        if well_spec.liner_od_profile:
+            od_md, od_values = _profile_to_arrays(well_spec.liner_od_profile)
+            od = np.interp(cal_md, od_md, od_values)
+        else:
+            od = np.full_like(cal_md, float(well_spec.liner_od_mm or 0.0), dtype=float)
         area = np.pi * ((cal_hole / 1000.0) ** 2 - (od / 1000.0) ** 2) / 4.0
         return float(np.trapezoid(area, x=cal_md))
 

@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "anysearch": {
+      "source": "anysearch-ai/anysearch-skill",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "d2a7c914b5e0203eba1cdd14e699a84f11d1023f1982721abc61d78efb4d9f28"
+    }
+  }
+}
