@@ -107,6 +107,8 @@ class WellSpec:
     liner_id_mm: Optional[float] = None
     # --- 剖面数据 ---
     hole_diameter_profile: Tuple[DepthValuePoint, ...] = field(default_factory=tuple)
+    liner_od_profile: Tuple[DepthValuePoint, ...] = field(default_factory=tuple)
+    pipe_id_profile: Tuple[DepthValuePoint, ...] = field(default_factory=tuple)
     inclination_profile: Tuple[DepthValuePoint, ...] = field(default_factory=tuple)
     standoff_profile: Tuple[DepthValuePoint, ...] = field(default_factory=tuple)
     evaluation_windows: Tuple[EvaluationWindow, ...] = field(default_factory=tuple)
@@ -120,6 +122,8 @@ class WellSpec:
     shoe_lag_volume_m3: Optional[float] = None        # 鞋口处迟到体积（m³）
     # --- 衬管壁厚 ---
     liner_wall_thickness_mm: Optional[float] = None   # 衬管壁厚（mm）
+    # --- 管内径剖面（1D前沿追踪用，深度→内径mm） ---
+    pipe_id_profile: Tuple[DepthValuePoint, ...] = field(default_factory=tuple)
 
     @property
     def is_dual_diameter(self) -> bool:

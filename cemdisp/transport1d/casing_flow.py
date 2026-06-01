@@ -452,7 +452,29 @@ class CasingFlowSolver:
 
     @staticmethod
     def _pipe_cross_section_area(well_spec: WellSpec) -> float:
-        """根据套管内径计算管内截面积。"""
+        """根据管内径计算等效截面积。
+
+        优先级：shoe_lag_volume_m3 > pipe_id_profile > liner_id_mm。
+        shoe_lag_volume_m3 是从地面到鞋口的管内迟到体积（m³），
+        除以鞋口深度得到等效截面积。
+        """
+        if well_spec.shoe_lag_volume_m3 is not None:
+            return well_spec.shoe_lag_volume_m3 / well_spec.shoe_md_m
+
+        if well_spec.pipe_id_profile:
+            import numpy as np
+            depths = np.array([p.depth_md_m for p in well_spec.pipe_id_profile])
+            ids_mm = np.array([p.value for p in well_spec.pipe_id_profile])
+            mask = (depths >= 0.0) & (depths <= well_spec.shoe_md_m)
+            d = depths[mask]
+            ids = ids_mm[mask]
+            if len(d) < 2:
+                d = np.array([0.0, well_spec.shoe_md_m])
+                ids = np.array([ids_mm[0], ids_mm[-1]])
+            ids_m = ids / 1000.0
+            areas = math.pi * ids_m**2 / 4.0
+            total_volume = float(np.trapezoid(areas, x=d))
+            return total_volume / well_spec.shoe_md_m
 
         if well_spec.liner_id_mm is None:
             raise ValueError("well_spec.liner_id_mm 不能为空，套管内1D模型需要内径")
