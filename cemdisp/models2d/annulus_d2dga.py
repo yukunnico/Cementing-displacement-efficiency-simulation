@@ -9,6 +9,10 @@
 3. D2DGA 通量放大修正，近似捕捉间隙尺度分散；
 4. 仅输出求解域内的顶替效率与浓度场。
 
+出口边界条件：
+- 开放出口（open_outlet=True，默认）：允许水泥浆流出求解域到重叠段，适用于只模拟裸眼段；
+- 封闭出口（open_outlet=False）：按累计入环空体积限制场量，适用于模拟整个环空。
+
 注意：
 - 本模块不再把泥饼、温度、凝胶强度、湍流修正、CBL 质量惩罚等工程扩展
   项作为核心求解的一部分；
@@ -72,8 +76,20 @@ def _phase_volume(field: Array, geom: Dict[str, Array]) -> float:
     return 2.0 * _trapez2d(geom["b"] * np.clip(field, 0.0, 1.0), geom)
 
 
-def _limit_phase_volume(field: Array, geom: Dict[str, Array], target_volume_m3: float) -> Array:
-    """按累计入环空体积限制场量，避免数值扩散凭空放大相体积。"""
+def _limit_phase_volume(field: Array, geom: Dict[str, Array], target_volume_m3: float, open_outlet: bool = False) -> Array:
+    """按累计入环空体积限制场量，避免数值扩散凭空放大相体积。
+
+    Args:
+        field: 浓度场（ny×nz 数组）
+        geom: 几何参数字典
+        target_volume_m3: 目标体积（累计入环空体积，立方米）
+        open_outlet: 是否开放出口边界。True 时不限制体积，允许水泥浆流出到重叠段。
+
+    Returns:
+        限制后的浓度场，裁剪到 [0, 1]
+    """
+    if open_outlet:
+        return np.clip(field, 0.0, 1.0)
     if target_volume_m3 <= 0.0:
         return np.zeros_like(field)
     current_volume_m3 = _phase_volume(field, geom)
@@ -134,6 +150,8 @@ class AnnulusSimulationResult:
     tail_snapshots: Tuple[Array, ...] = field(default_factory=tuple)
     spacer_snapshots: Tuple[Array, ...] = field(default_factory=tuple)
     wall_snapshots: Tuple[Array, ...] = field(default_factory=tuple)
+    # Legacy fields -- always empty/zero in the current paper-grade solver.
+    # Kept as Optional placeholders for backward compatibility; no longer populated by run().
     gel_strength_snapshots: Tuple[Array, ...] = field(default_factory=tuple)
     mud_cake_field: Array = field(default_factory=lambda: np.empty((0, 0), dtype=float))
     mud_cake_snapshots: Tuple[Array, ...] = field(default_factory=tuple)
@@ -154,7 +172,8 @@ class AnnulusD2DGASolver:
     1. 平流输运：水泥浆与前置/隔离液随平均速度场向下游运移；
     2. D2DGA 分散：基于 Zhang & Frigaard (2022) 的通量放大修正，近似捕捉间隙尺度分散；
     3. 浮力相关横向再分布：以 Hele-Shaw 风格的密度差横向速度近似，保持密度差影响仍在核心层；
-    4. 仅输出求解域指标，不在 solver 内叠加现场质量惩罚或 CBL 校准。
+    4. 出口边界：支持开放边界（允许水泥浆流出到重叠段）或封闭边界（限制体积）；
+    5. 仅输出求解域指标，不在 solver 内叠加现场质量惩罚或 CBL 校准。
 
     D2DGA通量修正（核心改进）：
     - 假设替浆液占据间隙中心（流速快），被替液贴近壁面（流速慢）
@@ -169,7 +188,12 @@ class AnnulusD2DGASolver:
     - 风险指标：仅作为后验诊断输出，不反向影响顶替结果。
 
     使用示例：
-        solver = AnnulusD2DGASolver(dt=4.0, nz=140, ny=40)
+        # 开放出口边界（默认，适用于只模拟裸眼段）
+        solver = AnnulusD2DGASolver(open_outlet=True)
+
+        # 封闭出口边界（适用于模拟整个环空）
+        solver = AnnulusD2DGASolver(open_outlet=False)
+
         result = solver.run(well_spec, fluids, inlet_state_provider)
     """
 
@@ -182,30 +206,10 @@ class AnnulusD2DGASolver:
         total_t: float = 12000.0,
         enable_d2dga: bool = True,
         d2dga_viscosity_ratio: float = 1.0,
-        quality_penalty_scale: float = 0.099,
-        channeling_penalty_weight: float = 0.55,
-        mixing_penalty_weight: float = 0.35,
-        instability_penalty_weight: float = 0.25,
         instability_decay_scale: float = 5.0,
         save_interval: int = 60,
-        gel_growth_rate: float = 0.001,
-        gel_max_pa: float = 50.0,
-        gel_break_threshold: float = 100.0,
-        T_surface: float = 20.0,
-        geothermal_gradient: float = 0.03,
-        T_ref: float = 80.0,
-        alpha_T: float = 0.01,
-        enable_temperature_coupling: bool = False,
-        enable_mud_cake: bool = False,
-        initial_mud_cake_mm: float = 3.0,
-        k_erosion: float = 0.001,
-        enable_turbulence: bool = False,
-        Re_critical: float = 2100.0,
-        turbulence_coefficient: float = 0.16,
-        enable_gravity: bool = False,
-        g_constant: float = 9.81,
-        gravity_yield_factor: float = 0.5,
         yield_regularization_M: float = 100.0,
+        open_outlet: bool = True,
     ) -> None:
         """初始化环空二维求解器参数。
 
@@ -216,29 +220,12 @@ class AnnulusD2DGASolver:
             total_t: 总模拟时间（秒），默认12000秒（200分钟）
             enable_d2dga: 是否启用D2DGA通量修正（Zhang & Frigaard 2022），默认开启
             d2dga_viscosity_ratio: D2DGA粘度比 m = η_displaced/η_displacing，默认1.0
-            quality_penalty_scale: 兼容旧脚本保留，但论文口径核心中不再使用。
-            channeling_penalty_weight: 兼容旧脚本保留，仅用于后验风险指标。
-            mixing_penalty_weight: 兼容旧脚本保留，仅用于后验风险指标。
-            instability_penalty_weight: 兼容旧脚本保留，仅用于后验风险指标。
             instability_decay_scale: 后验失稳指数缩放，默认5.0。
             save_interval: 二维场快照保存步长，默认每60个时间步保存一次
-            gel_growth_rate: 兼容旧脚本保留，核心中不再使用。
-            gel_max_pa: 兼容旧脚本保留，核心中不再使用。
-            gel_break_threshold: 兼容旧脚本保留，核心中不再使用。
-            T_surface: 兼容旧脚本保留，核心中不再使用。
-            geothermal_gradient: 兼容旧脚本保留，核心中不再使用。
-            T_ref: 兼容旧脚本保留，核心中不再使用。
-            alpha_T: 兼容旧脚本保留，核心中不再使用。
-            enable_temperature_coupling: 兼容旧脚本保留，核心中不再使用。
-            enable_mud_cake: 兼容旧脚本保留，核心中不再使用。
-            initial_mud_cake_mm: 兼容旧脚本保留，核心中不再使用。
-            k_erosion: 兼容旧脚本保留，核心中不再使用。
-            enable_turbulence: 兼容旧脚本保留，核心中不再使用。
-            Re_critical: 兼容旧脚本保留，仅用于诊断雷诺数阈值注释。
-            turbulence_coefficient: 兼容旧脚本保留，核心中不再使用。
-            enable_gravity: 兼容旧脚本保留，核心中不再使用。
-            g_constant: 重力常数，供论文口径浮力横向速度近似使用。
-            gravity_yield_factor: 兼容旧脚本保留，核心中不再使用。
+            yield_regularization_M: Papanastasiou正则化参数，控制屈服应力在低剪切区的平滑过渡，默认100.0
+            open_outlet: 是否开放出口边界（允许水泥浆流出到重叠段），默认True。
+                True: 开放出口，不限制体积，适用于只模拟裸眼段；
+                False: 封闭出口，按累计入环空体积限制场量，适用于模拟整个环空。
         """
         self.dt = dt
         self.nz = nz
@@ -246,30 +233,10 @@ class AnnulusD2DGASolver:
         self.total_t = total_t
         self.enable_d2dga = enable_d2dga
         self.d2dga_viscosity_ratio = d2dga_viscosity_ratio
-        self.quality_penalty_scale = quality_penalty_scale
-        self.channeling_penalty_weight = channeling_penalty_weight
-        self.mixing_penalty_weight = mixing_penalty_weight
-        self.instability_penalty_weight = instability_penalty_weight
         self.instability_decay_scale = instability_decay_scale
         self.save_interval: int = save_interval
-        self.gel_growth_rate = gel_growth_rate
-        self.gel_max_pa = gel_max_pa
-        self.gel_break_threshold = gel_break_threshold
-        self.T_surface = T_surface
-        self.geothermal_gradient = geothermal_gradient
-        self.T_ref = T_ref
-        self.alpha_T = alpha_T
-        self.enable_temperature_coupling = enable_temperature_coupling
-        self.enable_mud_cake: bool = enable_mud_cake
-        self.initial_mud_cake_mm: float = initial_mud_cake_mm
-        self.k_erosion: float = k_erosion
-        self.enable_turbulence: bool = enable_turbulence
-        self.Re_critical: float = Re_critical
-        self.turbulence_coefficient: float = turbulence_coefficient
-        self.enable_gravity: bool = enable_gravity
-        self.g_constant: float = g_constant
-        self.gravity_yield_factor: float = gravity_yield_factor
         self.yield_regularization_M: float = yield_regularization_M
+        self.open_outlet: bool = open_outlet
 
     def _build_geom(self, well_spec: WellSpec, mud_cake_thickness: Array | None = None) -> Dict[str, Array]:
         """根据井筒规格构建环空二维网格几何参数。
@@ -675,10 +642,6 @@ class AnnulusD2DGASolver:
         tail_snapshots: list[Array] = []
         spacer_snapshots: list[Array] = []
         wall_snapshots: list[Array] = []
-        gel_strength_snapshots: list[Array] = []
-        mud_cake_snapshots: list[Array] = []
-        reynolds_snapshots: list[Array] = []
-        turbulent_viscosity_snapshots: list[Array] = []
         snapshot_times: list[float] = []
         cumulative_lead_in_m3 = 0.0
         cumulative_tail_in_m3 = 0.0
@@ -754,9 +717,9 @@ class AnnulusD2DGASolver:
                 cumulative_lead_in_m3 += inlet_state.flow_rate_m3_s * inlet_lead_fraction * self.dt
                 cumulative_tail_in_m3 += inlet_state.flow_rate_m3_s * inlet_tail_fraction * self.dt
                 cumulative_spacer_in_m3 += inlet_state.flow_rate_m3_s * inlet_spacer_fraction * self.dt
-                lead = _limit_phase_volume(lead, geom, cumulative_lead_in_m3)
-                tail = _limit_phase_volume(tail, geom, cumulative_tail_in_m3)
-                spacer = _limit_phase_volume(spacer, geom, cumulative_spacer_in_m3)
+                lead = _limit_phase_volume(lead, geom, cumulative_lead_in_m3, self.open_outlet)
+                tail = _limit_phase_volume(tail, geom, cumulative_tail_in_m3, self.open_outlet)
+                spacer = _limit_phase_volume(spacer, geom, cumulative_spacer_in_m3, self.open_outlet)
 
             else:
                 # === 泵停阶段：冻结浓度场，仅记录指标 ===
@@ -785,10 +748,6 @@ class AnnulusD2DGASolver:
                 tail_snapshots.append(tail.copy())
                 spacer_snapshots.append(spacer.copy())
                 wall_snapshots.append(wall.copy())
-                gel_strength_snapshots.append(gel_strength.copy())
-                mud_cake_snapshots.append(mud_cake_thickness.copy())
-                reynolds_snapshots.append(Re.copy())
-                turbulent_viscosity_snapshots.append(mu_turbulent.copy())
                 snapshot_times.append(current_time_s)
 
             cement = np.clip(lead + tail, 0.0, 1.0)
@@ -887,11 +846,6 @@ class AnnulusD2DGASolver:
             tail_snapshots=tuple(tail_snapshots),
             spacer_snapshots=tuple(spacer_snapshots),
             wall_snapshots=tuple(wall_snapshots),
-            gel_strength_snapshots=tuple(gel_strength_snapshots),
-            mud_cake_field=mud_cake_thickness,
-            mud_cake_snapshots=tuple(mud_cake_snapshots),
-            reynolds_snapshots=tuple(reynolds_snapshots),
-            turbulent_viscosity_snapshots=tuple(turbulent_viscosity_snapshots),
             snapshot_times_s=tuple(snapshot_times),
             notes=(
                 "当前显式跟踪领浆、尾浆与前置液/隔离液三类入环空相，钻井液由体积分数闭合反算。",

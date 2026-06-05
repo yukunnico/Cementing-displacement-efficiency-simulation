@@ -116,25 +116,19 @@ def run_and_export(
     _ = plot_annulus_snapshots(result, output_dir=output_dir)
     _ = plot_final_fields_contour(result, output_dir=output_dir)
 
-    # 导出2D场数据NPZ（水泥/隔离液/泥饼/触变/湍流快照 + 时间点 + 网格坐标）
-    # 这些数组直接来自求解器结果对象，确保导出数据与模型实际计算场一致。
+    # 导出2D场数据NPZ（水泥/隔离液/壁面快照 + 时间点 + 网格坐标）
     npz_path = output_dir / f"呼103尾管_{mode_title}_2D场数据.npz"
     _ = np.savez(
         npz_path,
         cement_snapshots=np.array(result.cement_snapshots),
         spacer_snapshots=np.array(result.spacer_snapshots),
         wall_snapshots=np.array(result.wall_snapshots),
-        gel_strength_snapshots=np.array(result.gel_strength_snapshots),
-        mud_cake_snapshots=np.array(result.mud_cake_snapshots),
-        reynolds_snapshots=np.array(result.reynolds_snapshots),
-        turbulent_viscosity_snapshots=np.array(result.turbulent_viscosity_snapshots),
         snapshot_times_s=np.array(result.snapshot_times_s),
         md=result.geom["md"],
         y=result.geom["y"],
         cement_final=result.cement_field,
         spacer_final=result.spacer_field,
         wall_final=result.wall_field,
-        mud_cake_final=result.mud_cake_field,
     )
 
     # 导出水泥浓度场时间演化动画（GIF格式）

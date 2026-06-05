@@ -251,17 +251,12 @@ def run_and_export(
         cement_snapshots=np.array(result.cement_snapshots),
         spacer_snapshots=np.array(result.spacer_snapshots),
         wall_snapshots=np.array(result.wall_snapshots),
-        gel_strength_snapshots=np.array(result.gel_strength_snapshots),
-        mud_cake_snapshots=np.array(result.mud_cake_snapshots),
-        reynolds_snapshots=np.array(result.reynolds_snapshots),
-        turbulent_viscosity_snapshots=np.array(result.turbulent_viscosity_snapshots),
         snapshot_times_s=np.array(result.snapshot_times_s),
         md=result.geom["md"],
         y=result.geom["y"],
         cement_final=result.cement_field,
         spacer_final=result.spacer_field,
         wall_final=result.wall_field,
-        mud_cake_final=result.mud_cake_field,
     )
 
     _ = animate_cement_field(result, output_dir=output_dir, save_format="gif")
