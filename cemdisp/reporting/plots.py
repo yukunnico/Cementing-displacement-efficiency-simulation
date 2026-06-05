@@ -237,14 +237,11 @@ def plot_efficiency_summary_bar(
 ) -> Figure:
     """绘制最终顶替指标对比柱状图。
 
-    默认绘制四个最终指标的柱状对比图：
+    绘制两个最终指标的柱状对比图：
     - 全井段有效顶替效率
-    - CBL评价井段有效顶替效率
-    - 目标层段有效顶替效率
     - 水泥浆占据率（水泥体积占环空体积的比例）
 
-    若旧结果对象仍包含 ``cbl_quality_proxy`` 列，则附加显示第五根柱，
-    以兼容历史结果可视化。
+    所有指标均基于全井段计算，不区分 CBL 评价段或目标层段。
 
     Args:
         result: 环空二维模拟结果
@@ -258,8 +255,6 @@ def plot_efficiency_summary_bar(
         metrics,
         [
             "effective_efficiency",
-            "cbl_eval_interval_efficiency",
-            "target_interval_efficiency",
             "bulk_cement_fill",
         ],
         "metrics",
@@ -267,25 +262,16 @@ def plot_efficiency_summary_bar(
     final_row = metrics.iloc[-1]
     labels = [
         "全井段有效顶替效率",
-        "CBL评价井段有效顶替效率",
-        "目标层段有效顶替效率",
         "水泥浆占据率",
     ]
     values = [
         final_row["effective_efficiency"],
-        final_row["cbl_eval_interval_efficiency"],
-        final_row["target_interval_efficiency"],
         final_row["bulk_cement_fill"],
     ]
-    colors = ["#2f80ed", "#2f80ed", "#2f80ed", "#27ae60"]
-
-    if "cbl_quality_proxy" in metrics.columns:
-        labels.append("质量响应效率")
-        values.append(final_row["cbl_quality_proxy"])
-        colors.append("#f2994a")
+    colors = [ACADEMIC_COLORS["primary"], ACADEMIC_COLORS["success"]]
 
     well_name = _safe_filename_component(result.well_name)
-    fig, ax = plt.subplots(figsize=(11, 6))
+    fig, ax = plt.subplots(figsize=STANDARD_FIGSIZE["single"])
     bars = ax.bar(labels, values, color=colors, edgecolor="#333333", linewidth=0.6)
     ax.set_title(f"{result.well_name} 最终结果对比", fontsize=14, fontweight="bold")
     ax.set_ylabel("效率 / 占据率")
@@ -301,18 +287,6 @@ def plot_efficiency_summary_bar(
             ha="center",
             va="bottom",
             fontsize=10,
-        )
-
-    if "cbl_quality_proxy" in metrics.columns:
-        ax.text(
-            0.01,
-            -0.22,
-            "* 质量响应效率 ≠ 有效顶替效率，基于 CBL 代理值计算",
-            transform=ax.transAxes,
-            ha="left",
-            va="top",
-            fontsize=10,
-            color="#8a4b08",
         )
 
     fig.tight_layout()

@@ -34,8 +34,7 @@ def _require_snapshot_data(result: AnnulusSimulationResult) -> tuple[tuple[Array
     if not snapshots:
         raise ValueError("result.cement_snapshots 为空，无法绘制二维场快照云图。")
 
-    # 优先使用专门的快照时间；若旧结果对象未提供，则退回到 time_points_s。
-    raw_times = result.snapshot_times_s or result.time_points_s
+    raw_times = result.snapshot_times_s
     if len(raw_times) != len(snapshots):
         raise ValueError("快照数量与快照时间数量不一致，无法建立时间坐标。")
 
@@ -44,11 +43,10 @@ def _require_snapshot_data(result: AnnulusSimulationResult) -> tuple[tuple[Array
 
 
 def _optional_spacer_snapshots(result: AnnulusSimulationResult, expected_count: int) -> tuple[Array, ...]:
-    """读取隔离液快照；旧结果缺少该字段时返回同尺寸零场以保持兼容。"""
-    raw_snapshots = getattr(result, "spacer_snapshots", ())
+    """读取隔离液快照；若无隔离液快照则返回同尺寸零场。"""
+    raw_snapshots = result.spacer_snapshots
     snapshots = tuple(np.asarray(snapshot, dtype=float) for snapshot in raw_snapshots)
     if not snapshots:
-        # 兼容旧版单流体结果：没有隔离液快照时显示为零浓度，不影响原有水泥图。
         cement_snapshots = tuple(np.asarray(snapshot, dtype=float) for snapshot in result.cement_snapshots)
         return tuple(np.zeros_like(snapshot, dtype=float) for snapshot in cement_snapshots)
     if len(snapshots) != expected_count:
@@ -57,10 +55,9 @@ def _optional_spacer_snapshots(result: AnnulusSimulationResult, expected_count: 
 
 
 def _optional_spacer_field(result: AnnulusSimulationResult, cement_field: Array) -> Array:
-    """读取最终隔离液浓度场；旧结果缺少该字段时返回零场以保持向后兼容。"""
-    raw_field = getattr(result, "spacer_field", None)
+    """读取最终隔离液浓度场；若无则返回零场。"""
+    raw_field = result.spacer_field
     if raw_field is None:
-        # 旧版本 AnnulusSimulationResult 只有水泥场，零场能保持既有功能不报错。
         return np.zeros_like(cement_field, dtype=float)
     return np.asarray(raw_field, dtype=float)
 
@@ -259,7 +256,7 @@ def plot_final_fields_contour(
     cement_field = np.asarray(result.cement_field, dtype=float)
     spacer_field = _optional_spacer_field(result, cement_field)
     wall_field = np.asarray(result.wall_field, dtype=float)
-    effective_field = cement_field * (1.0 - wall_field)
+    effective_field = cement_field  # wall_field 当前恒为零，直接使用水泥浓度作为有效顶替效率
 
     _validate_field_shape(cement_field, depth, azimuth, "cement_field")
     _validate_field_shape(spacer_field, depth, azimuth, "spacer_field")
