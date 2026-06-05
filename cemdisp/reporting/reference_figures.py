@@ -23,9 +23,7 @@ def plot_reference_efficiency_timeseries(
     """绘制参考项目口径的顶替效率时程图。"""
     metrics = result.metrics
     fig, ax = plt.subplots(figsize=(9, 5.4))
-    ax.plot(metrics["time_min"], metrics["effective_efficiency"], label="全井段", linewidth=2.2)
-    ax.plot(metrics["time_min"], metrics["cbl_eval_interval_efficiency"], label="CBL评价段", linewidth=2.0)
-    ax.plot(metrics["time_min"], metrics["target_interval_efficiency"], label="目的层段", linewidth=2.0)
+    ax.plot(metrics["time_min"], metrics["effective_efficiency"], label="全井段有效顶替效率", linewidth=2.2)
     ax.set_title("顶替效率时程", fontsize=14, fontweight="bold")
     ax.set_xlabel("时间 / min")
     ax.set_ylabel("顶替效率")

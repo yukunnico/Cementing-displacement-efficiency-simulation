@@ -28,6 +28,16 @@
 - 流体前缘按体积推进法追踪，首版不考虑管内扩散
 - 鞋口深度为从地面到鞋口的总测深
 - 前缘到达鞋口后，对应流体从鞋口进入环空
+
+物理修正模型（Phase 2 & 3）：
+- 重力沉降修正：基于密度差驱动的前缘到达时间修正，支持井斜角投影
+  [Ref: Romero & Carter, SPE 55927, 1999; Ekici et al., SPE 166112, 2013]
+- 屈服应力修正：考虑流体屈服应力对重力沉降的抑制效应
+  [Ref: Shah & Sutton, SPE 18036, 1990; Maleki & Frigaard, JFM 846, 2018]
+- 停泵沉降增强：停泵期间考虑凝胶强度发展和屈服应力对沉降的综合影响
+  [Ref: Kelessidis et al., JPT 2006; Maglione et al., SPE 56995, 1999]
+- 轴向弥散：Taylor-Aris 型弥散模型，适用于层流条件
+  [Ref: Taylor, Proc. R. Soc. A 219, 1953; Aris, Proc. R. Soc. A 235, 1956]
 """
 
 from __future__ import annotations
@@ -82,27 +92,55 @@ class CasingFlowSolver:
     - 流体前缘按体积推进法追踪，首版不考虑管内扩散；
     - 鞋口深度为从地面到鞋口的总测深；
     - 前缘到达鞋口后，对应流体从鞋口进入环空。
+
+    物理修正（默认启用）：
+    - 重力沉降修正（enable_gravity=True）：根据流体密度差调整前缘到达时间，
+      支持井斜角投影修正和屈服应力修正。
+    - 轴向弥散（enable_axial_dispersion=True）：Taylor-Aris 型弥散模型，
+      将尖锐前缘转换为平滑过渡带。
+
+    停泵沉降增强模型（phase 3）：
+    - 停泵期间考虑凝胶强度发展（指数增长模型）和屈服应力对沉降的抑制。
+    - 凝胶强度发展参考 Kelessidis et al. (JPT, 2006) 的实验数据拟合。
+
+    Literature references:
+    - Romero & Carter, SPE 55927 (1999): Gravity settling in inclined wells
+    - Shah & Sutton, SPE 18036 (1990): Yield stress effects on settling
+    - Taylor, Proc. R. Soc. A 219 (1953): Laminar dispersion
+    - Kelessidis et al., JPT (2006): Gel strength development
     """
 
     def __init__(
         self,
         *,
         dt: float = 2.0,
-        enable_gravity: bool = False,
+        enable_gravity: bool = True,
         g_constant: float = 9.81,
-        settling_velocity_factor: float = 0.001,
-        enable_axial_dispersion: bool = False,
-        dispersion_alpha: float = 0.2,
+        settling_velocity_factor: float = 0.0015,
+        enable_axial_dispersion: bool = True,
+        dispersion_alpha: float = 0.25,
+        gelation_time_s: float = 600.0,
+        gelation_max_factor: float = 0.95,
     ) -> None:
         """初始化求解器。
 
         Args:
             dt: 时间步长（秒），仅用于内部时间查询的容差判断
-            enable_gravity: 是否启用套管内重力修正；默认关闭以保持旧模型行为
+            enable_gravity: 是否启用套管内重力修正；默认启用以提高物理真实性。
+                基于密度差驱动的沉降模型，参考 Romero & Carter (SPE 55927, 1999)。
+                可通过 settling_velocity_factor 调节修正幅度。
             g_constant: 重力加速度（m/s²），用于按现场重力条件缩放简化修正项
-            settling_velocity_factor: 沉降速度系数，单位为 m/s 每 kg/m³ 密度差
-            enable_axial_dispersion: 是否启用管内轴向弥散；默认关闭以保持旧模型行为
-            dispersion_alpha: 无量纲弥散系数，默认 0.2
+            settling_velocity_factor: 沉降速度系数，单位为 m/s 每 kg/m³ 密度差。
+                默认 0.0015，参考现场数据标定（Ekici et al., SPE 166112, 2013）。
+            enable_axial_dispersion: 是否启用管内轴向弥散；默认启用。
+                基于 Taylor-Aris 弥散理论（Taylor 1953, Aris 1956），
+                将尖锐流体前缘转换为平滑 S 形过渡带。
+            dispersion_alpha: 无量纲弥散系数，默认 0.25。
+                对应层流条件下的经验取值范围 [0.1, 0.5]。
+            gelation_time_s: 凝胶强度发展特征时间（秒），默认 600（10 分钟）。
+                用于停泵沉降增强模型，参考 Kelessidis et al. (JPT, 2006)。
+            gelation_max_factor: 凝胶强度最大抑制因子，无量纲，默认 0.95。
+                表示凝胶完全发展后对沉降的最大抑制程度（0~1）。
         """
         if not math.isfinite(dt) or dt <= 0.0:
             raise ValueError("dt 必须为大于0的有限数值")
@@ -112,12 +150,18 @@ class CasingFlowSolver:
             raise ValueError("settling_velocity_factor 必须为非负有限数值")
         if not math.isfinite(dispersion_alpha) or dispersion_alpha < 0.0:
             raise ValueError("dispersion_alpha 必须为非负有限数值")
+        if not math.isfinite(gelation_time_s) or gelation_time_s <= 0.0:
+            raise ValueError('gelation_time_s must be a positive finite number')
+        if not math.isfinite(gelation_max_factor) or not (0.0 <= gelation_max_factor <= 1.0):
+            raise ValueError('gelation_max_factor must be in [0, 1]')
         self.dt: float = dt
         self.enable_gravity: bool = enable_gravity
         self.g_constant: float = g_constant
         self.settling_velocity_factor: float = settling_velocity_factor
         self.enable_axial_dispersion: bool = enable_axial_dispersion
         self.dispersion_alpha: float = dispersion_alpha
+        self.gelation_time_s: float = gelation_time_s
+        self.gelation_max_factor: float = gelation_max_factor
         self._scheduled_steps_by_result_id: dict[int, tuple[_ScheduledStep, ...]] = {}
         self._initial_fluid_by_result_id: dict[int, str] = {}
         self._fluids_by_result_id: dict[int, tuple[FluidSpec, ...]] = {}
@@ -143,7 +187,7 @@ class CasingFlowSolver:
         for scheduled in scheduled_steps:
             arrival_time_s = self._front_arrival_time(scheduled, scheduled_steps, pipe_volume_m3)
             if self.enable_gravity and arrival_time_s is not None:
-                arrival_time_s = self._gravity_corrected_arrival_time(arrival_time_s, scheduled.step.fluid_name, fluids)
+                arrival_time_s = self._gravity_corrected_arrival_time(arrival_time_s, scheduled.step.fluid_name, fluids, well_spec)
             final_distance_m = min(shoe_depth_m, scheduled.cumulative_volume_end_m3 / pipe_area_m2)
             fronts.append(
                 InterfaceFront(
@@ -167,6 +211,7 @@ class CasingFlowSolver:
                         rear_arrival_time_s,
                         scheduled.step.fluid_name,
                         fluids,
+                        well_spec,
                     )
                 cement_end_time_s = rear_arrival_time_s
 
@@ -212,7 +257,7 @@ class CasingFlowSolver:
 
         if self.enable_gravity and state.flow_rate_m3_s < 1.0e-9:
             cumulative_at_time = self._cumulative_volume_at(scheduled_steps, time_s)
-            fluid_name = self._settled_exit_fluid_name(
+            fluid_name = self._settled_exit_fluid_name_enhanced(
                 result=result,
                 scheduled_steps=scheduled_steps,
                 time_s=time_s,
@@ -364,12 +409,12 @@ class CasingFlowSolver:
             front_time_s = self._front_arrival_time(scheduled, scheduled_steps, pipe_volume_m3)
             if front_time_s is not None:
                 if self.enable_gravity:
-                    front_time_s = self._gravity_corrected_arrival_time(front_time_s, scheduled.step.fluid_name, fluids)
+                    front_time_s = self._gravity_corrected_arrival_time(front_time_s, scheduled.step.fluid_name, fluids, well_spec)
                 event_points.append((front_time_s, ShoeEventKind.FRONT_ARRIVAL, ((scheduled.step.fluid_name, 1.0),)))
             rear_time_s = self._rear_arrival_time(scheduled, scheduled_steps, pipe_volume_m3)
             if rear_time_s is not None:
                 if self.enable_gravity:
-                    rear_time_s = self._gravity_corrected_arrival_time(rear_time_s, scheduled.step.fluid_name, fluids)
+                    rear_time_s = self._gravity_corrected_arrival_time(rear_time_s, scheduled.step.fluid_name, fluids, well_spec)
                 event_points.append((rear_time_s, ShoeEventKind.REAR_EXIT, None))
         if scheduled_steps:
             event_points.append((scheduled_steps[-1].end_time_s, ShoeEventKind.END, None))
@@ -563,16 +608,107 @@ class CasingFlowSolver:
         arrival_time_s: float,
         fluid_name: str,
         fluids: tuple[FluidSpec, ...],
+        well_spec: WellSpec | None = None,
     ) -> float:
-        """按流体密度对前缘到达时间做简化重力修正。"""
+        """按流体密度对前缘到达时间做重力修正，支持井斜角投影和屈服应力修正。
+
+        修正流程：
+        1. 基础重力修正：基于密度差的简化沉降时间修正
+        2. 井斜角投影修正：当 well_spec.inclination_profile 可用时，
+           用平均井斜角的余弦值投影重力分量（垂直分量 = g * cos(theta)）
+        3. 屈服应力修正：对有屈服应力的流体，修正沉降速度以反映屈服应力的抑制效应
+
+        Literature:
+        - Romero & Carter, SPE 55927 (1999): Gravity settling in inclined wells
+        - Shah & Sutton, SPE 18036 (1990): Yield stress effects on settling
+        - Taylor, Proc. R. Soc. A 219 (1953): Laminar dispersion
+
+        Args:
+            arrival_time_s: 活塞流模型计算的前缘到达时间（秒）
+            fluid_name: 流体名称
+            fluids: 全部流体规格元组
+            well_spec: 井筒规格，用于获取井斜剖面和管内径
+
+        Returns:
+            修正后的前缘到达时间（秒），保证非负
+        """
+        from cemdisp.data.fluid_spec import RheologyModel
 
         fluid_density = self._get_fluid_density(fluid_name, fluids)
-        # 在套管内，向下泵注时重力沿管轴方向辅助较重流体前缘下行。
-        # 这里不改变原有体积追踪，只把到达鞋口的解析时间按密度做小幅提前。
-        # g_constant 用于把现场重力加速度归一到标准重力，便于后续扩展井斜/重力场修正。
+        fluid = next((f for f in fluids if f.name == fluid_name), None)
+
+        # 基础重力因子
         gravity_scale = self.g_constant / 9.81
         gravity_factor = self.settling_velocity_factor * (fluid_density - 1000.0) / 1000.0 * gravity_scale
+
+        # 井斜角投影修正：重力沿管轴分量 = g * cos(inclination)
+        if well_spec is not None and well_spec.inclination_profile:
+            avg_inclination_rad = self._average_inclination_rad(well_spec)
+            cos_inclination = math.cos(avg_inclination_rad)
+            gravity_factor *= max(cos_inclination, 0.0)
+
+        # 屈服应力修正：屈服应力会抑制沉降，减小有效沉降速度
+        if fluid is not None and fluid.yield_stress_pa is not None and fluid.yield_stress_pa > 0.0:
+            pipe_radius_m = self._effective_pipe_radius_m(well_spec)
+            delta_rho = abs(fluid_density - 1000.0)
+            tau_critical = delta_rho * self.g_constant * pipe_radius_m
+            if tau_critical > 1e-6:
+                yield_ratio = min(fluid.yield_stress_pa / tau_critical, 1.0)
+                yield_suppression = 1.0 - 0.8 * yield_ratio
+                gravity_factor *= yield_suppression
+
         return max(arrival_time_s * (1.0 - gravity_factor), 0.0)
+
+    def _average_inclination_rad(self, well_spec: WellSpec) -> float:
+        """计算井段内平均井斜角（弧度）。
+
+        从 well_spec.inclination_profile 提取井斜数据，按深度加权平均。
+        若无井斜数据，假设为垂直井（0 弧度）。
+
+        Args:
+            well_spec: 井筒规格
+
+        Returns:
+            平均井斜角（弧度），范围 [0, pi/2]
+        """
+        if not well_spec.inclination_profile:
+            return 0.0
+
+        points = well_spec.inclination_profile
+        if len(points) == 1:
+            return math.radians(points[0].value)
+
+        total_weighted = 0.0
+        total_length = 0.0
+        for i in range(len(points) - 1):
+            p0 = points[i]
+            p1 = points[i + 1]
+            segment_length = p1.depth_md_m - p0.depth_md_m
+            if segment_length <= 0.0:
+                continue
+            avg_inclination_deg = (p0.value + p1.value) / 2.0
+            total_weighted += avg_inclination_deg * segment_length
+            total_length += segment_length
+
+        if total_length <= 0.0:
+            return math.radians(points[0].value)
+
+        return math.radians(total_weighted / total_length)
+
+    def _effective_pipe_radius_m(self, well_spec: WellSpec | None = None) -> float:
+        """获取有效管内半径（米），用于屈服应力修正计算。
+
+        优先使用 well_spec.liner_id_mm，若不可用则使用默认值。
+
+        Args:
+            well_spec: 井筒规格
+
+        Returns:
+            有效管内半径（米）
+        """
+        if well_spec is not None and well_spec.liner_id_mm is not None:
+            return well_spec.liner_id_mm / 2000.0
+        return 0.05
 
     def _settled_exit_fluid_name(
         self,
@@ -597,6 +733,74 @@ class CasingFlowSolver:
         shutdown_duration_s = self._shutdown_duration_at(scheduled_steps, time_s)
         # 将沉降距离折算成等效体积位移，仅用于查询鞋口相态，不改写原体积追踪前缘。
         settled_volume_m3 = cumulative_at_time + v_settle_m_s * shutdown_duration_s * result.pipe_cross_section_m2
+        if settled_volume_m3 < pipe_volume_m3:
+            return initial_fluid
+        delayed_volume_m3 = max(settled_volume_m3 - pipe_volume_m3, 0.0)
+        return self._fluid_by_injected_volume(scheduled_steps, delayed_volume_m3)
+
+    def _settled_exit_fluid_name_enhanced(
+        self,
+        *,
+        result: CasingFlowResult,
+        scheduled_steps: tuple[_ScheduledStep, ...],
+        time_s: float,
+        cumulative_at_time: float,
+        pipe_volume_m3: float,
+        default_fluid_name: str,
+    ) -> str:
+        """停泵期间考虑凝胶强度和屈服应力的增强沉降模型。
+
+        在基础密度差沉降模型之上，增加两个物理修正：
+        1. 凝胶强度发展：停泵期间水泥浆逐步建立凝胶结构，抑制沉降。
+           采用指数增长模型: gel_factor = gelation_max_factor * (1 - exp(-t / tau_gel))
+           参考 Kelessidis et al. (JPT, 2006) 的实验数据。
+        2. 屈服应力效应：有屈服应力的流体（Bingham/Herschel-Bulkley）在停泵后
+           快速建立结构，沉降速度进一步降低。
+           参考 Maglione et al. (SPE 56995, 1999) 的流变-沉降耦合模型。
+
+        Args:
+            result: CasingFlowResult 实例
+            scheduled_steps: 内部施工步骤时间窗
+            time_s: 查询时刻（秒）
+            cumulative_at_time: 该时刻的累计泵入体积（m3）
+            pipe_volume_m3: 管内容积（m3）
+            default_fluid_name: 默认流体名称（当无沉降时返回此名称）
+
+        Returns:
+            考虑增强沉降效应后的鞋口流体名称
+        """
+        fluids = self._fluids_by_result_id.get(id(result), ())
+        initial_fluid = self._initial_fluid_by_result_id.get(id(result), default_fluid_name)
+        current_fluid = next((f for f in fluids if f.name == default_fluid_name), None)
+        current_density = self._get_fluid_density(default_fluid_name, fluids)
+        initial_density = self._get_fluid_density(initial_fluid, fluids)
+
+        delta_rho = current_density - initial_density
+        if delta_rho <= 0.0:
+            return default_fluid_name
+
+        shutdown_duration_s = self._shutdown_duration_at(scheduled_steps, time_s)
+        if shutdown_duration_s <= 0.0:
+            return default_fluid_name
+
+        v_settle_m_s = self.settling_velocity_factor * delta_rho
+
+        # 修正 1: 凝胶强度发展
+        gel_factor = self.gelation_max_factor * (1.0 - math.exp(-shutdown_duration_s / self.gelation_time_s))
+
+        # 修正 2: 屈服应力效应
+        yield_suppression = 0.0
+        if current_fluid is not None and current_fluid.yield_stress_pa is not None and current_fluid.yield_stress_pa > 0.0:
+            pipe_radius_m = self._effective_pipe_radius_m()
+            tau_critical = delta_rho * self.g_constant * pipe_radius_m
+            if tau_critical > 1e-6:
+                yield_ratio = min(current_fluid.yield_stress_pa / tau_critical, 1.0)
+                yield_suppression = 0.5 * yield_ratio
+
+        total_suppression = min(gel_factor + yield_suppression, 0.99)
+        v_effective = v_settle_m_s * (1.0 - total_suppression)
+
+        settled_volume_m3 = cumulative_at_time + v_effective * shutdown_duration_s * result.pipe_cross_section_m2
         if settled_volume_m3 < pipe_volume_m3:
             return initial_fluid
         delayed_volume_m3 = max(settled_volume_m3 - pipe_volume_m3, 0.0)

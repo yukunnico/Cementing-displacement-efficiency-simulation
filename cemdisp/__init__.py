@@ -15,8 +15,6 @@ cemdisp - 多井通用固井顶替效率模型包
 - cemdisp.models2d: 环空二维顶替核心
 - cemdisp.diagnostics: 诊断与指标计算
 - cemdisp.reporting: 图表与报告输出
-- cemdisp.correlations: 经验相关式
-- cemdisp.utils: 通用工具
 - cemdisp.runners: 各井段模型运行器
 - cemdisp.validation: 数值验证
 """

@@ -18,7 +18,12 @@ cemdisp/
 │   └── loaders/                 # 单井加载器
 │       ├── __init__.py
 │       ├── hu101_loader.py      # 呼101尾管段加载器
-│       └── hu102_loader.py      # 呼102尾管段加载器
+│       ├── hu102_loader.py      # 呼102尾管段加载器
+│       ├── hu103_loader.py      # 呼103尾管段加载器
+│       ├── hu1_loader.py        # 呼探1尾管段加载器
+│       ├── hu2_loader.py        # 呼探1-002尾管段加载器
+│       ├── ht1_001_loader.py    # 呼探1-001尾管段加载器
+│       └── ht1_003_loader.py    # 呼探1-003尾管段加载器
 ├── transport1d/                 # 套管内1D输运层
 │   ├── __init__.py
 │   ├── casing_flow.py           # 套管内前沿追踪求解器
@@ -27,24 +32,31 @@ cemdisp/
 ├── models2d/                    # 环空2D顶替核心层
 │   ├── __init__.py
 │   ├── annulus_d2dga.py         # D2DGA偏心环空求解器
-│   └── boundary_bridge.py       # 1D→2D鞋口边界桥接
+│   ├── boundary_bridge.py       # 1D→2D鞋口边界桥接
+│   └── d2dga_flux.py            # D2DGA通量放大修正
 ├── reporting/                   # 图表与摘要输出层
 │   ├── __init__.py
 │   ├── plots.py                 # 静态图表（时间序列/深度剖面/风险指标/柱状对比）
 │   ├── contour_plots.py         # 二维云图（深度-时间/快照/最终场）
-│   └── animation.py             # 浓度场演化动画
+│   ├── animation.py             # 浓度场演化动画
+│   └── reference_figures.py     # 参考项目风格图件输出
 ├── runners/                     # 井段模型运行器
 │   ├── __init__.py
+│   ├── common.py                # 运行器公共逻辑
 │   ├── hu101_tailpipe.py        # 呼101尾管段运行器
-│   └── hu102_tailpipe.py        # 呼102尾管段运行器
-├── correlations/                # 经验相关式与快速判别层
-│   └── __init__.py
+│   ├── hu102_tailpipe.py        # 呼102尾管段运行器
+│   ├── hu103_tailpipe.py        # 呼103尾管段运行器
+│   ├── hu1_tailpipe.py          # 呼探1尾管段运行器
+│   ├── hu2_tailpipe.py          # 呼探1-002尾管段运行器
+│   ├── ht1_001_tailpipe.py      # 呼探1-001尾管段运行器
+│   └── ht1_003_tailpipe.py      # 呼探1-003尾管段运行器
 ├── diagnostics/                 # 顶替效率与风险指标诊断层
-│   └── __init__.py
-├── utils/                       # 通用工具层
-│   └── __init__.py
+│   ├── __init__.py
+│   └── quality_proxy.py         # CBL质量响应代理
 └── validation/                  # 数值与现场对比验证层
-    └── __init__.py
+    ├── __init__.py
+    ├── cbl_comparison.py        # CBL合格率对比
+    └── mass_balance.py          # 水泥质量守恒诊断
 ```
 
 ---
@@ -59,8 +71,6 @@ cemdisp/
 - `cemdisp.models2d`: 环空二维顶替核心层（偏心环空顶替模拟）
 - `cemdisp.diagnostics`: 顶替效率与风险指标诊断层
 - `cemdisp.reporting`: 图表与报告输出（中文图表、云图、动画）
-- `cemdisp.correlations`: 经验相关式
-- `cemdisp.utils`: 通用工具
 - `cemdisp.runners`: 井段模型运行器
 - `cemdisp.validation`: 数值验证
 
@@ -239,12 +249,27 @@ cemdisp/
 **导出符号**：
 - `load_hu101_tailpipe` — 加载呼101尾管段完整输入
 - `load_hu102_tailpipe` — 加载呼102尾管段完整输入
+- `load_hu103_tailpipe` — 加载呼103尾管段完整输入
+- `load_hu1_tailpipe` — 加载呼探1尾管段完整输入
+- `load_hu2_tailpipe` — 加载呼探1-002尾管段完整输入
+- `load_ht1_001_tailpipe` — 加载呼探1-001尾管段完整输入
+- `load_ht1_003_tailpipe` — 加载呼探1-003尾管段完整输入
 - `build_hu101_annulus_inlet_provider` — 构建呼101环空入口状态提供器
 - `build_hu102_annulus_inlet_provider` — 构建呼102环空入口状态提供器
+- `build_hu103_annulus_inlet_provider` — 构建呼103环空入口状态提供器
+- `build_hu1_annulus_inlet_provider` — 构建呼探1环空入口状态提供器
+- `build_hu2_annulus_inlet_provider` — 构建呼探1-002环空入口状态提供器
+- `build_ht1_001_annulus_inlet_provider` — 构建呼探1-001环空入口状态提供器
+- `export_hu101_sync_card_markdown` — 导出呼101同步卡片Markdown
+- `export_hu102_sync_card_markdown` — 导出呼102同步卡片Markdown
+- `export_hu103_sync_card_markdown` — 导出呼103同步卡片Markdown
+- `export_hu1_sync_card_markdown` — 导出呼探1同步卡片Markdown
+- `export_hu2_sync_card_markdown` — 导出呼探1-002同步卡片Markdown
+- `export_ht1_001_sync_card_markdown` — 导出呼探1-001同步卡片Markdown
 - `available_well_names` — 返回当前可用井号列表
 - `REFERENCE_DOCS_ROOT` — 参考文档根目录路径
-- `Hu101LoaderResult`, `Hu102LoaderResult` — 加载结果类型别名
-- `Hu101InletProviderFactory`, `Hu102InletProviderFactory` — 入口提供器工厂类型别名
+- `Hu101LoaderResult`, `Hu102LoaderResult`, `Hu103LoaderResult`, `Hu1LoaderResult`, `Hu2LoaderResult`, `Ht1_001LoaderResult`, `Ht1_003LoaderResult` — 加载结果类型别名
+- `Hu101InletProviderFactory`, `Hu102InletProviderFactory`, `Hu103InletProviderFactory`, `Hu1InletProviderFactory`, `Hu2InletProviderFactory`, `Ht1_001InletProviderFactory` — 入口提供器工厂类型别名
 
 ---
 
@@ -357,12 +382,27 @@ cemdisp/
   - `well_name: str` — 井号
   - `geom: Dict[str, Array]` — 几何参数字典（含s、md、y、phi、H、b、e、standoff、inc_deg、hole_mm、od_mm等）
   - `cement_field: Array` — 水泥浓度场（shape: ny×nz，值0~1）
+  - `spacer_field: Array` — 隔离液浓度场（shape: ny×nz，值0~1）
   - `wall_field: Array` — 壁面泥饼清除场（shape: ny×nz，值0~1）
   - `metrics: pd.DataFrame` — 时间序列指标DataFrame
   - `depth_profiles: pd.DataFrame` — 深度方向平均剖面DataFrame
   - `summary: Dict[str, object]` — 最终结果摘要字典
   - `time_points_s: Tuple[float, ...]` — 时间点序列
+  - `cement_snapshots: Tuple[Array, ...]` — 水泥浓度场时间快照序列
+  - `lead_snapshots: Tuple[Array, ...]` — 领浆浓度场时间快照序列
+  - `tail_snapshots: Tuple[Array, ...]` — 尾浆浓度场时间快照序列
+  - `spacer_snapshots: Tuple[Array, ...]` — 隔离液浓度场时间快照序列
+  - `wall_snapshots: Tuple[Array, ...]` — 壁面泥饼场时间快照序列
+  - `snapshot_times_s: Tuple[float, ...]` — 快照对应的时间点序列
+  - `lead_field: Array` — 最终领浆浓度场
+  - `tail_field: Array` — 最终尾浆浓度场
   - `notes: Tuple[str, ...]` — 运行备注
+  - **Legacy字段**（向后兼容，不再填充数据）：
+    - `gel_strength_snapshots: Tuple[Array, ...]` — 旧凝胶强度快照（已废弃）
+    - `mud_cake_field: Array` — 旧泥饼场（已废弃）
+    - `mud_cake_snapshots: Tuple[Array, ...]` — 旧泥饼快照（已废弃）
+    - `reynolds_snapshots: Tuple[Array, ...]` — 旧雷诺数快照（已废弃）
+    - `turbulent_viscosity_snapshots: Tuple[Array, ...]` — 旧湍流粘度快照（已废弃）
 
 #### `AnnulusD2DGASolver`
 
@@ -371,13 +411,13 @@ cemdisp/
   - `dt: float = 4.0` — 时间步长（秒）
   - `nz: int = 140` — 井深方向网格数
   - `ny: int = 40` — 方位角方向网格数
-  - `alpha_clean: float = 0.085` — 泥饼清除系数
-  - `total_t: float = 6600.0` — 总模拟时间（秒），默认6600秒（110分钟）
-  - `quality_penalty_scale: float = 0.099` — 质量惩罚因子
-  - `channeling_penalty_weight: float = 0.55` — 窜槽风险权重
-  - `mixing_penalty_weight: float = 0.35` — 混浆风险权重
-  - `instability_penalty_weight: float = 0.25` — 失稳风险权重
+  - `total_t: float = 12000.0` — 总模拟时间（秒），默认12000秒（200分钟）
+  - `enable_d2dga: bool = True` — 是否启用D2DGA通量修正（Zhang & Frigaard 2022）
+  - `d2dga_viscosity_ratio: float = 1.0` — D2DGA粘度比 m = η_displaced/η_displacing
   - `instability_decay_scale: float = 5.0` — 失稳指数衰减标度
+  - `save_interval: int = 60` — 二维场快照保存步长（每N个时间步保存一次）
+  - `yield_regularization_M: float = 100.0` — Papanastasiou正则化参数，控制屈服应力在低剪切区的平滑过渡
+  - `open_outlet: bool = True` — 是否开放出口边界。True: 开放出口，不限制体积，允许水泥浆流出到重叠段（适用于只模拟裸眼段）；False: 封闭出口，按累计入环空体积限制场量（适用于模拟整个环空）
 
 - **核心方法**：
 
@@ -390,7 +430,7 @@ cemdisp/
 | `_apparent_viscosity(fluid, gamma)` | 流体、剪切速率 | `Array` | 计算单流体表观粘度 |
 | `_compute_props(cement, w_prev, geom, mud_fluid, cement_fluid)` | 浓度场、几何、流体 | `tuple[Array, Array, Array]` | 计算混合物系表观粘度、密度、钻井液分数 |
 | `_compute_velocity(cement, geom, q_m3s, w_prev, mud_fluid, cement_fluid)` | 浓度场、几何、排量、流体 | `tuple[Array, Array, Array, Array, Array]` | 计算环空速度场 |
-| `_depth_profiles(geom, cement, wall)` | 几何、浓度场 | `pd.DataFrame` | 计算深度方向平均剖面 |
+| `_depth_profiles(geom, lead, tail, spacer, wall)` | 几何、领浆场、尾浆场、隔离液场、壁面场 | `pd.DataFrame` | 计算深度方向平均剖面 |
 
 - **求解流程**（`run`方法内部）：
   1. 构建几何网格和初始场（初始水泥浓度=0，壁面泥饼=1）
@@ -431,6 +471,8 @@ cemdisp/
 - `_window_mask(well_spec, md, window_type)` — 生成评价窗口布尔掩码
 - `_phase_fraction(inlet_state, phase_name)` — 从入口状态提取相分数
 - `_trapez2d(arr, geom)` — 二维梯形积分
+- `_phase_volume(field, geom)` — 计算某一相在全环空中的实际占据体积
+- `_limit_phase_volume(field, geom, target_volume_m3, open_outlet=False)` — 按累计入环空体积限制场量；open_outlet=True 时不限制体积，仅裁剪到 [0, 1]
 - `_bilinear_interp(field, ysrc, ssrc, geom, inlet_value)` — 双线性插值
 
 ---
@@ -454,12 +496,14 @@ cemdisp/
 - **参数**：`PipeExitState`（来自transport1d层）
 - **返回**：`AnnulusInletState`
 
-#### `build_coupled_annulus_inlet_provider(casing_result, casing_solver, fluids)`
+#### `build_coupled_annulus_inlet_provider(arg1, arg2, fluids, *, split_cement_phases=False)`
 
 - **功能**：构建1D-2D耦合的环空入口边界提供器
-- **参数**：`CasingFlowResult`, `CasingFlowSolver`, `tuple[FluidSpec, ...]`
+- **支持两种调用方式**：
+  1. **新方式**（推荐）：`build_coupled_annulus_inlet_provider(shoe_timeline, provenance, fluids)` — 传入 ShoeTimeline 和 WellProvenance，直接使用时间轴查询
+  2. **旧方式**：`build_coupled_annulus_inlet_provider(casing_result, casing_solver, fluids)` — 传入 CasingFlowResult 和 CasingFlowSolver，通过 pipe_exit_state_at 查询
 - **返回**：`Callable[[float], AnnulusInletState]`
-- **说明**：将套管鞋口出流状态转换为环空入口，自动将流体名称映射为环空两相（cement/mud）
+- **说明**：将套管鞋口出流状态转换为环空入口，自动将流体名称映射为环空相（cement/spacer/mud）。支持多相共存（轴向弥散后的过渡态），支持分离领浆/尾浆相（split_cement_phases=True）。
 
 ---
 
@@ -469,7 +513,7 @@ cemdisp/
 
 **功能**：导出输运层的所有公开符号。
 
-**导出符号**：`CasingFlowSolver`, `CasingFlowResult`, `InterfaceTracker`, `InterfaceFront`, `PipeExitState`
+**导出符号**：`CasingFlowSolver`, `CasingFlowResult`, `InterfaceTracker`, `InterfaceFront`, `PipeExitState`, `ShoeEvent`, `ShoeEventKind`, `ShoeTimeline`
 
 **子模块说明**：
 - 套管内1D输运层提供更真实的鞋口出流边界，不污染环空2D核心
@@ -480,7 +524,15 @@ cemdisp/
 
 ### 4.2 `cemdisp/transport1d/casing_flow.py`
 
-**功能**：套管内1D前沿追踪求解器，基于体积守恒的解析方法追踪多流体界面在套管内的下行位置。
+**功能**：套管内1D前沿追踪求解器，基于体积守恒的解析方法追踪多流体界面在套管内的下行位置。本模块实现了重力沉降修正、屈服应力修正、停泵沉降增强模型和轴向弥散模型，提供更真实的鞋口出流边界。
+
+**文献支撑**：
+- 重力沉降：Stokes定律、API RP 10B-2、Li et al. (2021)
+- 轴向弥散：Taylor (1953, 1954)、Zhang & Frigaard (2022)
+- 停泵沉降：Sabins & Sutton (SPE 19934)
+- 井斜影响：Chen et al. (2023)、Carrasco-Teja et al. (2008)
+- 屈服应力抑制：Shah & Sutton (SPE 18036, 1990)
+- 凝胶强度发展：Kelessidis et al. (JPT, 2006)
 
 #### `CasingFlowResult`
 
@@ -490,6 +542,9 @@ cemdisp/
   - `schedule_steps: tuple[PumpingScheduleStep, ...]` — 施工步骤记录
   - `pipe_cross_section_m2: float` — 管内截面积（平方米）
   - `shoe_md_m: float` — 鞋口深度（米）
+  - `pumping_end_time_s: float` — 施工结束时间（秒）
+  - `cement_end_time_s: float` — 水泥浆结束时间（秒，用于环空2D终止）
+  - `shoe_timeline: ShoeTimeline` — 鞋口出流事件时间轴
   - `notes: tuple[str, ...]` — 运行备注
 
 #### `_ScheduledStep`（内部类）
@@ -507,6 +562,13 @@ cemdisp/
 - **类型**：普通类
 - **构造参数**：
   - `dt: float = 2.0` — 时间步长（秒），仅用于内部时间查询容差判断
+  - `enable_gravity: bool = True` — 是否启用套管内重力修正（默认开启）
+  - `g_constant: float = 9.81` — 重力加速度（m/s^2）
+  - `settling_velocity_factor: float = 0.0015` — 沉降速度系数（m/s 每 kg/m^3 密度差）
+  - `enable_axial_dispersion: bool = True` — 是否启用管内轴向弥散（默认开启）
+  - `dispersion_alpha: float = 0.25` — 无量纲弥散系数，层流条件下经验取值范围 [0.1, 0.5]
+  - `gelation_time_s: float = 600.0` — 凝胶强度发展特征时间（秒），默认 600（10 分钟）
+  - `gelation_max_factor: float = 0.95` — 凝胶强度最大抑制因子，无量纲，范围 [0, 1]
 
 - **核心方法**：
 
@@ -521,21 +583,34 @@ cemdisp/
 - 鞋口深度为从地面到鞋口的总测深
 - 前缘到达鞋口后，对应流体从鞋口进入环空
 
+**物理修正模型**：
+- **重力沉降修正**（`enable_gravity=True`）：基于密度差驱动的前缘到达时间修正，支持井斜角投影（重力沿管轴分量 = g * cos(inclination)）和屈服应力抑制效应。
+- **轴向弥散**（`enable_axial_dispersion=True`）：Taylor-Aris 型弥散模型，将尖锐前缘转换为平滑 S 形过渡带，适用于层流条件。
+- **停泵沉降增强**：停泵期间考虑凝胶强度发展（指数增长模型）和屈服应力对沉降的综合抑制。
+
 - **求解逻辑**：
   1. 计算套管截面积和管内容积
   2. 将施工程序转换为 `_ScheduledStep` 序列（含时间轴和累计体积轴）
   3. 对每个流体前沿，解析计算到达鞋口的时间（需累计注入体积超过管内容积）
-  4. 记录各前沿到达时刻和最终位置
+  4. 应用重力修正（可选）
+  5. 构建鞋口出流事件时间轴
+  6. 应用轴向弥散处理（可选）
+  7. 记录各前沿到达时刻和最终位置
 
 **内部辅助方法**：
 - `_pipe_cross_section_area(well_spec)` — 从井身数据计算套管截面积
 - `_build_scheduled_steps(schedule)` — 将PumpingSchedule转为时间轴序列
 - `_initial_fluid_name(fluids, schedule)` — 确定管内初始流体
 - `_front_arrival_time(front_step, scheduled_steps, pipe_volume_m3)` — 解析计算前沿到达鞋口时间
+- `_rear_arrival_time(rear_step, scheduled_steps, pipe_volume_m3)` — 解析计算后缘到达鞋口时间
 - `_active_step_at(scheduled_steps, time_s)` — 查询某时刻的活跃施工步骤
 - `_cumulative_volume_at(scheduled_steps, time_s)` — 查询某时刻的累计注入体积
 - `_fluid_by_injected_volume(scheduled_steps, volume_m3)` — 查询某注入体积对应的流体
 - `_scheduled_steps_for_result(result)` — 从结果中提取施工步骤序列
+- `_gravity_corrected_arrival_time(arrival_time_s, fluid_name, fluids, well_spec)` — 增强的重力修正，支持井斜角投影和屈服应力抑制
+- `_settled_exit_fluid_name_enhanced(result, scheduled_steps, time_s, cumulative_at_time, pipe_volume_m3, default_fluid_name)` — 停泵期间考虑凝胶强度和屈服应力的增强沉降模型
+- `_compute_dispersion_coefficient(pipe_radius_m, fluid, mean_velocity_m_s)` — 计算管内层流轴向弥散系数（Taylor-Aris 型）
+- `_apply_dispersion_to_timeline(events, well_spec, scheduled_steps, fluids)` — 对离散鞋口时间线施加轴向弥散
 
 ---
 
@@ -586,6 +661,48 @@ cemdisp/
 
 ---
 
+### 4.5 `cemdisp/transport1d/shoe_timeline.py`
+
+**功能**：定义鞋口出流事件的时间轴抽象，用于为环空二维模型提供鞋口出流边界条件。时间轴按时间顺序记录一系列鞋口事件（ShoeEvent），并支持在任意时刻查询对应的出流状态（PipeExitState）。
+
+#### `ShoeEventKind`
+
+- **类型**：`Enum`
+- **成员**：
+  - `FRONT_ARRIVAL` — 前缘到达鞋口
+  - `REAR_EXIT` — 尾部离开鞋口
+  - `RATE_SWITCH` — 排量切换
+  - `SHUTDOWN` — 停泵
+  - `RESTART` — 重新启动
+  - `END` — 时间轴结束
+
+#### `ShoeEvent`
+
+- **类型**：`@dataclass(frozen=True)`
+- **字段**：
+  - `time_s: float` — 事件发生时间（秒）
+  - `kind: ShoeEventKind` — 事件类型
+  - `flow_rate_m3_s: float` — 事件发生时的排量（立方米/秒）
+  - `stage_name: str` — 当前施工阶段名称
+  - `phase_fractions: tuple[tuple[str, float], ...]` — 各相流体体积分数元组
+
+#### `ShoeTimeline`
+
+- **类型**：普通类
+- **构造参数**：
+  - `events: list[ShoeEvent]` — 按 time_s 升序排列的鞋口事件列表
+
+- **核心方法**：
+  - `at(time_s: float) -> PipeExitState` — 查询任意时刻的鞋口出流状态，返回最近过去事件对应的 PipeExitState
+
+- **设计说明**：
+  - 事件时间必须单调递增
+  - 空时间轴在任意时刻返回零排量、空阶段名的默认 PipeExitState
+  - CasingFlowSolver 的 run() 方法自动构建 ShoeTimeline，支持轴向弥散后的过渡事件
+  - 通过 build_coupled_annulus_inlet_provider() 桥接到环空2D求解器
+
+---
+
 ## 5. 井段模型运行器 `cemdisp/runners/`
 
 ### 5.1 `cemdisp/runners/__init__.py`
@@ -595,6 +712,10 @@ cemdisp/
 **导出符号**：
 - `run_hu101_tailpipe_initial` — 运行呼101尾管段初始模拟
 - `run_hu102_tailpipe_initial` — 运行呼102尾管段初始模拟
+- `run_hu103_tailpipe_initial` — 运行呼103尾管段初始模拟
+- `run_hu1_tailpipe_initial` — 运行呼探1尾管段初始模拟
+- `run_hu2_tailpipe_initial` — 运行呼探1-002尾管段初始模拟
+- `run_ht1_001_tailpipe_initial` — 运行呼探1-001尾管段初始模拟
 
 ### 5.2 `cemdisp/runners/hu101_tailpipe.py`
 
@@ -651,9 +772,9 @@ cemdisp/
 - **参数**：`AnnulusSimulationResult`, 可选的输出目录路径
 - **输出文件**：`{井号}_顶替效率时间序列.png`
 - **内容**：双面板图表
-  - 上图：全井段、CBL评价井段、目标层段的有效顶替效率及水泥浆占据率
+  - 上图：全井段有效顶替效率及水泥浆占据率
   - 下图：宽边、中线、窄边三个方位的水泥浆前沿推进距离
-- **脚注**：区分"有效顶替效率"与"质量响应效率"
+- **说明**：仅绘制全井段效率，不绘制CBL评价段和目标层段效率曲线
 
 #### `plot_depth_profiles(result, well_spec, output_dir)`
 
@@ -677,7 +798,8 @@ cemdisp/
 - **参数**：`AnnulusSimulationResult`, 可选的输出目录路径
 - **输出文件**：`{井号}_最终结果对比.png`
 - **内容**：单面板柱状图
-  - 五根柱：全井段有效顶替效率、CBL评价井段有效顶替效率、目标层段有效顶替效率、水泥浆占据率、质量响应效率
+  - 四根柱：全井段有效顶替效率、CBL评价井段有效顶替效率、目标层段有效顶替效率、水泥浆占据率
+  - 若结果包含 `cbl_quality_proxy` 列，附加第五根柱：质量响应效率
 - **脚注**：明确标注"质量响应效率≠有效顶替效率"
 
 ---
@@ -735,3 +857,47 @@ cemdisp/
   - 右面板：隔离液浓度场演化（coolwarm色图）
   - 标题显示当前时间
   - 支持旧版单流体结果兼容（无隔离液快照时显示零浓度）
+
+---
+
+### 6.5 `cemdisp/reporting/reference_figures.py`
+
+**功能**：提供参考项目风格的图件输出函数，包括顶替效率时程、水泥体积分数深度剖面、宽窄边前沿推进、最终环空水泥浓度场、分段最终顶替效率柱状图等。支持一键导出整套参考图件。
+
+**导出**：`__all__` 包含 `export_reference_figure_set`, `plot_reference_efficiency_timeseries`, `plot_reference_depth_profile`, `plot_reference_front_progress`, `plot_reference_final_cement_field`, `plot_reference_segment_efficiency`
+
+#### `plot_reference_efficiency_timeseries(result, output_dir)`
+
+- **参数**：`AnnulusSimulationResult`, 可选的输出目录路径
+- **输出文件**：`顶替效率时程.png`
+- **内容**：单面板折线图，仅绘制全井段有效顶替效率随时间变化曲线
+
+#### `plot_reference_depth_profile(result, output_dir)`
+
+- **参数**：`AnnulusSimulationResult`, 可选的输出目录路径
+- **输出文件**：`最终水泥体积分数深度剖面.png`
+- **内容**：单面板折线图，绘制周向平均、宽边、窄边水泥体积分数随井深分布
+
+#### `plot_reference_front_progress(result, well_spec, output_dir)`
+
+- **参数**：`AnnulusSimulationResult`, `WellSpec`, 可选的输出目录路径
+- **输出文件**：`宽窄边前沿推进.png`
+- **内容**：单面板折线图，绘制宽边、中线、窄边前沿推进深度随时间变化
+
+#### `plot_reference_final_cement_field(result, output_dir)`
+
+- **参数**：`AnnulusSimulationResult`, 可选的输出目录路径
+- **输出文件**：`最终环空二维水泥浓度场.png`
+- **内容**：二维云图，展示最终时刻环空水泥浓度场分布（方位归一化坐标 vs 井深）
+
+#### `plot_reference_segment_efficiency(result, well_spec, output_dir)`
+
+- **参数**：`AnnulusSimulationResult`, `WellSpec`, 可选的输出目录路径
+- **输出文件**：`分段最终顶替效率.png`
+- **内容**：柱状图，按全井段和各评价窗口分别绘制最终有效顶替效率
+
+#### `export_reference_figure_set(result, well_spec, output_dir)`
+
+- **参数**：`AnnulusSimulationResult`, `WellSpec`, 可选的输出目录路径
+- **返回**：`dict[str, Figure]` — 文件名到Figure对象的映射
+- **功能**：一键导出上述全部参考图件，返回所有生成的Figure对象字典

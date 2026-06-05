@@ -92,7 +92,7 @@ def plot_time_series(result: AnnulusSimulationResult, output_dir: Optional[Path 
     """绘制有效顶替效率与前沿推进时间序列。
 
     输出两张子图：
-    - 上图：全井段、CBL评价井段、目标层段的有效顶替效率及水泥浆占据率随时间变化
+    - 上图：全井段有效顶替效率及水泥浆占据率随时间变化
     - 下图：宽边、中线、窄边三个方位的水泥浆前沿推进距离随时间变化
 
     Args:
@@ -108,8 +108,6 @@ def plot_time_series(result: AnnulusSimulationResult, output_dir: Optional[Path 
         [
             "time_min",
             "effective_efficiency",
-            "cbl_eval_interval_efficiency",
-            "target_interval_efficiency",
             "bulk_cement_fill",
             "front_wide_m",
             "front_mid_m",
@@ -122,9 +120,7 @@ def plot_time_series(result: AnnulusSimulationResult, output_dir: Optional[Path 
     fig, axes = plt.subplots(2, 1, figsize=(10, 8), sharex=True)
     fig.suptitle(f"{result.well_name} 顶替效率与前沿推进时间序列", fontsize=15, fontweight="bold")
 
-    axes[0].plot(metrics["time_min"], metrics["effective_efficiency"], label="全井段", linewidth=2.2)
-    axes[0].plot(metrics["time_min"], metrics["cbl_eval_interval_efficiency"], label="CBL评价井段", linewidth=2)
-    axes[0].plot(metrics["time_min"], metrics["target_interval_efficiency"], label="目标层段", linewidth=2)
+    axes[0].plot(metrics["time_min"], metrics["effective_efficiency"], label="全井段有效顶替效率", linewidth=2.2)
     axes[0].plot(metrics["time_min"], metrics["bulk_cement_fill"], label="水泥浆占据率", linestyle="--", linewidth=2)
     axes[0].set_ylabel("有效顶替效率 / 占据率")
     axes[0].set_ylim(0, 1.05)

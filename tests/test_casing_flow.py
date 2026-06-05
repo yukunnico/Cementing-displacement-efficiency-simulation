@@ -112,7 +112,7 @@ class TestCasingFlowShoeTimeline(unittest.TestCase):
     def test_run_emits_shoe_timeline_without_changing_legacy_result_fields(self) -> None:
         """run() 返回 ShoeTimeline，且单径井查询结果与旧 pipe_exit_state_at 口径一致。"""
 
-        solver = CasingFlowSolver()
+        solver = CasingFlowSolver(enable_gravity=False, enable_axial_dispersion=False)
         result = solver.run(_well(), _fluids(), _schedule())
 
         self.assertIsInstance(result.shoe_timeline, ShoeTimeline)
@@ -137,7 +137,7 @@ class TestCasingFlowShoeTimeline(unittest.TestCase):
     def test_dual_diameter_metadata_delays_timeline_without_rewriting_legacy_fronts(self) -> None:
         """双径向井时间轴使用上段内径累计体积；旧 fronts 仍保持单径算法结果。"""
 
-        solver = CasingFlowSolver()
+        solver = CasingFlowSolver(enable_gravity=False, enable_axial_dispersion=False)
         result = solver.run(_well(upper_area_m2=0.02), _fluids(), _schedule())
 
         # 旧结果仍按 result.pipe_cross_section_m2 * shoe_md_m = 1 m³ 计算首个前缘。
@@ -152,7 +152,7 @@ class TestCasingFlowShoeTimeline(unittest.TestCase):
     def test_gravity_corrected_front_time_is_used_by_timeline(self) -> None:
         """启用重力修正时，时间轴前缘事件必须与旧 fronts 的校正时间一致。"""
 
-        solver = CasingFlowSolver(enable_gravity=True, settling_velocity_factor=1.0)
+        solver = CasingFlowSolver(enable_gravity=True, settling_velocity_factor=1.0, enable_axial_dispersion=False)
         result = solver.run(_well(), _fluids(), _schedule())
 
         corrected_front_time_s = result.fronts[0].time_s

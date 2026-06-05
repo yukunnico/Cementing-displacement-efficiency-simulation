@@ -284,10 +284,10 @@ class TestBoundaryBridgeMultiPhase(unittest.TestCase):
 class TestDispersionAlphaParameter(unittest.TestCase):
     """测试弥散系数参数。"""
 
-    def test_default_alpha_is_02(self) -> None:
-        """默认 dispersion_alpha = 0.2。"""
+    def test_default_alpha_is_025(self) -> None:
+        """默认 dispersion_alpha = 0.25。"""
         solver = CasingFlowSolver()
-        self.assertEqual(solver.dispersion_alpha, 0.2)
+        self.assertEqual(solver.dispersion_alpha, 0.25)
 
     def test_custom_alpha(self) -> None:
         """自定义 dispersion_alpha 正确保存。"""
