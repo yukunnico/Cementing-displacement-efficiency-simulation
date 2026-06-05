@@ -1,8 +1,8 @@
 # 固井模型图表输出优化设计文档
 
 > **日期**：2026-06-05
-> **版本**：v1.0
-> **状态**：已确认
+> **版本**：v1.1
+> **状态**：已确认（更新：删除CBL/目标层段相关，聚焦全井分布）
 
 ---
 
@@ -35,18 +35,17 @@
 |------|------|------|
 | 旧版本兼容逻辑 | contour_plots.py | `_require_snapshot_data`、`_optional_spacer_snapshots`、`_optional_spacer_field` 中有旧版本兼容代码 |
 | 无效计算 | contour_plots.py | `effective_field = cement_field * (1.0 - wall_field)` 中 wall_field 当前恒为零 |
-| 缺失曲线 | plots.py | `plot_time_series` 只绘制全井段效率，未绘制 CBL 评价段和目标层段效率 |
 | 旧版本兼容 | plots.py | `plot_efficiency_summary_bar` 中有 `cbl_quality_proxy` 兼容逻辑 |
+| 冗余字段 | plots.py, contour_plots.py | CBL评价段、目标层段相关字段和图表需要删除 |
 
 #### 1.2.2 样式问题
 
 | 问题 | 位置 | 说明 |
 |------|------|------|
-| 颜色方案 | plots.py, contour_plots.py | 颜色较为简单，不够学术化 |
-| 字体设置 | plots.py | 缺少 LaTeX 数学公式支持 |
-| 全局样式 | plots.py | 没有设置全局图表样式（grid、spine 等） |
-| 坐标轴标签 | plots.py, contour_plots.py | 格式不统一 |
-| 图例样式 | plots.py | 图例位置和样式可以优化 |
+| 等值线标注重叠 | contour_plots.py | 时间 125-150 min 之间，等值线标注拥挤 |
+| 图例遮挡数据 | plots.py | 图例遮挡了部分起始数据点 |
+| 曲线震荡 | plots.py | 井深 7500m 之后曲线剧烈震荡，需要平滑处理 |
+| X轴范围 | contour_plots.py | X轴刻度止于 175，但数据延伸到约 187.5 |
 
 #### 1.2.3 布局问题
 
@@ -60,11 +59,12 @@
 
 ## 2. 优化目标
 
-1. **中文显示优化**：统一设置全局图表样式，支持 LaTeX 数学公式
-2. **数据计算修复**：删除旧版本兼容逻辑，修复无效计算
-3. **样式调整**：采用学术论文风格的颜色方案，统一坐标轴标签格式
+1. **中文显示优化**：统一设置全局图表样式
+2. **数据计算修复**：删除旧版本兼容逻辑，修复无效计算，删除CBL/目标层段相关
+3. **样式调整**：修复等值线标注、图例位置、曲线平滑等问题
 4. **布局优化**：优化多面板图表的排列，调整 colorbar 位置
 5. **新增图表类型**：湍流区域分布图、雷诺数云图、流态判断图
+6. **聚焦全井分布**：所有图表只展示全井段数据，不区分CBL评价段和目标层段
 
 ---
 
@@ -175,7 +175,30 @@ CONTOUR_CMAP = {
 |------|----------|
 | `plot_efficiency_summary_bar` | `cbl_quality_proxy` 兼容逻辑 |
 
-#### 3.2.2 修复无效计算
+#### 3.2.2 删除 CBL 和目标层段相关
+
+**删除以下内容**：
+
+1. **plots.py 中的 `plot_time_series`**：
+   - 删除 CBL 评价段效率曲线
+   - 删除目标层段效率曲线
+   - 只保留全井段有效顶替效率
+
+2. **plots.py 中的 `plot_efficiency_summary_bar`**：
+   - 删除 CBL 评价井段有效顶替效率柱状
+   - 删除目标层段有效顶替效率柱状
+   - 只保留全井段有效顶替效率和水泥浆占据率
+
+3. **AnnulusD2DGASolver.run() 中的指标计算**：
+   - 删除 `target_efficiency` 计算
+   - 删除 `cbl_efficiency` 计算
+   - 只保留 `effective_efficiency`
+
+4. **AnnulusSimulationResult 中的字段**：
+   - 删除 `target_interval_efficiency` 相关
+   - 删除 `cbl_eval_interval_efficiency` 相关
+
+#### 3.2.3 修复无效计算
 
 **contour_plots.py 中的 `plot_final_fields_contour`**：
 
@@ -187,51 +210,109 @@ effective_field = cement_field * (1.0 - wall_field)
 effective_field = cement_field  # wall_field 当前恒为零，直接使用水泥浓度作为有效顶替效率
 ```
 
-#### 3.2.3 添加缺失曲线
-
-**plots.py 中的 `plot_time_series`**：
-
-添加 CBL 评价段和目标层段效率曲线：
-
-```python
-# 添加 CBL 评价段效率曲线
-if "cbl_eval_interval_efficiency" in metrics.columns:
-    axes[0].plot(
-        metrics["time_min"],
-        metrics["cbl_eval_interval_efficiency"],
-        label="CBL评价段效率",
-        linestyle="-.",
-        linewidth=1.8,
-        color=ACADEMIC_COLORS["secondary"],
-    )
-
-# 添加目标层段效率曲线
-if "target_interval_efficiency" in metrics.columns:
-    axes[0].plot(
-        metrics["time_min"],
-        metrics["target_interval_efficiency"],
-        label="目标层段效率",
-        linestyle=":",
-        linewidth=1.8,
-        color=ACADEMIC_COLORS["accent"],
-    )
-```
-
 ### 3.3 样式调整
 
-#### 3.3.1 统一坐标轴标签格式
+#### 3.3.1 修复等值线标注重叠
+
+**contour_plots.py 中的 `plot_depth_time_contour`**：
+
+```python
+# 修改前
+contour_lines = ax.contour(
+    time_grid,
+    depth_grid,
+    depth_time_matrix,
+    levels=[0.5, 0.7, 0.9],
+    colors="#333333",
+    linewidths=0.8,
+)
+ax.clabel(contour_lines, fmt="%.1f", inline=True, fontsize=9)
+
+# 修改后（减少标注密度，使用自动避让）
+contour_lines = ax.contour(
+    time_grid,
+    depth_grid,
+    depth_time_matrix,
+    levels=[0.5, 0.7, 0.9],
+    colors="#333333",
+    linewidths=0.8,
+)
+ax.clabel(contour_lines, fmt="%.1f", inline=True, fontsize=9, manual=False)
+```
+
+#### 3.3.2 优化图例位置
+
+**plots.py 中的 `plot_depth_profiles`**：
+
+```python
+# 修改前
+axes[0].legend(loc="best", ncol=2)
+
+# 修改后（将图例放在绘图区域之外）
+axes[0].legend(
+    loc="upper left",
+    bbox_to_anchor=(1.02, 1.0),
+    fontsize=10,
+    framealpha=0.8,
+    edgecolor="#333333",
+    ncol=1,
+)
+```
+
+#### 3.3.3 曲线平滑处理
+
+**plots.py 中的 `plot_depth_profiles`**：
+
+```python
+# 添加平滑函数
+from scipy.signal import savgol_filter
+
+def _smooth_curve(data: np.ndarray, window_length: int = 11, polyorder: int = 3) -> np.ndarray:
+    """使用 Savitzky-Golay 滤波器平滑曲线。
+
+    Args:
+        data: 原始数据
+        window_length: 窗口长度（必须为奇数）
+        polyorder: 多项式阶数
+
+    Returns:
+        平滑后的数据
+    """
+    if len(data) < window_length:
+        return data
+    return savgol_filter(data, window_length, polyorder)
+
+# 使用示例
+axes[0].plot(
+    depth,
+    _smooth_curve(profiles["宽边有效效率"]),
+    label="宽边有效效率",
+    linewidth=2,
+)
+```
+
+#### 3.3.4 调整 X 轴范围
+
+**contour_plots.py 中的 `plot_depth_time_contour`**：
+
+```python
+# 修改前
+ax.set_xlabel("时间 / min")
+
+# 修改后（设置合适的 X 轴范围）
+ax.set_xlabel("时间 / min")
+ax.set_xlim(left=0)  # 从 0 开始
+```
+
+#### 3.3.5 统一坐标轴标签格式
 
 ```python
 # 坐标轴标签格式
 axes[0].set_ylabel("有效顶替效率 / 占据率", fontsize=12)
 axes[0].set_xlabel("时间 / min", fontsize=12)
-
-# 或使用 LaTeX 数学公式格式
-axes[0].set_ylabel(r"有效顶替效率 $\eta$ / 占据率", fontsize=12)
-axes[0].set_xlabel(r"时间 $t$ / min", fontsize=12)
 ```
 
-#### 3.3.2 优化图例样式
+#### 3.3.6 优化图例样式
 
 ```python
 # 图例样式
@@ -244,7 +325,7 @@ axes[0].legend(
 )
 ```
 
-#### 3.3.3 调整线宽和标记
+#### 3.3.7 调整线宽和标记
 
 ```python
 # 线宽和标记
@@ -475,26 +556,29 @@ def plot_flow_regime(
 
 ## 4. 实施顺序
 
-### 第一阶段：全局样式设置
-
-1. 新增 `setup_academic_style()` 函数
-2. 定义学术颜色方案
-3. 定义标准图表尺寸
-4. 更新各模块的字体设置
-
-### 第二阶段：数据计算修复
+### 第一阶段：数据清理
 
 1. 删除 contour_plots.py 中的旧版本兼容逻辑
 2. 删除 plots.py 中的旧版本兼容逻辑
-3. 修复 `effective_field` 计算
-4. 添加 CBL 评价段和目标层段效率曲线
+3. 删除 CBL 评价段和目标层段相关代码
+4. 修复 `effective_field` 计算
+5. 更新 AnnulusD2DGASolver.run() 中的指标计算
+6. 更新 AnnulusSimulationResult 字段
 
-### 第三阶段：样式调整
+### 第二阶段：样式修复
 
-1. 统一坐标轴标签格式
-2. 优化图例样式
-3. 调整线宽和标记
-4. 应用学术颜色方案
+1. 修复等值线标注重叠问题
+2. 优化图例位置，避免遮挡数据
+3. 添加曲线平滑处理
+4. 调整 X 轴范围
+
+### 第三阶段：全局样式设置
+
+1. 新增 `setup_academic_style()` 函数
+2. 定义学术颜色方案
+3. 统一坐标轴标签格式
+4. 优化图例样式
+5. 调整线宽和标记
 
 ### 第四阶段：布局优化
 
@@ -518,13 +602,17 @@ def plot_flow_regime(
 - [ ] 中文标签、图例、标题显示正确
 - [ ] 数据计算逻辑正确
 - [ ] 新增图表类型功能正常
+- [ ] CBL 和目标层段相关代码已完全删除
+- [ ] 只展示全井段数据
 
 ### 5.2 样式验证
 
+- [ ] 等值线标注不重叠
+- [ ] 图例不遮挡数据
+- [ ] 曲线平滑处理正确
+- [ ] X 轴范围合适
 - [ ] 颜色方案符合学术论文风格
 - [ ] 坐标轴标签格式统一
-- [ ] 图例样式统一
-- [ ] 线宽和标记大小合适
 
 ### 5.3 布局验证
 
