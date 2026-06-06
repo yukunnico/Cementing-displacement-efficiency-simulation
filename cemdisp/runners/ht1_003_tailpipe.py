@@ -18,12 +18,10 @@ from typing import cast
 
 import numpy as np
 
-from cemdisp.data.fluid_spec import FluidRole, FluidSpec
+from cemdisp.data.fluid_spec import FluidSpec
 from cemdisp.data.fluid_provenance import build_injected_fluid_provenance_summary, format_injected_fluid_provenance_markdown
 from cemdisp.data.loaders.ht1_003_loader import load_ht1_003_tailpipe
 from cemdisp.data.pumping_schedule import PumpingSchedule
-from cemdisp.data.validation_data import ValidationData
-from cemdisp.diagnostics.quality_proxy import compute_cbl_quality_proxy
 from cemdisp.models2d import AnnulusD2DGASolver
 from cemdisp.models2d.boundary_bridge import AnnulusInletState, build_coupled_annulus_inlet_provider
 from cemdisp.reporting.animation import animate_cement_field
@@ -41,7 +39,6 @@ from cemdisp.reporting.plots import (
 from cemdisp.reporting.reference_figures import export_reference_figure_set
 from cemdisp.transport1d import CasingFlowSolver
 from cemdisp.transport1d.casing_flow import CasingFlowResult
-from cemdisp.validation.cbl_comparison import validate_against_cbl
 
 
 # 项目根目录：从cemdisp/runners向上两级到达cement model根目录
@@ -55,7 +52,6 @@ def run_and_export(
     output_dir: Path,
     inlet_provider: Callable[[float], AnnulusInletState],
     total_t_s: float,
-    validation_data: ValidationData | None = None,
 ) -> None:
     """运行环空模型并导出一套中文命名结果。
 
@@ -64,7 +60,6 @@ def run_and_export(
         output_dir: 结果输出目录
         inlet_provider: 环空入口边界状态提供器
         total_t_s: 环空二维顶替总时长（秒）
-        validation_data: 可选的现场验证资料（含 CBL 报告路径等），用于后验对比
     """
 
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -85,52 +80,7 @@ def run_and_export(
     summary_payload = dict(result.summary)
     summary_payload["注入流体现场符合性检查"] = fluid_provenance_summary
 
-    # 计算 CBL 质量风险代理值（独立模块，不等同于水力效率）
-    final_metrics = result.metrics.iloc[-1]
-    cbl_proxy = compute_cbl_quality_proxy(
-        displacement_efficiency=float(final_metrics["cbl_eval_interval_efficiency"]),
-        channeling_index=float(final_metrics["channeling_index"]),
-        mixing_index=float(final_metrics["mixing_index"]),
-        instability_index=float(final_metrics["instability_index"]),
-    )
-    summary_payload["CBL质量风险代理预测"] = {
-        "点估计": cbl_proxy.point_estimate,
-        "置信区间": [cbl_proxy.lower_bound, cbl_proxy.upper_bound],
-        "置信水平": cbl_proxy.confidence_level,
-        "水力有效顶替效率": cbl_proxy.hydraulic_efficiency,
-    }
-
-    # 若提供了现场 CBL 实测数据，进行后验验证对比
-    cbl_validation_md_lines: list[str] = []
-    if validation_data is not None and validation_data.cbl_pass_rate is not None:
-        cbl_val = validate_against_cbl(
-            well_name=result.well_name,
-            cbl_interval_top_m=well_spec.evaluation_windows[0].top_md_m,
-            cbl_interval_bottom_m=well_spec.evaluation_windows[0].bottom_md_m,
-            simulated_efficiency=float(final_metrics["cbl_eval_interval_efficiency"]),
-            measured_pass_rate=validation_data.cbl_pass_rate,
-        )
-        summary_payload["CBL实测对比验证"] = {
-            "现场CBL合格率": cbl_val.measured_pass_rate,
-            "绝对偏差": cbl_val.absolute_delta,
-            "相对偏差_%": cbl_val.relative_delta_pct,
-            "趋势一致性": cbl_val.trend_consistent,
-        }
-        cbl_validation_md_lines = [
-            "",
-            "## CBL 实测对比验证",
-            "",
-            f"- 模型预测水力效率：{cbl_val.simulated_efficiency:.4f}",
-            f"- 现场 CBL 实测合格率：{cbl_val.measured_pass_rate:.4f}",
-            f"- 绝对偏差：{cbl_val.absolute_delta:.4f}",
-            f"- 相对偏差：{cbl_val.relative_delta_pct:.2f}%",
-            f"- 趋势一致性：{cbl_val.trend_consistent}",
-            "",
-            "> **注意**：CBL 合格率受泥饼残留、水泥收缩、温度、气体窜槽等多因素影响，",
-            "> 通常低于水力学有效顶替效率。偏差在可接受范围内表明模型预测合理。",
-        ]
-
-    # 导出JSON摘要（已追加 CBL 代理和验证结果）
+    # 导出JSON摘要
     summary_json_path = output_dir / f"呼1-003_{mode_title}_结果摘要.json"
     _ = summary_json_path.write_text(
         json.dumps(summary_payload, ensure_ascii=False, indent=2), encoding="utf-8"
@@ -146,22 +96,10 @@ def run_and_export(
                 "",
                 f"- 模拟对象：{result.summary['模拟对象']}",
                 f"- 全井段最终有效顶替效率：{final_result['全井段最终有效顶替效率']:.4f}",
-                f"- CBL评价井段水力有效顶替效率：{final_result['CBL评价井段水力有效顶替效率']:.4f}",
-                f"- 目标层段水力有效顶替效率：{final_result['目标层段水力有效顶替效率']:.4f}",
                 f"- 最终水泥浆占据率：{final_result['最终水泥浆占据率']:.4f}",
                 f"- 最终窜槽/混浆/失稳指数：{final_result['最终窜槽指数']:.4f} / {final_result['最终混浆指数']:.4f} / {final_result['最终失稳指数']:.4f}",
                 "",
                 *format_injected_fluid_provenance_markdown(fluid_provenance_summary),
-                "",
-                "## CBL 质量风险代理预测",
-                "",
-                f"- 水力学有效顶替效率：{cbl_proxy.hydraulic_efficiency:.4f}",
-                f"- CBL 质量代理点估计：{cbl_proxy.point_estimate:.4f}",
-                f"- {cbl_proxy.confidence_level}：[{cbl_proxy.lower_bound:.4f}, {cbl_proxy.upper_bound:.4f}]",
-                "",
-                "> **声明**：CBL 质量代理值基于水力学结果与工程经验因子联合预测，",
-                "> 不等同于 CBL 实测真值，仅供风险筛查和方案对比参考。",
-                *cbl_validation_md_lines,
             ]
         ),
         encoding="utf-8",
@@ -328,7 +266,7 @@ def _export_casing_flow_timing(
 def run_ht1_003_tailpipe_initial() -> None:
     """呼1-003井（HT1-003）尾管段现场实录 1D-2D 耦合模型运行入口。"""
 
-    well_spec, fluids, schedule, validation_data = load_ht1_003_tailpipe()
+    well_spec, fluids, schedule, _ = load_ht1_003_tailpipe()
     output_dir = PROJECT_ROOT / "results" / "呼1-003_1D2D耦合模型"
 
     # 严格现场模式只使用 1D-2D 耦合：套管内前沿追踪 → 鞋口出流 → 环空入口。
@@ -348,7 +286,6 @@ def run_ht1_003_tailpipe_initial() -> None:
         output_dir=output_dir,
         inlet_provider=coupled_provider,
         total_t_s=annulus_stop_time_value_s,
-        validation_data=validation_data,
     )
 
 

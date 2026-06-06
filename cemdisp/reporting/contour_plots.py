@@ -141,11 +141,11 @@ def plot_depth_time_contour(
     ax.clabel(contour_lines, fmt="%.1f", inline=True, fontsize=9)
 
     colorbar = fig.colorbar(filled, ax=ax, pad=0.02)
-    colorbar.set_label("有效顶替效率")
+    colorbar.set_label("有效顶替效率", fontsize=10)
     ax.set_title(f"{result.well_name} 深度-时间顶替效率云图", fontsize=14, fontweight="bold")
-    ax.set_xlabel("时间 / min")
-    ax.set_ylabel("井深 / m")
-    ax.grid(True, alpha=0.18)
+    ax.set_xlabel("时间 / min", fontsize=11)
+    ax.set_ylabel("井深 / m", fontsize=11)
+    ax.grid(True, alpha=0.18, linestyle="--")
 
     fig.tight_layout()
     _save_figure(fig, output_dir, f"{well_name}_深度-时间顶替效率云图.png")
@@ -286,11 +286,11 @@ def plot_final_fields_contour(
             vmin=0.0,
             vmax=1.0,
         )
-        ax.set_title(title, fontweight="bold")
-        ax.set_xlabel("井深 / m")
-        ax.set_ylabel("方位角 (宽边→窄边)")
+        ax.set_title(title, fontweight="bold", fontsize=12)
+        ax.set_xlabel("井深 / m", fontsize=11)
+        ax.set_ylabel("方位角 (宽边→窄边)", fontsize=11)
         colorbar = fig.colorbar(image, ax=ax, pad=0.02)
-        colorbar.set_label(title)
+        colorbar.set_label(title, fontsize=10)
 
     fig.suptitle(f"{result.well_name} 最终场分布", fontsize=15, fontweight="bold")
     fig.tight_layout(rect=(0, 0, 1, 0.93))
