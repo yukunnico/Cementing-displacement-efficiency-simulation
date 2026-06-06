@@ -108,8 +108,6 @@ def run_and_export(
                 "",
                 f"- 模拟对象：{result.summary['模拟对象']}",
                 f"- 全井段最终有效顶替效率：{final_result['全井段最终有效顶替效率']:.4f}",
-                f"- CBL评价井段模拟有效顶替效率：{final_result['CBL评价井段水力有效顶替效率']:.4f}",
-                f"- 目标层段模拟有效顶替效率：{final_result['目标层段水力有效顶替效率']:.4f}",
                 f"- 最终水泥浆占据率：{final_result['最终水泥浆占据率']:.4f}",
                 f"- 最终窜槽/混浆/失稳指数：{final_result['最终窜槽指数']:.4f} / {final_result['最终混浆指数']:.4f} / {final_result['最终失稳指数']:.4f}",
                 "",
