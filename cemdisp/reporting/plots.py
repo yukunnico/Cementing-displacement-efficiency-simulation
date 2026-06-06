@@ -151,7 +151,7 @@ def plot_time_series(result: AnnulusSimulationResult, output_dir: Optional[Path 
     axes[1].set_xlabel("时间 / min", fontsize=11)
     axes[1].set_ylabel("前沿推进距离 / m", fontsize=11)
     axes[1].grid(True, alpha=0.2, linestyle="--")
-    axes[1].legend(loc="best", fontsize=9)
+    axes[1].legend(loc="upper left", bbox_to_anchor=(1.02, 1), fontsize=9)
 
     fig.tight_layout(rect=(0, 0, 1, 0.96))
     _save_figure(fig, output_dir, f"{well_name}_顶替效率时间序列.png")
@@ -194,7 +194,7 @@ def plot_depth_profiles(
     axes[0].set_ylabel("有效顶替效率", fontsize=11)
     axes[0].set_ylim(0, 1.05)
     axes[0].grid(True, alpha=0.2, linestyle="--")
-    axes[0].legend(loc="best", ncol=2, fontsize=9)
+    axes[0].legend(loc="upper left", bbox_to_anchor=(1.02, 1), ncol=1, fontsize=9)
 
     axes[1].plot(depth, profiles["宽边水泥浓度"], label="宽边水泥浓度", color=ACADEMIC_COLORS["primary"], linewidth=2)
     axes[1].plot(depth, profiles["中线水泥浓度"], label="中线水泥浓度", color=ACADEMIC_COLORS["warning"], linewidth=2)
@@ -204,7 +204,7 @@ def plot_depth_profiles(
     axes[1].set_ylabel("水泥浓度", fontsize=11)
     axes[1].set_ylim(0, 1.05)
     axes[1].grid(True, alpha=0.2, linestyle="--")
-    axes[1].legend(loc="best", ncol=2, fontsize=9)
+    axes[1].legend(loc="upper left", bbox_to_anchor=(1.02, 1), ncol=1, fontsize=9)
 
     fig.tight_layout(rect=(0, 0, 1, 0.96))
     _save_figure(fig, output_dir, f"{well_name}_深度剖面分布.png")
@@ -242,7 +242,7 @@ def plot_risk_indices(result: AnnulusSimulationResult, output_dir: Optional[Path
     ax.set_xlabel("时间 / min", fontsize=11)
     ax.set_ylabel("指数", fontsize=11)
     ax.grid(True, alpha=0.2, linestyle="--")
-    ax.legend(loc="best", fontsize=9)
+    ax.legend(loc="upper left", bbox_to_anchor=(1.02, 1), fontsize=9)
 
     fig.tight_layout()
     _save_figure(fig, output_dir, f"{well_name}_风险指标时间演变.png")
