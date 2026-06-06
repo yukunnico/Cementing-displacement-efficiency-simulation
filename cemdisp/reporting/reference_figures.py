@@ -50,7 +50,7 @@ def plot_reference_depth_profile(
     ax.set_ylabel("井深 / m", fontsize=11)
     ax.set_xlim(0.0, 1.05)
     ax.grid(True, alpha=0.2, linestyle="--")
-    ax.legend(loc="best", fontsize=9)
+    ax.legend(loc="upper left", bbox_to_anchor=(1.02, 1), fontsize=9)
     ax.invert_yaxis()
     fig.tight_layout()
     _save_figure(fig, output_dir, "最终水泥体积分数深度剖面.png")
@@ -76,7 +76,7 @@ def plot_reference_front_progress(
     ax.set_xlabel("时间 / min", fontsize=11)
     ax.set_ylabel("井深 / m", fontsize=11)
     ax.grid(True, alpha=0.2, linestyle="--")
-    ax.legend(loc="best", fontsize=9)
+    ax.legend(loc="upper left", bbox_to_anchor=(1.02, 1), fontsize=9)
     ax.invert_yaxis()
     fig.tight_layout()
     _save_figure(fig, output_dir, "宽窄边前沿推进.png")
@@ -121,6 +121,8 @@ def plot_reference_segment_efficiency(
 
     sorted_windows = sorted(well_spec.evaluation_windows, key=lambda window: (window.top_md_m, window.bottom_md_m, window.name))
     for window in sorted_windows:
+        if "CBL" in window.name or "目标层段" in window.name:
+            continue
         labels.append(window.name)
         values.append(_window_mean_efficiency(result, window.top_md_m, window.bottom_md_m))
 
