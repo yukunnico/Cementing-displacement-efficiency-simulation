@@ -18,7 +18,7 @@ from typing import cast
 
 import numpy as np
 
-from cemdisp.data.fluid_spec import FluidSpec
+from cemdisp.data.fluid_spec import FluidRole, FluidSpec
 from cemdisp.data.fluid_provenance import build_injected_fluid_provenance_summary, format_injected_fluid_provenance_markdown
 from cemdisp.data.loaders.ht1_003_loader import load_ht1_003_tailpipe
 from cemdisp.data.pumping_schedule import PumpingSchedule
