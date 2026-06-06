@@ -66,40 +66,37 @@
 - [ ] 字号：标题 14-15pt，轴标签 11-12pt，图例 9-10pt
 - [ ] 网格：alpha=0.2，虚线
 
-## 删除 CBL 相关代码
+## 删除 CBL 相关代码 ✅ 已完成
 
-### hu101_tailpipe.py
+### hu101_tailpipe.py ✅
 
-删除以下内容：
+已删除：
 - `HU101_CBL_PROFILE_PATH` 常量
 - `_load_hu101_cbl_profile()` 函数
 - `_export_cbl_profile_comparison()` 函数
 - `run_and_export()` 中调用 `_export_cbl_profile_comparison(result, output_dir)` 的行
-- `import pandas as pd`（如果仅用于 CBL）
-- `import matplotlib.pyplot as plt`（如果仅用于 CBL）
+- `import pandas as pd`、`import matplotlib.pyplot as plt`
 
-### hu102_tailpipe.py
+### hu102_tailpipe.py ✅
 
-删除以下内容：
+已删除：
 - `compute_cbl_quality_proxy` 相关代码
 - `validate_against_cbl` 相关代码
 - `summary_payload["CBL质量风险代理预测"]` 相关代码
 - `summary_payload["CBL实测对比验证"]` 相关代码
 - Markdown 摘要中的 CBL 相关段落
-- `from cemdisp.diagnostics.quality_proxy import compute_cbl_quality_proxy`
-- `from cemdisp.validation.cbl_comparison import validate_against_cbl`
-- `from cemdisp.data.validation_data import ValidationData`
+- 相关 import 语句
 - `run_and_export()` 的 `validation_data` 参数
 
-### ht1_003_tailpipe.py
+### ht1_003_tailpipe.py ✅
 
-删除内容同 hu102_tailpipe.py。
+已删除内容同 hu102_tailpipe.py。
 
-### 其他 runner
+### 其他 runner ✅
 
-检查是否有隐式 CBL 引用，如有则删除。
+已检查，无隐式 CBL 引用。
 
-## 学术风格参数
+## 学术风格参数 ✅ 已完成
 
 ```python
 # 配色方案（已在 plots.py 中定义）
@@ -122,6 +119,14 @@ LINE_WIDTH_AUX = 1.5
 GRID_ALPHA = 0.2
 GRID_STYLE = "--"
 ```
+
+### 已更新的文件 ✅
+
+| 文件 | 更新内容 |
+|------|----------|
+| `reporting/plots.py` | DPI 从 150 改为 300；使用 ACADEMIC_COLORS 配色；网格线改为虚线 |
+| `reporting/contour_plots.py` | 坐标轴标签字号统一为 11pt；网格线改为虚线 |
+| `reporting/reference_figures.py` | 使用学术配色；坐标轴标签字号统一为 11pt；网格线改为虚线 |
 
 ## 实施计划
 

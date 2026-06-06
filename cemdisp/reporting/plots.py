@@ -26,6 +26,24 @@ from cemdisp.models2d import AnnulusSimulationResult
 
 LOGGER = logging.getLogger(__name__)
 
+# 学术图表配色方案
+ACADEMIC_COLORS = {
+    "primary": "#2E86AB",      # 主色调（蓝色）
+    "success": "#A23B72",      # 成功/正向（紫红色）
+    "warning": "#F18F01",      # 警告（橙色）
+    "danger": "#C73E1D",       # 危险（红色）
+    "info": "#3B1F2B",         # 信息（深色）
+    "light": "#44BBA4",        # 浅色（绿色）
+}
+
+# 标准图表尺寸
+STANDARD_FIGSIZE = {
+    "single": (8, 6),          # 单图
+    "double": (12, 8),         # 双图
+    "wide": (14, 6),           # 宽图
+    "tall": (8, 10),           # 高图
+}
+
 
 def _setup_chinese_font() -> None:
     """配置 matplotlib 中文字体与负号显示。
@@ -75,7 +93,7 @@ def _save_figure(fig: Figure, output_dir: Optional[Path | str], filename: str) -
 
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
-    fig.savefig(output_path / filename, dpi=150, bbox_inches="tight")
+    fig.savefig(output_path / filename, dpi=300, bbox_inches="tight")
 
 
 def _require_columns(dataframe: pd.DataFrame, columns: Iterable[str], source_name: str) -> None:
@@ -120,20 +138,20 @@ def plot_time_series(result: AnnulusSimulationResult, output_dir: Optional[Path 
     fig, axes = plt.subplots(2, 1, figsize=(10, 8), sharex=True)
     fig.suptitle(f"{result.well_name} 顶替效率与前沿推进时间序列", fontsize=15, fontweight="bold")
 
-    axes[0].plot(metrics["time_min"], metrics["effective_efficiency"], label="全井段有效顶替效率", linewidth=2.2)
-    axes[0].plot(metrics["time_min"], metrics["bulk_cement_fill"], label="水泥浆占据率", linestyle="--", linewidth=2)
-    axes[0].set_ylabel("有效顶替效率 / 占据率")
+    axes[0].plot(metrics["time_min"], metrics["effective_efficiency"], label="全井段有效顶替效率", color=ACADEMIC_COLORS["primary"], linewidth=2.2)
+    axes[0].plot(metrics["time_min"], metrics["bulk_cement_fill"], label="水泥浆占据率", color=ACADEMIC_COLORS["success"], linestyle="--", linewidth=2)
+    axes[0].set_ylabel("有效顶替效率 / 占据率", fontsize=11)
     axes[0].set_ylim(0, 1.05)
-    axes[0].grid(True, alpha=0.25)
-    axes[0].legend(loc="best")
+    axes[0].grid(True, alpha=0.2, linestyle="--")
+    axes[0].legend(loc="best", fontsize=9)
 
-    axes[1].plot(metrics["time_min"], metrics["front_wide_m"], label="宽边", linewidth=2.1)
-    axes[1].plot(metrics["time_min"], metrics["front_mid_m"], label="中线", linewidth=2.1)
-    axes[1].plot(metrics["time_min"], metrics["front_narrow_m"], label="窄边", linewidth=2.1)
-    axes[1].set_xlabel("时间 / min")
-    axes[1].set_ylabel("前沿推进距离 / m")
-    axes[1].grid(True, alpha=0.25)
-    axes[1].legend(loc="best")
+    axes[1].plot(metrics["time_min"], metrics["front_wide_m"], label="宽边", color=ACADEMIC_COLORS["primary"], linewidth=2.1)
+    axes[1].plot(metrics["time_min"], metrics["front_mid_m"], label="中线", color=ACADEMIC_COLORS["warning"], linewidth=2.1)
+    axes[1].plot(metrics["time_min"], metrics["front_narrow_m"], label="窄边", color=ACADEMIC_COLORS["danger"], linewidth=2.1)
+    axes[1].set_xlabel("时间 / min", fontsize=11)
+    axes[1].set_ylabel("前沿推进距离 / m", fontsize=11)
+    axes[1].grid(True, alpha=0.2, linestyle="--")
+    axes[1].legend(loc="best", fontsize=9)
 
     fig.tight_layout(rect=(0, 0, 1, 0.96))
     _save_figure(fig, output_dir, f"{well_name}_顶替效率时间序列.png")
@@ -169,24 +187,24 @@ def plot_depth_profiles(
     fig.suptitle(f"{result.well_name} 深度剖面分布", fontsize=15, fontweight="bold")
 
     depth = profiles["井深_m"]
-    axes[0].plot(depth, profiles["宽边有效效率"], label="宽边有效效率", linewidth=2)
-    axes[0].plot(depth, profiles["中线有效效率"], label="中线有效效率", linewidth=2)
-    axes[0].plot(depth, profiles["窄边有效效率"], label="窄边有效效率", linewidth=2)
+    axes[0].plot(depth, profiles["宽边有效效率"], label="宽边有效效率", color=ACADEMIC_COLORS["primary"], linewidth=2)
+    axes[0].plot(depth, profiles["中线有效效率"], label="中线有效效率", color=ACADEMIC_COLORS["warning"], linewidth=2)
+    axes[0].plot(depth, profiles["窄边有效效率"], label="窄边有效效率", color=ACADEMIC_COLORS["danger"], linewidth=2)
     axes[0].plot(depth, profiles["平均有效顶替效率"], label="平均有效顶替效率", color="black", linewidth=2.4)
-    axes[0].set_ylabel("有效顶替效率")
+    axes[0].set_ylabel("有效顶替效率", fontsize=11)
     axes[0].set_ylim(0, 1.05)
-    axes[0].grid(True, alpha=0.25)
-    axes[0].legend(loc="best", ncol=2)
+    axes[0].grid(True, alpha=0.2, linestyle="--")
+    axes[0].legend(loc="best", ncol=2, fontsize=9)
 
-    axes[1].plot(depth, profiles["宽边水泥浓度"], label="宽边水泥浓度", linewidth=2)
-    axes[1].plot(depth, profiles["中线水泥浓度"], label="中线水泥浓度", linewidth=2)
-    axes[1].plot(depth, profiles["窄边水泥浓度"], label="窄边水泥浓度", linewidth=2)
+    axes[1].plot(depth, profiles["宽边水泥浓度"], label="宽边水泥浓度", color=ACADEMIC_COLORS["primary"], linewidth=2)
+    axes[1].plot(depth, profiles["中线水泥浓度"], label="中线水泥浓度", color=ACADEMIC_COLORS["warning"], linewidth=2)
+    axes[1].plot(depth, profiles["窄边水泥浓度"], label="窄边水泥浓度", color=ACADEMIC_COLORS["danger"], linewidth=2)
     axes[1].plot(depth, profiles["水泥平均浓度"], label="水泥平均浓度", color="black", linewidth=2.4)
-    axes[1].set_xlabel("井深 / m")
-    axes[1].set_ylabel("水泥浓度")
+    axes[1].set_xlabel("井深 / m", fontsize=11)
+    axes[1].set_ylabel("水泥浓度", fontsize=11)
     axes[1].set_ylim(0, 1.05)
-    axes[1].grid(True, alpha=0.25)
-    axes[1].legend(loc="best", ncol=2)
+    axes[1].grid(True, alpha=0.2, linestyle="--")
+    axes[1].legend(loc="best", ncol=2, fontsize=9)
 
     fig.tight_layout(rect=(0, 0, 1, 0.96))
     _save_figure(fig, output_dir, f"{well_name}_深度剖面分布.png")
@@ -217,14 +235,14 @@ def plot_risk_indices(result: AnnulusSimulationResult, output_dir: Optional[Path
 
     well_name = _safe_filename_component(result.well_name)
     fig, ax = plt.subplots(figsize=(10, 5.6))
-    ax.plot(metrics["time_min"], metrics["channeling_index"], label="窜槽指数", linewidth=2.2)
-    ax.plot(metrics["time_min"], metrics["mixing_index"], label="混浆指数", linewidth=2.2)
-    ax.plot(metrics["time_min"], metrics["instability_index"], label="失稳指数", linewidth=2.2)
+    ax.plot(metrics["time_min"], metrics["channeling_index"], label="窜槽指数", color=ACADEMIC_COLORS["danger"], linewidth=2.2)
+    ax.plot(metrics["time_min"], metrics["mixing_index"], label="混浆指数", color=ACADEMIC_COLORS["warning"], linewidth=2.2)
+    ax.plot(metrics["time_min"], metrics["instability_index"], label="失稳指数", color=ACADEMIC_COLORS["info"], linewidth=2.2)
     ax.set_title(f"{result.well_name} 风险指标时间演变", fontsize=14, fontweight="bold")
-    ax.set_xlabel("时间 / min")
-    ax.set_ylabel("指数")
-    ax.grid(True, alpha=0.25)
-    ax.legend(loc="best")
+    ax.set_xlabel("时间 / min", fontsize=11)
+    ax.set_ylabel("指数", fontsize=11)
+    ax.grid(True, alpha=0.2, linestyle="--")
+    ax.legend(loc="best", fontsize=9)
 
     fig.tight_layout()
     _save_figure(fig, output_dir, f"{well_name}_风险指标时间演变.png")
@@ -274,9 +292,9 @@ def plot_efficiency_summary_bar(
     fig, ax = plt.subplots(figsize=STANDARD_FIGSIZE["single"])
     bars = ax.bar(labels, values, color=colors, edgecolor="#333333", linewidth=0.6)
     ax.set_title(f"{result.well_name} 最终结果对比", fontsize=14, fontweight="bold")
-    ax.set_ylabel("效率 / 占据率")
+    ax.set_ylabel("效率 / 占据率", fontsize=11)
     ax.set_ylim(0, 1.08)
-    ax.grid(axis="y", alpha=0.25)
+    ax.grid(axis="y", alpha=0.2, linestyle="--")
     ax.tick_params(axis="x", rotation=18)
 
     for bar, value in zip(bars, values):
