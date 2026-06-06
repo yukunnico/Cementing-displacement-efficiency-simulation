@@ -130,31 +130,32 @@ GRID_STYLE = "--"
 
 ## 实施计划
 
-### 阶段 1：全面审查（并行）
+### 阶段 1：全面审查（并行） ✅ 已完成
 
-使用子 agent 并行检查：
+已检查：
 1. reporting 模块的绘图实现
 2. 各井 runner 的绘图调用
 3. data loaders 的数据输出
 
-### 阶段 2：删除 CBL 代码（并行）
+### 阶段 2：删除 CBL 代码（并行） ✅ 已完成
 
-使用子 agent 并行修改：
-1. hu101_tailpipe.py
-2. hu102_tailpipe.py
-3. ht1_003_tailpipe.py
+已修改：
+1. hu101_tailpipe.py ✅
+2. hu102_tailpipe.py ✅
+3. ht1_003_tailpipe.py ✅
 
-### 阶段 3：样式统一
+### 阶段 3：样式统一 ✅ 已完成
 
-修改 `reporting/plots.py`、`reporting/contour_plots.py` 中的样式参数。
+已修改 `reporting/plots.py`、`reporting/contour_plots.py`、`reporting/reference_figures.py` 中的样式参数。
 
-### 阶段 4：验证
+### 阶段 4：验证 ✅ 已完成
 
-使用子 agent 逐井检查修改后的代码，确保：
-- 无语法错误
-- 绘图逻辑正确
-- 图例不重叠
-- 输出文件路径正确
+使用子 agent 逐井检查修改后的代码，确认：
+- 无语法错误 ✅
+- 绘图逻辑正确 ✅
+- 图例不重叠 ✅
+- 输出文件路径正确 ✅
+- 修复了 ht1_003_tailpipe.py 中 FluidRole 未导入的问题 ✅
 
 ## 输出文件
 
