@@ -14,11 +14,8 @@
 - 封闭出口（open_outlet=False）：按累计入环空体积限制场量，适用于模拟整个环空。
 
 注意：
-- 本模块不再把泥饼、温度、凝胶强度、湍流修正、CBL 质量惩罚等工程扩展
-  项作为核心求解的一部分；
-- 为兼顾下游脚本兼容性，这些旧参数与旧快照字段仍保留接口或占位输出，
-  但不再影响求解结果；
-- 现场 CBL/合格率只允许用于验证与对比，不允许反向校准求解器。
+- 本模块不再把泥饼、温度、凝胶强度、湍流修正等工程扩展项作为核心求解的一部分；
+- 为兼顾下游脚本兼容性，旧参数与旧快照字段仍保留接口或占位输出，但不再影响求解结果。
 """
 
 from __future__ import annotations
@@ -38,7 +35,6 @@ from cemdisp.models2d.d2dga_flux import d2dga_flux_amplification
 
 
 Array = NDArray[np.float64]
-BoolArray = NDArray[np.bool_]
 
 
 def _profile_to_arrays(points: Tuple[DepthValuePoint, ...]) -> Tuple[Array, Array]:
@@ -46,15 +42,6 @@ def _profile_to_arrays(points: Tuple[DepthValuePoint, ...]) -> Tuple[Array, Arra
     depths = np.array([float(point.depth_md_m) for point in points], dtype=float)
     values = np.array([float(point.value) for point in points], dtype=float)
     return depths, values
-
-
-def _window_mask(well_spec: WellSpec, md: Array, window_type: str) -> BoolArray:
-    """根据窗口类型和井段规格生成井深掩码数组。"""
-    mask = np.zeros_like(md, dtype=bool)
-    for window in well_spec.evaluation_windows:
-        if window.window_type == window_type:
-            mask |= (md >= window.top_md_m) & (md <= window.bottom_md_m)
-    return mask[None, :]
 
 
 def _phase_fraction(inlet_state: AnnulusInletState, phase_name: str) -> float:
@@ -150,13 +137,9 @@ class AnnulusSimulationResult:
     tail_snapshots: Tuple[Array, ...] = field(default_factory=tuple)
     spacer_snapshots: Tuple[Array, ...] = field(default_factory=tuple)
     wall_snapshots: Tuple[Array, ...] = field(default_factory=tuple)
-    # Legacy fields -- always empty/zero in the current paper-grade solver.
-    # Kept as Optional placeholders for backward compatibility; no longer populated by run().
-    gel_strength_snapshots: Tuple[Array, ...] = field(default_factory=tuple)
-    mud_cake_field: Array = field(default_factory=lambda: np.empty((0, 0), dtype=float))
-    mud_cake_snapshots: Tuple[Array, ...] = field(default_factory=tuple)
+    # Legacy field -- always empty in the current paper-grade solver.
+    # Kept as placeholder for backward compatibility; no longer populated by run().
     reynolds_snapshots: Tuple[Array, ...] = field(default_factory=tuple)
-    turbulent_viscosity_snapshots: Tuple[Array, ...] = field(default_factory=tuple)
     snapshot_times_s: Tuple[float, ...] = field(default_factory=tuple)
     notes: Tuple[str, ...] = field(default_factory=tuple)
     lead_field: Array = field(default_factory=lambda: np.empty((0, 0), dtype=float))
@@ -315,11 +298,6 @@ class AnnulusD2DGASolver:
         geom["volume_scale"] = np.array(scale)
         geom["effective_b"] = geom["b"].copy()
         return geom
-
-    def _update_effective_gap(self, geom: Dict[str, Array], mud_cake_thickness: Array) -> None:
-        """兼容旧接口：论文口径核心中有效环空间隙始终等于原始环空间隙。"""
-        del mud_cake_thickness
-        geom["effective_b"] = geom["b"]
 
     def _physical_annular_volume(self, well_spec: WellSpec) -> float:
         """计算井段物理环空体积（用于体积校正）。"""
@@ -632,8 +610,6 @@ class AnnulusD2DGASolver:
         w_prev = np.full((self.ny, self.nz), 0.45, dtype=float)
         half_volume = _trapez2d(geom["b"], geom)
 
-        target_mask = _window_mask(well_spec, geom["md"], "target")
-        cbl_mask = _window_mask(well_spec, geom["md"], "cbl")
         ygrid, sgrid = np.meshgrid(geom["y"], geom["s"], indexing="ij")
         rows: list[list[float | str]] = []
         mud_density_gcc = mud_fluid.density_kg_m3 / 1000.0
@@ -646,9 +622,6 @@ class AnnulusD2DGASolver:
         cumulative_lead_in_m3 = 0.0
         cumulative_tail_in_m3 = 0.0
         cumulative_spacer_in_m3 = 0.0
-
-        mud_cake_thickness: Array = np.zeros((self.ny, self.nz), dtype=float)
-        self._update_effective_gap(geom, mud_cake_thickness)
 
         final_step_index = int(self.total_t / self.dt)
         for step_index in range(final_step_index + 1):
@@ -663,8 +636,6 @@ class AnnulusD2DGASolver:
             # 泵停后水泥场冻结——不再平流、扩散或壁面清除，
             # 因为水泥静凝胶强度在短时间（<2h）内足以抵抗浮力滑塌。
             pump_active = inlet_state.flow_rate_m3_s > 1.0e-9
-            self._update_effective_gap(geom, mud_cake_thickness)
-            effective_b = geom["effective_b"]
 
             if pump_active:
                 # === 正常泵注阶段：仅执行论文口径核心平流 + D2DGA 通量修正 ===
@@ -754,8 +725,6 @@ class AnnulusD2DGASolver:
             eff = cement
             bulk_fill = _trapez2d(geom["b"] * cement, geom) / half_volume
             effective_efficiency = _trapez2d(geom["b"] * eff, geom) / half_volume
-            target_efficiency = _trapez2d(geom["b"] * eff * target_mask, geom) / max(_trapez2d(geom["b"] * target_mask, geom), 1.0e-12)
-            cbl_efficiency = _trapez2d(geom["b"] * eff * cbl_mask, geom) / max(_trapez2d(geom["b"] * cbl_mask, geom), 1.0e-12)
 
             def _front(line: Array, threshold: float = 0.5) -> float:
                 idx = np.where(line >= threshold)[0]
@@ -778,8 +747,6 @@ class AnnulusD2DGASolver:
                     inlet_state.stage_name,
                     bulk_fill,
                     effective_efficiency,
-                    target_efficiency,
-                    cbl_efficiency,
                     front_wide,
                     front_narrow,
                     front_mid,
@@ -799,8 +766,6 @@ class AnnulusD2DGASolver:
             "stage",
             "bulk_cement_fill",
             "effective_efficiency",
-            "target_interval_efficiency",
-            "cbl_eval_interval_efficiency",
             "front_wide_m",
             "front_narrow_m",
             "front_mid_m",
@@ -823,8 +788,6 @@ class AnnulusD2DGASolver:
             "物理环空体积_m3": self._physical_annular_volume(well_spec),
             "最终结果": {
                 "全井段最终有效顶替效率": float(final["effective_efficiency"]),
-                "CBL评价井段水力有效顶替效率": float(final["cbl_eval_interval_efficiency"]),
-                "目标层段水力有效顶替效率": float(final["target_interval_efficiency"]),
                 "最终水泥浆占据率": float(final["bulk_cement_fill"]),
                 "最终窜槽指数": float(final["channeling_index"]),
                 "最终混浆指数": float(final["mixing_index"]),
