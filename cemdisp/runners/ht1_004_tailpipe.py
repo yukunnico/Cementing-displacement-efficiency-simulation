@@ -157,11 +157,21 @@ def annulus_stop_time_s(
 ) -> float:
     """返回呼1-004环空二维顶替应停止的地面累计时间。
 
-    当最后一段水泥浆（尾浆）尾缘完全离开鞋口时停止——
-    此时水泥浆已全部进入环空，后续替浆刚到达鞋口。
-    使用 cement_end_time_s 直接获取，避免 fronts 列表中
-    未到达鞋口的流体带来的回退时间混淆。
+    当替浆液（水泥浆之后的首个非水泥流体）到达鞋口时停止，
+    此时水泥浆已完全进入环空，继续泵入会稀释既有水泥场。
     """
+    cement_roles = {FluidRole.LEAD, FluidRole.INTERMEDIATE, FluidRole.TAIL}
+    fluid_by_name = {f.name: f for f in fluids}
+    found_cement = False
+    for front in casing_result.fronts:
+        fluid = fluid_by_name.get(front.fluid_name)
+        if fluid is None:
+            continue
+        if fluid.role in cement_roles:
+            found_cement = True
+            continue
+        if found_cement:
+            return float(front.time_s)
     return float(casing_result.cement_end_time_s)
 
 
