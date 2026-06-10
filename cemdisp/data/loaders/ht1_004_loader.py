@@ -30,10 +30,10 @@ DEFAULT_REFERENCE_ROOT = PROJECT_ROOT / "参考文档" / "呼1-004"
 # 呼1-004 井段几何参数
 # 来源：设计文档 第1.2节井身结构 + 第7.1.4节顶替量计算
 # ===========================================================================
-HT1_004_WELL_NAME = "呼1-004井（HT1-004）"
+HT1_004_WELL_NAME = "呼1-004井（HT1-004）裸眼段"
 HT1_004_DRILLED_DEPTH_MD_M = 7660.0       # 实际完钻井深/尾管鞋深度 (TD) [实测]
 HT1_004_HANGER_MD_M = 5243.207            # 尾管悬挂器喇叭口位置 [实测]
-HT1_004_TOP_MD_M = HT1_004_HANGER_MD_M    # 模型剖面从悬挂器开始
+HT1_004_TOP_MD_M = 5578.0                 # 模型剖面从套管鞋开始（仅裸眼段，不含套管重叠段）
 HT1_004_CASING_SHOE_MD_M = 5578.0         # 273.1mm技术套管鞋深度 [实测]
 HT1_004_UPPER_SECTION_BOTTOM_MD_M = 7378.051  # 168.3mm上段尾管底界/变径位置 [实测]
 HT1_004_LOWER_HOLE_TOP_MD_M = 7521.0      # 241.3mm→215.9mm裸眼变径位置 [实测]
@@ -137,19 +137,14 @@ HT1_004_UPPER_OPENHOLE_EQUIVALENT_MM = _equivalent_hole_diameter_mm(
 # ===========================================================================
 
 def _build_hole_diameter_profile() -> tuple[tuple[float, float], ...]:
-    """构建从悬挂器(5243.207m)到鞋底(7660m)的等效井径剖面。
+    """构建从套管鞋(5578m)到鞋底(7660m)的裸眼段等效井径剖面。
 
-    段1: 5243.207-5578m   → 套管段等效井径 (245.37mm→139.7mm基准)
-    段2: 5578-7378.051m    → 上裸眼段等效井径 (电测→139.7mm基准)
-    段3: 7378.051-7660m    → 下裸眼段直接使用电测井径 (139.7mm基准)
+    段1: 5578-7378.051m    → 上裸眼段等效井径 (168.3mm尾管→139.7mm基准)
+    段2: 7378.051-7660m    → 下裸眼段直接使用电测井径 (139.7mm基准)
     """
     points: list[tuple[float, float]] = []
 
-    # === 段1: 套管内 (5243.207-5578m) ===
-    points.append((HT1_004_TOP_MD_M, HT1_004_CASING_SECTION_EQUIVALENT_HOLE_MM))
-    points.append((HT1_004_CASING_SHOE_MD_M, HT1_004_CASING_SECTION_EQUIVALENT_HOLE_MM))
-
-    # === 段2: 上裸眼段 (5578-7378.051m) — 168.3mm尾管在241.3mm井眼中 ===
+    # === 段1: 上裸眼段 (5578-7378.051m) — 168.3mm尾管在241.3mm井眼中 ===
     # 电测井径数据 [实测]，30m间隔，等效换算到139.7mm基准
     _raw_caliper_upper: list[tuple[float, float]] = [
         (5578.0, 250.82), (5630.0, 251.21), (5660.0, 250.95), (5690.0, 248.03),
@@ -177,7 +172,7 @@ def _build_hole_diameter_profile() -> tuple[tuple[float, float], ...]:
         )
         points.append((depth, equiv))
 
-    # === 段3: 下裸眼段 (7378.051-7660m) — 139.7mm尾管，直接使用电测井径 ===
+    # === 段2: 下裸眼段 (7378.051-7660m) — 139.7mm尾管，直接使用电测井径 ===
     _raw_caliper_lower: list[tuple[float, float]] = [
         (7378.051, 242.00), (7380.0, 242.00), (7400.0, 242.00),
         (7430.0, 242.00), (7460.0, 242.00), (7490.0, 242.00),
@@ -196,10 +191,10 @@ def _build_hole_diameter_profile() -> tuple[tuple[float, float], ...]:
 # ===========================================================================
 
 def _build_liner_od_profile() -> tuple[tuple[float, float], ...]:
-    """构建尾管外径剖面（深度, OD mm）。
+    """构建尾管外径剖面（深度, OD mm），仅裸眼段(5578-7660m)。
 
-    段1: 5243.207~7378.051m → 168.3mm (上段尾管)
-    段2: 7378.051~7660m     → 139.7mm (下段尾管)
+    段1: 5578~7378.051m → 168.3mm (上段尾管)
+    段2: 7378.051~7660m → 139.7mm (下段尾管)
     """
     return (
         (HT1_004_TOP_MD_M, HT1_004_UPPER_LINER_OD_MM),
@@ -242,14 +237,14 @@ def _build_inclination_profile() -> tuple[tuple[float, float], ...]:
         (7660.0, 8.35),
     ]
 
-    # 过滤到悬挂器以下
+    # 过滤到套管鞋(5578m)以下
     points: list[tuple[float, float]] = []
     for depth, inc in _raw_inclination:
         if depth < HT1_004_TOP_MD_M - 1.0:
             continue
         points.append((depth, inc))
     if not points or points[0][0] > HT1_004_TOP_MD_M:
-        points.insert(0, (HT1_004_TOP_MD_M, 0.75))
+        points.insert(0, (HT1_004_TOP_MD_M, 1.44))  # 5578m处井斜约1.44°
     if points[-1][0] < HT1_004_BOTTOM_MD_M:
         points.append((HT1_004_BOTTOM_MD_M, points[-1][1]))
     return tuple(points)
@@ -261,10 +256,9 @@ def _build_inclination_profile() -> tuple[tuple[float, float], ...]:
 # ===========================================================================
 
 def _build_standoff_profile() -> tuple[tuple[float, float], ...]:
-    """构建居中度剖面，全井段采用固定值0.83（与HT1-003一致的处理方式）。"""
+    """构建居中度剖面，裸眼段采用固定值0.83（与设计文档6.3节一致）。"""
     return (
         (HT1_004_TOP_MD_M, HT1_004_AVERAGE_STANDOFF),
-        (HT1_004_CASING_SHOE_MD_M, HT1_004_AVERAGE_STANDOFF),
         (HT1_004_UPPER_SECTION_BOTTOM_MD_M, HT1_004_AVERAGE_STANDOFF),
         (HT1_004_BOTTOM_MD_M, HT1_004_AVERAGE_STANDOFF),
     )
@@ -416,7 +410,7 @@ def load_ht1_004_tailpipe(
         top_md_m=HT1_004_TOP_MD_M,
         bottom_md_m=HT1_004_BOTTOM_MD_M,
         shoe_md_m=HT1_004_SHOE_MD_M,
-        hanger_md_m=HT1_004_HANGER_MD_M,
+        hanger_md_m=None,  # 悬挂器在裸眼段之上，缩域后不属于模型域
         casing_id_mm=HT1_004_CASING_OD_MM,
         liner_od_mm=HT1_004_LOWER_LINER_OD_MM,
         liner_id_mm=HT1_004_LINER_ID_MM,
@@ -447,9 +441,10 @@ def load_ht1_004_tailpipe(
         ),
         reference_root=resolved_reference_root,
         notes=(
-            "呼1-004井（HT1-004）为168.3mm+139.7mm双径复合尾管控压固井，井深7660m。",
+            "呼1-004井（HT1-004）168.3+139.7mm双径尾管裸眼段(5578-7660m)控压固井。",
+            "模型域仅覆盖裸眼段（套管鞋5578m→鞋底7660m），不含套管重叠段。",
             "井径剖面直接使用设计文档电测井径表实测值，上段等效换算至139.7mm基准OD。",
-            "liner_od_profile按深度分段：5243-7378m=168.3mm，7378-7660m=139.7mm。",
+            "liner_od_profile：5578-7378m=168.3mm，7378-7660m=139.7mm。",
             "pipe_id_profile按4段管柱内径：129.9/107.7/138.9/107.94mm。",
             "钻井液/先导浆流变来自HT1-004文档实测；水泥浆/隔离液流变代理自HT1-003。",
             "居中度采用设计文档模拟值(平均83%)固定剖面。",
@@ -548,7 +543,7 @@ def load_ht1_004_tailpipe(
     validation_data = ValidationData(
         job_report_path=resolved_reference_root / "HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批) .doc",
         notes=(
-            "呼1-004数据来自施工设计文档（已审批版）。",
+            "呼1-004数据来自施工设计文档（已审批版），仅模拟裸眼段(5578-7660m)。",
             "井径数据来自设计文档1.4.2节电测井径实测值。",
             "井斜数据来自设计文档1.4.1节实测值。",
             "钻井液/先导浆流变来自HT1-004文档实测；水泥浆/隔离液流变代理自HT1-003。",
