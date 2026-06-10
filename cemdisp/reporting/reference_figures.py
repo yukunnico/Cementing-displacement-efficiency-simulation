@@ -91,8 +91,12 @@ def plot_reference_final_cement_field(
     cement = np.asarray(result.cement_field, dtype=float)
     md = np.asarray(result.geom["md"], dtype=float)
     fig, ax = plt.subplots(figsize=(8.8, 6.4))
+    # geom["md"] 数组反向存储：md[0] = 井底（最大井深），md[-1] = 井顶（最小井深）。
+    # 因此 cement.T 的第 0 行对应井底；需先沿深度轴翻转让"井顶 → 井底"顺序与
+    # extent=(..., md.max(), md.min()) + origin="upper" 的"井顶在上、井底在下"
+    # 标签布局对齐，否则 y 轴刻度与实际数据所在的深度互相错位。
     image = ax.imshow(
-        cement.T,
+        np.flipud(cement.T),
         aspect="auto",
         origin="upper",
         extent=(0.0, 1.0, float(md.max()), float(md.min())),
