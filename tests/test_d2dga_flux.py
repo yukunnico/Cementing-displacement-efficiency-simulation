@@ -57,3 +57,18 @@ class TestDispersionFunctionI3:
         i3 = d2dga_dispersion_function_I3(c, m=1.0)
         assert i3.shape == c.shape
         assert np.all(i3 >= 0.0)  # I3 在 [0,1] 非负
+
+
+class TestScalarCementArrayM:
+    def test_scalar_cement_array_m_returns_array(self):
+        # scalar cement + array m must NOT crash; returns array shaped like m
+        c = 0.5
+        m = np.array([0.5, 1.0, 2.0])
+        f = d2dga_flux_amplification(c, viscosity_ratio=m)
+        assert isinstance(f, np.ndarray)
+        assert f.shape == m.shape
+
+    def test_scalar_cement_scalar_m_returns_float(self):
+        f = d2dga_flux_amplification(0.5, viscosity_ratio=1.0)
+        assert isinstance(f, float)
+        assert f == pytest.approx(1.375)

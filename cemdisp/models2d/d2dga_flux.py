@@ -77,7 +77,7 @@ def d2dga_flux_amplification(
     denominator = m * c_safe**3 + (1.0 - c_safe**3)
     amplification = np.clip(numerator / denominator, min_amplification, max_amplification)
 
-    if np.isscalar(cement_fraction):
+    if amplification.ndim == 0:
         return float(amplification)
     return amplification.astype(float, copy=False)
 
