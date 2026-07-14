@@ -1,0 +1,9 @@
+{
+  "effective_efficiency": 0.9142274290767276,
+  "cement_occupation": 0.9142274290767276,
+  "channeling_index": 0.44802867383494,
+  "mixing_index": 0.20438880562310094,
+  "instability_index": 0.7088841883525656,
+  "buoyancy_number": 4.4604968184751845,
+  "run_id": "theoretical_e35_R0"
+}

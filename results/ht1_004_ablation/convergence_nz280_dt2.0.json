@@ -1,0 +1,9 @@
+{
+  "effective_efficiency": 0.9443494893291765,
+  "cement_occupation": 0.9443494893291765,
+  "channeling_index": 0.1146953405017447,
+  "mixing_index": 0.15449293217915044,
+  "instability_index": 0.06819655592468021,
+  "buoyancy_number": 4.023795869825696,
+  "run_id": "convergence_nz280_dt2.0"
+}

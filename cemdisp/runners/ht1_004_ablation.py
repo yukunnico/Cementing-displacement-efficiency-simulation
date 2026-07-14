@@ -12,7 +12,7 @@ R3: +true buoyancy
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict
+from typing import Dict, Optional
 import json
 from pathlib import Path
 
@@ -21,6 +21,7 @@ from cemdisp.transport1d import CasingFlowSolver
 from cemdisp.models2d.boundary_bridge import build_coupled_annulus_inlet_provider
 from cemdisp.runners.ht1_004_tailpipe import annulus_stop_time_s
 from cemdisp.data.loaders.ht1_004_loader import load_ht1_004_tailpipe
+from cemdisp.data.well_spec import WellSpec
 
 
 @dataclass
@@ -58,6 +59,7 @@ def extract_ablation_metrics(result: AnnulusSimulationResult) -> dict:
         "channeling_index": final.get("最终窜槽指数"),
         "mixing_index": final.get("最终混浆指数"),
         "instability_index": final.get("最终失稳指数"),
+        "buoyancy_number": result.summary.get("buoyancy_number") if isinstance(result.summary, dict) else None,
     }
 
 
@@ -68,6 +70,7 @@ def run_one_level(
     dt: float = 4.0,
     total_t: float | None = None,
     output_dir: str | None = None,
+    well_spec_override: WellSpec | None = None,
 ) -> AnnulusSimulationResult:
     """Run a single ablation level, returning the full simulation result.
 
@@ -81,8 +84,15 @@ def run_one_level(
 
     All three switches are forwarded to the solver. enable_true_buoyancy
     (Task 5) has no logic yet and is a placeholder.
+
+    Parameters
+    ----------
+    well_spec_override : WellSpec | None
+        If provided, use this well spec instead of the loaded one.
+        Enables theoretical eccentricity cases without modifying the loader.
     """
-    well_spec, fluids, schedule, _ = load_ht1_004_tailpipe()
+    loaded_well, fluids, schedule, _ = load_ht1_004_tailpipe()
+    well_spec = well_spec_override if well_spec_override is not None else loaded_well
 
     # 1D casing flow
     casing_solver = CasingFlowSolver(enable_gravity=True)
@@ -148,6 +158,7 @@ def _dump_summary(
     payload["enable_d2dga_auto_m"] = level.enable_d2dga_auto_m
     payload["enable_d2dga_i3_flux"] = level.enable_d2dga_i3_flux
     payload["enable_true_buoyancy"] = level.enable_true_buoyancy
+    payload["buoyancy_number"] = result.summary.get("buoyancy_number") if isinstance(result.summary, dict) else None
     p.write_text(
         json.dumps(payload, ensure_ascii=False, indent=2, default=str),
         encoding="utf-8",
