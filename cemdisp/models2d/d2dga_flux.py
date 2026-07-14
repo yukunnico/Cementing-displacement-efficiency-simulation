@@ -20,7 +20,7 @@ FloatOrArray = float | Array
 @overload
 def d2dga_flux_amplification(
     cement_fraction: float,
-    viscosity_ratio: float = 1.0,
+    viscosity_ratio: FloatOrArray = 1.0,
     *,
     min_fraction: float = 0.01,
     max_fraction: float = 0.99,
@@ -32,7 +32,7 @@ def d2dga_flux_amplification(
 @overload
 def d2dga_flux_amplification(
     cement_fraction: Array,
-    viscosity_ratio: float = 1.0,
+    viscosity_ratio: FloatOrArray = 1.0,
     *,
     min_fraction: float = 0.01,
     max_fraction: float = 0.99,
@@ -43,7 +43,7 @@ def d2dga_flux_amplification(
 
 def d2dga_flux_amplification(
     cement_fraction: FloatOrArray,
-    viscosity_ratio: float = 1.0,
+    viscosity_ratio: FloatOrArray = 1.0,
     *,
     min_fraction: float = 0.01,
     max_fraction: float = 0.99,
@@ -58,7 +58,8 @@ def d2dga_flux_amplification(
 
     Args:
         cement_fraction: 水泥相局部体积分数，可以是标量或 NumPy 数组。
-        viscosity_ratio: 被顶替液/顶替液的黏度比 ``m``。
+        viscosity_ratio: 被顶替液/顶替液的黏度比 ``m``，标量或与 ``cement_fraction``
+            形状兼容的数组（用于 R1：随空间变化的 m 场）。
         min_fraction: 公式计算前的水泥体积分数下限，避免零浓度奇异行为。
         max_fraction: 公式计算前的水泥体积分数上限，避免完全充满时的数值尖点。
         min_amplification: 放大因子的下限裁剪值。
@@ -70,11 +71,46 @@ def d2dga_flux_amplification(
 
     # 将输入转为数组统一计算；copy=False 保持轻量，后续 clip 会生成安全结果。
     fraction = np.asarray(cement_fraction, dtype=float)
+    m = np.asarray(viscosity_ratio, dtype=float)
     c_safe = np.clip(fraction, min_fraction, max_fraction)
-    numerator = viscosity_ratio * c_safe**2 + 1.5 * (1.0 - c_safe**2)
-    denominator = viscosity_ratio * c_safe**3 + (1.0 - c_safe**3)
+    numerator = m * c_safe**2 + 1.5 * (1.0 - c_safe**2)
+    denominator = m * c_safe**3 + (1.0 - c_safe**3)
     amplification = np.clip(numerator / denominator, min_amplification, max_amplification)
 
     if np.isscalar(cement_fraction):
         return float(amplification)
     return amplification.astype(float, copy=False)
+
+
+def d2dga_dispersion_function_I3(
+    c_bar: FloatOrArray,
+    m: float = 1.0,
+    *,
+    min_fraction: float = 0.01,
+    max_fraction: float = 0.99,
+) -> FloatOrArray:
+    """计算 D2DGA 浮力弥散函数 I3(ḉ, m)（Zhang & Frigaard 2022, 式 4.26）。
+
+    公式：I3 = ḉ²(1-ḉ)³[4m·ḉ + 3(1-ḉ)] / {2m[m·ḉ³ + 1 - ḉ³]}
+
+    性质：ḉ=0 或 ḉ=1 时 I3=0；ḉ≈0.5 附近达峰。用于 R2 浮力驱动弥散通量。
+
+    Args:
+        c_bar: 间隙平均水泥浓度（0~1），标量或数组。
+        m: 黏度比 η_displaced/η_displacing。
+        min_fraction: 计算前浓度下限，避免零浓度奇异。
+        max_fraction: 计算前浓度上限，避免充满时奇异。
+    """
+    c = np.asarray(c_bar, dtype=float)
+    c_safe = np.clip(c, min_fraction, max_fraction)
+    c2 = c_safe ** 2
+    c3 = c_safe ** 3
+    one_minus_c = 1.0 - c_safe
+    numerator = c2 * (one_minus_c ** 3) * (4.0 * m * c_safe + 3.0 * one_minus_c)
+    denominator = 2.0 * m * (m * c3 + 1.0 - c3)
+    i3 = numerator / denominator
+    # 边界处置零（c=0 或 c=1 的精确值，clip 之外）
+    i3 = np.where((c < min_fraction) | (c > max_fraction), 0.0, i3)
+    if np.isscalar(c_bar):
+        return float(i3)
+    return i3.astype(float, copy=False)
