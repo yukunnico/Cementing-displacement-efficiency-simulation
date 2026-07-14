@@ -79,9 +79,8 @@ def run_one_level(
     5. Run 2D D2DGA solver with the level's switches
     6. Optionally dump summary JSON
 
-    Only enable_d2dga_auto_m is passed to the solver (the only switch that
-    exists right now).  enable_d2dga_i3_flux and enable_true_buoyancy are
-    stored on the level but not forwarded until Task 4/5.
+    All three switches are forwarded to the solver. enable_true_buoyancy
+    (Task 5) has no logic yet and is a placeholder.
     """
     well_spec, fluids, schedule, _ = load_ht1_004_tailpipe()
 
@@ -106,6 +105,8 @@ def run_one_level(
         total_t=total_t,
         enable_d2dga=True,
         enable_d2dga_auto_m=level.enable_d2dga_auto_m,
+        enable_d2dga_i3_flux=level.enable_d2dga_i3_flux,
+        enable_true_buoyancy=level.enable_true_buoyancy,
         open_outlet=True,
     )
 

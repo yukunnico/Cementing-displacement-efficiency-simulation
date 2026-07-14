@@ -143,3 +143,24 @@ class TestExtractAblationMetrics:
         m = extract_ablation_metrics(result)
         assert m["effective_efficiency"] is None
         assert m["cement_occupation"] is None
+
+
+class TestBuoyancyForceVector:
+    """Tests for _buoyancy_force_vector (Task 4: shared between R2 I3 flux and R3 true buoyancy)."""
+
+    def test_vertical_well_sin_term_zero(self):
+        # β=0（垂直井）-> f_phi 的 sin(πφ)sinβ 项 = 0；f_xi 的 cosβ = 1
+        s = _make_solver()
+        well = _toy_well()
+        geom = s._build_geom(well)
+        f_phi, f_xi = s._buoyancy_force_vector(geom, beta_deg=0.0)
+        assert np.allclose(f_phi, 0.0)  # sin(0)=0
+        assert np.all(f_xi > 0)  # cos(0)=1 > 0
+
+    def test_inclined_well_sin_term_nonzero(self):
+        # β>0 -> f_phi 非零
+        s = _make_solver()
+        well = _toy_well()
+        geom = s._build_geom(well)
+        f_phi, f_xi = s._buoyancy_force_vector(geom, beta_deg=5.0)
+        assert np.any(f_phi > 0)
