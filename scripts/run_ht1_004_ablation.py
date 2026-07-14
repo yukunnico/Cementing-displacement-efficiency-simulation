@@ -39,7 +39,7 @@ if __name__ == "__main__":
 
         # Append to CSV
         row = {
-            "run_id": f"full_R{lv.name}_{nz}_{dt}",
+            "run_id": f"ht1_004_ablation_{lv.name}",
             "ablation_level": lv.name,
             "eccentricity": 0.17,
             "nz": nz,
