@@ -316,6 +316,10 @@ _setup_chinese_font()
 
 
 __all__ = [
+    "ACADEMIC_COLORS",
+    "STANDARD_FIGSIZE",
+    "_save_figure",
+    "_setup_chinese_font",
     "plot_depth_profiles",
     "plot_efficiency_summary_bar",
     "plot_risk_indices",

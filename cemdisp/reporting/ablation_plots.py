@@ -66,8 +66,8 @@ def plot_fig6_ablation_channeling_mixing(
         matplotlib Figure 对象。
     """
     df = pd.read_csv(csv_path)
-    # 筛选 full ablation 行
-    full = df[(df["eccentricity"] == 0.17) & (df["nz"] == 500)].copy()
+    # 筛选 full ablation 行（排除收敛行 convergence_* 避免 R3 重复）
+    full = df[(df["eccentricity"] == 0.17) & (df["nz"] == 500) & ~df["run_id"].str.startswith("convergence")].copy()
     full = full.sort_values("ablation_level")
 
     levels = full["ablation_level"].tolist()
@@ -290,7 +290,7 @@ def plot_fig9_efficiency_evolution(
 
     # --- 左图: 现场偏心 e=17% 的 R0->R3 折线 ---
     ax = axes[0]
-    full = df[(df["eccentricity"] == 0.17) & (df["nz"] == 500)]
+    full = df[(df["eccentricity"] == 0.17) & (df["nz"] == 500) & ~df["run_id"].str.startswith("convergence")]
     full = full.sort_values("ablation_level")
     ax.plot(
         full["ablation_level"], full["effective_efficiency"],
