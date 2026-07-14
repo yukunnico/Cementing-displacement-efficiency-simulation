@@ -1,9 +1,16 @@
 {
+  "run_id": "convergence_nz140_dt4.0",
+  "ablation_level": "R3",
+  "eccentricity": 0.17,
+  "nz": 140,
+  "dt": 4.0,
+  "enable_d2dga_auto_m": true,
+  "enable_d2dga_i3_flux": true,
+  "enable_true_buoyancy": true,
   "effective_efficiency": 0.938657690375135,
   "cement_occupation": 0.938657690375135,
   "channeling_index": 0.14388489208627153,
   "mixing_index": 0.1674194796273601,
   "instability_index": 0.08178757087487953,
-  "buoyancy_number": 4.028814661062214,
-  "run_id": "convergence_nz140_dt4.0"
+  "buoyancy_number": 4.028814661062214
 }

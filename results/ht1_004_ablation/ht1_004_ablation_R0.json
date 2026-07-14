@@ -1,12 +1,16 @@
 {
-  "effective_efficiency": 0.8833182150483623,
-  "cement_occupation": 0.8833182150483623,
-  "channeling_index": 0.7025089605731859,
-  "mixing_index": 0.21097746153821476,
-  "instability_index": 0.9777373298148333,
-  "buoyancy_number": 4.781749179950538,
+  "run_id": "ht1_004_ablation_R0",
   "ablation_level": "R0",
+  "eccentricity": 0.17,
+  "nz": 500,
+  "dt": 4.0,
   "enable_d2dga_auto_m": false,
   "enable_d2dga_i3_flux": false,
-  "enable_true_buoyancy": false
+  "enable_true_buoyancy": false,
+  "effective_efficiency": 0.9595823761947894,
+  "cement_occupation": 0.9595823761947894,
+  "channeling_index": 0.048096192384749666,
+  "mixing_index": 0.11780137782131027,
+  "instability_index": 0.02827095783443756,
+  "buoyancy_number": 4.016833845397571
 }

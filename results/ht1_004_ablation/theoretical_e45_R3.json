@@ -1,9 +1,16 @@
 {
+  "run_id": "theoretical_e45_R3",
+  "ablation_level": "R3",
+  "eccentricity": 0.45,
+  "nz": 280,
+  "dt": 4.0,
+  "enable_d2dga_auto_m": true,
+  "enable_d2dga_i3_flux": true,
+  "enable_true_buoyancy": true,
   "effective_efficiency": 0.8697706352159925,
   "cement_occupation": 0.8697706352159925,
   "channeling_index": 0.7526881720426993,
   "mixing_index": 0.21704872450648896,
   "instability_index": 0.9894753702509527,
-  "buoyancy_number": 4.811324426798564,
-  "run_id": "theoretical_e45_R3"
+  "buoyancy_number": 4.811324426798564
 }
