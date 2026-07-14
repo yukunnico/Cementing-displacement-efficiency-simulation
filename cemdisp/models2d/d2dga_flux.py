@@ -114,3 +114,25 @@ def d2dga_dispersion_function_I3(
     if np.isscalar(c_bar):
         return float(i3)
     return i3.astype(float, copy=False)
+
+
+def d2dga_buoyancy_flux(
+    c_bar: FloatOrArray,
+    m: float,
+    delta_rho: float,
+    H: FloatOrArray,
+    eta2: float,
+    f_phi: FloatOrArray,
+    f_xi: FloatOrArray,
+) -> tuple[FloatOrArray, FloatOrArray]:
+    """计算 D2DGA 浮力驱动弥散通量 q_buoy（Zhang & Frigaard 2022, 式 4.25 第二项）。
+
+    q_buoy = (Δρ H³ / (6 η2)) · I3(ḉ, m) · [-f_xi, f_phi]
+
+    返回 (q_phi, q_xi)。
+    """
+    i3 = d2dga_dispersion_function_I3(c_bar, m)
+    coef = (delta_rho * np.asarray(H, dtype=float) ** 3) / (6.0 * max(eta2, 1.0e-9))
+    q_phi = coef * i3 * np.asarray(f_phi, dtype=float)
+    q_xi = -coef * i3 * np.asarray(f_xi, dtype=float)
+    return q_phi, q_xi

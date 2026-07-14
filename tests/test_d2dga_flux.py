@@ -72,3 +72,45 @@ class TestScalarCementArrayM:
         f = d2dga_flux_amplification(0.5, viscosity_ratio=1.0)
         assert isinstance(f, float)
         assert f == pytest.approx(1.375)
+
+
+class TestBuoyancyFlux:
+    """Tests for d2dga_buoyancy_flux (Task 4: R2 I3 buoyancy dispersion flux)."""
+
+    def test_zero_density_contrast_gives_zero_flux(self):
+        from cemdisp.models2d.d2dga_flux import d2dga_buoyancy_flux
+        # Δρ=0 -> 通量=0
+        c = np.array([0.3, 0.5, 0.7])
+        q_phi, q_xi = d2dga_buoyancy_flux(c, m=1.0, delta_rho=0.0, H=0.01,
+                                          eta2=0.18, f_phi=1.0, f_xi=0.0)
+        assert np.allclose(q_phi, 0.0)
+        assert np.allclose(q_xi, 0.0)
+
+    def test_zero_concentration_gives_zero_flux(self):
+        from cemdisp.models2d.d2dga_flux import d2dga_buoyancy_flux
+        # c=0 -> I3=0 -> 通量=0（即使有 Δρ）
+        q_phi, q_xi = d2dga_buoyancy_flux(np.array([0.0]), m=1.0, delta_rho=300.0,
+                                          H=0.01, eta2=0.18, f_phi=1.0, f_xi=0.5)
+        assert np.allclose(q_phi, 0.0)
+        assert np.allclose(q_xi, 0.0)
+
+    def test_mid_concentration_nonzero_flux(self):
+        from cemdisp.models2d.d2dga_flux import d2dga_buoyancy_flux
+        # c=0.5, Δρ≠0, f≠0 -> 通量非零
+        q_phi, q_xi = d2dga_buoyancy_flux(np.array([0.5]), m=1.0, delta_rho=300.0,
+                                          H=0.01, eta2=0.18, f_phi=1.0, f_xi=0.5)
+        # q_xi = -(Δρ H³/(6η2)) I3 f_xi -> 负号（式 4.25 第二项 [-f_xi, f_phi]）
+        assert q_xi[0] < 0  # 负号
+        assert q_phi[0] > 0  # 正号
+        # 手算核对: I3(0.5,1)=0.0546875; ΔρH³/(6η2)=300*1e-6/(6*0.18)=2.7778e-4
+        # q_phi = 2.7778e-4 * 0.0546875 * 1.0 = 1.519e-5
+        assert q_phi[0] == pytest.approx(1.519e-5, rel=1e-3)
+
+    def test_array_inputs(self):
+        from cemdisp.models2d.d2dga_flux import d2dga_buoyancy_flux
+        c = np.linspace(0.05, 0.95, 10)
+        H = np.full(10, 0.01)
+        f_phi = np.linspace(0, 1, 10)
+        q_phi, q_xi = d2dga_buoyancy_flux(c, m=1.0, delta_rho=300.0, H=H,
+                                          eta2=0.18, f_phi=f_phi, f_xi=0.0)
+        assert q_phi.shape == c.shape
