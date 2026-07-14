@@ -1,0 +1,12 @@
+{
+  "effective_efficiency": 0.9561765303412054,
+  "cement_occupation": 0.9561765303412054,
+  "channeling_index": 0.0721442885771245,
+  "mixing_index": 0.12333368549674081,
+  "instability_index": 0.04129467135668474,
+  "buoyancy_number": 4.015118755842848,
+  "ablation_level": "R2",
+  "enable_d2dga_auto_m": true,
+  "enable_d2dga_i3_flux": true,
+  "enable_true_buoyancy": false
+}
