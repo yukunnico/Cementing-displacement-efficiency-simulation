@@ -189,6 +189,7 @@ class AnnulusD2DGASolver:
         total_t: float = 12000.0,
         enable_d2dga: bool = True,
         d2dga_viscosity_ratio: float = 1.0,
+        enable_d2dga_auto_m: bool = True,
         instability_decay_scale: float = 5.0,
         save_interval: int = 60,
         yield_regularization_M: float = 100.0,
@@ -203,6 +204,9 @@ class AnnulusD2DGASolver:
             total_t: 总模拟时间（秒），默认12000秒（200分钟）
             enable_d2dga: 是否启用D2DGA通量修正（Zhang & Frigaard 2022），默认开启
             d2dga_viscosity_ratio: D2DGA粘度比 m = η_displaced/η_displacing，默认1.0
+            enable_d2dga_auto_m: 是否按局部流体物性自动计算黏度比 m 场（R1），默认 True。
+                True: m = μ_displaced/μ_displacing 按浓度场每步计算（改进版）；
+                False: 退化为 d2dga_viscosity_ratio 构造常数（旧论文 R0 状态）。
             instability_decay_scale: 后验失稳指数缩放，默认5.0。
             save_interval: 二维场快照保存步长，默认每60个时间步保存一次
             yield_regularization_M: Papanastasiou正则化参数，控制屈服应力在低剪切区的平滑过渡，默认100.0
@@ -219,6 +223,7 @@ class AnnulusD2DGASolver:
         self.instability_decay_scale = instability_decay_scale
         self.save_interval: int = save_interval
         self.yield_regularization_M: float = yield_regularization_M
+        self.enable_d2dga_auto_m: bool = enable_d2dga_auto_m
         self.open_outlet: bool = open_outlet
 
     def _build_geom(self, well_spec: WellSpec, mud_cake_thickness: Array | None = None) -> Dict[str, Array]:
@@ -415,8 +420,8 @@ class AnnulusD2DGASolver:
         spacer_fluid: FluidSpec | None,
         gel_strength: Array | None = None,
         temperature_correction: Array | None = None,
-    ) -> Tuple[Array, Array, Array, Array]:
-        """计算四相混合物系的表观粘度、密度、钻井液分数和混合屈服应力。"""
+    ) -> Tuple[Array, Array, Array, Array, Array]:
+        """计算四相混合物系的表观粘度、密度、钻井液分数、混合屈服应力和黏度比 m 场。"""
         # 四相体积分数闭合：显式跟踪领浆、尾浆和前置/隔离液，钻井液由守恒关系反算。
         mud = np.clip(1.0 - lead - tail - spacer, 0.0, 1.0)
         effective_b = geom.get("effective_b", geom["b"])
@@ -444,7 +449,20 @@ class AnnulusD2DGASolver:
             tau_y += tail * self._fluid_yield_stress(tail_fluid)
         if spacer_fluid is not None:
             tau_y += spacer * self._fluid_yield_stress(spacer_fluid)
-        return mu, rho, mud, tau_y
+        # R1: auto-m 黏度比场 = μ_displaced / μ_displacing
+        # 被顶替液=泥浆(mu_mud)，顶替液=水泥(mu_cement)。m = mu_mud / mu_cement。
+        mu_mud_field = self._apparent_viscosity(mud_fluid, gamma)
+        # 水泥相表观粘度：领浆+尾浆中存在的那个（若 lead_fluid 存在用 lead，否则 tail）
+        cement_fluid = lead_fluid if lead_fluid is not None else tail_fluid
+        if cement_fluid is not None:
+            mu_cement_field = self._apparent_viscosity(cement_fluid, gamma)
+            m_field = mu_mud_field / np.maximum(mu_cement_field, 1.0e-6)
+        else:
+            # 无水泥相时 m=1（退化为默认）
+            m_field = np.ones_like(mu_mud_field)
+        # 限幅到合理范围，避免极端粘度比导致 f_amp 越界（d2dga_flux 内还有 [0.5,2] clip）
+        m_field = np.clip(m_field, 0.1, 10.0)
+        return mu, rho, mud, tau_y, m_field
 
     def _compute_velocity(
         self,
@@ -460,7 +478,7 @@ class AnnulusD2DGASolver:
         spacer_fluid: FluidSpec | None,
         gel_strength: Array | None = None,
         temperature_correction: Array | None = None,
-    ) -> Tuple[Array, Array, Array, Array, Array, Array, Array]:
+    ) -> Tuple[Array, Array, Array, Array, Array, Array, Array, Array]:
         """计算环空速度场（论文D2DGA口径）。
 
         采用 Zhang & Frigaard (2022) 的Hele-Shaw风格速度场：
@@ -478,12 +496,13 @@ class AnnulusD2DGASolver:
             mud: 钻井液分数场
             Re: 雷诺数场（仅作诊断，不参与湍流修正）
             mu_turbulent: 占位零场，保留旧结果对象兼容性
+            m_field: 黏度比场 m = μ_displaced/μ_displacing（R1 auto-m）
         """
         y = geom["y"]
         effective_b = geom.get("effective_b", geom["b"])
         b = effective_b
         q_half = q_m3s / 2.0
-        mu, rho, mud, tau_y = self._compute_props(
+        mu, rho, mud, tau_y, m_field = self._compute_props(
             lead,
             tail,
             spacer,
@@ -558,7 +577,7 @@ class AnnulusD2DGASolver:
         v = bv / np.maximum(b, 1.0e-8)
 
         # 返回正则化后的黏度 mu_reg，确保下游 mobility 指标反映屈服死区效应
-        return w, v, mu_reg, rho, mud, Re, mu_turbulent
+        return w, v, mu_reg, rho, mud, Re, mu_turbulent, m_field
 
     def _depth_profiles(self, geom: Dict[str, Array], lead: Array, tail: Array, spacer: Array, wall: Array) -> pd.DataFrame:
         """计算深度方向的平均剖面数据。"""
@@ -639,7 +658,7 @@ class AnnulusD2DGASolver:
 
             if pump_active:
                 # === 正常泵注阶段：仅执行论文口径核心平流 + D2DGA 通量修正 ===
-                w, v, mu, rho, mud, Re, mu_turbulent = self._compute_velocity(
+                w, v, mu, rho, mud, Re, mu_turbulent, m_field = self._compute_velocity(
                     lead,
                     tail,
                     spacer,
@@ -657,7 +676,11 @@ class AnnulusD2DGASolver:
 
                 cement = np.clip(lead + tail, 0.0, 1.0)
                 if self.enable_d2dga:
-                    f_amp = d2dga_flux_amplification(cement, self.d2dga_viscosity_ratio)
+                    if self.enable_d2dga_auto_m:
+                        m_for_amp = m_field  # 数组
+                    else:
+                        m_for_amp = self.d2dga_viscosity_ratio  # 标量
+                    f_amp = d2dga_flux_amplification(cement, m_for_amp)
                 else:
                     f_amp = 1.0
 
@@ -694,7 +717,7 @@ class AnnulusD2DGASolver:
 
             else:
                 # === 泵停阶段：冻结浓度场，仅记录指标 ===
-                w, v, mu, rho, mud, Re, mu_turbulent = self._compute_velocity(
+                w, v, mu, rho, mud, Re, mu_turbulent, m_field = self._compute_velocity(
                     lead,
                     tail,
                     spacer,
