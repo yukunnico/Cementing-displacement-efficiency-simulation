@@ -1,0 +1,18 @@
+﻿well_id,component,top_md_m,bottom_md_m,outer_diameter_mm,inner_diameter_mm,weight_or_grade,quantity,spacing_m,data_type,source_file,source_location,confidence,notes
+ht1_001,liner_139.7,7174.941,7746.0,139.7,107.94,BG140V/BGT2/15.88mm,202根(含附件),,design,施工设计/套管数据表,section 6.1,high,139.7mm段;钢级BG140V;共205根;不入井3根
+ht1_001,liner_168.3,5460.159,7174.941,168.3,138.76,BG155V/BGT2/14.27mm,152根,,design,施工设计/套管数据表,section 6.1,high,168.3mm段;钢级BG155V;单根约11.22m
+ht1_001,liner_hanger,5460.159,5467.729,187.0,108.0,BG135V-S13Cr/BGT2;大陆架PHI273.05x168.3,1套,,design,施工设计,section 6.1/11.2,high,额定负荷90KN;液缸外径235mm;过流面积31.6-28.4cm2
+ht1_001,tieback_sleeve,5460.159,5462.539,183.0,168.0,BG135V-S13Cr,1,,design,施工设计,section 6.1/11.2,high,回接筒;长度3100mm
+ht1_001,float_shoe,7745.05,7746.0,139.7,,BG135V-S13Cr/BGT2加长引鞋,1只,,design,套管数据表,Sheet 139.7,high,加长引鞋;长度0.950m
+ht1_001,float_collar_1,7733.458,7733.722,139.7,,BG135V-S13Cr/BGT2,1只,,design,套管数据表,Sheet 139.7,high,浮箍1;长度0.264m(含扣除)
+ht1_001,float_collar_2,7710.517,7710.781,139.7,,BG135V-S13Cr/BGT2,1只,,design,套管数据表,Sheet 139.7,high,浮箍2;长度0.264m
+ht1_001,ball_seat,7642.674,7642.938,139.7,,BG135V-S13Cr/BGT2,1只,,design,套管数据表,Sheet 139.7,high,球座(阻位);长度0.264m
+ht1_001,marker_joint,7493.685,7495.62,139.7,,BG140V/BGT2,1,,design,套管数据表/施工设计,section 6.1,high,标节;长度1.935m
+ht1_001,cross_over,7174.941,7176.287,,,BGT2变扣(168.3->139.7),1,,design,施工设计,section 6.1,high,变扣长度1.346m
+ht1_001,centralizer_139.7,7176.0,7746.0,215.9,,139.7x215.9整体式弹扶/西钻工程院,24只,2,design,施工设计/工程量清单,section 6.2,high,每2根1只扶正器;间距约23m
+ht1_001,centralizer_168.3,5468.0,7176.0,241.3,,168.3x241.3整体式弹扶/西钻工程院,77只,2,design,施工设计/工程量清单,section 6.2,high,每2根1只扶正器;间距约22m
+ht1_001,centralizer_total,5468.0,7746.0,,,整体式弹扶,101只,2,measured,技术总结,section 2,high,技术总结记载共101只
+ht1_001,plug_drill_pipe,,,149.2,,钻杆胶塞/大陆架,1个,,design,工程量清单,section 3,high,PHI149.2x127mm
+ht1_001,plug_casing,,,139.7,,套管胶塞/大陆架,1个,,design,工程量清单,section 3,high,PHI139.7mm
+ht1_001,stop_collar_139.7,7176.0,7746.0,139.7,,固定环/大陆架,24只,,design,工程量清单,section 3,high,
+ht1_001,stop_collar_168.3,5468.0,7176.0,168.3,,固定环/西钻工程院,77只,,design,工程量清单,section 3,high,

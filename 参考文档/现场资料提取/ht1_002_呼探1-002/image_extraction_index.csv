@@ -1,0 +1,13 @@
+﻿well_id,image_id,source_file,source_type,page_number_or_image_index,detected_content,is_liner_related,contains_useful_data,extracted_to_file,ocr_or_vision_method,confidence,needs_human_review,notes
+ht1_002,IMG001,HT1-002完井尾管报告.pdf,scanned_pdf,1-11,完井尾管报告全册(11页扫描件); 可能含CBL/VDL评价、井身结构图、施工参数等,yes,yes,no,none,low,yes,图片型PDF; 需OCR或人工查看; 重点检查CBL评价页
+ht1_002,IMG002,HT1-002井完井尾管回接报告.pdf,scanned_pdf,1-11,回接完井报告全册(11页扫描件); 可能含回接段CBL评价,yes,yes,no,none,low,yes,图片型PDF; 需OCR或人工查看
+ht1_002,IMG003,呼探1-002井139.7套管扭矩曲线表.pdf,pdf_text,1,139.7mm套管扭矩数据曲线图(巴州斯博瑞泰),yes,limited,no,none,medium,no,套管扭矩数据
+ht1_002,IMG004,图表-呼探1-002井168.3mm+193.7mm套管扭矩资料.dck.pdf,pdf_text,1,回接套管扭矩曲线(巴州斯博瑞泰),yes,limited,no,none,medium,no,套管扭矩数据
+ht1_002,IMG005,HT1-002施工曲线2.xlsm,excel_with_charts,Sheet1,施工实时曲线: 排量/压力/密度随时间变化,yes,yes,no,none,high,yes,xlsm含VBA宏; 实时施工参数序列待提取
+ht1_002,IMG006,HT1-002注灰曲线.xlsm,excel_with_charts,Sheet1,注水泥实时曲线: 排量/压力/密度,yes,yes,no,none,high,yes,xlsm含VBA宏; 注水泥期间实时数据待提取
+ht1_002,IMG007,呼探1-002回接施工注水泥曲线（大功率）.xlsm,excel_with_charts,Sheet1,回接段注水泥施工实时曲线,yes,yes,no,none,high,yes,xlsm含VBA宏; 回接施工实时监测数据
+ht1_002,IMG008,施工设计内嵌图片,word_embedded_image,multiple,井身结构示意图、居中度模拟图(78%)、浆柱结构图、施工动态图、顶替效率模拟图、井径曲线(1m)、井身轨迹图,yes,yes,no,visual,medium,yes,Word内嵌图; 部分数据已从表格提取; 1m井径曲线在图中未数字化
+ht1_002,呼探1-002,219.1mm技术尾管,slurry_lab,cbl_images/tech_liner_cbl_p1.png,300,Slurry_Report_Cover,水泥浆检测报告封面D301-2025019;CMA认证号230017242226;签发2025-03-30,2025-06-16,视觉分析,,,
+ht1_002,呼探1-002,219.1mm技术尾管,slurry_lead,cbl_images/tech_liner_cbl_p4.png,300,Slurry_Test_Lead,领浆:密度1.65;稠化466min@100度/84MPa;n=0.834/K=0.648(88度);失水36mL;强度4.9-9.4MPa,2025-06-16,视觉分析,,,
+ht1_002,呼探1-002,219.1mm技术尾管,slurry_tail,cbl_images/tech_liner_cbl_p5.png,300,Slurry_Test_Tail,尾浆:密度1.65;稠化306min@100度/84MPa;n=0.820/K=0.817(88度);失水32mL;强度15.8MPa,2025-06-16,视觉分析,,,
+ht1_002,呼探1-002,219.1mm技术尾管,slurry_compat,cbl_images/tech_liner_cbl_p6.png,300,Slurry_Compat_Test,相容性:水泥浆:隔离液:先导浆=7:2:1;稠化>480min;初稠19Bc终稠17Bc,2025-06-16,视觉分析,,,

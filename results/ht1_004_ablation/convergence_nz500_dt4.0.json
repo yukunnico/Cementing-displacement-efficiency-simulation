@@ -1,0 +1,16 @@
+{
+  "run_id": "convergence_nz500_dt4.0",
+  "ablation_level": "R3",
+  "eccentricity": 0.17,
+  "nz": 500,
+  "dt": 4.0,
+  "enable_d2dga_auto_m": true,
+  "enable_d2dga_i3_flux": true,
+  "enable_true_buoyancy": true,
+  "effective_efficiency": 0.9543180725939574,
+  "cement_occupation": 0.9543180725939574,
+  "channeling_index": 0.10020040080156167,
+  "mixing_index": 0.12791567049635733,
+  "instability_index": 0.0592411364619464,
+  "buoyancy_number": 4.023731099914672
+}

@@ -1,0 +1,14 @@
+{
+  "dt": 10.0,
+  "nz": 80,
+  "ny": 16,
+  "enable_d2dga": true,
+  "yield_regularization_M": 100.0,
+  "open_outlet": true,
+  "enable_axial_dispersion": true,
+  "dispersion_alpha": 0.2,
+  "mode": "dt_quick",
+  "paper_version": "pead_v1",
+  "well_id": "hu103",
+  "loader_version": "paper_loader_v1"
+}

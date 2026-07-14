@@ -1,0 +1,14 @@
+﻿well_id,step_index,stage_name,fluid_role,fluid_name,volume_m3,rate_m3_min,start_time_min,end_time_min,density_g_cm3,event_tag,data_type,source_file,source_location,confidence,notes
+ht1_001,1,管线试压,shutdown,冲洗管线试压,,,0.0,10.0,,pressure_test_30MPa,measured,施工小结/section 9,2025.8.25/26 21:05-21:15;试压30MPa,high,
+ht1_001,2,先导浆,wash,先导浆(平衡液/冲洗液),40.0,1.4,10.0,45.0,1.75,,measured,施工小结/section 9,21:15-21:50;泵压17.9->20.4MPa;占高1171m;排量设计1.0实际1.4,high,设计排量1.0m3/min;实际1.4
+ht1_001,3,驱油隔离液,spacer,驱油隔离液(1.98g/cm3),20.0,1.0,50.0,70.0,1.98,,measured,施工小结/section 9,22:05-22:30;泵压14.9->15.2MPa;占高577.8m,high,
+ht1_001,4,领浆,lead_cement,领浆(2.05g/cm3),20.6,1.0,70.0,93.0,2.05,,measured,施工小结/section 9,22:30-22:53;泵压15.7->18MPa;封固5186-5900m,high,
+ht1_001,5,中间浆,intermediate_cement,中间浆(1.90g/cm3),28.7,1.0,93.0,125.0,1.9,,measured,施工小结/section 9,22:53-23:25;泵压13.8->15.6MPa;封固5900-7000m,high,
+ht1_001,6,尾浆,tail_cement,尾浆(1.90g/cm3),22.1,1.0,125.0,156.0,1.9,,measured,施工小结/section 9,23:25-23:51;泵压13-15.2MPa;封固7000-7746m,high,实际注22.1m3(设计21.4m3)
+ht1_001,7,倒闸门压塞,shutdown,停泵倒闸门/压塞控压,,,156.0,165.0,,pressure_control,measured,施工小结/section 9,23:51-00:00;控压6.4MPa,high,倒闸门+控压等待
+ht1_001,8,压塞液,displacement,压塞液(后置液/1.98g/cm3),2.0,0.6,165.0,168.0,1.98,plug_set,measured,施工小结/section 9,00:00-00:03;泵压7MPa,high,压塞2m3
+ht1_001,9,替钻井液1,displacement,替钻井液(1.92g/cm3),25.0,1.4,168.0,187.0,1.92,,measured,施工小结/section 9,00:03-00:22;泵压21-19MPa,high,实际25m3;设计23m3(含12+12)
+ht1_001,10,中置液(保护液),displacement,中置液(保护液/驱油隔离液),10.0,1.0,187.0,198.0,1.98,,measured,施工小结/section 9,00:22-00:33;泵压11.8-10.6MPa,high,中置液10m3
+ht1_001,11,基液,displacement,隔离液基液(1.02g/cm3),3.0,1.0,198.0,200.0,1.02,,measured,施工小结/section 9,00:33-00:35;泵压11MPa,high,基液3m3
+ht1_001,12,替钻井液2,displacement,替钻井液(1.92g/cm3),53.7,0.9,200.0,259.0,1.92,bump_plug,measured,施工小结/section 9,00:35-01:34;泵压11.5->20.3->7.5MPa;排量1.2-0.6;碰压7.5->14.8MPa放回水断流,high,碰压成功;总替量94.7m3(设计)
+ht1_001,13,循环洗井,shutdown,拔出中心管循环排混浆,,2.4,259.0,,,circulate_contaminated,measured,施工小结/section 9,以2.4m3/min排量循环;排混浆和前置液,high,施工结束后循环洗井

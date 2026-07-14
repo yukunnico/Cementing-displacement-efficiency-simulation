@@ -1,0 +1,10 @@
+﻿well_id,fluid_name,fluid_role,density_g_cm3,rheology_model,pv_mpa_s,yp_pa,yield_stress_pa,consistency_k_pa_sn,flow_index_n,viscosity_mpa_s,test_temperature_c,data_type,source_file,source_location,confidence,notes
+ht1_001,钻井液(井浆@65C),mud,1.92,Power-Law,51.0,6.0,,0.18,0.828,,65.0,measured,施工设计/section 1.3.1,井口65C;六速:114/63/49/28/5/4,high,油基钻井液;油水比86:14;初切2.5Pa终切7.5Pa
+ht1_001,钻井液(化验复测@128-93C),mud,1.93,Power-Law,,,,0.557,0.689,,128.0,measured,化验报告/Table 8,128->93C;六速:114/63/49/28/5/4,high,温度变化导致K值从0.18增至0.557;n从0.828降至0.689
+ht1_001,先导浆(平衡液),wash,1.75,,,,,,,,,design,施工设计/section 5.1,设计要求:密度1.75;粘度<60s;PV<35;YP<6;含砂<0.3%,medium,未找到实测流变数据
+ht1_001,驱油隔离液,spacer,1.98,Power-Law,,,,1.338,0.545,,93.0,measured,"化验报告/Table 7,8",128->93C;六速:114/80/66/43/10/6;冲洗效率97.5%,high,沉降稳定性1.97/1.98/1.99;配方:水+3.5%BCJ-300S+8%XZ-JS1L+40%XZ-YCXJ+1%XZ-XP1L+195%重晶石
+ht1_001,领浆(2.05g/cm3),lead_cement,2.05,Power-Law,,,,0.876,0.811,,128.0,measured,"化验报告/Table 4,8",128C;六速:>300/268/194/113/10/7;稠化427min;失水43ml,high,G+30%铁矿粉+35%石英砂+3%WG;24h强度3.7MPa;48h强度7.6MPa;7d强度30.8MPa
+ht1_001,中间浆(1.90g/cm3),intermediate_cement,1.9,Power-Law,,,,0.504,0.871,,128.0,measured,"化验报告/Table 5,8",128C;六速:>300/221/165/92/7/4;稠化314min;失水40ml,high,G+35%石英砂+4%WG+3%BCE-311S+4%蛭石;24h强度14.2MPa;7d强度31.3MPa
+ht1_001,尾浆(1.90g/cm3),tail_cement,1.9,Power-Law,,,,0.453,0.886,,128.0,measured,"化验报告/Table 6,8",128C;六速:>300/218/163/88/6/4;稠化208min;失水43ml,high,G+35%石英砂+4%WG+4%BCY-200S+3%BCE-311S+4%蛭石;24h强度15.1MPa;7d强度32.9MPa
+ht1_001,压塞液/中置液,displacement,1.98,,,,,,,,,design,施工设计/section 7.1.3,与驱油隔离液配方相同,medium,未单独实测
+ht1_001,隔离液基液,displacement,1.02,,,,,,,,,design,施工设计/section 7.1.3,驱油隔离液基液(水化),medium,

@@ -1,0 +1,28 @@
+{
+  "paper_version": "pead_v1",
+  "well_id": "hu103",
+  "well_name_cn": "呼103",
+  "sample_class": "A_main_validation",
+  "include_in_cbl_metrics": true,
+  "measured_cbl_pass_rate": 0.1206,
+  "top_md_m": 7330.6,
+  "bottom_md_m": 7770.0,
+  "annulus_volume_m3": 8.51473101113508,
+  "runtime_s": 1.735381900012726,
+  "validation_notes": [
+    "呼103井数据包第二版给出 CBL 合格率 12.06%，评价井段 7338.0–7712.0m。",
+    "cbl_summary_path 指向参考文档/呼103下的 CBL PDF；若原始文件名不同，后续仅需更新路径。",
+    "流体物性来自 model_ready_candidate 与 recommended_inputs；代理值已在对应常量和施工步骤备注中标注。"
+  ],
+  "warnings": [
+    "final_field plot skipped: 'Figure' object has no attribute 'exists'",
+    "depth profile plot skipped: 'Figure' object has no attribute 'exists'"
+  ],
+  "final_effective_efficiency": 0.9999999999999998,
+  "final_bulk_cement_fill": 0.9999999999999998,
+  "cbl_eval_interval_efficiency": 0.9999999999999998,
+  "target_interval_efficiency": null,
+  "channeling_index": 0.0,
+  "mixing_index": 1.0699655469381738e-15,
+  "instability_index": 0.0
+}

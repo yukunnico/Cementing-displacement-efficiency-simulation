@@ -1,0 +1,23 @@
+well_id,source_path,file_name,file_type,relevant_section,extraction_method,text_quality,cbl_relevant,notes
+hu102,2/202/2021/20211.doc,20211.doc,.doc(Word97-2003),139.7mm尾管固井小结,Word COM Content.Text,good(中文字符正确),yes,核心文档:井身结构/钻井液/井径+井斜/泵注/施工事件/扶正器/钻具
+hu102,2/202/2021/20211.wps,20211.wps,.wps,同20211.doc,未提取,未提取,yes,"WPS格式,与.doc内容相同"
+hu102,2/202/2021/20212.doc,20212.doc,.doc,139.7mm施工设计,Word COM Content.Text,good,yes,管柱/泵注程序/流体/地层/86根管柱明细
+hu102,2/202/2021/20214.doc,20214.doc,.doc,139.7mm施工总结,Word COM Content.Text,good,yes,施工方案/事件时间线/固井质量/探塞
+hu102,2/202/2021/20215.xlsx,20215.xlsx,.xlsx,套管单根数据(86根),openpyxl,部分(中文sheet名乱码),yes,86根套管单根数据明细; ECD计算; 管柱组合
+hu102,2/202/2021/20216.doc,20216.doc,.doc,施工记录表,Word COM Content.Text,good,yes,流体性能/施工参数记录
+hu102,2/202/2022/20221/*.jpg,202211-202216.jpg,.jpg(6张),CBL/VDL测井图,待视觉分析(API不可用),不可直接提取,yes,"CBL测井图像(6张),1280x1706"
+hu102,2/202/2022/20222/*.jpg,202221-2022291.jpg,.jpg(8张+1doc),CBL/VDL测井图,待视觉分析,不可直接提取,yes,"CBL测井图像(8张),多尺寸"
+hu102,2/202/2022/20223.doc,20223.doc,.doc,193.7mm回接技术要求,antiword,good,no,非139.7mm尾管:193.7mm回接固井
+hu102,2/202/2022/20224.doc,20224.doc,.doc,193.7mm回接记录表,antiword,good,no,非139.7mm尾管
+hu102,2/202/2022/20225.pdf,20225.pdf,.pdf,193.7mm水泥浆试验,pdfplumber,不可直接提取,no,非139.7mm尾管
+hu102,2/202/2022/20229.xlsx,20229.xlsx,.xlsx,多管柱数据,openpyxl,部分,partial,"含168.3mm+193.7mm+139.7mm,仅取139.7mm部分"
+hu102,2/202/2023/20234.doc,20234.doc,.doc,水泥浆试验报告(领浆+尾浆),Word COM Content.Text,good,yes,领浆/尾浆配方/稠化/流变/强度/失水/混浆污染试验
+hu102,2/202/2024/20241.xls,20241.xls,.xls,工具/监测数据,xlrd,部分,partial,"193.7mm相关工具数据居多,139.7mm部分有限"
+hu102,2/202/2024/20242-20246.*,.jpg/.png,施工监测图(5张),待视觉分析,不可直接提取,yes,施工过程压力/排量监测图
+hu102,2/202/2025/20251-202593.*,各种格式,365.1mm技术套管,未提取(非尾管),N/A,no,非139.7mm尾管:365.1mm技套资料
+hu102,2/202/2026/20261-202697.*,各种格式,473.1mm导管/表层,未提取(非尾管),N/A,no,非139.7mm尾管:导管/表层资料
+hu102,1/1004/10041/100413.PDF,100413.PDF,.pdf(1页),CBL评价图(6840-7665m),pdfplumber字符提取,partial(文字层含关键结论),yes,"CBL合格率66.65%,不合格段7405-7480m+7502-7540m"
+hu102,1/1004/10041/100411.PDF,100411.PDF,.pdf(1页),CBL评价图(60-5449.6m),pdfplumber,partial,no,"193.7mm段CBL,非尾管段"
+hu102,1/1004/10041/100412.PDF,100412.PDF,.pdf(1页),CBL评价图(5449.6-6248m),pdfplumber,partial,no,"过渡段CBL,非尾管段"
+hu102,1/1004/10041/100419.PDF,100419.PDF,.pdf(1页),CBL评价图(5461-7085m),pdfplumber,partial,partial,含上部尾管段CBL
+hu102,1/1004/10041/100422-100424.PDF,PDF(3页),RCD固井质量成果图,"pdfplumber(扫描,无文字)",不可直接提取,yes,"扫描图像,无文字层,需OCR"

@@ -1,0 +1,17 @@
+﻿well_id,fluid_name,fluid_role,density_g_cm3,rheology_model,pv_mpa_s,yp_pa,yield_stress_pa,consistency_k_pa_sn,flow_index_n,viscosity_mpa_s,test_temperature_c,data_type,source_file,source_location,confidence,notes
+hu101,油基钻井液(65℃),mud,1.96,,58,9.2,,,,,,field_measured,2/201/2011/20111/201111/2011111.doc,1.4.1,high,"PV=58mPa.s, YP=9.2Pa, 粘度88s, HTHP失水2mL"
+hu101,油基钻井液(施工前),mud,1.96,,,5,,,,65,,field_measured,2/201/2011/20111/201111/2011115.doc,洗井,high,"洗井结束前: 密度1.96, 屈服值5Pa, 粘度65s"
+hu101,平衡液(轻泥浆),wash,1.85,,,,,,,,,field_measured,2/201/2011/20111/201111/2011111.doc,6.1.2,high,轻泥浆，密度1.85g/cm3，用量25m3
+hu101,驱油隔离液,spacer,2.00,,30,,,,,,,field_measured,2/201/2011/20111/201111/2011115.doc,隔离液,high,塑粘30mPa.s，滤失量25mL，注入量25m3
+hu101,领浆(加重水泥),lead_cement,2.10,幂律模式,,,,0.815,0.719,,93,field_measured,2/201/2011/20111/201112/2011121.doc,领浆化验,high,配方:G+45%磁铁矿+28%石英砂+6%WG+添加剂; 稠化443min/70Bc; API失水42mL; 24h强度15.6MPa
+hu101,尾浆(超细水泥),tail_cement,1.90,幂律模式,,,,0.684,0.722,,93,field_measured,2/201/2011/20111/201112/2011121.doc,尾浆化验,high,配方:G+30石英砂+7%WG+4%SNP+添加剂; 稠化177min/70Bc; API失水40mL; 24h强度18.2MPa
+hu101,替浆钻井液,displacement,1.96,,58,9.2,,,,,,field_measured,2/201/2011/20111/201111/2011111.doc,1.4.1,high,同井内钻井液
+hu101,轻泥浆(替浆),displacement,1.85,,,,,,,,,field_measured,2/201/2011/20111/201111/2011111.doc,6.1.3,high,替浆用轻泥浆26m3
+hu101,中置液,displacement,2.00,,30,,,,,,,field_measured,2/201/2011/20111/201111/2011111.doc,6.1.2,high,驱油隔离液10m3
+hu101,油基钻井液(回接),mud,2.14,,43,9,,,,,,field_measured,2/201/2012/20124.doc,1.4.1,high,"PV=43mPa.s, YP=9Pa, 粘度78s"
+hu101,油基钻井液(回接施工前),mud,2.14,,,5,,,,58,,field_measured,2/201/2012/20127.doc,施工记录,high,"洗井后: 密度2.14, 屈服值5Pa, 粘度83s, 温度58℃"
+hu101,平衡液(回接),wash,1.80,,,,,,,,,field_measured,2/201/2012/20124.doc,6.1.2,high,低密度钻井液23m3
+hu101,驱油隔离液(回接),spacer,2.10,,30,,,,,,,field_measured,2/201/2012/20127.doc,施工记录,high,"密度2.10g/cm3, 塑粘30mPa.s, 滤失量25mL, 注入23m3"
+hu101,领浆(回接),lead_cement,2.15,幂律模式,,,,0.973,0.727,,93,field_measured,2/201/2012/20122.doc,领浆化验,high,配方:G+65%磁铁矿+6%WG+3%SNP+添加剂; 稠化445min/70Bc; API失水42mL; 24h强度16.3MPa
+hu101,尾浆(回接),tail_cement,2.15,幂律模式,,,,0.973,0.727,,93,field_measured,2/201/2012/20122.doc,尾浆化验,high,配方:G+65%磁铁矿+6%WG+3%SNP+LAD; 稠化198min/70Bc; API失水42mL; 24h强度18.9MPa
+hu101,轻泥浆(回接替浆),displacement,1.96,,57,,,,,,,field_measured,2/201/2012/20127.doc,施工记录,high,"替浆密度1.96g/cm3, 塑粘57mPa.s, 用量112m3"

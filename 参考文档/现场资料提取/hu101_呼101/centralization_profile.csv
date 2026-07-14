@@ -1,0 +1,9 @@
+﻿well_id,md_m,standoff_ratio,centralization_percent,eccentricity_ratio,data_type,source_file,source_location,confidence,notes
+hu101,5400,,,model_assumption,2/201/2011/20111/201111/2011111.doc,5.2,medium,168.3mm段，扶正器间距22m，数量63只，整体弹性扶正器
+hu101,6800,,,model_assumption,2/201/2011/20111/201111/2011111.doc,5.2,medium,139.7mm段，扶正器间距22m，9只
+hu101,7000,,,model_assumption,2/201/2011/20111/201111/2011111.doc,5.2,medium,目的层加密段，间距11m，32只
+hu101,7350,,,model_assumption,2/201/2011/20111/201111/2011111.doc,5.2,medium,间距22m，11只
+hu101,7600,,,model_assumption,2/201/2011/20111/201111/2011111.doc,5.2,medium,间距11m，9只
+hu101,7700,,,model_assumption,2/201/2011/20111/201111/2011111.doc,5.2,medium,间距22m，8只；总计132只
+hu101,5700,,,model_assumption,2/201/2011/20111/201111/2011114.doc,七、固井质量分析,low,悬挂器坐挂失败，座底固井；复合井眼215.9mm内139.7mm套管承受较大应力，可能导致居中度下降
+hu101,0,,,model_assumption,2/201/2012/20124.doc,5.2,medium,193.7mm回接段，整体弹性扶正器161只（设计160只），间距33m

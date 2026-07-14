@@ -1,0 +1,21 @@
+﻿well_id,item,value,unit,top_md_m,bottom_md_m,data_type,source_file,source_location,confidence,notes
+hu103,liner_hanger_md,5546,m,,,design,20313.doc,正文+管串设计,high,悬挂器设计位置5546m(+-5m); 实际坐挂5545.97m
+hu103,liner_shoe_md,7770,m,,,design,20313.doc,正文,high,尾管鞋深=完钻井深
+hu103,liner_top_md,5536.66,m,,,field_measured,20318.doc,回接筒顶部,high,实际回接筒顶深5536.66m
+hu103,liner_bottom_md,7768.51,m,,,field_measured,20315.doc,施工总结,high,实际套管下深7768.51m
+hu103,openhole_top_md,5750,m,,,design,20313.doc,井身结构表,high,裸眼段从5750m开始(上层273.1mm套管鞋)
+hu103,openhole_bottom_md,7770,m,,,design,20313.doc,井身结构表,high,裸眼段底深=完钻井深
+hu103,simulation_top_md,5546,m,,,design,20313.doc,浆柱结构设计,high,模拟段顶=悬挂器位置(重叠段200m)
+hu103,simulation_bottom_md,7770,m,,,design,20313.doc,浆柱结构设计,high,模拟段底=井底
+hu103,liner_inner_diameter,107.94,mm,7330,7770,design,20313.doc,套管数据,high,139.7mm套管 壁厚15.88mm 内径107.94mm
+hu103,liner_inner_diameter,138.9,mm,5546,7330,design,20313.doc,套管数据,high,168.3mm套管 壁厚14.7mm 内径138.9mm
+hu103,liner_outer_diameter,139.7,mm,7330,7770,design,20313.doc,井身结构表,high,139.7mm尾管段
+hu103,liner_outer_diameter,168.3,mm,5546,7330,design,20313.doc,井身结构表,high,168.3mm尾管段(上部复合尾管)
+hu103,borehole_nominal_diameter,260.0,mm,5750,7382,design,20313.doc,井身质量情况,high,扩眼段名义井径260mm
+hu103,borehole_nominal_diameter,241.3,mm,7382,7563,design,20313.doc,井身质量情况,high,241.3mm钻头段名义井径
+hu103,borehole_nominal_diameter,215.9,mm,7563,7770,design,20313.doc,井身质量情况,high,215.9mm钻头段名义井径
+hu103,drill_bit_size,241.3,mm,5750,7563,design,20313.doc,井身结构表,high,五开钻头(5750-7382m扩眼至260mm)
+hu103,drill_bit_size,215.9,mm,7563,7770,design,20313.doc,井身结构表,high,五开钻头
+hu103,float_collar_md,7757.706,m,,,field_measured,20315.doc,施工总结,high,浮箍1 设计7757.706m 实际7757.71m
+hu103,float_collar_md,7735.588,m,,,field_measured,20315.doc,施工总结,high,浮箍2 设计7735.588m 实际7735.6m
+hu103,float_shoe_md,7770,m,,,field_measured,20315.doc,施工总结,high,加长防转浮鞋 设计7770m

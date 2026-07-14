@@ -1,0 +1,26 @@
+﻿well_id,data_file,field_name,value,unit,data_type,source_file,source_location,source_type,extraction_method,confidence,needs_human_review,notes
+hu1,20444.doc,well_name,呼探1,,field_measured,20444.doc,标题,word_text,olefile_raw,high,no,呼探1井技套固井技术总结
+hu1,20443.doc,td_365section,3036,m,field_measured,20443.doc,完钻井深,word_text,antiword,high,no,365.1mm技套段
+hu1,10063.xlsx,td_full,7601,m,field_measured,10063.xlsx,钻井日志,excel_table,openpyxl,high,no,全井完钻井深
+hu1,20444.doc,casing_od,365.13,mm,field_measured,20444.doc,技术总结,word_text,olefile_raw,high,no,365.1mm技套
+hu1,20444.doc,casing_id,337.37,mm,field_measured,20444.doc,技术总结,word_text,olefile_raw,high,no,
+hu1,20444.doc,casing_wt,13.88,mm,field_measured,20444.doc,技术总结,word_text,olefile_raw,high,no,
+hu1,20444.doc,casing_grade,TP110V,,field_measured,20444.doc,技术总结,word_text,olefile_raw,high,no,天钢BC扣
+hu1,20444.doc,casing_depth,3035.539,m,field_measured,20444.doc,技术总结,word_text,olefile_raw,high,no,套管下深
+hu1,20444.doc,float_collar_depth,2990.48,m,field_measured,20444.doc,阻位2990.48m,word_text,olefile_raw,high,no,
+hu1,20444.doc,centralizer_count,45,个,field_measured,20444.doc,技术总结,word_text,olefile_raw,high,no,双弓弹性扶正器
+hu1,20444.doc,centralizer_spacing,55,m,field_measured,20444.doc,间隔55m,word_text,olefile_raw,high,no,
+hu1,20444.doc,mud_density,1.53,g/cm3,field_measured,20444.doc,固井施工前泥浆,word_text,olefile_raw,high,no,
+hu1,20444.doc,mud_viscosity,66,s,field_measured,20444.doc,粘度66s,word_text,olefile_raw,high,no,
+hu1,20443.doc,mud_yield,10,Pa,field_measured,20443.doc,屈服值10Pa,word_text,antiword,high,no,
+hu1,20444.doc,lead_volume,153,m3,field_measured,20444.doc,注领浆153m3,word_text,olefile_raw,high,no,
+hu1,20444.doc,lead_density,1.65,g/cm3,field_measured,20444.doc,领浆平均密度1.65,word_text,olefile_raw,high,no,
+hu1,20444.doc,tail_volume,35,m3,field_measured,20444.doc,注尾浆35m3,word_text,olefile_raw,high,no,
+hu1,20444.doc,tail_density,1.90,g/cm3,field_measured,20444.doc,尾浆平均密度1.90,word_text,olefile_raw,high,no,
+hu1,20444.doc,spacer_volume,33,m3,field_measured,20444.doc,注隔离液33m3,word_text,olefile_raw,high,no,
+hu1,20444.doc,displacement_volume,263,m3,field_measured,20444.doc,替泥浆263m3,word_text,olefile_raw,high,no,
+hu1,20444.doc,cement_top,940,m,field_measured,20444.doc,返高940m,word_text,olefile_raw,high,no,声幅测量
+hu1,20443.doc,max_inclination,5.7,deg,field_measured,20443.doc,最大井斜5.7deg,word_text,antiword,high,no,at 2610m
+hu1,20441.doc,lead_slurry_formula,G+14%WZ+12%WG+...,,field_measured,20441.doc,领浆配方,word_text,olefile_raw,high,no,水灰比55%
+hu1,20441.doc,tail_slurry_formula,G+4%WG+5%SUP+...,,field_measured,20441.doc,尾浆配方,word_text,olefile_raw,high,no,水灰比36%
+hu1,20441.doc,spacer_formula,水+40%JYC-1+5%KWD-2+...,,field_measured,20441.doc,驱油隔离液配方,word_text,olefile_raw,high,no,含70%铁矿粉

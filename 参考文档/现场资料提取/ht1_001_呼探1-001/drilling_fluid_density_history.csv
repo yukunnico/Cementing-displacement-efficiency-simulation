@@ -1,0 +1,18 @@
+well_id,depth_top_m,depth_bottom_m,mud_density_gcm3,data_type,source_file,source_location,confidence,notes
+ht1_001,1100,1325,1.5,field_measured,205192.doc,section 3 泥浆密度使用情况,medium,从固井协作会CFB流提取;各段间可能不连续
+ht1_001,1325,1580,1.51,field_measured,205192.doc,section 3 泥浆密度使用情况,medium,从固井协作会CFB流提取;各段间可能不连续
+ht1_001,1580,1650,1.55,field_measured,205192.doc,section 3 泥浆密度使用情况,medium,从固井协作会CFB流提取;各段间可能不连续
+ht1_001,1650,1740,1.6,field_measured,205192.doc,section 3 泥浆密度使用情况,medium,从固井协作会CFB流提取;各段间可能不连续
+ht1_001,1740,1800,1.63,field_measured,205192.doc,section 3 泥浆密度使用情况,medium,从固井协作会CFB流提取;各段间可能不连续
+ht1_001,1800,2002,1.65,field_measured,205192.doc,section 3 泥浆密度使用情况,medium,从固井协作会CFB流提取;各段间可能不连续
+ht1_001,2002,2100,1.67,field_measured,205192.doc,section 3 泥浆密度使用情况,medium,从固井协作会CFB流提取;各段间可能不连续
+ht1_001,2100,2400,1.68,field_measured,205192.doc,section 3 泥浆密度使用情况,medium,从固井协作会CFB流提取;各段间可能不连续
+ht1_001,2400,2600,1.69,field_measured,205192.doc,section 3 泥浆密度使用情况,medium,从固井协作会CFB流提取;各段间可能不连续
+ht1_001,2600,2700,1.7,field_measured,205192.doc,section 3 泥浆密度使用情况,medium,从固井协作会CFB流提取;各段间可能不连续
+ht1_001,2700,2800,1.71,field_measured,205192.doc,section 3 泥浆密度使用情况,medium,从固井协作会CFB流提取;各段间可能不连续
+ht1_001,2800,2900,1.72,field_measured,205192.doc,section 3 泥浆密度使用情况,medium,从固井协作会CFB流提取;各段间可能不连续
+ht1_001,2900,3000,1.74,field_measured,205192.doc,section 3 泥浆密度使用情况,medium,从固井协作会CFB流提取;各段间可能不连续
+ht1_001,3000,3055,1.75,field_measured,205192.doc,section 3 泥浆密度使用情况,medium,从固井协作会CFB流提取;各段间可能不连续
+ht1_001,3055,3135,1.87,field_measured,205192.doc,section 3 泥浆密度使用情况,medium,从固井协作会CFB流提取;各段间可能不连续
+ht1_001,3135,3282,1.88,field_measured,205192.doc,section 3 泥浆密度使用情况,medium,从固井协作会CFB流提取;各段间可能不连续
+ht1_001,3282,3940,1.9,field_measured,205192.doc,section 3 泥浆密度使用情况,medium,从固井协作会CFB流提取;各段间可能不连续

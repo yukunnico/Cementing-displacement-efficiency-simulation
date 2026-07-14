@@ -1,0 +1,40 @@
+﻿well_id,image_id,source_file,source_type,page_number_or_image_index,detected_content,is_liner_related,contains_useful_data,extracted_to_file,ocr_or_vision_method,confidence,needs_human_review,notes
+ht1_001,img_001,20512/205121.jpg,jpg,1,浮鞋出厂检测报告(克拉玛依金鑫科技),False,False,False,vision,high,True,设备出厂检验报告;非CBL/VDL
+ht1_001,img_002,20512/205122.jpg,jpg,1,浮箍出厂检测报告(西部钻探工程院),False,False,False,vision,high,True,
+ht1_001,img_003,20512/205123.jpg,jpg,1,浮箍正向压力试验报告(28MPa/300s),False,False,False,vision,high,True,
+ht1_001,img_004,20512/205124.jpg,jpg,1,浮箍出厂检测+反向压力试验(35MPa),False,False,False,vision,high,True,
+ht1_001,img_005,20512/205125.jpg,jpg,1,浮箍正向压力试验报告(28MPa),False,False,False,vision,high,True,
+ht1_001,img_006,20514/205141/2051411.jpg,jpg,1,浮鞋+浮箍出厂检测报告(与20512重复),False,False,False,vision,high,True,20514/205141中JPG与20512完全相同
+ht1_001,img_007,20514/205141/2051412.jpg,jpg,1,浮鞋/浮箍正向压力试验(与205122重复),False,False,False,vision,high,True,
+ht1_001,img_008,20514/205141/2051413.jpg,jpg,1,浮箍正向压力试验(与205123重复),False,False,False,vision,high,True,
+ht1_001,img_009,20514/205141/2051414.jpg,jpg,1,浮箍出厂检测+反向压力试验(与205124重复),False,False,False,vision,high,True,
+ht1_001,img_010,20514/205141/2051415.jpg,jpg,1,浮箍正向压力试验(与205125重复),False,False,False,vision,high,True,
+ht1_001,img_011,施工设计.doc,word_embedded,section 1.2.3,井身结构示意图,True,True,False,not_extracted,medium,True,尾管固井相关;待单独提取
+ht1_001,img_012,施工设计.doc,word_embedded,section 1.4.3,X/Y轴井径曲线(1m间隔),True,True,False,not_extracted,medium,True,含尾管段井径连续曲线
+ht1_001,img_013,施工设计.doc,word_embedded,section 1.4.4,平均井径曲线(1m间隔),True,True,False,not_extracted,medium,True,含尾管段平均井径连续曲线
+ht1_001,img_014,施工设计.doc,word_embedded,section 1.4.5,井身轨迹图,True,False,False,not_extracted,medium,True,
+ht1_001,img_015,施工设计.doc,word_embedded,section 6.3,居中度模拟图(裸眼段居中度80.4%),True,True,False,not_extracted,medium,True,重要;居中度模拟结果
+ht1_001,img_016,施工设计.doc,word_embedded,section 7.1.5,浆柱结构图与施工动态图,True,True,False,not_extracted,medium,True,可验证泵注程序
+ht1_001,img_017,施工设计.doc,word_embedded,section 8.2.3,斯伦贝谢顶替效率模拟图(平均水泥充填率98%),True,True,False,not_extracted,medium,True,顶替效率模拟结果
+ht1_001,img_018,化验报告.docx,word_embedded,Fig 1-4,领浆稠化曲线+温度高点+升降温停机实验,True,True,False,not_extracted,low,True,水泥浆性能曲线
+ht1_001,img_019,化验报告.docx,word_embedded,Fig 5-6,中间浆稠化曲线+温度高点实验,True,True,False,not_extracted,low,True,
+ht1_001,img_020,化验报告.docx,word_embedded,Fig 7-8,尾浆稠化曲线+温密双高点实验,True,True,False,not_extracted,low,True,
+ht1_001,img_021,化验报告.docx,word_embedded,Fig 9-14,"相容性实验稠化曲线(7:3,7:2:1,7:1:2等)",True,True,False,not_extracted,low,True,相容性实验
+ht1_001,img_022,化验报告.docx,word_embedded,Fig 16-17,静胶凝实验曲线(中间浆118C;尾浆150C),True,True,False,not_extracted,medium,True,失重分析和候凝补压可用
+ht1_001,img_023,HT1-001井油层尾管报告.pdf,pdf,page_1/封面,检测分析报告封面(钻井流体分析实验中心/D301-2025045),True,True,True,cbl_pdf_ocr_full.json,easyocr,high,False,2025.8.24签发;委托单位新疆油田勘探事业部;实验名称:油层尾管性能
+ht1_001,img_023a,HT1-001井油层尾管报告.pdf,pdf,page_2/注意事项,检测报告使用条款(联系地址克拉玛依/0990-6881096),True,False,True,cbl_pdf_ocr_full.json,easyocr,low,False,标准条款
+ht1_001,img_023b,HT1-001井油层尾管报告.pdf,pdf,page_3/报告首页,委托书T301-2025045;井深7746;3套配方;共5页;接收2025.8.22,True,True,True,cbl_pdf_ocr_full.json,easyocr,high,False,委托人魏瑞华;依据GB/T 19139-2012
+ht1_001,img_023c,HT1-001井油层尾管报告.pdf,pdf,page_4/领浆检测,领浆(2.05g/cm3):稠化432min;n=0.825/K=0.842;六速243/185/108/10/6;24h=4.5/48h=14.8MPa,True,True,True,cbl_pdf_ocr_full.json,easyocr,high,False,OCR数值与docx版一致;增补六速完整读数
+ht1_001,img_023d,HT1-001井油层尾管报告.pdf,pdf,page_5/中间浆检测,中间浆(1.90g/cm3):稠化302min;n=0.816/K=0.512;六速225/168/95/8/5;24h=15.2/48h=21.8MPa,True,True,True,cbl_pdf_ocr_full.json,easyocr,high,False,OCR数值与docx版一致
+ht1_001,img_023e,HT1-001井油层尾管报告.pdf,pdf,page_6/尾浆检测,尾浆(1.90g/cm3):稠化223min;n=0.807/K=0.527;六速233/175/98/9/6;24h=17.7MPa,True,True,True,cbl_pdf_ocr_full.json,easyocr,high,False,48h强度未标注
+ht1_001,img_023f,HT1-001井油层尾管报告.pdf,pdf,page_7/相容性检测,水泥浆:隔离液:钻井液=7:2:1;初始14BC→终止13BC;稠化480min,True,True,True,cbl_pdf_ocr_full.json,easyocr,medium,False,相容性试验结果
+ht1_001,img_023g,HT1-001井油层尾管报告.pdf,pdf,page_8/稠化曲线图,扫描图像(稠化时间曲线);OCR无法识别文字,True,False,False,not_extracted,easyocr,extreme_low,True,图像页;仅曲线图无数据表
+ht1_001,img_023h,HT1-001井油层尾管报告.pdf,pdf,page_9/稠化曲线图,扫描图像(稠化时间曲线);OCR无法识别文字,True,False,False,not_extracted,easyocr,extreme_low,True,图像页
+ht1_001,img_023i,HT1-001井油层尾管报告.pdf,pdf,page_10/稠化曲线图,扫描图像(稠化时间曲线);OCR无法识别文字,True,False,False,not_extracted,easyocr,extreme_low,True,图像页
+ht1_001,img_023j,HT1-001井油层尾管报告.pdf,pdf,page_11/流变曲线图,扫描图像(可能为流变曲线);OCR无法识别文字,True,False,False,not_extracted,easyocr,extreme_low,True,图像页
+ht1_001,img_028,HT1-001数采.xlsm,xlsm,原始数据表(7555行),5秒间隔6通道原始数据(DensityMass/PumpPressA/PumpPressB/PumpRatesAll/PumpTotalAll/WaterRate),True,True,True,ht1_001_acquisition_raw.csv,openpyxl,high,False,2025.8.14 01:08-02:54;水泥浆准备/混合阶段数据;非8月25-26施工日
+ht1_001,img_029,HT1-001数采.xlsm,xlsm,数据表(1238行),5秒间隔12通道结构化数据(含密度/泵压/排量/累计量/水流量/闸位等),True,True,True,ht1_001_acquisition_raw.csv,openpyxl,high,False,1238行;密度范围-0.02-4.47g/cm3;泵压0-12.86MPa;排量0-1.33m3/min;累计增51m3
+ht1_001,img_024,205171.docx,word_embedded,Table,替浆泵冲跟踪表(10m3间隔;含压力/排量),True,True,False,not_extracted,medium,True,可验证替浆阶段泵压和排量变化;与205172.xlsx数据相同
+ht1_001,img_025,205192.doc,word_embedded,section 1,钻井液性能参数(六速130/80/61/38/5/3;密度1.90),True,False,False,not_extracted,low,True,固井协作会钻井液回执;需编码修复
+ht1_001,img_026,205192.doc,word_embedded,section 2,钻井液老化实验性能(24h/110C + 96h/100C),True,False,False,not_extracted,low,True,固井协作会老化实验表
+ht1_001,img_027,205192.doc,word_embedded,section 3,钻井液密度分段使用记录(1100-3940m),True,False,False,not_extracted,low,True,18段密度变化;从1.50-1.90g/cm3

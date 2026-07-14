@@ -1,0 +1,22 @@
+{
+  "well_id": "hu101",
+  "well_name_cn": "呼101",
+  "paper_version": "pead_v1",
+  "sample_class": "A_main_validation",
+  "loader_version": "paper_loader_v1",
+  "include_in_main_results": true,
+  "include_in_cbl_metrics": true,
+  "cbl_pass_rate": 0.6277,
+  "geometry_source": "field_measured + equivalent composite liner approximation",
+  "pumping_schedule_source": "field_measured construction sequence with shoe-lag correction inherited from legacy loader",
+  "fluid_source": "field_measured densities and rheology from extracted field report",
+  "caliper_source": "legacy nominal/degenerate profile; adopted as paper v1 equivalent geometry",
+  "inclination_source": "legacy nominal profile",
+  "standoff_source": "model_assumption profile documented in loader notes",
+  "cbl_source": "interpreted official CBL report 100312.PDF",
+  "notes": [
+    "主验证候选井；CBL合格率采用0.6277。",
+    "上部168.3mm+下部139.7mm复合尾管按面积守恒等效几何进入当前单外径求解器。",
+    "193.7mm回接段资料不进入本 paper loader 主验证口径。"
+  ]
+}

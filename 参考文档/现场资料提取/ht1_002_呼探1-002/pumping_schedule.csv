@@ -1,0 +1,17 @@
+﻿well_id,step_index,stage_name,fluid_role,fluid_name,volume_m3,rate_m3_min,start_time_min,end_time_min,density_g_cm3,event_tag,data_type,source_file,source_location,confidence,notes
+ht1_002,1,注先导浆,wash,先导浆,20,0.8,0,25,1.85,,field_measured,施工设计 Table37/施工记录表,施工设计 Table37,high,泥浆泵注; 泵压12.1-15.7MPa; 裸眼环空占高1435m
+ht1_002,2,注驱油隔离液,spacer,驱油隔离液,15,0.8,25,44,2.05,,field_measured,施工设计 Table37/施工记录表,施工设计 Table37,high,固井车注; 泵压15-15.1MPa; 裸眼环空占高1076m; 冲洗效率97.7%
+ht1_002,3,停泵倒闸门,shutdown,,,,,,,shutdown,field_measured,施工设计 Table37,施工设计 Table37,high,控压停泵倒闸门
+ht1_002,4,注领浆,lead_cement,领浆(2.10),12,0.8,44,60,2.10,,field_measured,施工设计 Table37/施工记录表,施工设计 Table37,high,固井车注16min; 泵压15.7-15.6MPa; 封固5068-5796m
+ht1_002,5,注中间浆,intermediate_cement,中间浆(1.95),14,0.8,60,78,1.95,,field_measured,施工设计 Table37/施工记录表,施工设计 Table37,high,固井车注18min; 泵压15.5-18.3MPa; 封固5796-6739m
+ht1_002,6,注尾浆,tail_cement,尾浆(1.95),12,0.8,78,94,1.95,,field_measured,施工设计 Table37/施工记录表,施工设计 Table37,high,固井车注16min; 泵压18.3-19.7MPa; 封固6739-7554m
+ht1_002,7,放胶塞,plug,,,,,,,plug_launch,field_measured,施工设计 Table37,施工设计 Table37,high,控压开挡销倒闸门放胶塞 3min
+ht1_002,8,注压塞液,plug,压塞液,5,0.8,94,101,1.90,,field_measured,施工设计 Table37/施工记录表,施工设计 Table37,high,固井车注7min; 泵压19.2-19.5MPa
+ht1_002,9,替浆-1,displacement,钻井液,12,0.8,101,117,2.06,,field_measured,施工设计 Table37,施工设计 Table37,high,固井车泵注16min; 泵压19.8-15.9MPa
+ht1_002,10,注中置液,spacer,中置液,15,0.8,117,137,1.90,,field_measured,施工设计 Table37/施工记录表,施工设计 Table37,high,固井车泵注20min; 泵压14.7-12.9MPa
+ht1_002,11,替浆-2,displacement,钻井液,15,0.8,137,157,2.06,,field_measured,施工设计 Table37,施工设计 Table37,high,20min; 泵压12.9-15.0MPa
+ht1_002,12,替浆-3,displacement,钻井液,5,0.5,157,167,2.06,rate_change,field_measured,施工设计 Table37,施工设计 Table37,high,排量降至0.5m3/min 10min; 泵压11.5-12.5MPa
+ht1_002,13,替浆-4,displacement,钻井液,18,0.3,167,227,2.06,rate_change,field_measured,施工设计 Table37,施工设计 Table37,high,排量降至0.3m3/min 60min; 泵压9.9-7.9MPa
+ht1_002,14,替浆-5,displacement,钻井液,9,0.4,227,252,2.06,,field_measured,施工设计 Table37,施工设计 Table37,high,25min; 泵压9.3MPa; 实际总替量79m3(施工记录表)
+ht1_002,15,碰压,plug,,,,,,,bump_plug,field_measured,施工记录表 R34,施工记录表,high,碰压17-23MPa; 放回水正常
+ht1_002,16,泄压拆除,shutdown,,,,,,,shutdown,field_measured,施工设计 Table37,施工设计 Table37,high,泄压检查回流; 拆水泥头; 15min

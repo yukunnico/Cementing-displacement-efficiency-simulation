@@ -1,0 +1,45 @@
+﻿well_id,data_file,field_name,value,unit,data_type,source_file,source_location,source_type,extraction_method,confidence,needs_human_review,notes
+ht1_001,施工设计,well_type,直井,,field_measured,施工设计,section 1.1,word_text,COM_text_extraction,high,False,
+ht1_001,施工设计,liner_hanger_md,5460.159,m,design,施工设计,section 4.2/6.1,word_text,COM_text_extraction,high,False,
+ht1_001,施工小结,liner_bottom_md,7746.0,m,field_measured,施工小结,section 9,word_text,COM_text_extraction,high,False,实际下深
+ht1_001,施工设计,borehole_sizes,241.3/215.9,mm,design,施工设计,section 1.2.1,word_table,COM_text_extraction,high,False,
+ht1_001,施工设计,caliper_profile,69 points @30m,mm,field_measured,施工设计,section 1.4.1,word_table,COM_text_extraction,high,False,30m间隔
+ht1_001,施工设计,inclination_profile,69 points @30m,deg,field_measured,施工设计,section 1.4.1,word_table,COM_text_extraction,high,False,30m间隔
+ht1_001,施工设计,pumping_schedule_design,详见表,,design,施工设计,section 7.2,word_table,COM_text_extraction,high,False,
+ht1_001,施工小结,pumping_schedule_actual,详见表,,field_measured,施工小结,section 9,word_text,COM_text_extraction,high,False,实际施工数据
+ht1_001,施工设计,casing_string_combo,详见表,,design,施工设计,section 6.1,word_table,COM_text_extraction,high,False,
+ht1_001,套管数据表,casing_detail_139.7,详见表,,field_measured,套管数据表xlsx,Sheet 139.7,excel_table,openpyxl_read,high,False,三方核对版
+ht1_001,套管数据表,casing_detail_168.3,详见表,,field_measured,套管数据表xlsx,Sheet 168.3,excel_table,openpyxl_read,high,False,三方核对版
+ht1_001,施工设计,centralizer_layout,101只(每2根1只),,design,施工设计,section 6.2,word_table,COM_text_extraction,high,False,
+ht1_001,施工设计,mud_rheology_65C,六速读数详表,,field_measured,施工设计,section 1.3.1,word_table,COM_text_extraction,high,False,
+ht1_001,化验报告,fluid_rheology_128C,六速读数详表,,field_measured,化验报告docx,Table 8,word_table,docx2txt,high,False,
+ht1_001,化验报告,cement_properties,详见表4-6,,field_measured,化验报告docx,Tables 4-6,word_table,docx2txt,high,False,
+ht1_001,化验报告,spacer_properties,详见表7,,field_measured,化验报告docx,Table 7,word_table,docx2txt,high,False,
+ht1_001,工程量清单,cement_additives,详见表,,field_measured,工程量清单doc,全文,word_text,COM_text_extraction,high,False,
+ht1_001,技术总结,actual_construction,详见表,,field_measured,技术总结doc,section 2/3,word_text,COM_text_extraction,high,False,
+ht1_001,施工小结,cbl_quality_result,合格,,interpreted,施工小结,section 10,word_text,COM_text_extraction,low,True,仅有定性结论
+ht1_001,施工设计,target_intervals,详见表,,interpreted,施工设计,section 2.3,word_table,COM_text_extraction,medium,False,录井解释
+ht1_001,施工设计,drilling_anomalies,4次井漏,,field_measured,施工设计,section 1.6,word_text,COM_text_extraction,high,False,
+ht1_001,施工设计,safety_window,1.936-2.011,g/cm3,field_measured,施工设计,section 3.3,word_text,COM_text_extraction,high,False,
+ht1_001,施工设计,formation_pressure_coeff,1.936,g/cm3,field_measured,施工设计,section 3.3,word_text,COM_text_extraction,high,False,
+ht1_001,施工设计,bottomhole_static_temp,150.0,C,field_measured,施工设计,section 2.5,word_text,COM_text_extraction,high,False,
+ht1_001,205172.xlsx,displacement_pump_stroke_table,51点累积泵冲数据(10-350m3),incremental,205172.xlsx,20517/,excel_table,openpyxl_read,high,False,替浆泵冲跟踪表;含压力/排量/备注;与205171.docx内容相同
+ht1_001,205171.docx,displacement_pump_stroke_table,替浆泵冲数据(与xlsx重复),incremental,205171.docx,20517/,word_table,python-docx,high,False,与205172.xlsx完全重复;保留源记录
+ht1_001,205192.doc,cementing_preparation_form,固井协作会模板(钻井液性能/地破/分层),text,205192.doc,2051/,word_text,CFB提取,medium,True,WPS格式;编码问题严重;含钻井液六速读数130/80/61/38/5/3(密度1.90)/老化性能/密度分段使用记录
+ht1_001,205191.doc,cementing_preparation_form,固井协作会文档(WPS加密),text,205191.doc,2051/,word_text,antiword失败,low,True,WPS格式无法解析;antiword报错;可能含类似205192内容
+ht1_001,205116.xlsx,well_logging_1m,井径/井斜1m间隔数据(1095-3940m),field_measured,205116.xlsx,20511/,excel_table,openpyxl_read,high,False,井径1m间隔2847行;含FC13/FC24(双轴井径);含方位角/井斜;仅覆盖上部二开井段(非尾管段)
+ht1_001,205116.xlsx,well_logging_30m,井径/井斜30m间隔数据(1100-3940m),field_measured,205116.xlsx,20511/,excel_table,openpyxl_read,high,False,30m间隔134行;含方位/井斜/双轴井径;仅上部井段
+ht1_001,205114.txt,well_logging_raw,测井原始数据(1103-3940m;7m间隔;407行),field_measured,205114.txt,20511/,text_raw,direct_read,high,False,4列制表分隔:深度/方位角/井斜/平均井径;仅上部井段
+ht1_001,205115.xlsx,formation_stratigraphy,地层分层(Q-J3k2;485-7620m),design,205115.xlsx,20511/,excel_table,openpyxl_read,high,False,13层地层分层;含标注设计和标红层;覆盖全井
+ht1_001,20519.xlsx,formation_stratigraphy,地层分层(Q-J3k2;485-7620m),design,20519.xlsx,2051/,excel_table,openpyxl_read,high,False,与205115.xlsx内容相同;含标红为设计分层标注
+ht1_001,205173.xlsx,wan_tan2_construction,湾探2井中完现场施工流程(非呼探1-001),field_measured,205173.xlsx,20517/,excel_table,openpyxl_read,high,True,已确认非呼探1-001数据;湾探2井;全部5个工作表均排除
+ht1_001,20512/,equipment_inspection_images,浮鞋/浮箍出厂检测报告(克拉玛依金鑫科技+西部钻探),image,20512/*.jpg,20512/,jpg,vision,high,False,5张JPG均为设备出厂检验报告;含压力试验曲线;非CBL/VDL
+ht1_001,20514/205141/,equipment_inspection_images,浮鞋/浮箍出厂检测报告(与20512完全重复),image,20514/205141/*.jpg,20514/205141/,jpg,vision,high,False,5张JPG与20512完全相同;重复文件
+ht1_001,HT1-001井油层尾管报告.pdf,cement_lab_report_pdf,水泥浆物理性能检测报告(11页扫描PDF),pdf_scan,化验报告/HT1-001井油层尾管报告.pdf,PDF全文,easyocr中文OCR,high,False,D301-2025045;钻井流体分析实验中心;2025.8.24;领浆/中间浆/尾浆3套配方;增补六速完整读数;确认非CBL/VDL报告;OCR数据存入cbl_pdf_ocr_full.json
+ht1_001,HT1-001数采.xlsm,acquisition_5sec_raw,5秒间隔6通道原始数据(7555行;2025.8.14),field_measured,HT1-001数采.xlsm,原始数据表,openpyxl_read,high,False,密度/泵压A/泵压B/排量/累计量/水流量;时间1:08-2:54;水泥浆混合/测试数据;非8月25-26施工日
+ht1_001,HT1-001数采.xlsm,acquisition_5sec_structured,5秒间隔12通道结构化数据(1238行),field_measured,HT1-001数采.xlsm,数据表,openpyxl_read,high,False,1238行;密度-0.02-4.47g/cm3;泵压0-12.86MPa;排量0-1.33m3/min;累计增51m3;导出ht1_001_acquisition_raw.csv
+ht1_001,1001/10011.xlsx,drilling_daily_log,HT1-001钻井日志(2025.5.28-7.8;5247-6630m),field_measured,1001/10011.xlsx,SheetJS,openpyxl_read,high,False,49行;钻进历史记录;含日期/深度/地层/泥浆密度/钻头尺寸;地层K1l-K2d-K1s-K1h
+ht1_001,1001/10012.xlsx,project_progress_table,HT1-001项目进度表(2025.2.7开工;151天),field_measured,1001/10012.xlsx,SheetJS,openpyxl_read,medium,False,902100队/ZJ90钻机;设计7620m;154行项目管理数据
+ht1_001,10041/100411-100423.PDF,cbl_logging_images,固井质量综合评价图(2022年/井号110022),image,1004/10041/*.PDF,pdfplumber+diread,low,True,已确认非HT1-001(2025年);日期2022年/井号110022;排除
+ht1_001,1002/10021-10022.xlsx,other_well_ht1_002,HT1-002井数据,field_measured,1002/10021-10022.xlsx,SheetJS,openpyxl_read,high,False,HT1-002井数据;已排除(非HT1-001)
+ht1_001,205192.doc,cementing_meeting_form,固井协作会文档(钻井液性能/地破/分层),text,205192.doc,2051/,antiword_text_extraction,medium,True,中文编码乱码但数字数据可读:钻井液六速130/80/61/38/5/3;老化实验24h/110C+96h/100C;密度分段记录18段;地破1.50g/cm3表压7.42MPa井深1120m
