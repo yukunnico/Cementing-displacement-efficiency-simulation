@@ -62,3 +62,84 @@ class TestMFieldFromProps:
         assert m_field.shape == (ny, nz)
         # 水泥更粘 -> m = mu_mud/mu_cement < 1
         assert np.all(m_field < 1.0)
+
+
+class TestExtractAblationMetrics:
+    """Unit tests for extract_ablation_metrics helper (Task 3)."""
+
+    def test_extracts_nested_chinese_keys_to_flat_english(self):
+        from cemdisp.runners.ht1_004_ablation import extract_ablation_metrics
+        from cemdisp.models2d.annulus_d2dga import AnnulusSimulationResult
+
+        # Construct a minimal fake result with only the summary field populated
+        fake_summary = {
+            "模拟对象": "HT1-004",
+            "最终结果": {
+                "全井段最终有效顶替效率": 0.8765,
+                "最终水泥浆占据率": 0.9123,
+                "最终窜槽指数": 0.0456,
+                "最终混浆指数": 0.0234,
+                "最终失稳指数": 0.0123,
+            },
+        }
+
+        result = AnnulusSimulationResult(
+            well_name="fake",
+            geom={},
+            cement_field=np.zeros((2, 2)),
+            spacer_field=np.zeros((2, 2)),
+            wall_field=np.zeros((2, 2)),
+            metrics=None,  # type: ignore[arg-type]
+            depth_profiles=None,  # type: ignore[arg-type]
+            summary=fake_summary,
+        )
+
+        m = extract_ablation_metrics(result)
+
+        assert m["effective_efficiency"] == 0.8765
+        assert m["cement_occupation"] == 0.9123
+        assert m["channeling_index"] == 0.0456
+        assert m["mixing_index"] == 0.0234
+        assert m["instability_index"] == 0.0123
+
+    def test_handles_missing_final_result_key(self):
+        from cemdisp.runners.ht1_004_ablation import extract_ablation_metrics
+        from cemdisp.models2d.annulus_d2dga import AnnulusSimulationResult
+
+        result = AnnulusSimulationResult(
+            well_name="fake",
+            geom={},
+            cement_field=np.zeros((2, 2)),
+            spacer_field=np.zeros((2, 2)),
+            wall_field=np.zeros((2, 2)),
+            metrics=None,  # type: ignore[arg-type]
+            depth_profiles=None,  # type: ignore[arg-type]
+            summary={"some_other_key": 42},
+        )
+
+        m = extract_ablation_metrics(result)
+        # All values should be None (missing key returns None from .get())
+        assert m["effective_efficiency"] is None
+        assert m["cement_occupation"] is None
+        assert m["channeling_index"] is None
+        assert m["mixing_index"] is None
+        assert m["instability_index"] is None
+
+    def test_handles_non_dict_summary(self):
+        from cemdisp.runners.ht1_004_ablation import extract_ablation_metrics
+        from cemdisp.models2d.annulus_d2dga import AnnulusSimulationResult
+
+        result = AnnulusSimulationResult(
+            well_name="fake",
+            geom={},
+            cement_field=np.zeros((2, 2)),
+            spacer_field=np.zeros((2, 2)),
+            wall_field=np.zeros((2, 2)),
+            metrics=None,  # type: ignore[arg-type]
+            depth_profiles=None,  # type: ignore[arg-type]
+            summary="not_a_dict",  # type: ignore[arg-type]
+        )
+
+        m = extract_ablation_metrics(result)
+        assert m["effective_efficiency"] is None
+        assert m["cement_occupation"] is None
