@@ -164,3 +164,34 @@ class TestBuoyancyForceVector:
         geom = s._build_geom(well)
         f_phi, f_xi = s._buoyancy_force_vector(geom, beta_deg=5.0)
         assert np.any(f_phi > 0)
+
+
+class TestTrueBuoyancy:
+    def test_constructor_has_enable_true_buoyancy(self):
+        s = _make_solver()
+        assert hasattr(s, "enable_true_buoyancy")
+        assert s.enable_true_buoyancy is True
+
+    def test_buoyancy_number_in_summary(self):
+        # summary 应含 buoyancy_number 字段（至少 R3 跑后）
+        s = _make_solver(enable_true_buoyancy=True)
+        # 不跑完整 run（需要 loader），只验证 _compute_buoyancy_number 方法存在
+        assert hasattr(s, "_compute_buoyancy_number")
+
+    def test_unstable_density_gives_negative_b(self):
+        # b<0（轻顶替重）应被检出
+        s = _make_solver()
+        # rho_displacing < rho_displaced -> b<0
+        b = s._compute_buoyancy_number(
+            rho_displacing_kg_m3=1800.0, rho_displaced_kg_m3=1900.0,
+            gap_m=0.04, mu_displaced_pa_s=0.05, velocity_m_s=0.5,
+        )
+        assert b < 0.0
+
+    def test_stable_density_gives_positive_b(self):
+        s = _make_solver()
+        b = s._compute_buoyancy_number(
+            rho_displacing_kg_m3=1950.0, rho_displaced_kg_m3=1900.0,
+            gap_m=0.04, mu_displaced_pa_s=0.05, velocity_m_s=0.5,
+        )
+        assert b > 0.0

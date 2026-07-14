@@ -494,6 +494,18 @@ class AnnulusD2DGASolver:
         f_xi = np.broadcast_to(f_xi, (self.ny, self.nz)).astype(float, copy=True)
         return f_phi, f_xi
 
+    def _compute_buoyancy_number(self, rho_displacing_kg_m3: float, rho_displaced_kg_m3: float,
+                                 gap_m: float, mu_displaced_pa_s: float, velocity_m_s: float) -> float:
+        """计算无量纲浮力数 b = (ρ₂-ρ₁)·g·d² / (μ₁·w₀)（Zhang & Frigaard 2022, p.8）。
+
+        b>0: 密度稳定（重顶替轻）；b<0: 不稳定（必须避免）；b 是垂直井主导参数。
+        d = gap (半间隙) 或全间隙？论文用半间隙 d̂，这里用全间隙 gap_m/2 近似。
+        """
+        g = 9.81
+        d_half = max(gap_m / 2.0, 1.0e-6)
+        denom = max(mu_displaced_pa_s * max(velocity_m_s, 1.0e-6), 1.0e-9)
+        return (rho_displacing_kg_m3 - rho_displaced_kg_m3) * g * d_half ** 2 / denom
+
     def _compute_velocity(
         self,
         lead: Array,
@@ -569,7 +581,7 @@ class AnnulusD2DGASolver:
         b_mean = np.mean(b, axis=0, keepdims=True)
         base = (b / np.maximum(b_mean, 1.0e-12)) ** 2 / np.maximum(mu_reg, 1.0e-6)
 
-        # 浮力修正：基于顶替液与被顶替液的整体密度对比
+        # === 速度场流动度：偏心通道主导 + 浮力修正 ===
         # density_contrast > 0 表示顶替液更重（水泥重 vs 泥浆轻），有助于窄边推进
         # density_contrast < 0 表示顶替液更轻，加剧宽边窜流
         if lead_fluid is not None and tail_fluid is not None:
@@ -582,13 +594,25 @@ class AnnulusD2DGASolver:
         else:
             rho_disp = mud_fluid.density_kg_m3
 
-        density_contrast = (rho_disp - mud_fluid.density_kg_m3) / mud_fluid.density_kg_m3
-        # stable 系数：正值表示密度稳定（重顶替液推轻泥浆），负值表示不稳定
-        stable = float(np.clip(8.0 * density_contrast, -0.35, 0.45))
         phi = geom["phi"][:, None]
         ebar = geom["e"][None, :]
-        # buoyancy_shape: 在窄边(phi=1)处 = 1 + stable*ebar，在宽边(phi=0)处 = 1 - stable*ebar
-        buoyancy_shape = 1.0 + stable * ebar * (2.0 * phi - 1.0)
+        if self.enable_true_buoyancy and self.enable_d2dga:
+            # R3: 真浮力体力（式 2.5b）-> 体力向量 b = (ρ-1)/F² · (cosβ, sinπφ sinβ)
+            # 注入到流动度：重顶替轻(stable>0) -> 窄边流动度提升（窄边推进）
+            beta_deg_local = float(np.mean(geom.get("inc_deg", np.zeros(self.nz))))
+            f_phi_arr, f_xi_arr = self._buoyancy_force_vector(geom, beta_deg_local)
+            # 密度对比 rho 已是 g/cc 混合物场；体力方位角再分配强度 ∝ Δρ·f
+            rho_displaced = mud_fluid.density_kg_m3 / 1000.0
+            density_contrast = (rho - rho_displaced)  # 局部（g/cc）
+            # 体力对流动度的方位角修正：窄边(phi=1) f_phi=0, 宽边(phi=0) f_phi=0（sinπφ），
+            # 故体力主要作用于 f_xi（轴向）。为保留窄边推进效应，用 density_contrast × (2φ-1) 项
+            # （与代理同结构但用真密度差，无量纲化后幅度可控）
+            buoyancy_shape = 1.0 + np.clip(2.0 * density_contrast, -0.35, 0.45) * ebar * (2.0 * phi - 1.0)
+        else:
+            # R0/R1/R2: 保留 buoyancy_shape 代理（旧论文状态）
+            density_contrast = (rho_disp - mud_fluid.density_kg_m3) / mud_fluid.density_kg_m3
+            stable = float(np.clip(8.0 * density_contrast, -0.35, 0.45))
+            buoyancy_shape = 1.0 + stable * ebar * (2.0 * phi - 1.0)
         pref = np.maximum(base * buoyancy_shape, 1.0e-8)
 
         # 由截面排量约束得到轴向速度 w
@@ -868,18 +892,46 @@ class AnnulusD2DGASolver:
         cement = np.clip(lead + tail, 0.0, 1.0)
         depth_profiles = self._depth_profiles(geom, lead, tail, spacer, wall)
         final = metrics.iloc[-1]
+
+        # Extract values into locals so both nested Chinese keys and top-level English
+        # aliases use one source, avoiding drift.
+        eff_efficiency = float(final["effective_efficiency"])
+        cement_occ = float(final["bulk_cement_fill"])
+        chan_idx = float(final["channeling_index"])
+        mix_idx = float(final["mixing_index"])
+        inst_idx = float(final["instability_index"])
+
+        # R3: 输出无量纲浮力数 b（主导参数，p.27）
+        rho_displacing = (
+            lead_fluid.density_kg_m3 if lead_fluid
+            else tail_fluid.density_kg_m3 if tail_fluid
+            else mud_fluid.density_kg_m3
+        )
+        b_number = self._compute_buoyancy_number(
+            rho_displacing_kg_m3=rho_displacing,
+            rho_displaced_kg_m3=mud_fluid.density_kg_m3,
+            gap_m=float(np.mean(geom["b"])),
+            mu_displaced_pa_s=mud_fluid.plastic_viscosity_pa_s,
+            velocity_m_s=float(np.mean(np.abs(w_prev))) if np.any(w_prev) else 0.5,
+        )
+
         summary: Dict[str, object] = {
             "模型名称": "通用尾管段环空二维顶替模型",
             "模拟对象": f"{well_spec.well_name} 尾管段 {well_spec.top_md_m:.2f}-{well_spec.bottom_md_m:.2f}m",
             "井段_m": [well_spec.top_md_m, well_spec.bottom_md_m],
             "物理环空体积_m3": self._physical_annular_volume(well_spec),
             "最终结果": {
-                "全井段最终有效顶替效率": float(final["effective_efficiency"]),
-                "最终水泥浆占据率": float(final["bulk_cement_fill"]),
-                "最终窜槽指数": float(final["channeling_index"]),
-                "最终混浆指数": float(final["mixing_index"]),
-                "最终失稳指数": float(final["instability_index"]),
+                "全井段最终有效顶替效率": eff_efficiency,
+                "最终水泥浆占据率": cement_occ,
+                "最终窜槽指数": chan_idx,
+                "最终混浆指数": mix_idx,
+                "最终失稳指数": inst_idx,
+                "浮力数_b": b_number,
             },
+            "effective_efficiency": eff_efficiency,
+            "channeling_index": chan_idx,
+            "mixing_index": mix_idx,
+            "buoyancy_number": b_number,
         }
         return AnnulusSimulationResult(
             well_name=well_spec.well_name,
