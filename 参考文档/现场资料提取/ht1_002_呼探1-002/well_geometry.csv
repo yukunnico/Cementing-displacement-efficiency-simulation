@@ -1,0 +1,14 @@
+﻿well_id,item,value,unit,top_md_m,bottom_md_m,data_type,source_file,source_location,confidence,notes
+ht1_002,liner_hanger_md,5292.5,m,,,field_measured,施工设计,施工设计 1.1节/4.2节,high,悬挂器顶部/喇叭口位置; 设计值
+ht1_002,liner_shoe_md,7554,m,,,field_measured,施工设计/施工记录表,施工设计 1.1节,high,尾管鞋深度; 实际下深7554m
+ht1_002,liner_top_md,5292.5,m,,,field_measured,施工设计,施工设计 1.1节,high,尾管顶深=悬挂器深度
+ht1_002,liner_bottom_md,7554,m,,,field_measured,施工设计,施工设计 1.1节,high,尾管底深
+ht1_002,openhole_top_md,5630,m,,,field_measured,施工设计 Table2(井身结构),施工设计 1.2.1节,high,四开219.1mm技术套管鞋深度
+ht1_002,openhole_bottom_md,7554,m,,,field_measured,施工设计 Table2,施工设计 1.2.1节,high,裸眼段底深=尾管鞋深(鱼顶位置7554m)
+ht1_002,simulation_top_md,5292.5,m,,,model_assumption,施工设计,施工设计 4.2节,high,建议模拟段顶=悬挂器位置
+ht1_002,simulation_bottom_md,7554,m,,,model_assumption,施工设计,施工设计 4.2节,high,建议模拟段底=尾管鞋
+ht1_002,liner_inner_diameter,107.94,mm,,,field_measured,施工记录表,施工记录表 R12,high,139.7mm*15.88mm壁厚段内径
+ht1_002,liner_outer_diameter,139.7,mm,,,field_measured,施工设计 Table1/Table32,施工设计 1.1节,high,油层尾管外径
+ht1_002,borehole_nominal_diameter,190.5,mm,,,field_measured,施工设计 Table2,施工设计 1.2.1节,high,五开钻头尺寸=名义井径
+ht1_002,drill_bit_size,190.5,mm,,,field_measured,施工设计 Table2/preface,施工设计 preface,high,五开钻头尺寸
+ht1_002,float_collar_md,7541.695,m,,,field_measured,原始记录 Sheet3,原始记录 Sheet3,high,浮箍上部; 另一个浮箍在7530.099m

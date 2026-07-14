@@ -1,0 +1,17 @@
+﻿well_id,step_index,stage_name,fluid_role,fluid_name,volume_m3,rate_m3_min,start_time_min,end_time_min,density_g_cm3,event_tag,data_type,source_file,source_location,confidence,notes
+hu103,1,注平衡液,mud,平衡液(轻泥浆),28,1.6,,,1.88,,design,2\203\2031\20313.doc,5.2.4(2)注入浆柱结构,high,设计环空占高800m(260mm井眼)
+hu103,2,注隔离液1,spacer,驱油隔离液1,17.5,1.6,,,2.00,,design,2\203\2031\20313.doc,5.2.4(2)注入浆柱结构,high,设计环空占高500m
+hu103,3,注隔离液2,spacer,驱油隔离液2,17.5,1.6,,,1.95,,design,2\203\2031\20313.doc,5.2.4(2)注入浆柱结构,high,设计环空占高500m
+hu103,4,注领浆,lead_cement,领浆,22,1.8,,,2.05,,design,2\203\2031\20313.doc,5.2.4(2)注入浆柱结构,high,封固5350-6000m; 稠化360-420min
+hu103,5,注中间浆,intermediate_cement,中间浆,36,1.8,,,2.05,,design,2\203\2031\20313.doc,5.2.4(2)注入浆柱结构,high,封固6000-7000m; 稠化150-180min
+hu103,6,注尾浆,tail_cement,尾浆,26,1.8,,,2.05,,design,2\203\2031\20313.doc,5.2.4(2)注入浆柱结构,high,封固7000-7770m; 稠化150-180min
+hu103,7,注压塞液,displacement,压塞液,7,1.8,,,2.10,,design,2\203\2031\20313.doc,5.2.4(3)替浆浆柱结构,high,设计管内占高582m
+hu103,8,替钻井液,displacement,钻井液,23,1.8,,,1.98,,design,2\203\2031\20313.doc,5.2.4(3)替浆浆柱结构,high,设计管内占高1520m
+hu103,9,替中置液,displacement,中置液,15,1.8,,,1.95,,design,2\203\2031\20313.doc,5.2.4(3)替浆浆柱结构,high,设计管内占高1600m
+hu103,10,替钻井液,displacement,钻井液,46.2,1.8,,,1.98,rate_change,design,2\203\2031\20313.doc,5.2.4(4)固井施工排量,high,设计排量1.8-0.8m3/min变排量
+hu103,11,注平衡液(实际),mud,平衡液,48,0.6,,,1.88,,field_measured,2\203\2031\20314.doc,施工记录表,high,实际注入48m3@0.6m3/min; 泵压8-12MPa
+hu103,12,注隔离液(实际),spacer,隔离液,35,0.6,,,1.92,,field_measured,2\203\2031\20314.doc,施工记录表,high,实际注入35m3@0.6m3/min; 泵压15MPa
+hu103,13,注水泥(实际),tail_cement,水泥浆(三凝),,0.6,,,,,field_measured,2\203\2031\20314.doc,施工记录表,medium,实际排量0.6m3/min; 泵压16-8MPa
+hu103,14,替浆(实际),displacement,替浆,90.9,0.6,,,,,field_measured,2\203\2031\20314.doc,施工记录表,high,实际替浆90.9m3@0.6m3/min; 泵压13-9MPa
+hu103,15,碰压,plug,碰压,,,,,,碰压,field_measured,2\203\2031\20314.doc,施工记录表,high,碰压; 放回水断流
+hu103,16,候凝,shutdown,候凝,,,,,,候凝48h,field_measured,2\203\2031\20314.doc,施工记录表,high,环空加压5.3MPa候凝48h

@@ -1,0 +1,22 @@
+﻿well_id,data_file,field_name,value,unit,data_type,source_file,source_location,source_type,extraction_method,confidence,needs_human_review,notes
+hu103,well_basic_info,well_name_cn,呼103井,,field_measured,2\203\2031\20313.doc,封面,word_text,antiword提取,high,no,
+hu103,well_geometry,liner_hanger_md,5546,m,design,2\203\2031\20313.doc,前言+管串设计,word_text,antiword提取,high,no,实际挂深5545.97m
+hu103,well_geometry,liner_shoe_md,7770,m,field_measured,2\203\2031\20313.doc,正文,word_text,antiword提取,high,no,
+hu103,well_geometry,liner_bottom_md,7768.51,m,field_measured,2\203\2031\20315.doc,(二)现场施工过程,word_text,antiword提取,high,no,实际下深
+hu103,well_geometry,openhole_top_md,5750,m,design,2\203\2031\20313.doc,1.2井身结构,word_text,antiword提取,high,no,
+hu103,well_geometry,liner_outer_diameter,139.7+168.3,mm,design,2\203\2031\20313.doc,1.2井身结构,word_text,antiword提取,high,no,复合尾管
+hu103,casing_liner_string,float_shoe_depth,7770,m,field_measured,2\203\2031\20315.doc,管柱数据,word_text,antiword提取,high,no,
+hu103,casing_liner_string,float_collar1_depth,7757.71,m,field_measured,2\203\2031\20315.doc,管柱数据,word_text,antiword提取,high,no,
+hu103,casing_liner_string,centralizer_count,188,个,field_measured,2\203\2031\20315.doc,(二)现场施工过程,word_text,antiword提取,high,no,
+hu103,caliper_profile,caliper_data,分段井径表,,field_measured,2\203\2031\20313.doc,1.5.2电测井径,word_table,antiword提取,high,no,30m分段平均井径
+hu103,inclination_profile,inclination_data,30m测斜表,,field_measured,2\203\2031\20313.doc,1.5.1井斜方位,word_table,antiword提取,high,no,
+hu103,pumping_schedule,pump_design,见pumping_schedule,,design,2\203\2031\20313.doc,5.2.4固井方案设计,word_text,antiword提取,high,no,设计泵注程序
+hu103,pumping_schedule,pump_actual,见pumping_schedule,,field_measured,2\203\2031\20314.doc,施工记录表,word_text,antiword提取,high,no,实际施工记录
+hu103,fluid_properties,cement_slurry,见fluid_properties,,design,2\203\2031\20311\203111.docx,Table0-8,docx_table,python-docx提取,high,no,水泥浆实验报告
+hu103,fluid_properties,drilling_mud,见fluid_properties,,field_measured,2\203\2031\20313.doc,1.3钻井液性能,word_table,antiword提取,high,no,钻井液全性能+多温度
+hu103,rheometer_readings,six_speed_65C,128-74-54-33-6-5,,field_measured,2\203\2031\20313.doc,1.3.1钻井液性能,word_table,antiword提取,high,no,钻井液六速读数65C
+hu103,rheometer_readings,six_speed_cement,见rheometer,,field_measured,2\203\2031\20311\203111.docx,Table7,docx_table,python-docx提取,high,no,水泥浆六速读数
+hu103,cbl_evaluation,cbl_pdf,100511-100516,,,,,,,medium,yes,需从CBL PDF提取定量数据
+hu103,construction_events,circulation_block,环空憋堵,,field_measured,2\203\2031\20315.doc,(三)井循环过程,word_text,antiword提取,high,no,重要施工异常
+hu103,construction_events,lost_circulation,漏失,,field_measured,2\203\2031\20313.doc,1.7钻进复杂,word_text,antiword提取,high,no,
+hu103,construction_events,design_vs_actual,排量1.8vs0.6,m3/min,field_measured,2\203\2031\20314.doc+20315.doc,施工记录+总结,word_text,antiword提取,high,no,关键差异

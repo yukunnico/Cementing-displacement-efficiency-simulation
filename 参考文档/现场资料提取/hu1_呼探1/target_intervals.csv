@@ -1,0 +1,3 @@
+﻿well_id,interval_name,top_md_m,bottom_md_m,purpose,source_file,source_location,data_type,confidence,notes
+hu1,365.1mm技套固井段,1000,3036,技术套管封固,20443.doc;20444.doc,固井井段/返高,field_measured,high,设计水泥返深1200m; 实际返高940m
+hu1,139.7mm尾管目标段,missing,missing,油层尾管封固,,,missing,,139.7mm尾管目标层段数据完全缺失; 从10063.xlsx日数据可推断井深达7601m; 尾管段应位于技套鞋3036m以下

@@ -1,0 +1,4 @@
+﻿well_id,md_m,standoff_ratio,centralization_percent,eccentricity_ratio,data_type,source_file,source_location,confidence,notes
+ht1_001,,,80.4,,design,施工设计/section 6.3,裸眼井段居中度80.4%(设计模拟),medium,设计模拟值;裸眼段居中度;扶正器每2根1只共101只;无实测居中度数据
+ht1_001,5460.159,0.804,80.4,0.196,model_assumption,基于居中度80.4%反算,估算值,low,168.3mm段;standoff=80.4/100;eccentricity=1-standoff=0.196;系基于设计居中度反算
+ht1_001,7746.0,0.804,80.4,0.196,model_assumption,基于居中度80.4%反算,估算值,low,139.7mm段;standoff和偏心度为模型假设值;非实测

@@ -1,0 +1,2 @@
+﻿well_id,md_m,standoff_ratio,centralization_percent,eccentricity_ratio,data_type,source_file,source_location,confidence,notes
+hu1,,,,,missing,,,,"139.7mm尾管段居中度/偏心度数据缺失; 365.1mm技套有扶正器数据(双弓弹性, 45个, 间隔55m)但属于非尾管段"

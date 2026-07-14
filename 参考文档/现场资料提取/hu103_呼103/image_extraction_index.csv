@@ -1,0 +1,15 @@
+﻿well_id,image_id,source_file,source_type,page_number_or_image_index,detected_content,is_liner_related,contains_useful_data,extracted_to_file,ocr_or_vision_method,confidence,needs_human_review,notes
+hu103,203411,2\203\2034\20341\203411.png,standalone_image,1,473mm表层套管测井图,no,no,no,,,,非尾管段 排除
+hu103,203412,2\203\2034\20341\203412.png,standalone_image,2,473mm表层套管测井图,no,no,no,,,,非尾管段 排除
+hu103,203413,2\203\2034\20341\203413.png,standalone_image,3,473mm表层套管测井图,no,no,no,,,,非尾管段 排除
+hu103,100511,1\1005\10051\100511.pdf,pdf,all,呼103固井质量测井评价图(CBL/VDL),yes,yes,no,,medium,yes,需从PDF人工读取CBL合格率
+hu103,100512,1\1005\10051\100512.pdf,pdf,all,呼103固井质量测井评价图(CBL/VDL),yes,yes,no,,medium,yes,需从PDF人工读取CBL合格率
+hu103,100513,1\1005\10051\100513.PDF,pdf,all,呼103固井质量测井评价图(CBL/VDL),yes,yes,no,,medium,yes,需从PDF人工读取CBL合格率
+hu103,100514,1\1005\10051\100514.pdf,pdf,all,呼103固井质量测井评价图(CBL/VDL),yes,yes,no,,medium,yes,需从PDF人工读取CBL合格率
+hu103,100515,1\1005\10051\100515.pdf,pdf,all,呼103固井质量测井评价图(CBL/VDL),yes,yes,no,,medium,yes,需从PDF人工读取CBL合格率
+hu103,100516,1\1005\10051\100516.pdf,pdf,all,呼103固井质量测井评价图(CBL/VDL),yes,yes,no,,medium,yes,需从PDF人工读取CBL合格率
+hu103,20313_pic1,2\203\2031\20313.doc,word_embedded_image,井身结构图,井身结构示意图,yes,yes,no,,medium,yes,Word内嵌图需人工查看/截取
+hu103,20313_pic2,2\203\2031\20313.doc,word_embedded_image,井径曲线,尾管段电测井径曲线,yes,yes,no,,low,yes,需曲线数字化获取连续井径
+hu103,20313_pic3,2\203\2031\20313.doc,word_embedded_image,居中度模拟,居中度模拟图(77.8%),yes,yes,no,,low,yes,居中度模拟图
+hu103,20313_pic4,2\203\2031\20313.doc,word_embedded_image,浆柱结构图+施工曲线,浆柱结构图与施工曲线图,yes,yes,no,,low,yes,含浆柱结构和施工曲线
+hu103,20313_pic5,2\203\2031\20313.doc,word_embedded_image,顶替效率模拟,西南软件模拟顶替效率图(97%),yes,yes,no,,low,yes,顶替效率模拟多图

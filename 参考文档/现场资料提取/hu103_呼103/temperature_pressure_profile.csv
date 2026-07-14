@@ -1,0 +1,11 @@
+﻿well_id,md_m,temperature_c,pressure_mpa,data_type,source_file,source_location,confidence,notes
+hu103,5750,125,,field_measured,20313.doc,2.5.2本井温度,high,电测温度; 温度梯度1.91C/100m
+hu103,7770,156,,field_measured,20313.doc,2.5.2本井温度,high,静止温度BHST=156C; 温度梯度1.78C/100m
+hu103,7770,140,,interpreted,20313.doc,2.5.2本井温度,high,领浆/中间浆循环温度=156x0.9=140C
+hu103,7770,133,,interpreted,20313.doc,2.5.2本井温度,high,尾浆循环温度=156x0.85=132.6~133C
+hu103,7770,112,,interpreted,20313.doc,9.1水泥浆实验条件,high,领浆顶部实验温度
+hu103,7770,124,,interpreted,20313.doc,9.1水泥浆实验条件,high,中间浆顶部实验温度
+hu103,7770,142,,interpreted,20313.doc,9.1水泥浆实验条件,high,尾浆顶部实验温度
+hu103,7770,,151,design,20313.doc,9.1水泥浆实验条件,high,实验压力151MPa
+hu103,5798,,,design,20313.doc,3.1地破试验,high,地破当量密度2.49g/cm3@5798m; 表压25.1MPa已破
+hu103,7770,,,design,20313.doc,静态承压测试,high,井底窗口2.02-2.082g/cm3; 井口套压7.81MPa时井底ECD2.082

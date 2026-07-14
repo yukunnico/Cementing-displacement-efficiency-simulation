@@ -1,0 +1,6 @@
+﻿well_id,interval_name,top_md_m,bottom_md_m,purpose,source_file,source_location,data_type,confidence,notes
+hu102,J3k目的层,7422,7640,主力产层(侏罗系喀拉扎组),2021/20212.doc,basic info,measured,high,在尾管段内
+hu102,油气显示层1,7432.914,7434.268,油气显示,2021/20212.doc,basic info,measured,high,
+hu102,油气显示层2,7638.05,7639.403,油气显示,2021/20212.doc,basic info,measured,high,
+hu102,K1q盖层,7448,,盖层(白垩系清水河组),2021/20212.doc,stratigraphy,measured,high,盖层顶7448m
+hu102,裸眼段,6720,7735,尾管固井裸眼段,2021/20211.doc,section 1.1,measured,high,
