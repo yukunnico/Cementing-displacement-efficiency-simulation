@@ -1,6 +1,5 @@
 """改进 D2DGA 三闭包（auto-m / I3 / 真体力）求解器级测试。"""
 import numpy as np
-import pytest
 from cemdisp.models2d.annulus_d2dga import AnnulusD2DGASolver
 from cemdisp.data.fluid_spec import FluidSpec, FluidRole, RheologyModel
 from cemdisp.data.well_spec import WellSpec, DepthValuePoint, EvaluationWindow
@@ -8,10 +7,6 @@ from cemdisp.data.well_spec import WellSpec, DepthValuePoint, EvaluationWindow
 
 def _make_solver(**kw) -> AnnulusD2DGASolver:
     return AnnulusD2DGASolver(dt=4.0, nz=20, ny=10, total_t=40.0, **kw)
-
-
-def _make_geom(solver, well_spec):
-    return solver._build_geom(well_spec)
 
 
 def _toy_well():
@@ -172,7 +167,7 @@ class TestTrueBuoyancy:
         assert hasattr(s, "enable_true_buoyancy")
         assert s.enable_true_buoyancy is True
 
-    def test_buoyancy_number_in_summary(self):
+    def test_has_compute_buoyancy_number_method(self):
         # summary 应含 buoyancy_number 字段（至少 R3 跑后）
         s = _make_solver(enable_true_buoyancy=True)
         # 不跑完整 run（需要 loader），只验证 _compute_buoyancy_number 方法存在
@@ -195,3 +190,47 @@ class TestTrueBuoyancy:
             gap_m=0.04, mu_displaced_pa_s=0.05, velocity_m_s=0.5,
         )
         assert b > 0.0
+
+
+class TestSwitchRegression:
+    """I6: 开关回归测试——验证 R0（全关）vs R3（全开）确实产生不同输出。"""
+
+    def test_r0_vs_r3_produces_different_efficiency(self):
+        from cemdisp.models2d.boundary_bridge import AnnulusInletState
+
+        well = _toy_well()
+        mud = FluidSpec(name="mud", role=FluidRole.MUD, density_kg_m3=1900.0,
+                        rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.053, yield_stress_pa=8.5)
+        lead = FluidSpec(name="lead", role=FluidRole.LEAD, density_kg_m3=1930.0,
+                         rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.180, yield_stress_pa=14.0)
+        fluids = (mud, lead)
+
+        def _inlet(t: float) -> AnnulusInletState:
+            return AnnulusInletState(
+                time_s=t, flow_rate_m3_s=0.02, stage_name="pump",
+                phase_fractions=(("cement", 1.0), ("lead", 1.0)),
+            )
+
+        # R0: all switches off
+        s_r0 = AnnulusD2DGASolver(
+            dt=4.0, nz=20, ny=8, total_t=40.0,
+            enable_d2dga=True,
+            enable_d2dga_auto_m=False,
+            enable_d2dga_i3_flux=False,
+            enable_true_buoyancy=False,
+        )
+        res_r0 = s_r0.run(well, fluids, _inlet)
+        eff_r0 = float(res_r0.summary["effective_efficiency"])
+
+        # R3: all switches on
+        s_r3 = AnnulusD2DGASolver(
+            dt=4.0, nz=20, ny=8, total_t=40.0,
+            enable_d2dga=True,
+            enable_d2dga_auto_m=True,
+            enable_d2dga_i3_flux=True,
+            enable_true_buoyancy=True,
+        )
+        res_r3 = s_r3.run(well, fluids, _inlet)
+        eff_r3 = float(res_r3.summary["effective_efficiency"])
+
+        assert eff_r0 != eff_r3, f"Switches should change output, got R0={eff_r0:.6f} R3={eff_r3:.6f}"

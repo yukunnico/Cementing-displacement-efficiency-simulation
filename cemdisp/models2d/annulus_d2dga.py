@@ -600,7 +600,7 @@ class AnnulusD2DGASolver:
             # R3: 真浮力体力（式 2.5b）-> 体力向量 b = (ρ-1)/F² · (cosβ, sinπφ sinβ)
             # 注入到流动度：重顶替轻(stable>0) -> 窄边流动度提升（窄边推进）
             beta_deg_local = float(np.mean(geom.get("inc_deg", np.zeros(self.nz))))
-            f_phi_arr, f_xi_arr = self._buoyancy_force_vector(geom, beta_deg_local)
+            # 真浮力体力向量 _buoyancy_force_vector 当前未注入流动度（采用 (2φ-1) 密度对比机动性简化，见 §2.7.4）；保留接口供未来动量源耦合
             # 密度对比 rho 已是 g/cc 混合物场；体力方位角再分配强度 ∝ Δρ·f
             rho_displaced = mud_fluid.density_kg_m3 / 1000.0
             density_contrast = (rho - rho_displaced)  # 局部（g/cc）
@@ -911,8 +911,8 @@ class AnnulusD2DGASolver:
             rho_displacing_kg_m3=rho_displacing,
             rho_displaced_kg_m3=mud_fluid.density_kg_m3,
             gap_m=float(np.mean(geom["b"])),
-            mu_displaced_pa_s=mud_fluid.plastic_viscosity_pa_s,
-            velocity_m_s=float(np.mean(np.abs(w_prev))) if np.any(w_prev) else 0.5,
+            mu_displaced_pa_s=(mud_fluid.plastic_viscosity_pa_s or 0.05),  # None guard for non-Bingham muds (power-law/HB); 0.05 Pa·s fallback
+            velocity_m_s=float(np.mean(np.abs(w_prev))),
         )
 
         summary: Dict[str, object] = {

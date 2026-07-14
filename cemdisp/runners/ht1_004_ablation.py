@@ -73,16 +73,6 @@ def append_ablation_csv_row(
         writer.writerow(row)
 
 
-def dump_ablation_json(payload: dict, filepath: str | Path) -> None:
-    """Write a metrics payload as JSON to *filepath* (full path, not dir + name)."""
-    p = Path(filepath)
-    p.parent.mkdir(parents=True, exist_ok=True)
-    p.write_text(
-        json.dumps(payload, ensure_ascii=False, indent=2, default=str),
-        encoding="utf-8",
-    )
-
-
 def extract_ablation_metrics(result: AnnulusSimulationResult) -> dict:
     """Read nested Chinese summary keys -> flat English-keyed dict (robust to missing keys).
 
