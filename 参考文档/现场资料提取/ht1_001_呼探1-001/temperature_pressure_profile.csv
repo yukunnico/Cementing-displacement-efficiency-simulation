@@ -1,0 +1,28 @@
+﻿well_id,md_m,temperature_c,pressure_mpa,data_type,source_file,source_location,confidence,notes
+ht1_001,7746.0,150.0,,measured,施工设计/section 2.5,电测静止温度150C;梯度1.7428C/100m,high,井底静止温度(BHST)
+ht1_001,7746.0,127.5,,calculated,施工设计/section 2.5,循环温度=150*0.85=127.5C,high,井底循环温度(BHCT);温度系数0.85
+ht1_001,5460.159,110.0,,design,施工设计/section 9,领浆顶部温度110C,high,领浆设计顶部静止温度
+ht1_001,5900.0,118.0,,design,施工设计/section 9,中间浆顶部温度118C,high,中间浆设计顶部静止温度
+ht1_001,7000.0,137.0,,design,施工设计/section 9,尾浆顶部温度137C,high,尾浆设计顶部静止温度
+ht1_001,7746.0,,149.5,calculated,施工设计/section 3.3,地层压力系数1.936推算,medium,Pe=1.936*0.00981*7746=147.07+井口套压
+ht1_001,7746.0,,147.0,design,化验报告/Tables 2-6,水泥浆实验压力147MPa,high,实验压力条件
+ht1_001,7746.0,,,measured,施工设计/section 3.3,静态承压ECD=2.011g/cm3,high,承压测试ECD=2.011g/cm3;罐区累计液面下降0.9m3
+ht1_001,7746.0,,,measured,施工设计/section 3.2,最大ECD=1.981g/cm3(施工期间),high,施工期间最大ECD;小于承压值2.011
+ht1_001,5460.159,,17.0,field_measured,205172.xlsx,替浆10m3时井口泵压,high,替浆开始泵压(排量3.5m3/min)
+ht1_001,5460.159,,16.0,field_measured,205172.xlsx,替浆20m3时井口泵压,high,
+ht1_001,5460.159,,15.6,field_measured,205172.xlsx,替浆30m3时井口泵压,high,
+ht1_001,5460.159,,15.5,field_measured,205172.xlsx,替浆40m3时井口泵压,high,
+ht1_001,5460.159,,15.0,field_measured,205172.xlsx,替浆50m3时井口泵压,high,
+ht1_001,5460.159,,15.1,field_measured,205172.xlsx,替浆60m3时井口泵压,high,
+ht1_001,5460.159,,15.4,field_measured,205172.xlsx,替浆70m3时井口泵压,high,
+ht1_001,5460.159,,15.6,field_measured,205172.xlsx,替浆80m3时井口泵压,high,
+ht1_001,5460.159,,15.7,field_measured,205172.xlsx,替浆90m3时井口泵压,high,
+ht1_001,5460.159,,16.0,field_measured,205172.xlsx,替浆100m3时井口泵压,high,
+ht1_001,5460.159,,12.7,field_measured,205172.xlsx,替浆110m3时井口泵压(排量降3.0),high,排量降低;泵压下降
+ht1_001,5460.159,,12.6,field_measured,205172.xlsx,替浆120m3时井口泵压,high,
+ht1_001,5460.159,,12.5,field_measured,205172.xlsx,替浆130-150m3时泵压,high,
+ht1_001,5460.159,,10.0,field_measured,205172.xlsx,替浆160m3时泵压(排量降2.5),high,排量降低
+ht1_001,5460.159,,7.5,field_measured,205172.xlsx,替浆210m3时泵压(排量降2.0),high,排量降低
+ht1_001,5460.159,,5.5,field_measured,205172.xlsx,替浆270m3时泵压(排量降1.5),high,排量降低
+ht1_001,5460.159,,3.5,field_measured,205172.xlsx,替浆315m3时泵压(排量降1.0),high,碰压前最低泵压
+ht1_001,7746.0,,149.5,calculated,205192.doc,地层承压密度=1.50g/cm3/井深1120m/表压7.42MPa,medium,固井协作会记录的地破数据;非尾管直接数据

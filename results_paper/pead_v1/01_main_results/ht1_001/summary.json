@@ -1,0 +1,24 @@
+{
+  "paper_version": "pead_v1",
+  "well_id": "ht1_001",
+  "well_name_cn": "呼探1-001井（HT1-001）",
+  "sample_class": "B_application_pending_validation",
+  "include_in_cbl_metrics": false,
+  "measured_cbl_pass_rate": null,
+  "top_md_m": 5469.711,
+  "bottom_md_m": 7746.0,
+  "annulus_volume_m3": 54.763920627903104,
+  "runtime_s": 23.743405199988047,
+  "validation_notes": [
+    "呼探1-001首版加载器不读取 JSON 文件，仅把数据包中的现场参数固化为模块常量。",
+    "CBL 评价井段和目标层段为暂定窗口，后续需结合 CBL 原始数据更新 ValidationData 路径。"
+  ],
+  "warnings": [],
+  "final_effective_efficiency": 0.8290853717614214,
+  "final_bulk_cement_fill": 0.8290853717614214,
+  "cbl_eval_interval_efficiency": 0.892117727369327,
+  "target_interval_efficiency": 0.9999998504132738,
+  "channeling_index": 0.45891783567114114,
+  "mixing_index": 0.24477555719819,
+  "instability_index": 0.5119547617573212
+}

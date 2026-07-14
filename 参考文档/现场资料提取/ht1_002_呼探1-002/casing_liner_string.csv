@@ -1,0 +1,26 @@
+﻿well_id,component,top_md_m,bottom_md_m,outer_diameter_mm,inner_diameter_mm,weight_or_grade,quantity,spacing_m,data_type,source_file,source_location,confidence,notes
+ht1_002,float_shoe,7554,7554,165,,BG135V-S13Cr,1,,field_measured,原始记录 Sheet3,原始记录 Sheet3,high,大陆架浮鞋
+ht1_002,liner,7553.045,7554,139.7,107.94,BG140V/15.88mm,1,,field_measured,原始记录 Sheet3,原始记录 Sheet3,high,引鞋下套管
+ht1_002,float_collar,7541.695,7541.695,165,,BG135V-S13Cr,1,,field_measured,原始记录 Sheet3,原始记录 Sheet3,high,大陆架浮箍(上)
+ht1_002,liner,7541.432,7541.695,139.7,107.94,BG140V/15.88mm,1,,field_measured,原始记录 Sheet3,原始记录 Sheet3,high,
+ht1_002,float_collar,7530.099,7530.099,165,,BG135V-S13Cr,1,,field_measured,原始记录 Sheet3,原始记录 Sheet3,high,大陆架浮箍(下)
+ht1_002,liner,7529.836,7530.099,139.7,107.94,BG140V/15.88mm,1,,field_measured,原始记录 Sheet3,原始记录 Sheet3,high,
+ht1_002,ball_seat,7439.142,7439.142,165,,BG135V-S13Cr,1,,field_measured,原始记录 Sheet3,原始记录 Sheet3,high,大陆架防转球座
+ht1_002,liner,7438.879,7529.836,139.7,107.94,BG140V/15.88mm,8,,field_measured,原始记录 Sheet3,原始记录 Sheet3,high,15.88mm壁厚8根约90.7m
+ht1_002,liner,7052.26,7438.879,139.7,107.94,BG140V/15.88mm,N,,field_measured,施工设计 Table30,施工设计 6.1节,high,15.88mm壁厚段约386.6m(实入)
+ht1_002,liner,5308.568,7052.26,139.7,111.16,BG140V/14.27mm,N,,field_measured,施工设计 Table30/Table32,施工设计 6.1节/6.4.1节,high,14.27mm壁厚段约1743.7m; 内径=139.7-2*14.27=111.16
+ht1_002,liner,5297.237,5308.568,139.7,107.94,BG140V/15.88mm,1,,field_measured,施工设计 Table30,施工设计 6.1节,high,悬挂器下短套管
+ht1_002,liner_hanger,5292.517,5297.237,187,108,219.1x139.7mm 大陆架,1,,field_measured,施工设计 Table30/Table45,施工设计 6.1节/11.2节,high,额定负荷90kN; 坐挂前/后过流面积31.6/28.4cm2; 封隔器密封能力70MPa
+ht1_002,tieback_sleeve,5289.417,5292.517,183,168,,1,,field_measured,施工设计 Table30/Table45,施工设计 6.1节/11.2节,high,回接筒; 长度3.1m
+ht1_002,centralizer,5297,5640,216,,整体式弹扶/外径216mm,3,1根/只,field_measured,施工设计 Table31,施工设计 6.2节,high,悬挂器附近-5640m; 每根1个
+ht1_002,centralizer,5331,5640,216,,整体式弹扶/外径216mm,8,3根/只,field_measured,施工设计 Table31,施工设计 6.2节,high,5331-5640m段
+ht1_002,centralizer,5640,7554,190.5,,整体弹扶正器/外径190.5mm,84,2根/只,field_measured,施工设计 Table31,施工设计 6.2节,high,5640-7554m段; 目的层间隔44m; 非目的层间隔55m
+ht1_002,drill_pipe,0,3489,149.2,130.9,V150/9.65mm,,,field_measured,施工设计 Table36,施工设计 7.1.4节,high,送入钻杆149.2mm*3489m
+ht1_002,drill_pipe,3489,5292.5,114.3,97.2,DS40/8.56mm,,,field_measured,施工设计 Table36,施工设计 7.1.4节,high,送入钻杆114.3mm*1803.5m
+ht1_002,tieback_stinger,5290.08,5290.08,139.7,,BG135V-S13Cr/15.88mm,1,,field_measured,回接套管数据表,回接套管数据表,high,大陆架插入头
+ht1_002,tieback_liner,0,3700,193.7,,BG140V,N,,field_measured,回接施工设计/技术总结,回接施工设计,medium,193.7mm上部套管段
+ht1_002,tieback_liner,3700,5290.08,168.3,138.9,BG140V/14.7mm,N,,field_measured,回接套管数据表,回接套管数据表,high,168.3mm下部套管段; 内径=168.3-2*14.7=138.9mm
+ht1_002,tieback_float_collar,5234.289,5234.549,168.3,,BG135V-S13Cr,1,,field_measured,回接作业史 Table7,回接作业史 Table7,high,大陆架节流浮箍
+ht1_002,tieback_centralizer,0,5290,241.3,,整体式弹性扶正器,76,4-5根/只,field_measured,回接施工设计 Table7/技术总结,回接施工设计 5节/技术总结,high,0-1500m每5根1个; 1500-3680m每4根1个
+ht1_002,float_shoe,5630,5630,219.1,,BG140V/12.7mm BG-FJ加长引鞋,1,,field_measured,施工小结,219.1mm,high,
+ht1_002,liner,5629.06,5630,219.1,193.7,BG140V/12.7mm,2,,field_measured,施工小结,219.1mm引鞋下2根22m,high,内径=219.1-2*12.7=193.7mm

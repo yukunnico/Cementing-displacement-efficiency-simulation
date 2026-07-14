@@ -1,0 +1,8 @@
+﻿well_id,md_m,temperature_c,pressure_mpa,data_type,source_file,source_location,confidence,notes
+hu101,7868,150,,field_measured,2/201/2011/20111/201111/2011111.doc,2.9,high,电测静止温度150℃，循环温度135℃
+hu101,5700,123,,field_measured,2/201/2012/20124.doc,2.9,high,回接段电测温度123℃，循环温度99℃
+hu101,5400,117,,field_measured,2/201/2012/20124.doc,2.9,high,
+hu101,7868,,,field_measured,2/201/2011/20111/201111/2011111.doc,6.2.1,medium,环空静压152.16MPa，管内静压149.31MPa
+hu101,7598,,,field_measured,2/201/2011/20111/201111/2011111.doc,2.5,high,地破试验当量2.46g/cm3(5732m); 7598m漏层当量2.04g/cm3
+hu101,7615,,,field_measured,2/201/2011/20111/201111/2011111.doc,2.6,high,7615.4m地层压力当量1.98g/cm3
+hu101,7492,,,field_measured,2/201/2011/20111/201111/2011111.doc,11.4,high,固井加回压后7492m当量密度1.958→2.042g/cm3

@@ -1,0 +1,20 @@
+﻿well_id,data_file,field_name,value,unit,data_type,source_file,source_location,source_type,extraction_method,confidence,needs_human_review,notes
+ht1_002,well_basic_info,well_name_cn,呼探1-002,,field_measured,施工设计 Table1,施工设计 1.1节,word_text,python-docx,high,no,
+ht1_002,well_basic_info,well_type,直井,,field_measured,施工设计 Table1,施工设计 Table1 R0,word_text,python-docx,high,no,
+ht1_002,well_geometry,liner_hanger_md,5292.5,m,field_measured,施工设计 Table1,施工设计 4.2节,word_text,python-docx,high,no,
+ht1_002,well_geometry,liner_shoe_md,7554,m,field_measured,施工设计 Table1/施工记录表,施工设计 1.1节/施工记录表R10-12,word_text,python-docx,high,no,实际下深
+ht1_002,well_geometry,average_caliper_mm,193.05,mm,field_measured,施工设计 Table9,施工设计 1.4.2节,word_table,python-docx,high,no,电测30m间隔
+ht1_002,caliper_profile,caliper_64pts,(5631-7554),mm,field_measured,施工设计 Table8,施工设计 1.4.2节,word_table,python-docx,high,no,64点30m井径
+ht1_002,inclination_profile,inclination_64pts,(5631-7554),deg,field_measured,施工设计 Table7,施工设计 1.4.1节,word_table,python-docx,high,no,64点30m井斜/方位
+ht1_002,casing_liner_string,centralizer_95pcs,95,个,field_measured,施工设计 Table31/施工记录表,施工设计 6.2节/施工记录表R13,word_table,python-docx,high,no,尾管段95个扶正器
+ht1_002,pumping_schedule,actual_pumping,,,field_measured,施工设计 Table37/施工记录表,施工设计 Table37/施工记录表,word_table,python-docx/人工整理,high,no,设计程序与施工一致; 实际替浆量79m3
+ht1_002,fluid_properties,mud_rheology,"PV=58, YP=8.5","mPa·s, Pa",field_measured,施工设计 Table4/Table5,施工设计 1.3.1节/1.3.2节,word_table,python-docx,high,no,
+ht1_002,rheometer_readings,six_speed_reading,,,field_measured,化验报告 Table7,化验报告 Table7,word_table,python-docx,high,no,2组(尾管+回接)六速读数
+ht1_002,cbl_evaluation,cbl_data,missing,,missing,HT1-002完井尾管报告.pdf,PDF全册扫描件,scanned_pdf,none,low,yes,需OCR或人工查看
+ht1_002,temperature_pressure,bhst,148,℃,field_measured,施工设计 Table15/化验报告,施工设计 2.5节/化验报告 Table1,word_table,python-docx,high,no,
+ht1_002,呼探1-002,219.1mm技术尾管,construction_summary,呼探1-002井219.1mm尾管固井施工小结.docx,现场资料/2/206/2061/20611/206118/,docx_extract,python-docx,2025-06-16,完整提取,high,含井身结构/泥浆/井温/套管串/固井施工数据/ECD表/CBL结果,
+ht1_002,呼探1-002,219.1mm技术尾管,slurry_lab_pdf,呼探1-002四开技术尾管报告.pdf (化验报告/),现场资料/2/206/2061/20611/206118/化验报告/,visual_analysis,pdfplumber+mcp_vision,2025-06-16,视觉分析提取,high,扫描PDF(9页);D301-2025019;领浆+尾浆+相容性完整数据,
+ht1_002,呼探1-002,219.1mm技术尾管,wireline_log,呼探1-002中完图.pdf (声幅图/),现场资料/2/206/2061/20611/206118/声幅图/,pdfplumber_text,pdfplumber,2025-06-16,文本提取,high,HDES测井图39页;深度3386.78-5639.37m;GR+电阻率+DT声波+FC井径;非CBL/VDL,
+ht1_002,呼探1-002,219.1mm技术尾管,slurry_notice_docx,20611492.docx (水泥浆实验通知单大样),现场资料/2/206/2061/20611/206114/,docx_extract,python-docx,2025-06-16,完整提取,high,领浆25m3+尾浆20m3;密度1.65;稠化420-480/260-320min;含隔离液方案,
+ht1_002,呼探1-002,219.1mm技术尾管,liner_plan_docx,2061146.docx (技术尾管方案),现场资料/2/206/2061/20611/206114/,docx_extract,python-docx,2025-06-16,完整提取,high,管串结构+钻井液性能+环空返速计算+ECD表,
+ht1_002,呼探1-002,219.1mm技术尾管,drilling_design_docx,2061147.docx (钻井工程设计77KB),现场资料/2/206/2061/20611/206114/,docx_extract_sections,python-docx,2025-06-16,部分提取,medium,完整TOC识别;固井质量要求表(各开次CBL+VDL合格)已提取;完整文本保存到_txt文件,

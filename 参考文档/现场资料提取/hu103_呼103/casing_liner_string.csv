@@ -1,0 +1,14 @@
+﻿well_id,component,top_md_m,bottom_md_m,outer_diameter_mm,inner_diameter_mm,weight_or_grade,quantity,spacing_m,data_type,source_file,source_location,confidence,notes
+hu103,liner,7330.694,7768.51,139.7,107.94,BG140V/15.88mm/BGT2C,39根,,field_measured,20315.doc,施工总结,high,139.7mm尾管段; 实际入井39根
+hu103,liner,5546.022,7330.694,168.3,138.9,BG140V/14.7mm/BG-FJU,161根,,field_measured,20315.doc,施工总结,high,168.3mm尾管段; 实际入井161根
+hu103,liner_hanger,5536.662,5545.972,238,136.54,NSSX-CYFMD封隔一体式,1,,field_measured,20315.doc,施工总结,high,273.1x193.7转168.3mm; 回接筒顶5536.66m; 额定负荷240t
+hu103,float_collar,7757.706,7757.946,139.7,,编号1100084536-01,1,,field_measured,20315.doc,施工总结,high,强制式浮箍1 耐温200C
+hu103,float_collar,7735.588,7735.828,139.7,,编号1100084536-02,1,,field_measured,20315.doc,施工总结,high,强制式浮箍2 耐温200C
+hu103,float_shoe,7769.05,7770,139.7,,BGT2C加长防转浮鞋,1,,field_measured,20315.doc,施工总结,high,编号1100084538-01 耐温200C
+hu103,plug,,,,,钻杆胶塞+尾管胶塞,1套,,design,20313.doc,管串设计,high,钻杆胶塞149x127mm + 尾管胶塞178mm
+hu103,other_liner_accessory,7712.678,7712.948,139.7,,球座 编号1100084537-0,1,,field_measured,20315.doc,施工总结,high,球座; 井斜1.2度; 坐挂压力11.55/11.85MPa
+hu103,centralizer,5550,5750,241.3,,整体式弹扶(168.3mm套管),6,3根/只,design,20313.doc,扶正器安放设计,high,上部密集区
+hu103,centralizer,5750,7334,241.3,,整体式弹扶(168.3mm套管),144,1根/只,design,20313.doc,扶正器安放设计,high,168.3mm段常规区间
+hu103,centralizer,7334,7563,241.3,,整体式弹扶(139.7mm套管),19,1根/只,design,20313.doc,扶正器安放设计,high,139.7mm段上部井眼241.3mm
+hu103,centralizer,7563,7770,215.9,,整体式弹扶(139.7mm套管),19,1根/只,design,20313.doc,扶正器安放设计,high,139.7mm段下部井眼215.9mm
+hu103,centralizer,5550,7770,,,整体式弹扶(汇总),188,,field_measured,20315.doc,施工总结,high,实际下入扶正器188只

@@ -1,0 +1,16 @@
+{
+  "run_id": "theoretical_e45_R0",
+  "ablation_level": "R0",
+  "eccentricity": 0.45,
+  "nz": 280,
+  "dt": 4.0,
+  "enable_d2dga_auto_m": false,
+  "enable_d2dga_i3_flux": false,
+  "enable_true_buoyancy": false,
+  "effective_efficiency": 0.8833182150483623,
+  "cement_occupation": 0.8833182150483623,
+  "channeling_index": 0.7025089605731859,
+  "mixing_index": 0.21097746153821476,
+  "instability_index": 0.9777373298148333,
+  "buoyancy_number": 4.781749179950538
+}

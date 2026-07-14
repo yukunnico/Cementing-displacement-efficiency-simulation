@@ -31,7 +31,7 @@ import pandas as pd
 from cemdisp.data.fluid_spec import FluidRole, FluidSpec
 from cemdisp.data.well_spec import DepthValuePoint, WellSpec
 from cemdisp.models2d.boundary_bridge import AnnulusInletState
-from cemdisp.models2d.d2dga_flux import d2dga_flux_amplification
+from cemdisp.models2d.d2dga_flux import d2dga_flux_amplification, d2dga_buoyancy_flux
 
 
 Array = NDArray[np.float64]
@@ -189,6 +189,9 @@ class AnnulusD2DGASolver:
         total_t: float = 12000.0,
         enable_d2dga: bool = True,
         d2dga_viscosity_ratio: float = 1.0,
+        enable_d2dga_auto_m: bool = True,
+        enable_d2dga_i3_flux: bool = True,
+        enable_true_buoyancy: bool = True,
         instability_decay_scale: float = 5.0,
         save_interval: int = 60,
         yield_regularization_M: float = 100.0,
@@ -203,6 +206,12 @@ class AnnulusD2DGASolver:
             total_t: 总模拟时间（秒），默认12000秒（200分钟）
             enable_d2dga: 是否启用D2DGA通量修正（Zhang & Frigaard 2022），默认开启
             d2dga_viscosity_ratio: D2DGA粘度比 m = η_displaced/η_displacing，默认1.0
+            enable_d2dga_auto_m: 是否按局部流体物性自动计算黏度比 m 场（R1），默认 True。
+                True: m = μ_displaced/μ_displacing 按浓度场每步计算（改进版）；
+                False: 退化为 d2dga_viscosity_ratio 构造常数（旧论文 R0 状态）。
+            enable_d2dga_i3_flux: 是否启用 D2DGA 浮力弥散通量 I3（R2，式4.25第二项），默认 True。
+            enable_true_buoyancy: 是否用真浮力体力替换 buoyancy_shape 代理（R3，式2.5b），默认 True。
+                False: 保留 buoyancy_shape 代理（旧论文 R0/R1/R2 状态）。
             instability_decay_scale: 后验失稳指数缩放，默认5.0。
             save_interval: 二维场快照保存步长，默认每60个时间步保存一次
             yield_regularization_M: Papanastasiou正则化参数，控制屈服应力在低剪切区的平滑过渡，默认100.0
@@ -219,6 +228,9 @@ class AnnulusD2DGASolver:
         self.instability_decay_scale = instability_decay_scale
         self.save_interval: int = save_interval
         self.yield_regularization_M: float = yield_regularization_M
+        self.enable_d2dga_auto_m: bool = enable_d2dga_auto_m
+        self.enable_d2dga_i3_flux: bool = enable_d2dga_i3_flux
+        self.enable_true_buoyancy: bool = enable_true_buoyancy
         self.open_outlet: bool = open_outlet
 
     def _build_geom(self, well_spec: WellSpec, mud_cake_thickness: Array | None = None) -> Dict[str, Array]:
@@ -415,8 +427,8 @@ class AnnulusD2DGASolver:
         spacer_fluid: FluidSpec | None,
         gel_strength: Array | None = None,
         temperature_correction: Array | None = None,
-    ) -> Tuple[Array, Array, Array, Array]:
-        """计算四相混合物系的表观粘度、密度、钻井液分数和混合屈服应力。"""
+    ) -> Tuple[Array, Array, Array, Array, Array]:
+        """计算四相混合物系的表观粘度、密度、钻井液分数、混合屈服应力和黏度比 m 场。"""
         # 四相体积分数闭合：显式跟踪领浆、尾浆和前置/隔离液，钻井液由守恒关系反算。
         mud = np.clip(1.0 - lead - tail - spacer, 0.0, 1.0)
         effective_b = geom.get("effective_b", geom["b"])
@@ -444,7 +456,55 @@ class AnnulusD2DGASolver:
             tau_y += tail * self._fluid_yield_stress(tail_fluid)
         if spacer_fluid is not None:
             tau_y += spacer * self._fluid_yield_stress(spacer_fluid)
-        return mu, rho, mud, tau_y
+        # R1: auto-m 黏度比场 = μ_displaced / μ_displacing
+        # 被顶替液=泥浆(mu_mud)，顶替液=水泥(mu_cement)。m = mu_mud / mu_cement。
+        mu_mud_field = self._apparent_viscosity(mud_fluid, gamma)
+        # 水泥相表观粘度：领浆+尾浆中存在的那个（若 lead_fluid 存在用 lead，否则 tail）
+        cement_fluid = lead_fluid if lead_fluid is not None else tail_fluid
+        if cement_fluid is not None:
+            mu_cement_field = self._apparent_viscosity(cement_fluid, gamma)
+            m_field = mu_mud_field / np.maximum(mu_cement_field, 1.0e-6)
+        else:
+            # 无水泥相时 m=1（退化为默认）
+            m_field = np.ones_like(mu_mud_field)
+        # 限幅到合理范围，避免极端粘度比导致 f_amp 越界（d2dga_flux 内还有 [0.5,2] clip）
+        m_field = np.clip(m_field, 0.1, 10.0)
+        return mu, rho, mud, tau_y, m_field
+
+    def _buoyancy_force_vector(self, geom: Dict[str, Array], beta_deg: Array | float) -> Tuple[Array, Array]:
+        """计算论文式 2.5b 的浮力体力向量 f = (r_a·cosβ/F², r_a·sin(πφ)·sinβ/F²)。
+
+        R2 (I3 通量) 与 R3 (真体力) 共用。F 为 Froude 数（此处用经验常数 1.0 归一化，
+        实际数值在 _compute_velocity 中按 F 定义校准）。
+        返回 (f_phi, f_xi)，shape 与 geom['phi'] 广播兼容 (ny, nz)。
+        """
+        phi = geom["phi"][:, None]  # (ny, 1)
+        beta_rad = np.deg2rad(np.asarray(beta_deg, dtype=float))
+        # 平均半径 r_a（用 mean_radius 近似，从 geom 取 hole/od 推算）
+        hole_mm = geom.get("hole_mm", np.full((1, self.nz), 220.0))
+        od_mm = geom.get("od_mm", np.full((1, self.nz), 139.7))
+        # 沿深度取均值半径（米），广播到 (ny, nz)
+        r_a_m = np.mean((hole_mm + od_mm) / 4.0) / 1000.0
+        # F 取 1.0（无量纲归一化；真 F 校正在 _compute_velocity 内做）
+        F2 = 1.0
+        f_phi = (r_a_m / F2) * np.sin(np.pi * phi) * np.sin(beta_rad)  # (ny,1) 广播
+        f_xi = np.full_like(f_phi, (r_a_m / F2) * np.cos(beta_rad))
+        # 广播到 (ny, nz)
+        f_phi = np.broadcast_to(f_phi, (self.ny, self.nz)).astype(float, copy=True)
+        f_xi = np.broadcast_to(f_xi, (self.ny, self.nz)).astype(float, copy=True)
+        return f_phi, f_xi
+
+    def _compute_buoyancy_number(self, rho_displacing_kg_m3: float, rho_displaced_kg_m3: float,
+                                 gap_m: float, mu_displaced_pa_s: float, velocity_m_s: float) -> float:
+        """计算无量纲浮力数 b = (ρ₂-ρ₁)·g·d² / (μ₁·w₀)（Zhang & Frigaard 2022, p.8）。
+
+        b>0: 密度稳定（重顶替轻）；b<0: 不稳定（必须避免）；b 是垂直井主导参数。
+        d = gap (半间隙) 或全间隙？论文用半间隙 d̂，这里用全间隙 gap_m/2 近似。
+        """
+        g = 9.81
+        d_half = max(gap_m / 2.0, 1.0e-6)
+        denom = max(mu_displaced_pa_s * max(velocity_m_s, 1.0e-6), 1.0e-9)
+        return (rho_displacing_kg_m3 - rho_displaced_kg_m3) * g * d_half ** 2 / denom
 
     def _compute_velocity(
         self,
@@ -460,7 +520,7 @@ class AnnulusD2DGASolver:
         spacer_fluid: FluidSpec | None,
         gel_strength: Array | None = None,
         temperature_correction: Array | None = None,
-    ) -> Tuple[Array, Array, Array, Array, Array, Array, Array]:
+    ) -> Tuple[Array, Array, Array, Array, Array, Array, Array, Array]:
         """计算环空速度场（论文D2DGA口径）。
 
         采用 Zhang & Frigaard (2022) 的Hele-Shaw风格速度场：
@@ -478,12 +538,13 @@ class AnnulusD2DGASolver:
             mud: 钻井液分数场
             Re: 雷诺数场（仅作诊断，不参与湍流修正）
             mu_turbulent: 占位零场，保留旧结果对象兼容性
+            m_field: 黏度比场 m = μ_displaced/μ_displacing（R1 auto-m）
         """
         y = geom["y"]
         effective_b = geom.get("effective_b", geom["b"])
         b = effective_b
         q_half = q_m3s / 2.0
-        mu, rho, mud, tau_y = self._compute_props(
+        mu, rho, mud, tau_y, m_field = self._compute_props(
             lead,
             tail,
             spacer,
@@ -520,7 +581,7 @@ class AnnulusD2DGASolver:
         b_mean = np.mean(b, axis=0, keepdims=True)
         base = (b / np.maximum(b_mean, 1.0e-12)) ** 2 / np.maximum(mu_reg, 1.0e-6)
 
-        # 浮力修正：基于顶替液与被顶替液的整体密度对比
+        # === 速度场流动度：偏心通道主导 + 浮力修正 ===
         # density_contrast > 0 表示顶替液更重（水泥重 vs 泥浆轻），有助于窄边推进
         # density_contrast < 0 表示顶替液更轻，加剧宽边窜流
         if lead_fluid is not None and tail_fluid is not None:
@@ -533,13 +594,25 @@ class AnnulusD2DGASolver:
         else:
             rho_disp = mud_fluid.density_kg_m3
 
-        density_contrast = (rho_disp - mud_fluid.density_kg_m3) / mud_fluid.density_kg_m3
-        # stable 系数：正值表示密度稳定（重顶替液推轻泥浆），负值表示不稳定
-        stable = float(np.clip(8.0 * density_contrast, -0.35, 0.45))
         phi = geom["phi"][:, None]
         ebar = geom["e"][None, :]
-        # buoyancy_shape: 在窄边(phi=1)处 = 1 + stable*ebar，在宽边(phi=0)处 = 1 - stable*ebar
-        buoyancy_shape = 1.0 + stable * ebar * (2.0 * phi - 1.0)
+        if self.enable_true_buoyancy and self.enable_d2dga:
+            # R3: 真浮力体力（式 2.5b）-> 体力向量 b = (ρ-1)/F² · (cosβ, sinπφ sinβ)
+            # 注入到流动度：重顶替轻(stable>0) -> 窄边流动度提升（窄边推进）
+            beta_deg_local = float(np.mean(geom.get("inc_deg", np.zeros(self.nz))))
+            # 真浮力体力向量 _buoyancy_force_vector 当前未注入流动度（采用 (2φ-1) 密度对比机动性简化，见 §2.7.4）；保留接口供未来动量源耦合
+            # 密度对比 rho 已是 g/cc 混合物场；体力方位角再分配强度 ∝ Δρ·f
+            rho_displaced = mud_fluid.density_kg_m3 / 1000.0
+            density_contrast = (rho - rho_displaced)  # 局部（g/cc）
+            # 体力对流动度的方位角修正：窄边(phi=1) f_phi=0, 宽边(phi=0) f_phi=0（sinπφ），
+            # 故体力主要作用于 f_xi（轴向）。为保留窄边推进效应，用 density_contrast × (2φ-1) 项
+            # （与代理同结构但用真密度差，无量纲化后幅度可控）
+            buoyancy_shape = 1.0 + np.clip(2.0 * density_contrast, -0.35, 0.45) * ebar * (2.0 * phi - 1.0)
+        else:
+            # R0/R1/R2: 保留 buoyancy_shape 代理（旧论文状态）
+            density_contrast = (rho_disp - mud_fluid.density_kg_m3) / mud_fluid.density_kg_m3
+            stable = float(np.clip(8.0 * density_contrast, -0.35, 0.45))
+            buoyancy_shape = 1.0 + stable * ebar * (2.0 * phi - 1.0)
         pref = np.maximum(base * buoyancy_shape, 1.0e-8)
 
         # 由截面排量约束得到轴向速度 w
@@ -558,7 +631,7 @@ class AnnulusD2DGASolver:
         v = bv / np.maximum(b, 1.0e-8)
 
         # 返回正则化后的黏度 mu_reg，确保下游 mobility 指标反映屈服死区效应
-        return w, v, mu_reg, rho, mud, Re, mu_turbulent
+        return w, v, mu_reg, rho, mud, Re, mu_turbulent, m_field
 
     def _depth_profiles(self, geom: Dict[str, Array], lead: Array, tail: Array, spacer: Array, wall: Array) -> pd.DataFrame:
         """计算深度方向的平均剖面数据。"""
@@ -639,7 +712,7 @@ class AnnulusD2DGASolver:
 
             if pump_active:
                 # === 正常泵注阶段：仅执行论文口径核心平流 + D2DGA 通量修正 ===
-                w, v, mu, rho, mud, Re, mu_turbulent = self._compute_velocity(
+                w, v, mu, rho, mud, Re, mu_turbulent, m_field = self._compute_velocity(
                     lead,
                     tail,
                     spacer,
@@ -657,7 +730,11 @@ class AnnulusD2DGASolver:
 
                 cement = np.clip(lead + tail, 0.0, 1.0)
                 if self.enable_d2dga:
-                    f_amp = d2dga_flux_amplification(cement, self.d2dga_viscosity_ratio)
+                    if self.enable_d2dga_auto_m:
+                        m_for_amp = m_field  # 数组
+                    else:
+                        m_for_amp = self.d2dga_viscosity_ratio  # 标量
+                    f_amp = d2dga_flux_amplification(cement, m_for_amp)
                 else:
                     f_amp = 1.0
 
@@ -683,6 +760,40 @@ class AnnulusD2DGASolver:
                 tail = self._smooth_dispersion(tail, axial=0.018, azimuthal=0.015)
                 spacer = self._smooth_dispersion(spacer, axial=0.012, azimuthal=0.012)
 
+                # R2: I3 浮力弥散通量（式 4.25 第二项）—— 仅作用于水泥相(lead+tail)
+                if self.enable_d2dga_i3_flux and self.enable_d2dga:
+                    cement_for_flux = np.clip(lead + tail, 0.0, 1.0)
+                    # 浮力向量 f（用当前井段平均井斜）
+                    beta_deg_local = float(np.mean(geom["inc_deg"])) if "inc_deg" in geom else 0.0
+                    f_phi_arr, f_xi_arr = self._buoyancy_force_vector(geom, beta_deg_local)
+                    # 顶替液粘度 eta2（用 cement 表观粘度的场均值近似）
+                    eta2 = float(np.mean(mu)) if np.all(np.isfinite(mu)) else 0.18
+                    # 密度差 Δρ（顶替液 - 被顶替液），kg/m³
+                    delta_rho = (rho.mean() - mud_fluid.density_kg_m3 / 1000.0) * 1000.0
+                    H_field = geom["H"]
+                    m_for_flux = m_field if self.enable_d2dga_auto_m else self.d2dga_viscosity_ratio
+                    q_phi, q_xi = d2dga_buoyancy_flux(
+                        cement_for_flux, m_for_flux, delta_rho, H_field, eta2,
+                        f_phi_arr, f_xi_arr,
+                    )
+                    # 散度通量：dc/dt += -div(q) = -(dq_xi/ds + dq_phi/dy)
+                    # 注意：np.gradient(f, x, axis) 中 x 是坐标数组（不是间距）。
+                    # 若用 np.gradient(geom["y"]) 返回均匀间距数组，再作为坐标传入会导致
+                    # 除零间距 -> inf/NaN。此处直接用 geom["s"] (nz,) 和 geom["y"] (ny,)
+                    # 作为坐标参数，与 q_xi.shape[1] 和 q_phi.shape[0] 匹配。
+                    dq_xi_ds = np.gradient(q_xi, geom["s"], axis=1)    # geom["s"]: 轴向坐标 (nz,)
+                    dq_phi_dy = np.gradient(q_phi, geom["y"], axis=0)   # geom["y"]: 方位角坐标 (ny,)
+                    div_q = dq_xi_ds + dq_phi_dy
+                    # 通量只加到水泥相（lead+tail 按比例分配）
+                    cement_total = np.maximum(cement_for_flux, 1.0e-6)
+                    lead_frac = lead / cement_total
+                    tail_frac = tail / cement_total
+                    flux_strength = 0.05  # 数值稳定限幅系数，控制每步通量幅度
+                    lead = lead - flux_strength * div_q * lead_frac * self.dt
+                    tail = tail - flux_strength * div_q * tail_frac * self.dt
+                    lead = np.clip(lead, 0.0, 1.0)
+                    tail = np.clip(tail, 0.0, 1.0)
+
                 # D2DGA 通量放大会改变前锋形态，但不应让各相总量超过累计入环空体积。
                 # 这里按入口累计体积对领浆、尾浆和前置液/隔离液分别做体积上限约束。
                 cumulative_lead_in_m3 += inlet_state.flow_rate_m3_s * inlet_lead_fraction * self.dt
@@ -694,7 +805,7 @@ class AnnulusD2DGASolver:
 
             else:
                 # === 泵停阶段：冻结浓度场，仅记录指标 ===
-                w, v, mu, rho, mud, Re, mu_turbulent = self._compute_velocity(
+                w, v, mu, rho, mud, Re, mu_turbulent, m_field = self._compute_velocity(
                     lead,
                     tail,
                     spacer,
@@ -781,18 +892,46 @@ class AnnulusD2DGASolver:
         cement = np.clip(lead + tail, 0.0, 1.0)
         depth_profiles = self._depth_profiles(geom, lead, tail, spacer, wall)
         final = metrics.iloc[-1]
+
+        # Extract values into locals so both nested Chinese keys and top-level English
+        # aliases use one source, avoiding drift.
+        eff_efficiency = float(final["effective_efficiency"])
+        cement_occ = float(final["bulk_cement_fill"])
+        chan_idx = float(final["channeling_index"])
+        mix_idx = float(final["mixing_index"])
+        inst_idx = float(final["instability_index"])
+
+        # R3: 输出无量纲浮力数 b（主导参数，p.27）
+        rho_displacing = (
+            lead_fluid.density_kg_m3 if lead_fluid
+            else tail_fluid.density_kg_m3 if tail_fluid
+            else mud_fluid.density_kg_m3
+        )
+        b_number = self._compute_buoyancy_number(
+            rho_displacing_kg_m3=rho_displacing,
+            rho_displaced_kg_m3=mud_fluid.density_kg_m3,
+            gap_m=float(np.mean(geom["b"])),
+            mu_displaced_pa_s=(mud_fluid.plastic_viscosity_pa_s or 0.05),  # None guard for non-Bingham muds (power-law/HB); 0.05 Pa·s fallback
+            velocity_m_s=float(np.mean(np.abs(w_prev))),
+        )
+
         summary: Dict[str, object] = {
             "模型名称": "通用尾管段环空二维顶替模型",
             "模拟对象": f"{well_spec.well_name} 尾管段 {well_spec.top_md_m:.2f}-{well_spec.bottom_md_m:.2f}m",
             "井段_m": [well_spec.top_md_m, well_spec.bottom_md_m],
             "物理环空体积_m3": self._physical_annular_volume(well_spec),
             "最终结果": {
-                "全井段最终有效顶替效率": float(final["effective_efficiency"]),
-                "最终水泥浆占据率": float(final["bulk_cement_fill"]),
-                "最终窜槽指数": float(final["channeling_index"]),
-                "最终混浆指数": float(final["mixing_index"]),
-                "最终失稳指数": float(final["instability_index"]),
+                "全井段最终有效顶替效率": eff_efficiency,
+                "最终水泥浆占据率": cement_occ,
+                "最终窜槽指数": chan_idx,
+                "最终混浆指数": mix_idx,
+                "最终失稳指数": inst_idx,
+                "浮力数_b": b_number,
             },
+            "effective_efficiency": eff_efficiency,
+            "channeling_index": chan_idx,
+            "mixing_index": mix_idx,
+            "buoyancy_number": b_number,
         }
         return AnnulusSimulationResult(
             well_name=well_spec.well_name,

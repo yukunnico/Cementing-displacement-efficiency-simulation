@@ -1,0 +1,15 @@
+﻿well_id,fluid_name,fluid_role,density_g_cm3,rheology_model,pv_mpa_s,yp_pa,yield_stress_pa,consistency_k_pa_sn,flow_index_n,viscosity_mpa_s,test_temperature_c,data_type,source_file,source_location,confidence,notes
+ht1_002,油基钻井液,mud,2.06,Herschel-Bulkley,58,8.5,,0.557,0.689,,,field_measured,施工设计 Table4/5; 化验报告 Table0/7,施工设计 1.3.1节/化验报告,high,"PV=58mPa·s, YP=8.5Pa; n=0.689, K=0.557Pa·s^n; 老化后PV=61, YP=10.5; 循环后YP=6Pa"
+ht1_002,先导浆,wash,1.85,,,,,,,,,field_measured,"施工设计 Table4/5, Table34",施工设计 5.1/7.1.2节,high,密度1.85g/cm3; 用量20m3; 裸眼环空占高1435m
+ht1_002,驱油隔离液,spacer,2.05,Herschel-Bulkley,30,8,,1.338,0.545,,,field_measured,施工记录表 R20; 化验报告 Table7,施工记录表/化验报告/施工设计 7.1.2节,high,"PV=30mPa·s, YP=8Pa; n=0.545, K=1.338Pa·s^n; 冲洗效率97.7%"
+ht1_002,领浆(2.10),lead_cement,2.10,Herschel-Bulkley,,,,0.876,0.811,,133,field_measured,化验报告 Table7/Table3,化验报告 Table3/Table7,high,"n=0.811, K=0.876Pa·s^n; 稠化456min(70Bc); 失水45mL; 底部强度3.6MPa/24h; 顶部7.4MPa/48h"
+ht1_002,中间浆(1.95),intermediate_cement,1.95,Herschel-Bulkley,,,,0.504,0.871,,133,field_measured,化验报告 Table7/Table4,化验报告 Table4/Table7,high,"n=0.871, K=0.504Pa·s^n; 稠化293min; 失水44mL; 底部强度14.3MPa/24h"
+ht1_002,尾浆(1.95),tail_cement,1.95,Herschel-Bulkley,,,,0.453,0.886,,133,field_measured,化验报告 Table7/Table5,化验报告 Table5/Table7,high,"n=0.886, K=0.453Pa·s^n; 稠化252min(70Bc); 失水45mL; 底部强度15.1MPa/24h; 静胶凝196min@148℃"
+ht1_002,压塞液,plug,1.90,,30,8,,,,,,field_measured,施工记录表 R30; 施工设计 Table35,施工记录表/施工设计,high,"隔离液类型; PV=30mPa·s, YP=8Pa; 冲洗效率96.4%; 用量5m3"
+ht1_002,中置液,spacer,1.90,,30,8,,,,,,field_measured,施工记录表 R30; 施工设计 Table35,施工记录表/施工设计,high,"隔离液类型; PV=30mPa·s, YP=8Pa; 冲洗效率96.4%; 用量15m3"
+ht1_002,回接_先导浆,wash,1.85,,,,,,,,,field_measured,回接技术总结,回接技术总结,high,回接段先导浆; 用量20m3; 排量1.0m3/min
+ht1_002,回接_驱油隔离液,spacer,2.00,Herschel-Bulkley,,,,0.371,0.697,,94,field_measured,回接化验报告 Table7/Table6,回接化验报告,high,"n=0.697, K=0.371Pa·s^n; 冲洗效率98.2%; 用量20m3"
+ht1_002,回接_替浆隔离液,spacer,1.50,,,,,,,,,field_measured,回接化验报告 Table2,回接化验报告,medium,驱油隔离液1.50g/cm3; 冲洗效率96.8%
+ht1_002,回接_领浆(2.05),lead_cement,2.05,Herschel-Bulkley,,,,0.820,0.816,,94,field_measured,回接化验报告 Table7/Table3,回接化验报告,high,"n=0.816, K=0.820Pa·s^n; 稠化411min; 失水42mL; 底部强度7.1MPa/24h; 全返地面"
+ht1_002,回接_中间浆(1.90),intermediate_cement,1.90,Herschel-Bulkley,,,,0.468,0.869,,94,field_measured,回接化验报告 Table7/Table4,回接化验报告,high,"n=0.869, K=0.468Pa·s^n; 稠化355min; 失水44mL; 底部强度14.5MPa/24h; 封固0-3700m"
+ht1_002,回接_尾浆(1.90),tail_cement,1.90,Herschel-Bulkley,,,,0.499,0.863,,94,field_measured,回接化验报告 Table7/Table5,回接化验报告,high,"n=0.863, K=0.499Pa·s^n; 稠化292min; 失水45mL; 底部强度15.3MPa/24h; 静胶凝547min@82℃; 封固3700-5290m"

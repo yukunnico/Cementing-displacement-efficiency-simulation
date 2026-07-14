@@ -1,0 +1,16 @@
+{
+  "run_id": "convergence_nz280_dt4.0",
+  "ablation_level": "R3",
+  "eccentricity": 0.17,
+  "nz": 280,
+  "dt": 4.0,
+  "enable_d2dga_auto_m": true,
+  "enable_d2dga_i3_flux": true,
+  "enable_true_buoyancy": true,
+  "effective_efficiency": 0.9481188995961601,
+  "cement_occupation": 0.9481188995961601,
+  "channeling_index": 0.11827956989242405,
+  "mixing_index": 0.1419823631570632,
+  "instability_index": 0.0686270307319744,
+  "buoyancy_number": 4.023762246512481
+}

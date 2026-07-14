@@ -1,0 +1,22 @@
+{
+  "well_id": "hu102",
+  "well_name_cn": "呼102",
+  "paper_version": "pead_v1",
+  "sample_class": "A_main_validation",
+  "loader_version": "paper_loader_v1",
+  "include_in_main_results": true,
+  "include_in_cbl_metrics": true,
+  "cbl_pass_rate": 0.6665,
+  "geometry_source": "field-rich source package; legacy reconstructed loader profile adopted for paper v1",
+  "pumping_schedule_source": "legacy reconstructed schedule from field-rich records",
+  "fluid_source": "field/extracted densities and rheology as represented by legacy loader",
+  "caliper_source": "legacy loader profile pending full extracted CSV rebuild",
+  "inclination_source": "legacy loader profile pending full extracted CSV rebuild",
+  "standoff_source": "model_assumption because continuous field standoff is unavailable",
+  "cbl_source": "interpreted official CBL report 100413.PDF",
+  "notes": [
+    "主验证候选井；CBL合格率采用0.6665。",
+    "设计文档指出旧loader需重构；paper v1明确标注当前仍采用legacy reconstructed口径。",
+    "CBL评价窗与目标层段必须分别读取，不得混用。"
+  ]
+}

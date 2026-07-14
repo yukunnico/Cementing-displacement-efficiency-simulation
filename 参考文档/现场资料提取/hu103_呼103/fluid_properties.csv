@@ -1,0 +1,16 @@
+﻿well_id,fluid_name,fluid_role,density_g_cm3,rheology_model,pv_mpa_s,yp_pa,yield_stress_pa,consistency_k_pa_sn,flow_index_n,viscosity_mpa_s,test_temperature_c,data_type,source_file,source_location,confidence,notes
+hu103,白油基钻井液(65C),mud,1.98,幂律,54,10,4,0.112,0.82,,65,field_measured,2\203\2031\20313.doc,1.3.1钻井液性能,high,PV=54mPas YP=10Pa n=0.82 K=0.112; 初切4Pa终切12.5Pa; Φ600=128 Φ300=74
+hu103,白油基钻井液(25C),mud,1.98,,88,15.5,5,,,,25,field_measured,2\203\2031\20313.doc,1.3.2低温性能,high,PV=88 YP=15.5; Φ600=207 Φ300=119
+hu103,白油基钻井液(35C),mud,1.98,,71,13.5,4,,,,35,field_measured,2\203\2031\20313.doc,1.3.2低温性能,high,PV=71 YP=13.5; Φ600=169 Φ300=98
+hu103,白油基钻井液(45C),mud,1.98,,67,9,4,,,,45,field_measured,2\203\2031\20313.doc,1.3.2低温性能,high,PV=67 YP=9; Φ600=152 Φ300=85
+hu103,白油基钻井液(55C),mud,1.98,,55,8,4,,,,55,field_measured,2\203\2031\20313.doc,1.3.2低温性能,high,PV=55 YP=8; Φ600=126 Φ300=71
+hu103,驱油隔离液1,spacer,2.00,,,,,,,,,design,2\203\2031\20313.doc,7.1.2前置液设计,high,配方:水+3.5%BCJ-300S+8%XZ-JS1L+40%XZ-YCXJ+1%消泡剂+200%重晶石
+hu103,驱油隔离液2,spacer,1.95,,,,,,,,,design,2\203\2031\20313.doc,7.1.2前置液设计,high,配方:水+3.5%BCJ-300S+8%XZ-JS1L+40%XZ-YCXJ+1%消泡剂+190%重晶石
+hu103,领浆,lead_cement,2.05,幂律,,,,0.67,0.82,,140,design,2\203\2031\20311\203111.docx,Table7流变数据,high,n=0.82 K=0.67Pa.s^n; 稠化390min/70Bc; 24h强度4.6MPa; Φ300=224
+hu103,中间浆,intermediate_cement,2.05,幂律,,,,1.11,0.76,,140,design,2\203\2031\20311\203111.docx,Table7流变数据,high,n=0.76 K=1.11Pa.s^n; 稠化176min/70Bc; 24h强度5.9MPa; Φ300=254
+hu103,尾浆,tail_cement,2.05,幂律,,,,1.14,0.76,,133,design,2\203\2031\20311\203111.docx,Table7流变数据,high,n=0.76 K=1.14Pa.s^n; 稠化153min/70Bc; 24h强度15.3MPa; Φ300=265
+hu103,压塞液,displacement,2.10,,,,,,,,,design,2\203\2031\20313.doc,7.1.3后置液设计,high,配方:水+3.5%BCJ-300S+8%XZ-JS1L+140%重晶石
+hu103,中置液,displacement,1.95,,,,,,,,,design,2\203\2031\20313.doc,7.1.3后置液设计,high,配方:水+3.5%BCJ-300S+8%XZ-JS1L+195%重晶石
+hu103,平衡液(轻泥浆),mud,1.88,,25,1.5,,,,,,field_measured,2\203\2031\20314.doc,施工记录表,high,实际:密度1.88 PV=25mPas YP=1.5Pa
+hu103,领浆(193.7mm回接),lead_cement,1.90,幂律,,,,0.587,0.838,,109,design,2\203\2032\20321\203211.docx,Table6流变数据,high,193.7mm回接; n=0.838 K=0.587; 稠化493min; Φ300=217
+hu103,尾浆(193.7mm回接),tail_cement,1.90,幂律,,,,1.093,0.766,,109,design,2\203\2032\20321\203211.docx,Table6流变数据,high,193.7mm回接; n=0.766 K=1.093; 稠化295min; 24h强度14.7MPa; Φ300=259

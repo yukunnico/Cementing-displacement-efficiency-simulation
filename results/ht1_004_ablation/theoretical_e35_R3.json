@@ -1,0 +1,16 @@
+{
+  "run_id": "theoretical_e35_R3",
+  "ablation_level": "R3",
+  "eccentricity": 0.35,
+  "nz": 280,
+  "dt": 4.0,
+  "enable_d2dga_auto_m": true,
+  "enable_d2dga_i3_flux": true,
+  "enable_true_buoyancy": true,
+  "effective_efficiency": 0.9083393868368977,
+  "cement_occupation": 0.9083393868368977,
+  "channeling_index": 0.5017921146951329,
+  "mixing_index": 0.21046258524826475,
+  "instability_index": 0.7569776926211644,
+  "buoyancy_number": 4.4880863227417125
+}

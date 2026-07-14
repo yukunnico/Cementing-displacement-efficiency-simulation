@@ -1,0 +1,16 @@
+well_id,md_m,temperature_c,pressure_mpa,ecd_gcm3,data_type,source_file,confidence,notes
+hu102,7120,147.8,,,measured,20211.doc(s1.3),high,电测温度@7120m
+hu102,7735,149,,,measured,20211.doc(s1.3),high,井底静止温度(BHST)
+hu102,,134,,,derived,20211.doc(s1.3),high,水泥浆试验温度(0.9x温度系数)
+hu102,5300,,,2.04,calculated,20211.doc(s1.7),high,注入2.30g/cm3重浆30m3后井底ECD
+hu102,7422,,,2.044,calculated,20211.doc(s1.7),high,7422m ECD(目的层顶K1q)
+hu102,7735,,8.60,,measured,20211.doc(s1.7),high,"承压试验(钻井液2.02,承压8.60MPa,10min降至7.00MPa)"
+hu102,7735,,,2.11,calculated,20211.doc(s1.7),high,承压当量密度(7.00MPa折算)
+hu102,,,,0.066,calculated,20211.doc(s1.7),high,井下安全窗口(g/cm3)=2.11-2.044
+hu102,6820,,,2.053-2.093-2.066,calculated,20215.xlsx(Sheet2),high,"ECD计算范围(固井段顶,排量1.3m3/min)"
+hu102,7120,,,2.055-2.094-2.068,calculated,20215.xlsx(Sheet2),high,ECD计算范围
+hu102,7300,,,2.057-2.094-2.069,calculated,20215.xlsx(Sheet2),high,ECD计算范围
+hu102,7422,,,2.058-2.094-2.069,calculated,20215.xlsx(Sheet2),high,ECD计算范围(目的层)
+hu102,7526,,,2.058-2.094-2.07,calculated,20215.xlsx(Sheet2),high,ECD计算范围
+hu102,7735,,,2.059-2.095-2.071,calculated,20215.xlsx(Sheet2),high,ECD计算范围(井底)
+hu102,3000,,,2.054,calculated,20211.doc(s9.2),high,提钻前3000m注入2.20重浆70m3后井底当量
