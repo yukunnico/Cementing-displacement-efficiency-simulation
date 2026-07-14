@@ -1,35 +1,19 @@
 """HT1-004 R0->R3 消融运行入口。产出 results/ht1_004_ablation/ 下的各级摘要JSON + 汇总CSV。（Task 6a）"""
 from __future__ import annotations
 
-import csv
 import os
 from pathlib import Path
-from datetime import datetime
 
 from cemdisp.runners.ht1_004_ablation import (
     run_full_ablation,
     extract_ablation_metrics,
     ABLATION_LEVELS,
+    ABLATION_CSV_COLUMNS,
+    append_ablation_csv_row,
 )
 
 OUTPUT_DIR = "results/ht1_004_ablation"
 CSV_PATH = os.path.join(OUTPUT_DIR, "ablation_summary.csv")
-CSV_COLUMNS = [
-    "run_id", "ablation_level", "eccentricity", "nz", "dt",
-    "effective_efficiency", "channeling_index", "mixing_index",
-    "cement_occupation", "instability_index", "buoyancy_number",
-]
-
-
-def _append_csv_row(row: dict, csv_path: str, columns: list[str]) -> None:
-    """Append a single row to the CSV; write header if file is new."""
-    Path(csv_path).parent.mkdir(parents=True, exist_ok=True)
-    write_header = not os.path.exists(csv_path)
-    with open(csv_path, "a", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=columns, extrasaction="ignore")
-        if write_header:
-            writer.writeheader()
-        writer.writerow(row)
 
 
 if __name__ == "__main__":
@@ -37,6 +21,7 @@ if __name__ == "__main__":
     print(f"=== HT1-004 Full Ablation R0->R3 (nz={nz}, dt={dt}) ===\n")
     results = run_full_ablation(
         nz=nz, dt=dt, total_t=None, output_dir=OUTPUT_DIR,
+        run_id_prefix="ht1_004_ablation",
     )
 
     # Print summary table
@@ -61,7 +46,7 @@ if __name__ == "__main__":
             "dt": dt,
             **m,
         }
-        _append_csv_row(row, CSV_PATH, CSV_COLUMNS)
+        append_ablation_csv_row(row, CSV_PATH)
 
     print(f"\nCSV appended to: {CSV_PATH}")
     print("Done.")

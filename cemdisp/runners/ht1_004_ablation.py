@@ -11,9 +11,11 @@ R3: +true buoyancy
 """
 from __future__ import annotations
 
+import csv
+import json
+import os
 from dataclasses import dataclass
 from typing import Dict, Optional
-import json
 from pathlib import Path
 
 from cemdisp.models2d.annulus_d2dga import AnnulusD2DGASolver, AnnulusSimulationResult
@@ -44,6 +46,42 @@ ABLATION_LEVELS = [
     AblationLevel("R3", True,  True,  True),
 ]
 
+# ---------------------------------------------------------------------------
+# Shared CSV / JSON helpers — used by ablation, theoretical, and convergence
+# scripts to avoid copy-paste duplication.
+# ---------------------------------------------------------------------------
+
+ABLATION_CSV_COLUMNS = [
+    "run_id", "ablation_level", "eccentricity", "nz", "dt",
+    "effective_efficiency", "channeling_index", "mixing_index",
+    "cement_occupation", "instability_index", "buoyancy_number",
+]
+
+
+def append_ablation_csv_row(
+    row: dict, csv_path: str, columns: list[str] | None = None
+) -> None:
+    """Append a single row to the ablation CSV; write header if file is new."""
+    if columns is None:
+        columns = ABLATION_CSV_COLUMNS
+    Path(csv_path).parent.mkdir(parents=True, exist_ok=True)
+    write_header = not os.path.exists(csv_path)
+    with open(csv_path, "a", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=columns, extrasaction="ignore")
+        if write_header:
+            writer.writeheader()
+        writer.writerow(row)
+
+
+def dump_ablation_json(payload: dict, filepath: str | Path) -> None:
+    """Write a metrics payload as JSON to *filepath* (full path, not dir + name)."""
+    p = Path(filepath)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2, default=str),
+        encoding="utf-8",
+    )
+
 
 def extract_ablation_metrics(result: AnnulusSimulationResult) -> dict:
     """Read nested Chinese summary keys -> flat English-keyed dict (robust to missing keys).
@@ -71,6 +109,8 @@ def run_one_level(
     total_t: float | None = None,
     output_dir: str | None = None,
     well_spec_override: WellSpec | None = None,
+    run_id: str | None = None,
+    eccentricity: float = 0.17,
 ) -> AnnulusSimulationResult:
     """Run a single ablation level, returning the full simulation result.
 
@@ -80,7 +120,7 @@ def run_one_level(
     3. Build coupled annulus inlet provider
     4. Compute annulus stop time (real, from casing result)
     5. Run 2D D2DGA solver with the level's switches
-    6. Optionally dump summary JSON
+    6. Optionally dump summary JSON to a unique filename
 
     All three switches are forwarded to the solver. enable_true_buoyancy
     (Task 5) has no logic yet and is a placeholder.
@@ -90,6 +130,12 @@ def run_one_level(
     well_spec_override : WellSpec | None
         If provided, use this well spec instead of the loaded one.
         Enables theoretical eccentricity cases without modifying the loader.
+    run_id : str | None
+        Unique identifier for this run. Used as the JSON filename stem
+        (e.g. "ht1_004_ablation_R0", "theoretical_e35_R3").
+        If None, falls back to ``level.name``.
+    eccentricity : float
+        Casing eccentricity (0..1). Default 0.17 matches HT1-004 field data.
     """
     loaded_well, fluids, schedule, _ = load_ht1_004_tailpipe()
     well_spec = well_spec_override if well_spec_override is not None else loaded_well
@@ -123,7 +169,10 @@ def run_one_level(
     result = solver.run(well_spec, fluids, provider)
 
     if output_dir is not None:
-        _dump_summary(result, level, output_dir)
+        _dump_summary(
+            result, level, output_dir,
+            run_id=run_id, nz=nz, dt=dt, eccentricity=eccentricity,
+        )
 
     return result
 
@@ -135,30 +184,61 @@ def run_full_ablation(
     dt: float = 4.0,
     total_t: float | None = None,
     output_dir: str | None = None,
+    run_id_prefix: str = "ht1_004_ablation",
+    eccentricity: float = 0.17,
 ) -> Dict[str, AnnulusSimulationResult]:
-    """Run all ablation levels, returning {level_name: result}."""
+    """Run all ablation levels, returning {level_name: result}.
+
+    Each level gets a unique run_id = ``{run_id_prefix}_{level.name}`` so the
+    dumped JSONs are never overwritten by other scripts sharing the same
+    output_dir.
+    """
     if levels is None:
         levels = ABLATION_LEVELS
     results: Dict[str, AnnulusSimulationResult] = {}
     for lv in levels:
+        run_id = f"{run_id_prefix}_{lv.name}"
         results[lv.name] = run_one_level(
-            lv, nz=nz, dt=dt, total_t=total_t, output_dir=output_dir
+            lv, nz=nz, dt=dt, total_t=total_t, output_dir=output_dir,
+            run_id=run_id, eccentricity=eccentricity,
         )
     return results
 
 
+# ---------------------------------------------------------------------------
+# Internal helpers
+# ---------------------------------------------------------------------------
+
 def _dump_summary(
-    result: AnnulusSimulationResult, level: AblationLevel, output_dir: str
+    result: AnnulusSimulationResult,
+    level: AblationLevel,
+    output_dir: str,
+    *,
+    run_id: str | None = None,
+    nz: int,
+    dt: float,
+    eccentricity: float,
 ) -> None:
-    """Write a per-level summary JSON combining ablation metrics + level flags."""
-    p = Path(output_dir) / f"ht1_004_ablation_{level.name}.json"
+    """Write a per-level summary JSON combining ablation metrics + run metadata.
+
+    The JSON is written to ``{output_dir}/{run_id or level.name}.json`` so
+    every caller gets a unique file — no more filename collisions between
+    ablation / theoretical / convergence scripts.
+    """
+    file_stem = run_id if run_id else level.name
+    p = Path(output_dir) / f"{file_stem}.json"
     p.parent.mkdir(parents=True, exist_ok=True)
-    payload = extract_ablation_metrics(result)
-    payload["ablation_level"] = level.name
-    payload["enable_d2dga_auto_m"] = level.enable_d2dga_auto_m
-    payload["enable_d2dga_i3_flux"] = level.enable_d2dga_i3_flux
-    payload["enable_true_buoyancy"] = level.enable_true_buoyancy
-    payload["buoyancy_number"] = result.summary.get("buoyancy_number") if isinstance(result.summary, dict) else None
+    payload = {
+        "run_id": run_id or f"ht1_004_ablation_{level.name}",
+        "ablation_level": level.name,
+        "eccentricity": eccentricity,
+        "nz": nz,
+        "dt": dt,
+        "enable_d2dga_auto_m": level.enable_d2dga_auto_m,
+        "enable_d2dga_i3_flux": level.enable_d2dga_i3_flux,
+        "enable_true_buoyancy": level.enable_true_buoyancy,
+        **extract_ablation_metrics(result),
+    }
     p.write_text(
         json.dumps(payload, ensure_ascii=False, indent=2, default=str),
         encoding="utf-8",
