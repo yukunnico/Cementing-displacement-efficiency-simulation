@@ -1,0 +1,25 @@
+{
+  "paper_version": "pead_v1",
+  "well_id": "hu102",
+  "well_name_cn": "呼102",
+  "sample_class": "A_main_validation",
+  "include_in_cbl_metrics": true,
+  "measured_cbl_pass_rate": 0.6665,
+  "top_md_m": 6823.1,
+  "bottom_md_m": 7735.0,
+  "annulus_volume_m3": 19.406795107938343,
+  "runtime_s": 27.966481399984332,
+  "validation_notes": [
+    "100413.PDF 给出 CBL 合格率 66.65%，评价井段 6840–7665m。",
+    "10042.xlsx 提供尾管固井主作业水泥浆 35t、平均密度 2.10g/cm3、替浆量 74m3。",
+    "钻井液与水泥浆流变参数仍为首版暂定值，需后续继续用 0708 或文献补强。"
+  ],
+  "warnings": [],
+  "final_effective_efficiency": 0.38679076895487347,
+  "final_bulk_cement_fill": 0.38679076895487347,
+  "cbl_eval_interval_efficiency": 0.37994115009625823,
+  "target_interval_efficiency": 0.3975775138856418,
+  "channeling_index": 0.9899799599187541,
+  "mixing_index": 0.25050713942986885,
+  "instability_index": 1.0
+}

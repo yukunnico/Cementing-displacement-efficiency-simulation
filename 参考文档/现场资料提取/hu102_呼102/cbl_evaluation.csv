@@ -1,0 +1,8 @@
+well_id,md_top_m,md_bottom_m,interval_length_m,bond_quality,cbl_amplitude_pct,bond_index,vd1_description,qualified,data_type,source_file,confidence,notes
+hu102,6840,7119.8,279.8,非评价段(双层套管),,,"双层套管,二界面不做评价",,measured,100413.PDF,high,6840-7119.8m为双层套管段
+hu102,7119.8,7405,285.2,胶结良好-中等,<15,,"CBL低值段,胶结合格",yes,measured,100413.PDF,medium,良好-中等胶结
+hu102,7405,7480,75,胶结差,高,,"连续胶结差段,不合格",no,measured,100413.PDF,high,违反红线:油气水层段无连续中等以上胶结
+hu102,7480,7502,22,胶结中等,中等,,过渡段,yes,measured,100413.PDF,medium,中等胶结
+hu102,7502,7540,38,胶结差,高,,"连续胶结差段(>25m),不合格",no,measured,100413.PDF,high,违反红线:连续>25m胶结差
+hu102,7540,7665,125,胶结良好-中等,<15,,"CBL低值段,胶结合格",yes,measured,100413.PDF,medium,良好-中等胶结
+hu102,6840,7665,825,综合评价,66.65%合格率,,整体不合格(低于70%红线),no,measured,100413.PDF,high,"CBL合格率66.65%<70%,违反红线规定; 目的井段固井质量不合格"

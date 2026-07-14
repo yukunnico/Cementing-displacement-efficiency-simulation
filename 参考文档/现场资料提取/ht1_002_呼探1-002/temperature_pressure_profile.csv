@@ -1,0 +1,6 @@
+﻿well_id,md_m,temperature_c,pressure_mpa,data_type,source_file,source_location,confidence,notes
+ht1_002,7554,148,,field_measured,施工设计 Table15/化验报告,施工设计 2.5节/化验报告 Table1,high,井底静止温度; 温度梯度1.761℃/100m; 循环温度133℃(系数0.90)
+ht1_002,5324,108,,interpreted,化验报告 Table1,化验报告 Table1,high,领浆顶部温度108℃(5324m)
+ht1_002,5796,117,,interpreted,化验报告 Table1,化验报告 Table1,high,中间浆顶部温度117℃(5796m)
+ht1_002,6739,134,,interpreted,化验报告 Table1,化验报告 Table1,high,尾浆顶部温度134℃(6739m)
+ht1_002,5292.5,111,,field_measured,回接化验报告 Table1,回接化验报告,high,回接段静止温度111℃; 循环温度94℃(系数0.85)

@@ -1,0 +1,31 @@
+well_id,item,value,unit,top_md_m,bottom_md_m,data_type,source_file,source_location,confidence,notes
+hu102,total_depth_md,7735,m,,,measured,20211.doc,section 1.1,high,完钻井深
+hu102,liner_hanger_top_md,6821.895,m,,,measured,20211.doc,pipe string,high,悬挂器坐挂顶深/送入工具
+hu102,liner_hanger_md,7665.516,m,,,measured,20211.doc,section 1.1,high,悬挂器坐挂位置
+hu102,liner_hanger_od,149.2,mm,,,measured,20211.doc,section 1.9,high,FHDS550型悬挂器
+hu102,liner_shoe_md,7735,m,,,measured,20211.doc,section 1.1,high,尾管鞋深
+hu102,liner_top_md,6821.895,m,,,measured,20211.doc,pipe string,high,送入工具顶部
+hu102,liner_bottom_md,7735,m,,,measured,20211.doc,section 1.1,high,尾管底深
+hu102,openhole_top_md,6720,m,,,measured,20211.doc,section 1.1,high,裸眼段顶深(设计)
+hu102,openhole_bottom_md,7735,m,,,measured,20211.doc,section 1.1,high,裸眼段底深
+hu102,simulation_top_md,6820,m,,,derived,20211.doc,derived,medium,建议模拟段顶深
+hu102,simulation_bottom_md,7735,m,,,derived,20211.doc,derived,medium,建议模拟段底深
+hu102,liner_length_md,913.105,m,,,measured,20211.doc,section 1.9,high,尾管总长
+hu102,liner_od,139.7,mm,,,measured,20211.doc,section 1.1,high,尾管外径
+hu102,liner_id_heavy,108.1,mm,,,measured,20211.doc,pipe specs,high,15.8mm壁厚段内径(底部50根)
+hu102,liner_id_light,111.16,mm,,,measured,20211.doc,pipe specs,high,14.27mm壁厚段内径(上部36根)
+hu102,drill_bit_size,190.5,mm,,,measured,20211.doc,section 1.1,high,钻头尺寸
+hu102,borehole_nominal_diameter,190.5,mm,,,measured,20211.doc,section 1.8,high,名义井径
+hu102,float_collar_md,6826.74,m,,,measured,20211.doc,construction description,high,实探喇叭口/浮箍位置
+hu102,float_collar_design_md,6823.095,m,,,measured,20211.doc,section 1.9,high,设计喇叭口位置
+hu102,float_shoe_md,6823.095,m,,,measured,20211.doc,construction summary,high,浮鞋深度
+hu102,upper_casing_od,219.1,mm,,,measured,20211.doc,section 1.1,high,上层技术套管外径(悬挂器以上)
+hu102,cbl_measure_top_md,6840,m,,,measured,100413.PDF,CBL header,high,CBL测量段顶深
+hu102,cbl_measure_bottom_md,7665,m,,,measured,100413.PDF,CBL header,high,CBL测量段底深
+hu102,designed_bottom_plug,7585,m,,,measured,20211.doc,section 6,high,设计下塞面
+hu102,actual_bottom_plug,7447,m,,,measured,20211.doc,section 6,high,实探下塞面
+hu102,designed_plug_length,150,m,,,measured,20211.doc,section 6,high,设计塞长
+hu102,max_inclination,11.49,deg,,,measured,20211.doc,section 1.6,high,最大井斜@7490m
+hu102,bottomhole_static_temp,149,degC,,,measured,20211.doc,section 1.3,high,井底静止温度(BHST)
+hu102,cement_test_temp,134,degC,,,derived,20211.doc,section 1.3,high,水泥浆试验温度(0.9x温度系数)
+hu102,safe_window,0.066,g/cm3,,,calculated,20211.doc,section 1.7,high,井下安全窗口

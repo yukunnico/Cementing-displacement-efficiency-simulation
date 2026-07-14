@@ -7,50 +7,49 @@ Requires-Python: >=3.9
 Description-Content-Type: text/markdown
 Requires-Dist: numpy>=1.24
 Requires-Dist: pandas>=1.5
+Requires-Dist: matplotlib>=3.7
 
 # 固井顶替效率建模项目骨架
 
-这个目录当前包含三类内容：
+这个目录现在包含两类内容：
 
-1. 多口井的参考资料与标签整理；
-2. 既有的单井 legacy 脚本与算例输出；
-3. 新建立的、面向多井复用的 `cemdisp` Python 包骨架。
+1. 既有的历史脚本/算例与资料；
+2. 新建立的、可持续扩展的 Python 项目骨架。
 
-## 当前目标
+新骨架的目标不是立即重写所有旧模型，而是先把"顶替效率模型综述 + 可安装代码结构 + 统一变量命名"稳定下来，后续再逐步接入经验模型和 2D 机理模型。
 
-项目的近期目标不是立即重写所有旧模型，而是先完成以下几项基础工作：
-
-- 建立可安装的 `cemdisp` 包结构；
-- 建立统一的井筒、流体、施工程序输入数据结构；
-- 为后续“地面开泵 → 套管内输运 → 环空 2D 顶替”分层建模做好接口占位；
-- 逐步把 `hu101model/`、`hu102model/` 的可复用逻辑迁移进新包。
-
-## 当前目录说明
+## 当前新增结构
 
 ```text
-参考文档/   多口井现场资料与统一标签表
-hu101model/ legacy 呼101 单井脚本与输出
-hu102model/ legacy 呼102 单井脚本与输出
-cankao/     外部文献与全文提取
-baogao/     项目方案、任务清单、对比分析报告
-cemdisp/    新的多井通用模型包骨架
-```
-
-## `cemdisp` 当前骨架
-
-```text
+docs/
+  displacement_efficiency_review.md
 cemdisp/
-  data/         标准输入数据结构
-  transport1d/  套管内 1D 输运层占位
-  models2d/     环空 2D 顶替层占位
-  diagnostics/  诊断层占位
-  reporting/    输出层占位
-  validation/   校验层占位
-  correlations/ 经验/判别层占位
-  utils/        通用工具占位
+  correlations/
+  models2d/
+  diagnostics/       # 诊断与质量解释层（含独立 CBL 质量代理模块）
+  validation/        # 数值与现场对比验证层（含 CBL 实测对比接口）
+  utils/
+tests/
+pyproject.toml
+environment.yml
 ```
 
-## 安装与检查
+## 关键概念区分（必须遵守）
+
+**CBL（水泥胶结测井）合格率 ≠ 流体力学顶替效率。** 两者的物理定义完全不同：
+
+- **顶替效率**：水力学意义上的水泥浆实际占据体积 / 应被顶替的环空体积，由流体力学模型直接计算；
+- **CBL 合格率**：测井解释中胶结质量达到"中等"及以上标准的井段长度占比，反映套管-水泥环和水泥环-地层的声学胶结质量。
+
+除顶替不完全外，以下因素也会显著降低 CBL 质量，但与流体力学顶替过程无直接关系：
+泥饼残留、水泥石收缩、温度效应、气体窜槽、地层疏松等。
+
+**因此：**
+- 现场 CBL/合格率**只允许用于验证与对比**，**不允许反向校准求解器**；
+- `cemdisp.diagnostics.quality_proxy` 提供独立的 CBL 质量风险代理解释层，输出带不确定区间的预测值；
+- `cemdisp.validation.cbl_comparison` 提供后验对比接口，仅计算偏差，不修改模型。
+
+## 建议工作流
 
 ### 1. 激活环境
 
@@ -64,24 +63,34 @@ conda activate shenjingwangluo
 python -m pip install -e .
 ```
 
-### 3. 快速导入检查
+### 3. 运行基础测试
 
 ```powershell
-python -c "from cemdisp import WellSpec, FluidSpec, PumpingSchedule; print('cemdisp import ok')"
+python -m unittest discover -s tests -v
 ```
 
-## 开发原则
+## 代码设计原则
 
-- Python 包、模块、类、函数名使用英文；
-- 图表标题、坐标轴、图例、摘要字段和输出文件名尽量使用中文；
-- 通用模块中不要硬编码单井井号、井深、井段、流体体积和文件路径；
-- legacy 单井脚本优先迁移逻辑，不继续复制派生；
-- 先做骨架和输入标准，再做求解器迁移与增强。
+- `cemdisp.correlations`：用于放经验/拟合型顶替效率模型；
+- `cemdisp.models2d`：用于放 Hele-Shaw / 2DGA 类机理模型接口；
+- `cemdisp.geometry`：负责环空几何与偏心参数；
+- `cemdisp.fluid`：负责流体流变数据结构；
+- `cemdisp.diagnostics`：负责顶替效率计算、风险评估和 **CBL 质量风险代理预测**（独立于求解器）；
+- `cemdisp.validation`：负责质量守恒验证和 **现场 CBL/施工数据对比**（只验证，不校准）；
+- `cemdisp.utils.dimensionless`：放公共计算函数；
+- `cemdisp.utils.validators`：放适用范围校验和警告。
 
-## 文档优先级
+## 与旧脚本的关系
 
-后续开发优先参考：
+当前目录中的 `环空六浆柱注入阶段模型(1)` 以及 `hu101model/`、`hu102model/` 被视为 **legacy 原型资产**：
 
-1. `AGENTS.md`
-2. `baogao/multiwell_primary_cementing_model_scheme.md`
-3. `baogao/multiwell_primary_cementing_development_task_list.md`
+- 先保留，不直接改写（已清理旧版 CBL 质量惩罚逻辑）；
+- 后续逐步把可复用公式迁入新包；
+- 新代码优先解决：统一单位、统一变量名、解耦数据文件与脚本。
+
+## 下一步建议
+
+1. 先把一到两个经验模型写实；
+2. 再接入旧脚本中的偏心摩阻与环空几何公式；
+3. 最后再扩展到 2DGA 数值求解；
+4. 逐步用 `cemdisp.diagnostics` 和 `cemdisp.validation` 替代 legacy 脚本中的 CBL 惩罚与对比逻辑。

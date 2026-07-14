@@ -1,0 +1,2 @@
+well_id,well_name_cn,alias,block,field,well_type,cementing_type,target_formation,drilling_rig,drilling_company,cementing_company,total_depth_m,cbl_qualified_rate_pct,cbl_evaluation,data_source,confidence,notes
+hu102,呼102,呼102井,准噶尔盆地南缘呼图壁,呼图壁气田,定向井,尾管固井(139.7mm),J3k(侏罗系喀拉扎组),90013,西部钻探,固井准东公司,7735,66.65,不合格(低于70%),20211.doc(固井小结); 20212.doc(施工设计); 20214.doc(施工总结); 20216.doc(施工记录表); 100413.PDF(CBL评价图),high,"139.7mm油层尾管固井6821.895-7735m; CBL合格率66.65%, 不合格段7405-7480m及7502-7540m; 下部结构单流阀失效,施工方案临场调整; 施工日期2022-11-21"

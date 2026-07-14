@@ -1,0 +1,4 @@
+﻿well_id,fluid_name,temperature_c,theta_600,theta_300,theta_200,theta_100,theta_6,theta_3,source_file,source_location,confidence,notes
+hu102,钻井液(油基泥浆),,142,82,58,34,5,4,2021/20211.doc,section 1.2,high,固井前钻井液六速读数
+hu102,领浆(2.20),93,,163,128,106,10,6,2021/20234.doc,slurry rheology,high,"θ600缺失; 幂律模式n=0.737,K=0.947"
+hu102,尾浆(2.20),93,,163,128,106,10,6,2021/20234.doc,slurry rheology,high,同领浆流变参数

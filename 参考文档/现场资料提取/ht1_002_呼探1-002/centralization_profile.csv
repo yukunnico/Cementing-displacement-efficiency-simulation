@@ -1,0 +1,3 @@
+﻿well_id,md_m,standoff_ratio,centralization_percent,eccentricity_ratio,data_type,source_file,source_location,confidence,notes
+ht1_002,5293,,78,,model_assumption,施工设计 6.3节,施工设计 6.3节 居中度模拟图,medium,设计居中度78%(斯伦贝谢模拟); 无连续standoff分布
+ht1_002,7554,,78,,model_assumption,施工设计 6.3节,施工设计 6.3节 居中度模拟图,medium,尾管段整体居中度78%
