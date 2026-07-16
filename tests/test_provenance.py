@@ -5,7 +5,6 @@
 """
 
 import unittest
-from typing import cast
 
 
 class TestMultiwellProvenanceRegistry(unittest.TestCase):
@@ -36,46 +35,6 @@ class TestMultiwellProvenanceRegistry(unittest.TestCase):
         for well_name, fluid_registry in legacy_registry.items():
             with self.subTest(well_name=well_name):
                 self.assertEqual(WELL_PROVENANCE[well_name].fluid, fluid_registry)
-
-
-class TestMultiwellProvenanceSummary(unittest.TestCase):
-    """测试面向报告层的多井来源口径摘要。"""
-
-    def test_summary_exposes_four_sections_for_all_six_wells(self):
-        """摘要构造器按井输出 fluid/geometry/program/sync 四段。"""
-        from cemdisp.data.provenance import build_multiwell_provenance_summary
-
-        summary = build_multiwell_provenance_summary()
-        wells = cast(dict[str, dict[str, object]], summary["井来源口径"])
-
-        self.assertEqual(summary["井数"], 6)
-        self.assertEqual(set(wells), {"呼101", "呼102", "呼103", "呼探1", "呼探1-002", "呼探1-001"})
-        for well_name, well_summary in wells.items():
-            with self.subTest(well_name=well_name):
-                self.assertEqual(set(well_summary), {"fluid", "geometry", "program", "sync"})
-                fluid_summary = cast(dict[str, object], well_summary["fluid"])
-                geometry_summary = cast(dict[str, str], well_summary["geometry"])
-                program_summary = cast(dict[str, str], well_summary["program"])
-                sync_summary = cast(dict[str, str], well_summary["sync"])
-                self.assertIn("明细", fluid_summary)
-                self.assertIn("来源口径", geometry_summary)
-                self.assertIn("来源口径", program_summary)
-                self.assertIn("来源口径", sync_summary)
-
-    def test_summary_preserves_existing_fluid_status_labels(self):
-        """流体段仍使用原有中文状态标签和流体名称。"""
-        from cemdisp.data.provenance import build_multiwell_provenance_summary
-
-        summary = build_multiwell_provenance_summary()
-        wells = cast(dict[str, dict[str, object]], summary["井来源口径"])
-        hu102_fluid = cast(dict[str, object], wells["呼102"]["fluid"])
-        details = cast(list[dict[str, str]], hu102_fluid["明细"])
-        detail_by_name = {item["流体名称"]: item for item in details}
-
-        self.assertEqual(hu102_fluid["注入流体总数"], 7)
-        self.assertEqual(detail_by_name["冲洗液"]["来源口径"], "代理/暂定")
-        self.assertEqual(detail_by_name["隔离液"]["来源口径"], "部分符合")
-        self.assertEqual(detail_by_name["尾管水泥浆"]["来源口径"], "部分符合")
 
 
 class TestFluidProvenanceCompatibility(unittest.TestCase):

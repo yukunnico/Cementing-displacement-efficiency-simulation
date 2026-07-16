@@ -18,7 +18,6 @@ from cemdisp.data.provenance import (
     WellProvenance,
     WELL_PROVENANCE,
     build_injected_fluid_provenance_summary,
-    build_multiwell_provenance_summary,
     format_injected_fluid_provenance_markdown,
 )
 from cemdisp.data.pumping_schedule import PumpingSchedule, PumpingScheduleStep
@@ -40,6 +39,5 @@ __all__ = [
     "WellSpec",
     "WELL_PROVENANCE",
     "build_injected_fluid_provenance_summary",
-    "build_multiwell_provenance_summary",
     "format_injected_fluid_provenance_markdown",
 ]
