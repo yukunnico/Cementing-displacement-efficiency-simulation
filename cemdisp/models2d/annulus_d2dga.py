@@ -346,21 +346,16 @@ class AnnulusD2DGASolver:
         self,
         fluid: FluidSpec,
         gamma: Array,
-        gel_strength: Array | None = None,
-        temperature_correction: Array | None = None,
     ) -> Array:
         """根据流变模型计算流体的表观粘度。
 
         Args:
             fluid: 流体规格
             gamma: 剪切速率数组
-            gel_strength: 兼容旧接口保留，论文口径核心中不再使用。
-            temperature_correction: 兼容旧接口保留，论文口径核心中不再使用。
 
         Returns:
             表观粘度数组
         """
-        del gel_strength, temperature_correction
         gamma = np.maximum(np.asarray(gamma, dtype=float), 1.0e-6)
         if fluid.rheology_model == fluid.rheology_model.NEWTONIAN:
             assert fluid.plastic_viscosity_pa_s is not None
@@ -425,15 +420,12 @@ class AnnulusD2DGASolver:
         lead_fluid: FluidSpec | None,
         tail_fluid: FluidSpec | None,
         spacer_fluid: FluidSpec | None,
-        gel_strength: Array | None = None,
-        temperature_correction: Array | None = None,
     ) -> Tuple[Array, Array, Array, Array, Array]:
         """计算四相混合物系的表观粘度、密度、钻井液分数、混合屈服应力和黏度比 m 场。"""
         # 四相体积分数闭合：显式跟踪领浆、尾浆和前置/隔离液，钻井液由守恒关系反算。
         mud = np.clip(1.0 - lead - tail - spacer, 0.0, 1.0)
         effective_b = geom.get("effective_b", geom["b"])
         gamma = np.maximum(6.0 * np.abs(w_prev) / np.maximum(effective_b, 1.0e-5), 1.0e-6)
-        del gel_strength, temperature_correction
         mu = mud * self._apparent_viscosity(mud_fluid, gamma)
         if lead_fluid is not None:
             mu += lead * self._apparent_viscosity(lead_fluid, gamma)
@@ -518,8 +510,6 @@ class AnnulusD2DGASolver:
         lead_fluid: FluidSpec | None,
         tail_fluid: FluidSpec | None,
         spacer_fluid: FluidSpec | None,
-        gel_strength: Array | None = None,
-        temperature_correction: Array | None = None,
     ) -> Tuple[Array, Array, Array, Array, Array, Array, Array, Array]:
         """计算环空速度场（论文D2DGA口径）。
 
@@ -554,8 +544,6 @@ class AnnulusD2DGASolver:
             lead_fluid,
             tail_fluid,
             spacer_fluid,
-            gel_strength,
-            temperature_correction,
         )
 
         shear_rate = np.maximum(6.0 * np.abs(w_prev) / np.maximum(effective_b, 1.0e-5), 1.0e-6)
@@ -678,8 +666,6 @@ class AnnulusD2DGASolver:
         spacer = np.zeros((self.ny, self.nz), dtype=float)
         # 为兼容旧结果结构仍保留 wall 字段，但论文口径核心不再做壁面泥饼清洗，故恒为零。
         wall = np.zeros((self.ny, self.nz), dtype=float)
-        gel_strength = np.zeros((self.ny, self.nz), dtype=float)
-        viscosity_correction = np.ones((self.ny, self.nz), dtype=float)
         w_prev = np.full((self.ny, self.nz), 0.45, dtype=float)
         half_volume = _trapez2d(geom["b"], geom)
 
@@ -723,8 +709,6 @@ class AnnulusD2DGASolver:
                     lead_fluid,
                     tail_fluid,
                     spacer_fluid,
-                    gel_strength,
-                    viscosity_correction,
                 )
                 w_prev = w
 
@@ -816,8 +800,6 @@ class AnnulusD2DGASolver:
                     lead_fluid,
                     tail_fluid,
                     spacer_fluid,
-                    gel_strength,
-                    viscosity_correction,
                 )
                 # 泵停后保持上一时刻浓度场，不再引入停泵滑移或额外壁面过程。
 
