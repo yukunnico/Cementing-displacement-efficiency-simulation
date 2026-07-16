@@ -191,24 +191,6 @@ def _fluid_registry_to_summary(registry: Mapping[str, FluidProvenance]) -> dict[
     }
 
 
-def build_multiwell_provenance_summary() -> dict[str, object]:
-    """构造六井的 fluid/geometry/program/sync 来源口径摘要。"""
-
-    well_summaries = {
-        well_name: {
-            "fluid": _fluid_registry_to_summary(provenance.fluid),
-            "geometry": _section_to_summary(provenance.geometry),
-            "program": _section_to_summary(provenance.program),
-            "sync": _section_to_summary(provenance.sync),
-        }
-        for well_name, provenance in WELL_PROVENANCE.items()
-    }
-    return {
-        "井数": len(well_summaries),
-        "井来源口径": well_summaries,
-    }
-
-
 def build_injected_fluid_provenance_summary(
     well_name: str,
     schedule: PumpingSchedule,
@@ -276,6 +258,5 @@ __all__ = [
     "WELL_FLUID_PROVENANCE",
     "WELL_PROVENANCE",
     "build_injected_fluid_provenance_summary",
-    "build_multiwell_provenance_summary",
     "format_injected_fluid_provenance_markdown",
 ]
