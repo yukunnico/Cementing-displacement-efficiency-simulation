@@ -254,22 +254,13 @@ cemdisp/
 - `load_hu2_tailpipe` — 加载呼探1-002尾管段完整输入
 - `load_ht1_001_tailpipe` — 加载呼探1-001尾管段完整输入
 - `load_ht1_003_tailpipe` — 加载呼探1-003尾管段完整输入
-- `build_hu101_annulus_inlet_provider` — 构建呼101环空入口状态提供器
-- `build_hu102_annulus_inlet_provider` — 构建呼102环空入口状态提供器
-- `build_hu103_annulus_inlet_provider` — 构建呼103环空入口状态提供器
-- `build_hu1_annulus_inlet_provider` — 构建呼探1环空入口状态提供器
-- `build_hu2_annulus_inlet_provider` — 构建呼探1-002环空入口状态提供器
-- `build_ht1_001_annulus_inlet_provider` — 构建呼探1-001环空入口状态提供器
 - `export_hu101_sync_card_markdown` — 导出呼101同步卡片Markdown
 - `export_hu102_sync_card_markdown` — 导出呼102同步卡片Markdown
 - `export_hu103_sync_card_markdown` — 导出呼103同步卡片Markdown
 - `export_hu1_sync_card_markdown` — 导出呼探1同步卡片Markdown
 - `export_hu2_sync_card_markdown` — 导出呼探1-002同步卡片Markdown
 - `export_ht1_001_sync_card_markdown` — 导出呼探1-001同步卡片Markdown
-- `available_well_names` — 返回当前可用井号列表
-- `REFERENCE_DOCS_ROOT` — 参考文档根目录路径
 - `Hu101LoaderResult`, `Hu102LoaderResult`, `Hu103LoaderResult`, `Hu1LoaderResult`, `Hu2LoaderResult`, `Ht1_001LoaderResult`, `Ht1_003LoaderResult` — 加载结果类型别名
-- `Hu101InletProviderFactory`, `Hu102InletProviderFactory`, `Hu103InletProviderFactory`, `Hu1InletProviderFactory`, `Hu2InletProviderFactory`, `Ht1_001InletProviderFactory` — 入口提供器工厂类型别名
 
 ---
 
@@ -282,7 +273,6 @@ cemdisp/
 | 函数 | 返回类型 | 说明 |
 |------|----------|------|
 | `load_hu101_tailpipe(reference_root=None)` | `Tuple[WellSpec, Tuple[FluidSpec, ...], PumpingSchedule, ValidationData]` | 返回呼101尾管段的完整四元组输入数据 |
-| `build_hu101_annulus_inlet_provider(schedule, fluids, annulus_boundary_mode="field_order_realistic", *, split_cement_phases=False)` | `Callable[[float], AnnulusInletState]` | 构建环空入口状态提供器；支持多种边界模式：`"sustained_tail"`、`"volume_limited"`、`"tail_then_mud"`、`"field_order_realistic"`；支持`split_cement_phases`参数分离领浆/尾浆相 |
 
 **硬编码数据清单**（仅存于此文件）：
 - 井号："呼101"
@@ -324,7 +314,6 @@ cemdisp/
 | 函数 | 返回类型 | 说明 |
 |------|----------|------|
 | `load_hu102_tailpipe()` | `Tuple[WellSpec, Tuple[FluidSpec, ...], PumpingSchedule, ValidationData]` | 返回呼102尾管段的完整四元组输入数据 |
-| `build_hu102_annulus_inlet_provider(schedule, fluids, mode)` | `Callable[[float], AnnulusInletState]` | 构建环空入口状态提供器；`mode`参数决定模式：`"sustained_tail"`（替浆期环空入口保持尾浆）、`"volume_limited"`（管内推进期间环空入口保持尾浆，排量设为0）、`"tail_then_mud"`（替浆期结束后环空入口切换为钻井液）|
 
 **硬编码数据清单**（仅存于此文件）：
 - 井号："呼102"

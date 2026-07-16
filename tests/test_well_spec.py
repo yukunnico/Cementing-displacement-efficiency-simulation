@@ -256,18 +256,20 @@ class TestWellSpecPositionalBackwardCompatibility(unittest.TestCase):
         pt = DepthValuePoint(depth_md_m=500.0, value=215.0)
         win = EvaluationWindow(name="目的层", top_md_m=800.0, bottom_md_m=1200.0)
         spec = WellSpec(
-            "呼102",          # well_name (pos 0)
-            0.1,              # top_md_m (pos 1)
-            2500.0,           # bottom_md_m (pos 2)
-            2500.0,           # shoe_md_m (pos 3)
-            None,             # hanger_md_m (kwarg, optional)
-            None,             # casing_id_mm (kwarg, optional)
-            None,             # liner_od_mm (kwarg, optional)
-            None,             # liner_id_mm (kwarg, optional)
-            (pt,),            # hole_diameter_profile (pos 8, old tail start)
-            (),               # inclination_profile (pos 9)
-            (),               # standoff_profile (pos 10)
-            (win,),           # evaluation_windows (pos 11)
+            "呼102",          # pos 0 well_name
+            0.1,              # pos 1 top_md_m
+            2500.0,           # pos 2 bottom_md_m
+            2500.0,           # pos 3 shoe_md_m
+            None,             # pos 4 hanger_md_m
+            None,             # pos 5 casing_id_mm
+            None,             # pos 6 liner_od_mm
+            None,             # pos 7 liner_id_mm
+            (pt,),            # pos 8 hole_diameter_profile
+            (),               # pos 9 liner_od_profile
+            (),               # pos 10 pipe_id_profile
+            (),               # pos 11 inclination_profile
+            (),               # pos 12 standoff_profile
+            (win,),           # pos 13 evaluation_windows
         )
         self.assertEqual(len(spec.hole_diameter_profile), 1)
         self.assertEqual(spec.hole_diameter_profile[0].depth_md_m, 500.0)
@@ -279,15 +281,19 @@ class TestWellSpecPositionalBackwardCompatibility(unittest.TestCase):
         通过位置参数传入 notes，验证仍落入正确的现有字段。
         """
         spec = WellSpec(
-            "呼102",
-            0.1,
-            2500.0,
-            2500.0,
-            None, None, None, None,
-            (), (), (),
-            (),           # evaluation_windows (pos 11)
-            None,         # reference_root (pos 12)
-            ("备注1", "备注2"),  # notes (pos 13)
+            "呼102",          # pos 0 well_name
+            0.1,              # pos 1 top_md_m
+            2500.0,           # pos 2 bottom_md_m
+            2500.0,           # pos 3 shoe_md_m
+            None, None, None, None,  # pos 4-7 hanger/casing/liner_od/liner_id
+            (),               # pos 8 hole_diameter_profile
+            (),               # pos 9 liner_od_profile
+            (),               # pos 10 pipe_id_profile
+            (),               # pos 11 inclination_profile
+            (),               # pos 12 standoff_profile
+            (),               # pos 13 evaluation_windows
+            None,             # pos 14 reference_root
+            ("备注1", "备注2"),  # pos 15 notes
         )
         self.assertEqual(spec.notes, ("备注1", "备注2"))
 
@@ -297,15 +303,19 @@ class TestWellSpecPositionalBackwardCompatibility(unittest.TestCase):
         """
         ref = Path("C:/Users/30525/Documents")
         spec = WellSpec(
-            "呼102",
-            0.1,
-            2500.0,
-            2500.0,
-            None, None, None, None,
-            (), (), (),
-            (),           # evaluation_windows
-            ref,          # reference_root (pos 12)
-            ("note",),    # notes (pos 13)
+            "呼102",          # pos 0 well_name
+            0.1,              # pos 1 top_md_m
+            2500.0,           # pos 2 bottom_md_m
+            2500.0,           # pos 3 shoe_md_m
+            None, None, None, None,  # pos 4-7 hanger/casing/liner_od/liner_id
+            (),               # pos 8 hole_diameter_profile
+            (),               # pos 9 liner_od_profile
+            (),               # pos 10 pipe_id_profile
+            (),               # pos 11 inclination_profile
+            (),               # pos 12 standoff_profile
+            (),               # pos 13 evaluation_windows
+            ref,              # pos 14 reference_root
+            ("note",),        # pos 15 notes
         )
         self.assertEqual(spec.reference_root, ref)
 
