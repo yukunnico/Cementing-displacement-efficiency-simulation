@@ -17,16 +17,54 @@
 - CBL 代理值仅用于验证与对比，禁止反向校准求解器
 """
 
+from cemdisp.diagnostics.displacement_metrics import (
+    DisplacementMetricsResult,
+    compute_displacement_metrics,
+)
+from cemdisp.diagnostics.flow_classification import (
+    FlowClassificationResult,
+    compute_flow_classification,
+)
+from cemdisp.diagnostics.muskat_regime import (
+    MuskatRegimeResult,
+    classify_muskat_regime,
+    compute_muskat_regime,
+)
 from cemdisp.diagnostics.quality_proxy import (
     CBLQualityProxyResult,
     compute_cbl_quality_proxy,
     compute_from_simulation_metrics,
     summarize_proxy_for_report,
 )
+from cemdisp.diagnostics.regime_classifiers import (
+    BuoyancyRegimeResult,
+    ShutdownDecayResult,
+    classify_buoyancy_regime,
+    classify_buoyancy_regime_from_result,
+    compute_shutdown_decay,
+)
+from cemdisp.diagnostics.tier0_diagnostics import (
+    Tier0DiagnosticsResult,
+    compute_all_tier0_diagnostics,
+)
 
 __all__ = [
     "CBLQualityProxyResult",
+    "DisplacementMetricsResult",
+    "FlowClassificationResult",
     "compute_cbl_quality_proxy",
+    "compute_displacement_metrics",
+    "compute_flow_classification",
     "compute_from_simulation_metrics",
     "summarize_proxy_for_report",
+    "BuoyancyRegimeResult",
+    "ShutdownDecayResult",
+    "classify_buoyancy_regime",
+    "classify_buoyancy_regime_from_result",
+    "compute_shutdown_decay",
+    "MuskatRegimeResult",
+    "classify_muskat_regime",
+    "compute_muskat_regime",
+    "Tier0DiagnosticsResult",
+    "compute_all_tier0_diagnostics",
 ]
