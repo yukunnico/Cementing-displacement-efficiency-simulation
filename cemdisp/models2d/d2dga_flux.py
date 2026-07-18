@@ -24,8 +24,8 @@ def d2dga_flux_amplification(
     *,
     min_fraction: float = 0.01,
     max_fraction: float = 0.99,
-    min_amplification: float = 0.5,
-    max_amplification: float = 2.0,
+    min_amplification: float = -np.inf,
+    max_amplification: float = np.inf,
 ) -> float: ...
 
 
@@ -36,8 +36,8 @@ def d2dga_flux_amplification(
     *,
     min_fraction: float = 0.01,
     max_fraction: float = 0.99,
-    min_amplification: float = 0.5,
-    max_amplification: float = 2.0,
+    min_amplification: float = -np.inf,
+    max_amplification: float = np.inf,
 ) -> Array: ...
 
 
@@ -47,8 +47,8 @@ def d2dga_flux_amplification(
     *,
     min_fraction: float = 0.01,
     max_fraction: float = 0.99,
-    min_amplification: float = 0.5,
-    max_amplification: float = 2.0,
+    min_amplification: float = -np.inf,
+    max_amplification: float = np.inf,
 ) -> FloatOrArray:
     """计算 D2DGA 水泥相通量放大因子。
 
