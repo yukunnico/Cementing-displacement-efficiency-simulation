@@ -37,6 +37,27 @@ _setup_chinese_font()
 _DEFAULT_OUTPUT_DIR = Path("results/ht1_004_ablation/figures")
 
 
+def _deduplicate_ablation_summary(df: pd.DataFrame) -> pd.DataFrame:
+    """按 (run_id, ablation_level) 去重，保留有效行。
+
+    删除 metrics 全零的脏数据行；若同一 (run_id, ablation_level) 仍有
+    多条记录，保留最后出现的那条（即最近一次写入的结果），确保图 6/9
+    不会把修复前的无效零值或重复试验同时绘出。
+    """
+    metric_cols = [
+        "effective_efficiency",
+        "channeling_index",
+        "mixing_index",
+        "cement_occupation",
+        "instability_index",
+    ]
+    # 只保留至少有一个指标非零的行
+    valid = df.loc[df[metric_cols].abs().sum(axis=1) > 0.0].copy()
+    # 按原始顺序保留每组 (run_id, ablation_level) 的最后一条记录
+    deduped = valid.groupby(["run_id", "ablation_level"], as_index=False).tail(1)
+    return deduped.reset_index(drop=True)
+
+
 def _ensure_output_dir(output_dir: Path | str | None = None) -> Path:
     """确保输出目录存在并返回 Path 对象。"""
     p = Path(output_dir) if output_dir is not None else _DEFAULT_OUTPUT_DIR
@@ -65,7 +86,7 @@ def plot_fig6_ablation_channeling_mixing(
     Returns:
         matplotlib Figure 对象。
     """
-    df = pd.read_csv(csv_path)
+    df = _deduplicate_ablation_summary(pd.read_csv(csv_path))
     # 筛选 full ablation 行（排除收敛行 convergence_* 避免 R3 重复）
     full = df[(df["eccentricity"] == 0.17) & (df["nz"] == 500) & ~df["run_id"].str.startswith("convergence")].copy()
     full = full.sort_values("ablation_level")
@@ -284,7 +305,7 @@ def plot_fig9_efficiency_evolution(
     Returns:
         matplotlib Figure 对象。
     """
-    df = pd.read_csv(csv_path)
+    df = _deduplicate_ablation_summary(pd.read_csv(csv_path))
 
     fig, axes = plt.subplots(1, 3, figsize=(16, 5.5))
 
