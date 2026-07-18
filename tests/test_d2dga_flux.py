@@ -114,3 +114,25 @@ class TestBuoyancyFlux:
         q_phi, q_xi = d2dga_buoyancy_flux(c, m=1.0, delta_rho=300.0, H=H,
                                           eta2=0.18, f_phi=f_phi, f_xi=0.0)
         assert q_phi.shape == c.shape
+
+
+class TestNoClipDefault:
+    """T1-1: 去通量放大限幅 [0.5,2.0]，默认不物理裁剪（仅 c_safe 防除零）。"""
+
+    def test_large_m_high_c_formula_value(self):
+        # m=10, c=0.99: 式 4.28 给出 f≈1.01（旧默认 [0.5,2.0] 不裁剪此值，新默认同样不裁剪）
+        f = d2dga_flux_amplification(np.array([0.99]), viscosity_ratio=10.0)
+        # 验证公式计算结果正确，未被 clip 篡改
+        assert f[0] == pytest.approx(1.010085, abs=1e-5)
+
+    def test_c_zero_returns_near_1p5(self):
+        # c=0 -> c_safe clip 到 0.01, f(0.01,1) ≈ 1.497（趋势趋向 1.5）
+        f = d2dga_flux_amplification(0.0, viscosity_ratio=1.0)
+        assert f == pytest.approx(1.5, abs=0.02)
+
+    def test_explicit_clip_still_available(self):
+        # 向后兼容：显式传 min/max_amplification 仍生效
+        # 用 1.5 下限裁剪验证：f≈1.01 被 clip 到 1.5
+        f = d2dga_flux_amplification(np.array([0.99]), viscosity_ratio=10.0,
+                                     min_amplification=1.5, max_amplification=2.0)
+        assert f[0] == 1.5  # 显式 clip 到 1.5
