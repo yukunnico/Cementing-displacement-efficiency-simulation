@@ -234,3 +234,55 @@ class TestSwitchRegression:
         eff_r3 = float(res_r3.summary["effective_efficiency"])
 
         assert eff_r0 != eff_r3, f"Switches should change output, got R0={eff_r0:.6f} R3={eff_r3:.6f}"
+
+
+class TestI3FluxPhysicalUpdate:
+    """I3 浮力弥散通量物理系数接线测试（T1-2：去 flux_strength=0.05，式 4.25 直驱）。"""
+
+    def test_i3_flux_physical_update_different_from_off(self):
+        """验证 I3 通量（物理系数直驱，无 0.05 限幅）产生与关闭不同的顶替效率。"""
+        from cemdisp.models2d.boundary_bridge import AnnulusInletState
+
+        # 构造 Δρ=300 kg/m³（lead 2200 - mud 1900），η₂=0.18 Pa·s 工况
+        well = _toy_well()
+        mud = FluidSpec(name="mud", role=FluidRole.MUD, density_kg_m3=1900.0,
+                        rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.053, yield_stress_pa=8.5)
+        lead = FluidSpec(name="lead", role=FluidRole.LEAD, density_kg_m3=2200.0,
+                         rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.180, yield_stress_pa=14.0)
+        fluids = (mud, lead)
+
+        def _inlet(t: float):
+            return AnnulusInletState(
+                time_s=t, flow_rate_m3_s=0.02, stage_name="pump",
+                phase_fractions=(("cement", 1.0), ("lead", 1.0)),
+            )
+
+        # 启用 I3 通量（无 0.05 限幅，物理系数直驱）
+        s_on = AnnulusD2DGASolver(
+            dt=4.0, nz=20, ny=8, total_t=40.0,
+            enable_d2dga=True,
+            enable_d2dga_auto_m=True,
+            enable_d2dga_i3_flux=True,
+            enable_true_buoyancy=True,
+        )
+        res_on = s_on.run(well, fluids, _inlet)
+        eff_on = float(res_on.summary["effective_efficiency"])
+
+        # 关闭 I3 通量（对照）
+        s_off = AnnulusD2DGASolver(
+            dt=4.0, nz=20, ny=8, total_t=40.0,
+            enable_d2dga=True,
+            enable_d2dga_auto_m=True,
+            enable_d2dga_i3_flux=False,
+            enable_true_buoyancy=True,
+        )
+        res_off = s_off.run(well, fluids, _inlet)
+        eff_off = float(res_off.summary["effective_efficiency"])
+
+        # 物理系数直驱的 I3 通量应改变顶替效率（不同于 0.05 限幅版的小修正）
+        assert eff_on != eff_off, (
+            f"I3 flux should change efficiency; "
+            f"on={eff_on:.6f} off={eff_off:.6f}"
+        )
+        assert 0.0 < eff_on < 1.0
+        assert 0.0 < eff_off < 1.0

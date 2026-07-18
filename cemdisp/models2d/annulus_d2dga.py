@@ -772,9 +772,14 @@ class AnnulusD2DGASolver:
                     cement_total = np.maximum(cement_for_flux, 1.0e-6)
                     lead_frac = lead / cement_total
                     tail_frac = tail / cement_total
-                    flux_strength = 0.05  # 数值稳定限幅系数，控制每步通量幅度
-                    lead = lead - flux_strength * div_q * lead_frac * self.dt
-                    tail = tail - flux_strength * div_q * tail_frac * self.dt
+                    # T1-2: 去人工限幅 flux_strength=0.05；物理系数 ΔρH³/(6η₂)·I3 直驱（式 4.25）
+                    # 局部 CFL 裁剪防单步越界（α=0.5，非全局限幅）
+                    alpha_cfl = 0.5
+                    ds = geom["s"][1] - geom["s"][0]
+                    step_limit = alpha_cfl * ds / max(self.dt, 1.0e-9)
+                    div_q_clipped = np.clip(div_q, -step_limit, step_limit)
+                    lead = lead - div_q_clipped * lead_frac * self.dt
+                    tail = tail - div_q_clipped * tail_frac * self.dt
                     lead = np.clip(lead, 0.0, 1.0)
                     tail = np.clip(tail, 0.0, 1.0)
 
