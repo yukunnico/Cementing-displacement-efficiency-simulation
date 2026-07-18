@@ -7,10 +7,10 @@
   "enable_d2dga_auto_m": true,
   "enable_d2dga_i3_flux": false,
   "enable_true_buoyancy": false,
-  "effective_efficiency": 0.956175137663473,
-  "cement_occupation": 0.956175137663473,
-  "channeling_index": 0.0721442885771245,
-  "mixing_index": 0.12333603051760289,
-  "instability_index": 0.04129416482349668,
-  "buoyancy_number": 4.015117985827346
+  "effective_efficiency": 0.558047313130765,
+  "cement_occupation": 0.558047313130765,
+  "channeling_index": 0.024048096192374833,
+  "mixing_index": 0.010054019991861089,
+  "instability_index": 0.02044557869688368,
+  "buoyancy_number": 7.234908311135617
 }
