@@ -424,8 +424,8 @@ class AnnulusD2DGASolver:
         lead_fluid: FluidSpec | None,
         tail_fluid: FluidSpec | None,
         spacer_fluid: FluidSpec | None,
-    ) -> Tuple[Array, Array, Array, Array, Array]:
-        """计算四相混合物系的表观粘度、密度、钻井液分数、混合屈服应力和黏度比 m 场。"""
+    ) -> Tuple[Array, Array, Array, Array, Array, Array, Array]:
+        """计算四相混合物系的表观粘度、密度、钻井液分数、混合屈服应力、黏度比 m 场及相黏度场（η1=泥浆相, η2=水泥相）。"""
         # 四相体积分数闭合：显式跟踪领浆、尾浆和前置/隔离液，钻井液由守恒关系反算。
         mud = np.clip(1.0 - lead - tail - spacer, 0.0, 1.0)
         effective_b = geom.get("effective_b", geom["b"])
@@ -461,11 +461,15 @@ class AnnulusD2DGASolver:
             mu_cement_field = self._apparent_viscosity(cement_fluid, gamma)
             m_field = mu_mud_field / np.maximum(mu_cement_field, 1.0e-6)
         else:
-            # 无水泥相时 m=1（退化为默认）
+            # 无水泥相时 m=1（退化为默认），η2 退化为 η1
+            mu_cement_field = mu_mud_field
             m_field = np.ones_like(mu_mud_field)
         # 限幅到合理范围，避免极端粘度比导致 f_amp 越界（d2dga_flux 内还有 [0.5,2] clip）
         m_field = np.clip(m_field, 0.1, 10.0)
-        return mu, rho, mud, tau_y, m_field
+        # T1-4: 返回相黏度场 η1=泥浆相, η2=水泥相（两层黏度闭包用）
+        eta1 = mu_mud_field
+        eta2 = mu_cement_field
+        return mu, rho, mud, tau_y, m_field, eta1, eta2
 
     def _buoyancy_force_vector(self, geom: Dict[str, Array], beta_deg: Array | float) -> Tuple[Array, Array]:
         """计算论文式 2.5b 的浮力体力向量 f = (r_a·cosβ/F², r_a·sin(πφ)·sinβ/F²)。
@@ -538,7 +542,7 @@ class AnnulusD2DGASolver:
         effective_b = geom.get("effective_b", geom["b"])
         b = effective_b
         q_half = q_m3s / 2.0
-        mu, rho, mud, tau_y, m_field = self._compute_props(
+        mu, rho, mud, tau_y, m_field, eta1, eta2 = self._compute_props(
             lead,
             tail,
             spacer,
@@ -568,10 +572,14 @@ class AnnulusD2DGASolver:
         mu_turbulent = np.zeros_like(mu_reg)
 
         # === 论文D2DGA口径速度场：偏心通道主导 + 浮力修正 ===
-        # 基础流动度：偏心通道主导 (b/mean(b))^2 / mu_reg
-        # 使用正则化黏度 mu_reg，在低剪切死区自动抑制流动
+        # T1-4: 两层黏度闭包 1/η_mix = c̄³/η₂ + (1−c̄³)/η₁（式 4.23）替换单相 μ_reg
+        # 基础流动度：偏心通道主导 (b/mean(b))^2 / η_mix
+        # mu_reg 保留用于 Re 诊断
         b_mean = np.mean(b, axis=0, keepdims=True)
-        base = (b / np.maximum(b_mean, 1.0e-12)) ** 2 / np.maximum(mu_reg, 1.0e-6)
+        c_bar = np.clip(lead + tail, 0.0, 1.0)  # 局部水泥浓度
+        eta_mix = 1.0 / (c_bar**3 / np.maximum(eta2, 1.0e-9)
+                         + (1.0 - c_bar**3) / np.maximum(eta1, 1.0e-9))
+        base = (b / np.maximum(b_mean, 1.0e-12)) ** 2 / np.maximum(eta_mix, 1.0e-9)
 
         # === 速度场流动度：偏心通道主导 + 浮力修正 ===
         # density_contrast > 0 表示顶替液更重（水泥重 vs 泥浆轻），有助于窄边推进
