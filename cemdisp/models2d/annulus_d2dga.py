@@ -691,6 +691,8 @@ class AnnulusD2DGASolver:
         spacer = np.zeros((self.ny, self.nz), dtype=float)
         # wall 场初始化为零；T1-5 后按 c < c_min 判据在泵注阶段动态更新（式 2.35-2.41）
         wall = np.zeros((self.ny, self.nz), dtype=float)
+        # 水泥前锋到达标记：c_min 壁面判据只在前锋已到达的网格生效
+        cement_ever = np.zeros((self.ny, self.nz), dtype=float)
         w_prev = np.full((self.ny, self.nz), 0.45, dtype=float)
         half_volume = _trapez2d(geom["b"], geom)
 
@@ -820,8 +822,11 @@ class AnnulusD2DGASolver:
 
                 # T1-5: static wall layer c_min 判据（Bararpour 2025 式 2.35-2.41）
                 # 局部水泥浓度 c < c_min 处壁面层泥浆滞留不流动 → wall=1
+                # 注意：c_min 判据只在水前锋已到达的网格生效（cement_ever > 0），
+                # 避免前锋到达前全局 wall=1 堵塞速度场。
                 cement_local = np.clip(lead + tail, 0.0, 1.0)
-                wall = (cement_local < self.c_min).astype(float)
+                cement_ever = np.maximum(cement_ever, cement_local)
+                wall = np.where(cement_ever > 0, (cement_local < self.c_min).astype(float), 0.0)
 
             else:
                 # === 泵停阶段：冻结浓度场，仅记录指标 ===
