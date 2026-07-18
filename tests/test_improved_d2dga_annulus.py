@@ -552,3 +552,96 @@ class TestBuoyancyForceInjection:
         shape_exp = 1.0 + stable * ebar * (2.0 * phi[:, 0] - 1.0)
 
         np.testing.assert_allclose(shape_est_mean, shape_exp, rtol=1.0e-10, atol=1.0e-10)
+
+
+class TestStaticWallLayer:
+    """T1-5: Static wall layer c_min 判据（Bararpour 2025 式 2.35-2.41）"""
+
+    def test_constructor_has_cmin_default(self):
+        """c_min 参数默认值应为 0.05。"""
+        s = _make_solver()
+        assert hasattr(s, "c_min")
+        assert s.c_min == 0.05
+
+    def test_cmin_parameter_stored(self):
+        """c_min 参数可配置。"""
+        s = _make_solver(c_min=0.3)
+        assert s.c_min == 0.3
+
+    def test_wall_consistency_after_run(self):
+        """运行后 wall 场与水泥浓度场一致：wall=1 ↔ cement < c_min。"""
+        from cemdisp.models2d.boundary_bridge import AnnulusInletState
+        well = _toy_well()
+        mud = FluidSpec(name="mud", role=FluidRole.MUD, density_kg_m3=1900.0,
+                        rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.053, yield_stress_pa=8.5)
+        lead = FluidSpec(name="lead", role=FluidRole.LEAD, density_kg_m3=1930.0,
+                         rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.180, yield_stress_pa=14.0)
+        fluids = (mud, lead)
+
+        def _inlet(t: float):
+            return AnnulusInletState(
+                time_s=t, flow_rate_m3_s=0.02, stage_name="pump",
+                phase_fractions=(("cement", 1.0), ("lead", 1.0)),
+            )
+
+        s = AnnulusD2DGASolver(dt=4.0, nz=20, ny=8, total_t=40.0, c_min=0.05)
+        res = s.run(well, fluids, _inlet)
+        cement = np.clip(res.lead_field + res.tail_field, 0.0, 1.0)
+        # wall=1 → cement < c_min; wall=0 → cement >= c_min
+        wall_one = res.wall_field > 0.5
+        if wall_one.any():
+            assert np.all(cement[wall_one] < 0.05 + 1e-9), "wall=1 处 cement 应 < c_min"
+        wall_zero = res.wall_field < 0.5
+        if wall_zero.any():
+            assert np.all(cement[wall_zero] >= 0.05 - 1e-9), "wall=0 处 cement 应 >= c_min"
+
+    def test_wall_zeros_velocity_in_wall_cells(self):
+        """wall=1 处速度 w≈0（流动度归零）。"""
+        s = _make_solver(c_min=0.05)
+        well = _toy_well()
+        geom = s._build_geom(well)
+        ny, nz = s.ny, s.nz
+        mud_f = FluidSpec(name="mud", role=FluidRole.MUD, density_kg_m3=1900.0,
+                          rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.053, yield_stress_pa=8.5)
+        lead_f = FluidSpec(name="lead", role=FluidRole.LEAD, density_kg_m3=1930.0,
+                           rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.180, yield_stress_pa=14.0)
+        lead = np.full((ny, nz), 0.6)
+        tail = np.zeros((ny, nz))
+        spacer = np.zeros((ny, nz))
+        w_prev = np.full((ny, nz), 0.4)
+        wall = np.zeros((ny, nz))
+        wall[:, :nz//2] = 1.0
+
+        w, *_ = s._compute_velocity(
+            lead, tail, spacer, geom, 0.02, w_prev, mud_f, lead_f, None, None, wall=wall,
+        )
+
+        # wall=1 处速度 ≈ 0
+        assert np.all(np.abs(w[:, :nz//2]) < 1e-10), "wall=1 处速度应 ≈ 0"
+        # wall=0 处速度 > 0
+        assert np.all(w[:, nz//2:] > 0), "wall=0 处速度应 > 0"
+
+    def test_cmin_0_3_more_wall_than_cmin_0_05(self):
+        """c_min=0.3 时 wall=1 网格数多于 c_min=0.05。"""
+        from cemdisp.models2d.boundary_bridge import AnnulusInletState
+        well = _toy_well()
+        mud = FluidSpec(name="mud", role=FluidRole.MUD, density_kg_m3=1900.0,
+                        rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.053, yield_stress_pa=8.5)
+        lead = FluidSpec(name="lead", role=FluidRole.LEAD, density_kg_m3=1930.0,
+                         rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.180, yield_stress_pa=14.0)
+        fluids = (mud, lead)
+
+        def _inlet(t: float):
+            return AnnulusInletState(
+                time_s=t, flow_rate_m3_s=0.02, stage_name="pump",
+                phase_fractions=(("cement", 1.0), ("lead", 1.0)),
+            )
+
+        s_low = AnnulusD2DGASolver(dt=4.0, nz=20, ny=8, total_t=40.0, c_min=0.05)
+        s_high = AnnulusD2DGASolver(dt=4.0, nz=20, ny=8, total_t=40.0, c_min=0.3)
+        res_low = s_low.run(well, fluids, _inlet)
+        res_high = s_high.run(well, fluids, _inlet)
+        assert np.sum(res_high.wall_field) >= np.sum(res_low.wall_field), (
+            f"c_min=0.3 wall=1 网格数 ({np.sum(res_high.wall_field)}) "
+            f"应 >= c_min=0.05 ({np.sum(res_low.wall_field)})"
+        )

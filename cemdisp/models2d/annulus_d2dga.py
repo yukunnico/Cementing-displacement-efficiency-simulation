@@ -202,6 +202,7 @@ class AnnulusD2DGASolver:
         yield_regularization_M: float = 100.0,
         open_outlet: bool = True,
         alpha_cfl: float = 0.5,
+        c_min: float = 0.05,
     ) -> None:
         """初始化环空二维求解器参数。
 
@@ -226,6 +227,8 @@ class AnnulusD2DGASolver:
                 False: 封闭出口，按累计入环空体积限制场量，适用于模拟整个环空。
             alpha_cfl: CFL 裁剪系数，默认 0.5。控制单步 I3 通量散度裁剪上限
                 |div_q|·dt ≤ alpha_cfl·min(ds)，其中 ds 取轴向网格最小间距。
+            c_min: 壁面静止层浓度阈值（Bararpour 2025 式 2.35-2.41），默认 0.05。
+                局部水泥浓度 c < c_min 时该处壁面层泥浆滞留不流动（wall=1）。
         """
         self.dt = dt
         self.nz = nz
@@ -241,6 +244,7 @@ class AnnulusD2DGASolver:
         self.enable_true_buoyancy: bool = enable_true_buoyancy
         self.open_outlet: bool = open_outlet
         self.alpha_cfl: float = alpha_cfl
+        self.c_min: float = c_min
 
     def _build_geom(self, well_spec: WellSpec, mud_cake_thickness: Array | None = None) -> Dict[str, Array]:
         """根据井筒规格构建环空二维网格几何参数。
@@ -523,6 +527,7 @@ class AnnulusD2DGASolver:
         lead_fluid: FluidSpec | None,
         tail_fluid: FluidSpec | None,
         spacer_fluid: FluidSpec | None,
+        wall: Array | None = None,
     ) -> Tuple[Array, Array, Array, Array, Array, Array, Array, Array]:
         """计算环空速度场（论文D2DGA口径）。
 
@@ -620,6 +625,9 @@ class AnnulusD2DGASolver:
             stable = float(np.clip(8.0 * density_contrast, -0.35, 0.45))
             buoyancy_shape = 1.0 + stable * ebar * (2.0 * phi - 1.0)
         pref = np.maximum(base * buoyancy_shape, 1.0e-8)
+        # T1-5: wall=1 处壁面静止层，流动度归零（式 2.35-2.41）
+        if wall is not None:
+            pref = pref * (1.0 - wall)
 
         # 由截面排量约束得到轴向速度 w
         dy = np.gradient(geom["y"])[:, None]
@@ -642,7 +650,6 @@ class AnnulusD2DGASolver:
     def _depth_profiles(self, geom: Dict[str, Array], lead: Array, tail: Array, spacer: Array, wall: Array) -> pd.DataFrame:
         """计算深度方向的平均剖面数据。"""
         cement = np.clip(lead + tail, 0.0, 1.0)
-        del wall
         eff = cement
         mud = np.clip(1.0 - lead - tail - spacer, 0.0, 1.0)
         return pd.DataFrame(
@@ -682,7 +689,7 @@ class AnnulusD2DGASolver:
         lead = np.zeros((self.ny, self.nz), dtype=float)
         tail = np.zeros((self.ny, self.nz), dtype=float)
         spacer = np.zeros((self.ny, self.nz), dtype=float)
-        # 为兼容旧结果结构仍保留 wall 字段，但论文口径核心不再做壁面泥饼清洗，故恒为零。
+        # wall 场初始化为零；T1-5 后按 c < c_min 判据在泵注阶段动态更新（式 2.35-2.41）
         wall = np.zeros((self.ny, self.nz), dtype=float)
         w_prev = np.full((self.ny, self.nz), 0.45, dtype=float)
         half_volume = _trapez2d(geom["b"], geom)
@@ -727,6 +734,7 @@ class AnnulusD2DGASolver:
                     lead_fluid,
                     tail_fluid,
                     spacer_fluid,
+                    wall=wall,
                 )
                 w_prev = w
 
@@ -810,6 +818,11 @@ class AnnulusD2DGASolver:
                 tail = _limit_phase_volume(tail, geom, cumulative_tail_in_m3, self.open_outlet)
                 spacer = _limit_phase_volume(spacer, geom, cumulative_spacer_in_m3, self.open_outlet)
 
+                # T1-5: static wall layer c_min 判据（Bararpour 2025 式 2.35-2.41）
+                # 局部水泥浓度 c < c_min 处壁面层泥浆滞留不流动 → wall=1
+                cement_local = np.clip(lead + tail, 0.0, 1.0)
+                wall = (cement_local < self.c_min).astype(float)
+
             else:
                 # === 泵停阶段：冻结浓度场，仅记录指标 ===
                 w, v, mu, rho, mud, Re, mu_turbulent, m_field = self._compute_velocity(
@@ -823,6 +836,7 @@ class AnnulusD2DGASolver:
                     lead_fluid,
                     tail_fluid,
                     spacer_fluid,
+                    wall=wall,
                 )
                 # 泵停后保持上一时刻浓度场，不再引入停泵滑移或额外壁面过程。
 
