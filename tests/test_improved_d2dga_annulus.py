@@ -286,3 +286,68 @@ class TestI3FluxPhysicalUpdate:
         )
         assert 0.0 < eff_on < 1.0
         assert 0.0 < eff_off < 1.0
+
+    def test_i3_flux_magnitude_matches_physical_coefficient(self):
+        """验证 I3 通量量级符合 ΔρH³/(6η₂)·I3 ≈ 2.78e-4 理论值。"""
+        from cemdisp.models2d.d2dga_flux import d2dga_buoyancy_flux, d2dga_dispersion_function_I3
+
+        # 构造 Δρ=300 kg/m³, H=0.01 m, η₂=0.18 Pa·s 工况
+        delta_rho = 300.0
+        H = 0.01
+        eta2 = 0.18
+        c = 0.5
+        m = 1.0
+
+        # 物理系数 prefactor = ΔρH³/(6η₂) = 300*1e-6/(6*0.18) = 2.7778e-4
+        prefactor = delta_rho * H**3 / (6.0 * eta2)
+        assert np.isclose(prefactor, 2.7778e-4, rtol=1e-3), (
+            f"prefactor={prefactor:.6e}, expected ~2.78e-4"
+        )
+        # I3(0.5, 1.0) = 0.0546875
+        i3 = d2dga_dispersion_function_I3(c, m)
+        assert np.isclose(i3, 0.0546875, rtol=1e-4), (
+            f"I3(0.5,1)={i3:.8f}, expected 0.0546875"
+        )
+        expected_q_mag = prefactor * i3  # ≈ 1.519e-5
+
+        q_phi, q_xi = d2dga_buoyancy_flux(
+            np.array([c]), m=m, delta_rho=delta_rho, H=H,
+            eta2=eta2, f_phi=1.0, f_xi=0.5,
+        )
+        # q_phi = +prefactor * I3 * f_phi（式 4.25 正号）
+        assert np.isclose(q_phi[0], expected_q_mag * 1.0, rtol=1e-3), (
+            f"q_phi={q_phi[0]:.6e}, expected {expected_q_mag:.6e}"
+        )
+        # q_xi = -prefactor * I3 * f_xi（式 4.25 负号）
+        assert np.isclose(q_xi[0], -expected_q_mag * 0.5, rtol=1e-3), (
+            f"q_xi={q_xi[0]:.6e}, expected {-expected_q_mag * 0.5:.6e}"
+        )
+
+    def test_i3_flux_no_clip_greater_than_old_clipped(self):
+        """验证去 flux_strength=0.05 后通量更新量大于旧 0.05 限幅版。"""
+        from cemdisp.models2d.d2dga_flux import d2dga_buoyancy_flux
+
+        delta_rho = 300.0
+        H = 0.01
+        eta2 = 0.18
+        c = np.array([0.5])
+        m = 1.0
+
+        q_phi, q_xi = d2dga_buoyancy_flux(
+            c, m=m, delta_rho=delta_rho, H=H,
+            eta2=eta2, f_phi=1.0, f_xi=0.5,
+        )
+        # 旧版：通量乘以 0.05 (flux_strength=0.05)，新版无此限幅
+        q_phi_old = q_phi * 0.05
+        q_xi_old = q_xi * 0.05
+
+        # 新版（无 0.05 限幅）通量幅值大于旧版（应为旧版 20 倍）
+        assert np.abs(q_phi[0]) > np.abs(q_phi_old[0]), (
+            f"新 q_phi={q_phi[0]:.6e} 应大于旧版 {q_phi_old[0]:.6e}"
+        )
+        assert np.abs(q_xi[0]) > np.abs(q_xi_old[0]), (
+            f"新 q_xi={q_xi[0]:.6e} 应大于旧版 {q_xi_old[0]:.6e}"
+        )
+        # 精确倍率验证：新 = 旧 / 0.05 = 20 倍
+        assert np.isclose(q_phi[0], q_phi_old[0] * 20.0, rtol=1e-10)
+        assert np.isclose(q_xi[0], q_xi_old[0] * 20.0, rtol=1e-10)
