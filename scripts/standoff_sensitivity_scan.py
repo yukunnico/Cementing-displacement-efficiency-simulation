@@ -5,6 +5,8 @@
 - 扫 standoff ∈ {0.90, 0.80, 0.70, 0.60, 0.50, 0.40, 0.30}
 - 每次运行完整 1D-2D 流水线，提取全部指标
 - 输出 CSV 到 results/偏心度敏感性扫描/敏感性扫描结果.csv
+
+注：本脚本非 D2DGA Tier 1 spec 范围，属 R3 模型辅助敏感性分析工具。
 """
 from __future__ import annotations
 
