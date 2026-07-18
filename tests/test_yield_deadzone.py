@@ -128,7 +128,7 @@ class TestYieldRegularization(unittest.TestCase):
             "effective_b": np.ones((ny, nz)) * 0.02,
         }
 
-        mu, rho, mud_frac, tau_y, m_field = solver._compute_props(
+        mu, rho, mud_frac, tau_y, m_field, eta1, eta2 = solver._compute_props(
             lead, tail, spacer_field, w_prev, geom,
             mud, None, None, spacer,
         )
@@ -220,8 +220,8 @@ class TestNarrowSideDeadzoneEffect(unittest.TestCase):
             f"宽边速度 ({wide_velocity:.4f}) 应显著大于窄边速度 ({narrow_velocity:.4f})",
         )
 
-    def test_compute_props_returns_five_values(self) -> None:
-        """_compute_props 返回五元组 (mu, rho, mud, tau_y, m_field)。"""
+    def test_compute_props_returns_seven_values(self) -> None:
+        """_compute_props 返回七元组 (mu, rho, mud, tau_y, m_field, eta1, eta2)。"""
         solver = AnnulusD2DGASolver()
         mud = FluidSpec(
             name="mud",
@@ -242,10 +242,12 @@ class TestNarrowSideDeadzoneEffect(unittest.TestCase):
             lead, tail, spacer, w_prev, geom,
             mud, None, None, None,
         )
-        self.assertEqual(len(result), 5)
-        mu, rho, mud_frac, tau_y, m_field = result
+        self.assertEqual(len(result), 7)
+        mu, rho, mud_frac, tau_y, m_field, eta1, eta2 = result
         self.assertEqual(mu.shape, (ny, nz))
         self.assertEqual(tau_y.shape, (ny, nz))
+        self.assertEqual(eta1.shape, (ny, nz))
+        self.assertEqual(eta2.shape, (ny, nz))
 
 
 if __name__ == "__main__":

@@ -51,12 +51,15 @@ class TestMFieldFromProps:
         cement_f = FluidSpec(name="tail", role=FluidRole.TAIL, density_kg_m3=1900.0,
                               rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.180, yield_stress_pa=14.0)
         out = s._compute_props(lead, tail, spacer, w_prev, geom, mud_f, None, cement_f, None)
-        # 期望多返回一个 m_field
-        assert len(out) == 5
-        mu, rho, mud, tau_y, m_field = out
+        # 期望多返回 m_field + 相黏度场 eta1/eta2（T1-4）
+        assert len(out) == 7
+        mu, rho, mud, tau_y, m_field, eta1, eta2 = out
         assert m_field.shape == (ny, nz)
         # 水泥更粘 -> m = mu_mud/mu_cement < 1
         assert np.all(m_field < 1.0)
+        # 相黏度场形状与 m_field 一致
+        assert eta1.shape == (ny, nz)
+        assert eta2.shape == (ny, nz)
 
 
 class TestExtractAblationMetrics:
@@ -351,3 +354,78 @@ class TestI3FluxPhysicalUpdate:
         # 精确倍率验证：新 = 旧 / 0.05 = 20 倍
         assert np.isclose(q_phi[0], q_phi_old[0] * 20.0, rtol=1e-10)
         assert np.isclose(q_xi[0], q_xi_old[0] * 20.0, rtol=1e-10)
+
+
+class TestTwoLayerViscosity:
+    """T1-4: 两层黏度闭包 1/η_mix = c̄³/η₂ + (1−c̄³)/η₁（式 4.23）端点及混合行为验证。"""
+
+    def _compute_eta_mix(self, c_bar, eta1, eta2):
+        """应用式 4.23 计算两层黏度闭包。"""
+        return 1.0 / (c_bar**3 / np.maximum(eta2, 1.0e-9)
+                      + (1.0 - c_bar**3) / np.maximum(eta1, 1.0e-9))
+
+    def test_eta_mix_equals_eta1_when_cbar_zero(self):
+        """c̄=0 → η_mix = η1（纯泥浆相）。"""
+        s = _make_solver()
+        well = _toy_well()
+        geom = s._build_geom(well)
+        ny, nz = s.ny, s.nz
+        w_prev = np.full((ny, nz), 0.4)
+        mud_f = FluidSpec(name="mud", role=FluidRole.MUD, density_kg_m3=1900.0,
+                          rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.053, yield_stress_pa=8.5)
+        cement_f = FluidSpec(name="tail", role=FluidRole.TAIL, density_kg_m3=1900.0,
+                              rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.180, yield_stress_pa=14.0)
+        # c̄=0: lead=0, tail=0
+        lead = np.zeros((ny, nz))
+        tail = np.zeros((ny, nz))
+        spacer = np.zeros((ny, nz))
+        _, _, _, _, _, eta1, eta2 = s._compute_props(
+            lead, tail, spacer, w_prev, geom, mud_f, None, cement_f, None)
+        c_bar = np.clip(lead + tail, 0.0, 1.0)
+        eta_mix = self._compute_eta_mix(c_bar, eta1, eta2)
+        np.testing.assert_allclose(eta_mix, eta1, rtol=1e-10)
+
+    def test_eta_mix_equals_eta2_when_cbar_one(self):
+        """c̄=1 → η_mix = η2（纯水泥相）。"""
+        s = _make_solver()
+        well = _toy_well()
+        geom = s._build_geom(well)
+        ny, nz = s.ny, s.nz
+        w_prev = np.full((ny, nz), 0.4)
+        mud_f = FluidSpec(name="mud", role=FluidRole.MUD, density_kg_m3=1900.0,
+                          rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.053, yield_stress_pa=8.5)
+        cement_f = FluidSpec(name="tail", role=FluidRole.TAIL, density_kg_m3=1900.0,
+                              rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.180, yield_stress_pa=14.0)
+        # c̄=1: lead=1, tail=0（水泥相通过 lead_fluid 传入）
+        lead = np.ones((ny, nz))
+        tail = np.zeros((ny, nz))
+        spacer = np.zeros((ny, nz))
+        _, _, _, _, _, eta1, eta2 = s._compute_props(
+            lead, tail, spacer, w_prev, geom, mud_f, lead_fluid=cement_f, tail_fluid=None, spacer_fluid=None)
+        c_bar = np.clip(lead + tail, 0.0, 1.0)
+        eta_mix = self._compute_eta_mix(c_bar, eta1, eta2)
+        np.testing.assert_allclose(eta_mix, eta2, rtol=1e-10)
+
+    def test_eta_mix_between_eta1_and_eta2_for_mixed_cbar(self):
+        """混合 c̄ 时 η_mix 介于 η1 和 η2 之间。"""
+        s = _make_solver()
+        well = _toy_well()
+        geom = s._build_geom(well)
+        ny, nz = s.ny, s.nz
+        w_prev = np.full((ny, nz), 0.4)
+        mud_f = FluidSpec(name="mud", role=FluidRole.MUD, density_kg_m3=1900.0,
+                          rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.053, yield_stress_pa=8.5)
+        cement_f = FluidSpec(name="tail", role=FluidRole.TAIL, density_kg_m3=1900.0,
+                              rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.180, yield_stress_pa=14.0)
+        # c̄=0.5: lead=0.5, tail=0
+        lead = np.full((ny, nz), 0.5)
+        tail = np.zeros((ny, nz))
+        spacer = np.zeros((ny, nz))
+        _, _, _, _, _, eta1, eta2 = s._compute_props(
+            lead, tail, spacer, w_prev, geom, mud_f, lead_fluid=cement_f, tail_fluid=None, spacer_fluid=None)
+        c_bar = np.clip(lead + tail, 0.0, 1.0)
+        eta_mix = self._compute_eta_mix(c_bar, eta1, eta2)
+        eta_min = np.minimum(eta1, eta2)
+        eta_max = np.maximum(eta1, eta2)
+        assert np.all(eta_mix >= eta_min - 1e-10), "η_mix 不应小于 min(η1,η2)"
+        assert np.all(eta_mix <= eta_max + 1e-10), "η_mix 不应大于 max(η1,η2)"
