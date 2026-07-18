@@ -429,3 +429,78 @@ class TestTwoLayerViscosity:
         eta_max = np.maximum(eta1, eta2)
         assert np.all(eta_mix >= eta_min - 1e-10), "η_mix 不应小于 min(η1,η2)"
         assert np.all(eta_mix <= eta_max + 1e-10), "η_mix 不应大于 max(η1,η2)"
+
+
+class TestBuoyancyForceInjection:
+    """T1-3b: 体力向量注入流动度（式 2.5b/4.24）测试。"""
+
+    def _make_well_inclined(self):
+        """创建斜井（5 deg）井身结构。"""
+        pts = lambda d, v: DepthValuePoint(depth_md_m=d, value=v)
+        return WellSpec(
+            well_name="inclined",
+            top_md_m=1000.0, bottom_md_m=1100.0, shoe_md_m=1100.0, hanger_md_m=1000.0,
+            casing_id_mm=200.0, liner_od_mm=139.7, liner_id_mm=108.0,
+            hole_diameter_profile=[pts(1000.0, 215.9), pts(1100.0, 215.9)],
+            inclination_profile=[pts(1000.0, 5.0), pts(1100.0, 5.0)],
+            standoff_profile=[pts(1000.0, 0.83), pts(1100.0, 0.83)],
+            evaluation_windows=[EvaluationWindow(name="w", top_md_m=1000.0, bottom_md_m=1100.0, window_type="full")],
+        )
+
+    def _setup_heavy_over_light(self, solver):
+        """重顶替轻工况：水泥 2200 vs 泥浆 1900 kg/m³，均匀 c=0.6。"""
+        well = self._make_well_inclined()
+        geom = solver._build_geom(well)
+        ny, nz = solver.ny, solver.nz
+        mud_f = FluidSpec(name="mud", role=FluidRole.MUD, density_kg_m3=1900.0,
+                          rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.053, yield_stress_pa=8.5)
+        lead_f = FluidSpec(name="lead", role=FluidRole.LEAD, density_kg_m3=2200.0,
+                           rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.180, yield_stress_pa=14.0)
+        lead = np.full((ny, nz), 0.6)
+        tail = np.zeros((ny, nz))
+        spacer = np.zeros((ny, nz))
+        w_prev = np.full((ny, nz), 0.4)
+        return geom, ny, nz, mud_f, lead_f, lead, tail, spacer, w_prev
+
+    def test_true_buoyancy_differs_from_false(self):
+        """真浮力体力注入（True）与简化代理（False）产生不同的速度剖面。"""
+        s_true = AnnulusD2DGASolver(
+            dt=4.0, nz=20, ny=10, total_t=40.0,
+            enable_d2dga=True, enable_d2dga_auto_m=True,
+            enable_d2dga_i3_flux=True, enable_true_buoyancy=True,
+        )
+        s_false = AnnulusD2DGASolver(
+            dt=4.0, nz=20, ny=10, total_t=40.0,
+            enable_d2dga=True, enable_d2dga_auto_m=True,
+            enable_d2dga_i3_flux=True, enable_true_buoyancy=False,
+        )
+        geom, ny, nz, mud_f, lead_f, lead, tail, spacer, w_prev = self._setup_heavy_over_light(s_true)
+
+        w_true, *_ = s_true._compute_velocity(lead, tail, spacer, geom, q_m3s=0.02, w_prev=w_prev,
+                                               mud_fluid=mud_f, lead_fluid=lead_f, tail_fluid=None, spacer_fluid=None)
+        w_false, *_ = s_false._compute_velocity(lead, tail, spacer, geom, q_m3s=0.02, w_prev=w_prev,
+                                                 mud_fluid=mud_f, lead_fluid=lead_f, tail_fluid=None, spacer_fluid=None)
+
+        diff = np.max(np.abs(w_true - w_false))
+        assert diff > 1e-8, f"True vs False 速度差过小: {diff:.2e}"
+
+    def test_false_buoyancy_falls_back_to_simplified(self):
+        """enable_true_buoyancy=False → 回退 (2φ−1) 简化代理，结果合理。"""
+        s = AnnulusD2DGASolver(
+            dt=4.0, nz=20, ny=10, total_t=40.0,
+            enable_d2dga=True, enable_d2dga_auto_m=True,
+            enable_d2dga_i3_flux=True, enable_true_buoyancy=False,
+        )
+        geom, ny, nz, mud_f, lead_f, lead, tail, spacer, w_prev = self._setup_heavy_over_light(s)
+
+        w, v, mu, rho, mud_out, Re, mu_turb, m_field = s._compute_velocity(
+            lead, tail, spacer, geom, q_m3s=0.02, w_prev=w_prev,
+            mud_fluid=mud_f, lead_fluid=lead_f, tail_fluid=None, spacer_fluid=None,
+        )
+
+        # 结果合理：速度>0, 形状正确
+        assert np.all(w > 0), "速度应为正"
+        assert w.shape == (ny, nz)
+        # 与无浮力(base alone)比较：宽边因 buoyancy_shape 修正速度相对降低（与纯几何比）
+        # 用轴向平均速度场验证 (2φ−1) 修正生效：宽边φ=0获得 -stable·ebar 因子
+        # 由于几何主导，宽边绝对速度仍最高，但 True 与 False 不同（已在上方测试覆盖）

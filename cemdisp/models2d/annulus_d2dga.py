@@ -31,7 +31,12 @@ import pandas as pd
 from cemdisp.data.fluid_spec import FluidRole, FluidSpec
 from cemdisp.data.well_spec import DepthValuePoint, WellSpec
 from cemdisp.models2d.boundary_bridge import AnnulusInletState
-from cemdisp.models2d.d2dga_flux import d2dga_flux_amplification, d2dga_buoyancy_flux
+from cemdisp.models2d.d2dga_flux import (
+    d2dga_buoyancy_flux,
+    d2dga_dispersion_I1,
+    d2dga_dispersion_I2,
+    d2dga_flux_amplification,
+)
 
 
 Array = NDArray[np.float64]
@@ -597,17 +602,18 @@ class AnnulusD2DGASolver:
         phi = geom["phi"][:, None]
         ebar = geom["e"][None, :]
         if self.enable_true_buoyancy and self.enable_d2dga:
-            # R3: 真浮力体力（式 2.5b）-> 体力向量 b = (ρ-1)/F² · (cosβ, sinπφ sinβ)
-            # 注入到流动度：重顶替轻(stable>0) -> 窄边流动度提升（窄边推进）
+            # T1-3b: 体力向量注入流动度（式 2.5b/4.24），替换 (2φ−1) 简化代理
             beta_deg_local = float(np.mean(geom.get("inc_deg", np.zeros(self.nz))))
-            # 真浮力体力向量 _buoyancy_force_vector 当前未注入流动度（采用 (2φ-1) 密度对比机动性简化，见 §2.7.4）；保留接口供未来动量源耦合
-            # 密度对比 rho 已是 g/cc 混合物场；体力方位角再分配强度 ∝ Δρ·f
+            f_phi_arr, _ = self._buoyancy_force_vector(geom, beta_deg_local)
             rho_displaced = mud_fluid.density_kg_m3 / 1000.0
-            density_contrast = (rho - rho_displaced)  # 局部（g/cc）
-            # 体力对流动度的方位角修正：窄边(phi=1) f_phi=0, 宽边(phi=0) f_phi=0（sinπφ），
-            # 故体力主要作用于 f_xi（轴向）。为保留窄边推进效应，用 density_contrast × (2φ-1) 项
-            # （与代理同结构但用真密度差，无量纲化后幅度可控）
-            buoyancy_shape = 1.0 + np.clip(2.0 * density_contrast, -0.35, 0.45) * ebar * (2.0 * phi - 1.0)
+            delta_rho = (rho - rho_displaced)  # g/cc 局部密度差
+            m_local = float(np.mean(m_field)) if np.all(np.isfinite(m_field)) else self.d2dga_viscosity_ratio
+            c_bar = np.clip(lead + tail, 0.0, 1.0)
+            i1 = d2dga_dispersion_I1(c_bar, m_local)
+            i2 = d2dga_dispersion_I2(c_bar, m_local)
+            # 式 4.24: 方位修正 = Δρ·f_phi·(I2/I1)；重顶替轻→窄边(f_phi 大) pref 提升
+            correction = np.clip(delta_rho * (i2 / np.maximum(i1, 1.0e-12)), -0.5, 0.5)
+            buoyancy_shape = 1.0 + correction * f_phi_arr
         else:
             # R0/R1/R2: 保留 buoyancy_shape 代理（旧论文状态）
             density_contrast = (rho_disp - mud_fluid.density_kg_m3) / mud_fluid.density_kg_m3
