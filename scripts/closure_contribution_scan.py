@@ -1,6 +1,8 @@
 """三闭包 R0->R3 逐级贡献分解扫描脚本。
 额外包含 NONE 级别（enable_d2dga=False 纯平流基线），共 5 级。
 产出 results/三闭包贡献分解/三闭包贡献分解结果.csv
+
+注：本脚本非 D2DGA Tier 1 spec 范围，属 R3 模型辅助敏感性分析工具。
 """
 from __future__ import annotations
 

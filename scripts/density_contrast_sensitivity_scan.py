@@ -6,6 +6,8 @@
 - 扫 cement_density ∈ {1600, 1750, 1900, 2000, 2100, 2200, 2350} kg/m³
 - 每次运行完整 1D-2D 流水线，提取全部指标
 - 输出 CSV 到 results/密度差敏感性扫描/密度差敏感性扫描结果.csv
+
+注：本脚本非 D2DGA Tier 1 spec 范围，属 R3 模型辅助敏感性分析工具。
 """
 from __future__ import annotations
 

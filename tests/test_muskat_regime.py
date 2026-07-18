@@ -19,13 +19,15 @@ import numpy as np
 
 from cemdisp.diagnostics.muskat_regime import (
     MuskatRegimeResult,
-    _buoyant_mobility_I2,
     _finger_velocity,
     _front_flux,
     _isotropic_flux_q0,
-    _mean_mobility_I1,
     classify_muskat_regime,
     compute_muskat_regime,
+)
+from cemdisp.models2d.d2dga_flux import (
+    d2dga_dispersion_I1,
+    d2dga_dispersion_I2,
 )
 
 
@@ -171,8 +173,8 @@ class TestNumericalSafety(unittest.TestCase):
         """牛顿闭包端点解析值：q0(0)=0、q0(1)=1、I2(0)=I2(1)=0、I1 恒正、F 端点 0/1。"""
         c = np.array([0.0, 1.0])
         for m in [0.5, 1.0, 2.0]:
-            i1 = _mean_mobility_I1(c, m)
-            i2 = _buoyant_mobility_I2(c, m)
+            i1 = d2dga_dispersion_I1(c, m)
+            i2 = d2dga_dispersion_I2(c, m)
             q0 = _isotropic_flux_q0(c, m)
             flux = _front_flux(c, m, 10.0)
             self.assertTrue(np.all(i1 > 0.0))

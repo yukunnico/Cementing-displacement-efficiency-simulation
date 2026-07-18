@@ -190,10 +190,7 @@ class MuskatRegimeResult:
 
 # ---------------------------------------------------------------------------
 # 牛顿解析闭包（Bararpour & Frigaard 2025 式 2.24-2.26；I3 用 Zhang 2022 式 4.26）
-# I1/I2 已提升至 d2dga_flux.d2dga_dispersion_I1/I2（T1-3a DRY）。
-# 向后兼容别名（测试中仍 import _mean_mobility_I1 / _buoyant_mobility_I2）。
-_mean_mobility_I1 = d2dga_dispersion_I1
-_buoyant_mobility_I2 = d2dga_dispersion_I2
+# I1/I2 已提升至 d2dga_flux.d2dga_dispersion_I1/I2（T1-3a DRY，单一来源）。
 # ---------------------------------------------------------------------------
 
 
