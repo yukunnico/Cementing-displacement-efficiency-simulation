@@ -196,6 +196,7 @@ class AnnulusD2DGASolver:
         save_interval: int = 60,
         yield_regularization_M: float = 100.0,
         open_outlet: bool = True,
+        alpha_cfl: float = 0.5,
     ) -> None:
         """初始化环空二维求解器参数。
 
@@ -218,6 +219,8 @@ class AnnulusD2DGASolver:
             open_outlet: 是否开放出口边界（允许水泥浆流出到重叠段），默认True。
                 True: 开放出口，不限制体积，适用于只模拟裸眼段；
                 False: 封闭出口，按累计入环空体积限制场量，适用于模拟整个环空。
+            alpha_cfl: CFL 裁剪系数，默认 0.5。控制单步 I3 通量散度裁剪上限
+                |div_q|·dt ≤ alpha_cfl·min(ds)，其中 ds 取轴向网格最小间距。
         """
         self.dt = dt
         self.nz = nz
@@ -232,6 +235,7 @@ class AnnulusD2DGASolver:
         self.enable_d2dga_i3_flux: bool = enable_d2dga_i3_flux
         self.enable_true_buoyancy: bool = enable_true_buoyancy
         self.open_outlet: bool = open_outlet
+        self.alpha_cfl: float = alpha_cfl
 
     def _build_geom(self, well_spec: WellSpec, mud_cake_thickness: Array | None = None) -> Dict[str, Array]:
         """根据井筒规格构建环空二维网格几何参数。
@@ -773,10 +777,10 @@ class AnnulusD2DGASolver:
                     lead_frac = lead / cement_total
                     tail_frac = tail / cement_total
                     # T1-2: 去人工限幅 flux_strength=0.05；物理系数 ΔρH³/(6η₂)·I3 直驱（式 4.25）
-                    # 局部 CFL 裁剪防单步越界（α=0.5，非全局限幅）
-                    alpha_cfl = 0.5
-                    ds = geom["s"][1] - geom["s"][0]
-                    step_limit = alpha_cfl * ds / max(self.dt, 1.0e-9)
+                    # 局部 CFL 裁剪防单步越界（非全局限幅）
+                    # ds 取轴向网格最小间距，保证非均匀网格下 CFL 条件保守
+                    ds = float(np.min(np.diff(geom["s"])))
+                    step_limit = self.alpha_cfl * ds / max(self.dt, 1.0e-9)
                     div_q_clipped = np.clip(div_q, -step_limit, step_limit)
                     lead = lead - div_q_clipped * lead_frac * self.dt
                     tail = tail - div_q_clipped * tail_frac * self.dt
