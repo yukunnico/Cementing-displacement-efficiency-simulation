@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import math
 from typing import overload
 
 import numpy as np
@@ -136,3 +137,29 @@ def d2dga_buoyancy_flux(
     q_phi = coef * i3 * np.asarray(f_phi, dtype=float)
     q_xi = -coef * i3 * np.asarray(f_xi, dtype=float)
     return q_phi, q_xi
+
+
+def d2dga_dispersion_I1(c_bar: FloatOrArray, m: float) -> FloatOrArray:
+    """牛顿平均流动度 I1(ḉ,m)（Bararpour 2025 式 2.24，H³ 归一化）。
+
+    公式：I1 = [√m·c̄³ + (1−c̄³)/√m] / 3。
+    恒正，最小值 ≥ min(√m, 1/√m)/3。
+    标量输入返回 float，数组输入返回 Array。
+    """
+    c = np.asarray(c_bar, dtype=float)
+    sq_m = math.sqrt(m)
+    out = (sq_m * c**3 + (1.0 - c**3) / sq_m) / 3.0
+    return float(out) if np.isscalar(c_bar) else out.astype(float, copy=False)
+
+
+def d2dga_dispersion_I2(c_bar: FloatOrArray, m: float) -> FloatOrArray:
+    """牛顿浮力流动度 I2(ḉ,m)（Bararpour 2025 式 2.25，H⁴ 归一化）。
+
+    公式：I2 = [2√m·c̄³(1−c̄) + c̄(1−c̄)²(1+2c̄)/√m] / 6。
+    I2(0)=I2(1)=0，在混合区为正。
+    标量输入返回 float，数组输入返回 Array。
+    """
+    c = np.asarray(c_bar, dtype=float)
+    sq_m = math.sqrt(m)
+    out = (2.0 * sq_m * c**3 * (1.0 - c) + c * (1.0 - c)**2 * (1.0 + 2.0 * c) / sq_m) / 6.0
+    return float(out) if np.isscalar(c_bar) else out.astype(float, copy=False)

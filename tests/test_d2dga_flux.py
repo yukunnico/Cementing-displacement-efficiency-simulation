@@ -1,7 +1,12 @@
-"""D2DGA 通量纯函数测试。覆盖：式4.28放大因子（含数组m）+ 式4.26 I₃弥散函数。"""
+"""D2DGA 通量纯函数测试。覆盖：式4.28放大因子（含数组m）+ 式4.26 I₃弥散函数 + 式2.24/2.25 I1/I2。"""
 import numpy as np
 import pytest
-from cemdisp.models2d.d2dga_flux import d2dga_flux_amplification, d2dga_dispersion_function_I3
+from cemdisp.models2d.d2dga_flux import (
+    d2dga_dispersion_function_I3,
+    d2dga_dispersion_I1,
+    d2dga_dispersion_I2,
+    d2dga_flux_amplification,
+)
 
 
 class TestFluxAmplificationArrayM:
@@ -136,3 +141,37 @@ class TestNoClipDefault:
         f = d2dga_flux_amplification(np.array([0.99]), viscosity_ratio=10.0,
                                      min_amplification=1.5, max_amplification=2.0)
         assert f[0] == 1.5  # 显式 clip 到 1.5
+
+
+class TestDispersionI1I2:
+    """I1/I2 牛顿解析闭包（Bararpour 2025 式 2.24/2.25，T1-3a DRY 提升）。"""
+
+    def test_I1_zero_m4_returns_one_sixth(self):
+        """I1(0, m=4) = 1/6：仅顶端泥浆，平均流动度取最小值。"""
+        assert d2dga_dispersion_I1(0.0, m=4.0) == pytest.approx(1.0 / 6.0, abs=1e-12)
+
+    def test_I1_one_m4_returns_two_thirds(self):
+        """I1(1, m=4) = 2/3：全水泥，平均流动度取最大值。"""
+        assert d2dga_dispersion_I1(1.0, m=4.0) == pytest.approx(2.0 / 3.0, abs=1e-12)
+
+    def test_I2_zero_returns_zero(self):
+        """I2(0, m) = 0：浮力流度在端点消失。"""
+        assert d2dga_dispersion_I2(0.0, m=1.0) == pytest.approx(0.0, abs=1e-12)
+        assert d2dga_dispersion_I2(0.0, m=4.0) == pytest.approx(0.0, abs=1e-12)
+
+    def test_I2_one_returns_zero(self):
+        """I2(1, m) = 0：浮力流度在端点消失。"""
+        assert d2dga_dispersion_I2(1.0, m=1.0) == pytest.approx(0.0, abs=1e-12)
+        assert d2dga_dispersion_I2(1.0, m=4.0) == pytest.approx(0.0, abs=1e-12)
+
+    def test_I2_mid_concentration_positive(self):
+        """I2(0.5, m=1) > 0：浮力流度在混合区为正。"""
+        assert d2dga_dispersion_I2(0.5, m=1.0) > 0.0
+
+    def test_array_shape_preserved(self):
+        """数组输入保持形状兼容性。"""
+        c = np.array([0.2, 0.5, 0.8])
+        i1 = d2dga_dispersion_I1(c, m=2.0)
+        i2 = d2dga_dispersion_I2(c, m=2.0)
+        assert i1.shape == c.shape
+        assert i2.shape == c.shape
