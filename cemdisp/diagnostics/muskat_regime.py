@@ -105,6 +105,8 @@ from numpy.typing import NDArray
 
 from cemdisp.models2d.d2dga_flux import (
     d2dga_dispersion_function_I3,
+    d2dga_dispersion_I1,
+    d2dga_dispersion_I2,
     d2dga_flux_amplification,
 )
 
@@ -188,27 +190,11 @@ class MuskatRegimeResult:
 
 # ---------------------------------------------------------------------------
 # 牛顿解析闭包（Bararpour & Frigaard 2025 式 2.24-2.26；I3 用 Zhang 2022 式 4.26）
+# I1/I2 已提升至 d2dga_flux.d2dga_dispersion_I1/I2（T1-3a DRY）。
+# 向后兼容别名（测试中仍 import _mean_mobility_I1 / _buoyant_mobility_I2）。
+_mean_mobility_I1 = d2dga_dispersion_I1
+_buoyant_mobility_I2 = d2dga_dispersion_I2
 # ---------------------------------------------------------------------------
-
-
-def _mean_mobility_I1(c_bar: float | Array, m: float) -> float | Array:
-    """牛顿平均流动度 I1(c̄,m)（Bararpour 2025 式 2.24，H³ 已归一化）。
-
-    I1 = [√m·c̄³ + (1−c̄³)/√m]/3，恒正（≥min(√m,1/√m)/3）。
-    """
-    c = np.asarray(c_bar, dtype=float)
-    sq_m = math.sqrt(m)
-    return (sq_m * c**3 + (1.0 - c**3) / sq_m) / 3.0
-
-
-def _buoyant_mobility_I2(c_bar: float | Array, m: float) -> float | Array:
-    """牛顿浮力流动度 I2(c̄,m)（Bararpour 2025 式 2.25，H⁴ 已归一化）。
-
-    I2 = [2√m·c̄³(1−c̄) + c̄(1−c̄)²(1+2c̄)/√m]/6；I2(0)=I2(1)=0。
-    """
-    c = np.asarray(c_bar, dtype=float)
-    sq_m = math.sqrt(m)
-    return (2.0 * sq_m * c**3 * (1.0 - c) + c * (1.0 - c) ** 2 * (1.0 + 2.0 * c) / sq_m) / 6.0
 
 
 def _isotropic_flux_q0(c_bar: Array, m: float) -> Array:
@@ -247,9 +233,9 @@ def _finger_velocity(c_bar: Array, m: float, b: float) -> Array:
     利用了 I2(1)=0。I1 除零保护（I1 恒正，保护仅为防御性）。
     """
     c = np.asarray(c_bar, dtype=float)
-    i1 = np.maximum(_mean_mobility_I1(c, m), _EPS)
-    i1_at_1 = max(float(_mean_mobility_I1(1.0, m)), _EPS)
-    i2 = _buoyant_mobility_I2(c, m)
+    i1 = np.maximum(d2dga_dispersion_I1(c, m), _EPS)
+    i1_at_1 = max(float(d2dga_dispersion_I1(1.0, m)), _EPS)
+    i2 = d2dga_dispersion_I2(c, m)
     return i1_at_1 / i1 + b * i1_at_1 * (i2 / i1 + c - 1.0)
 
 
