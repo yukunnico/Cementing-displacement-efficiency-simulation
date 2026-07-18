@@ -645,3 +645,23 @@ class TestStaticWallLayer:
             f"c_min=0.3 wall=1 网格数 ({np.sum(res_high.wall_field)}) "
             f"应 >= c_min=0.05 ({np.sum(res_low.wall_field)})"
         )
+
+    def test_wall_zero_before_cement_arrival(self):
+        """水泥前锋未到达时（全场 cement=0），wall 场必须全为 0，不得提前堵死。"""
+        from cemdisp.models2d.boundary_bridge import AnnulusInletState
+        well = _toy_well()
+        mud = FluidSpec(name="mud", role=FluidRole.MUD, density_kg_m3=1900.0,
+                        rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.053, yield_stress_pa=8.5)
+        lead = FluidSpec(name="lead", role=FluidRole.LEAD, density_kg_m3=1930.0,
+                         rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.180, yield_stress_pa=14.0)
+        fluids = (mud, lead)
+
+        def _inlet(t: float):
+            return AnnulusInletState(
+                time_s=t, flow_rate_m3_s=0.02, stage_name="pump",
+                phase_fractions=(("mud", 1.0),),
+            )
+
+        s = AnnulusD2DGASolver(dt=4.0, nz=20, ny=8, total_t=40.0, c_min=0.05)
+        res = s.run(well, fluids, _inlet)
+        assert np.all(res.wall_field == 0.0), "水泥前锋未到达时 wall 场应全为 0"
