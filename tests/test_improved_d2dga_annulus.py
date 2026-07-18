@@ -1,7 +1,8 @@
 """改进 D2DGA 三闭包（auto-m / I3 / 真体力）求解器级测试。"""
 import numpy as np
-from cemdisp.models2d.annulus_d2dga import AnnulusD2DGASolver
+from cemdisp.models2d.annulus_d2dga import AnnulusD2DGASolver, _trapez2d
 from cemdisp.data.fluid_spec import FluidSpec, FluidRole, RheologyModel
+from cemdisp.models2d.d2dga_flux import d2dga_dispersion_I1, d2dga_dispersion_I2
 from cemdisp.data.well_spec import WellSpec, DepthValuePoint, EvaluationWindow
 
 
@@ -462,30 +463,66 @@ class TestBuoyancyForceInjection:
         w_prev = np.full((ny, nz), 0.4)
         return geom, ny, nz, mud_f, lead_f, lead, tail, spacer, w_prev
 
-    def test_true_buoyancy_differs_from_false(self):
-        """真浮力体力注入（True）与简化代理（False）产生不同的速度剖面。"""
+    def _base_and_props(self, geom, lead, tail, spacer, w_prev, mud_f, lead_f):
+        """由 _compute_props 重建基础流动度 base 与混合物性场。"""
+        s = AnnulusD2DGASolver(dt=4.0, nz=20, ny=10, total_t=40.0)
+        mu, rho, mud, tau_y, m_field, eta1, eta2 = s._compute_props(
+            lead, tail, spacer, w_prev, geom, mud_f, lead_f, None, None
+        )
+        c_bar = np.clip(lead + tail, 0.0, 1.0)
+        eta_mix = 1.0 / (
+            c_bar ** 3 / np.maximum(eta2, 1.0e-9)
+            + (1.0 - c_bar ** 3) / np.maximum(eta1, 1.0e-9)
+        )
+        b = geom["b"]
+        b_mean = np.mean(b, axis=0, keepdims=True)
+        base = (b / np.maximum(b_mean, 1.0e-12)) ** 2 / np.maximum(eta_mix, 1.0e-9)
+        return base, rho, m_field
+
+    def test_true_buoyancy_pref_raises_at_mid_gap_for_heavy_over_light(self):
+        """重顶替轻（Δρ>0）时，True 分支中缝区 pref 高于 False 分支（体力正向修正）。"""
+        geom, ny, nz, mud_f, lead_f, lead, tail, spacer, w_prev = self._setup_heavy_over_light(
+            AnnulusD2DGASolver(dt=4.0, nz=20, ny=10, total_t=40.0)
+        )
+        base, rho, m_field = self._base_and_props(
+            geom, lead, tail, spacer, w_prev, mud_f, lead_f
+        )
+
+        # True 分支 pref：式 4.24，重顶替轻时 f_phi>0 的中缝区修正最大
         s_true = AnnulusD2DGASolver(
             dt=4.0, nz=20, ny=10, total_t=40.0,
             enable_d2dga=True, enable_d2dga_auto_m=True,
             enable_d2dga_i3_flux=True, enable_true_buoyancy=True,
         )
-        s_false = AnnulusD2DGASolver(
-            dt=4.0, nz=20, ny=10, total_t=40.0,
-            enable_d2dga=True, enable_d2dga_auto_m=True,
-            enable_d2dga_i3_flux=True, enable_true_buoyancy=False,
+        f_phi, _ = s_true._buoyancy_force_vector(geom, float(np.mean(geom["inc_deg"])))
+        m_local = float(np.mean(m_field))
+        i1 = d2dga_dispersion_I1(0.6, m_local)
+        i2 = d2dga_dispersion_I2(0.6, m_local)
+        rho_mud = mud_f.density_kg_m3 / 1000.0
+        delta_rho = float(np.mean(rho - rho_mud))
+        correction = np.clip(delta_rho * (i2 / np.maximum(i1, 1.0e-12)), -0.5, 0.5)
+        pref_true = base * (1.0 + correction * f_phi)
+
+        # False 分支 pref：旧 (2φ−1) 代理
+        density_contrast = (lead_f.density_kg_m3 - mud_f.density_kg_m3) / mud_f.density_kg_m3
+        stable = float(np.clip(8.0 * density_contrast, -0.35, 0.45))
+        ebar = float(np.mean(geom["e"]))
+        phi = geom["phi"][:, None]
+        pref_false = base * (1.0 + stable * ebar * (2.0 * phi - 1.0))
+
+        # 中缝区（φ≈0.5）True 的 pref 更高
+        mid_mask = (phi[:, 0] >= 0.4) & (phi[:, 0] <= 0.6)
+        assert mid_mask.any(), "中缝区应有网格点"
+        assert np.mean(pref_true[mid_mask, :]) > np.mean(pref_false[mid_mask, :]), (
+            f"重顶替轻时 True 分支中缝 pref 应高于 False"
         )
-        geom, ny, nz, mud_f, lead_f, lead, tail, spacer, w_prev = self._setup_heavy_over_light(s_true)
-
-        w_true, *_ = s_true._compute_velocity(lead, tail, spacer, geom, q_m3s=0.02, w_prev=w_prev,
-                                               mud_fluid=mud_f, lead_fluid=lead_f, tail_fluid=None, spacer_fluid=None)
-        w_false, *_ = s_false._compute_velocity(lead, tail, spacer, geom, q_m3s=0.02, w_prev=w_prev,
-                                                 mud_fluid=mud_f, lead_fluid=lead_f, tail_fluid=None, spacer_fluid=None)
-
-        diff = np.max(np.abs(w_true - w_false))
-        assert diff > 1e-8, f"True vs False 速度差过小: {diff:.2e}"
+        # 方位加权积分 pref(True) > pref(False)
+        assert _trapez2d(pref_true, geom) > _trapez2d(pref_false, geom), (
+            "重顶替轻时 True 分支方位加权 pref 积分应高于 False"
+        )
 
     def test_false_buoyancy_falls_back_to_simplified(self):
-        """enable_true_buoyancy=False → 回退 (2φ−1) 简化代理，结果合理。"""
+        """enable_true_buoyancy=False 时，pref 形状恢复为 (2φ−1) 简化代理。"""
         s = AnnulusD2DGASolver(
             dt=4.0, nz=20, ny=10, total_t=40.0,
             enable_d2dga=True, enable_d2dga_auto_m=True,
@@ -493,14 +530,25 @@ class TestBuoyancyForceInjection:
         )
         geom, ny, nz, mud_f, lead_f, lead, tail, spacer, w_prev = self._setup_heavy_over_light(s)
 
-        w, v, mu, rho, mud_out, Re, mu_turb, m_field = s._compute_velocity(
+        w, *_ = s._compute_velocity(
             lead, tail, spacer, geom, q_m3s=0.02, w_prev=w_prev,
             mud_fluid=mud_f, lead_fluid=lead_f, tail_fluid=None, spacer_fluid=None,
         )
-
-        # 结果合理：速度>0, 形状正确
         assert np.all(w > 0), "速度应为正"
         assert w.shape == (ny, nz)
-        # 与无浮力(base alone)比较：宽边因 buoyancy_shape 修正速度相对降低（与纯几何比）
-        # 用轴向平均速度场验证 (2φ−1) 修正生效：宽边φ=0获得 -stable·ebar 因子
-        # 由于几何主导，宽边绝对速度仍最高，但 True 与 False 不同（已在上方测试覆盖）
+
+        # 从速度场反解无量纲 buoyancy_shape：w ∝ base·shape
+        base, *_ = self._base_and_props(geom, lead, tail, spacer, w_prev, mud_f, lead_f)
+        shape_est = w / np.maximum(base, 1.0e-12)
+        # 按列归一化，消除截面流量常数
+        shape_est = shape_est / np.mean(shape_est, axis=0, keepdims=True)
+        shape_est_mean = np.mean(shape_est, axis=1)
+
+        # 期望的 (2φ−1) 代理
+        density_contrast = (lead_f.density_kg_m3 - mud_f.density_kg_m3) / mud_f.density_kg_m3
+        stable = float(np.clip(8.0 * density_contrast, -0.35, 0.45))
+        ebar = float(np.mean(geom["e"]))
+        phi = geom["phi"][:, None]
+        shape_exp = 1.0 + stable * ebar * (2.0 * phi[:, 0] - 1.0)
+
+        np.testing.assert_allclose(shape_est_mean, shape_exp, rtol=1.0e-10, atol=1.0e-10)
