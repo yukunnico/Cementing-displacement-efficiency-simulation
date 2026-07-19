@@ -51,7 +51,7 @@ class TestMFieldFromProps:
                           rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.053, yield_stress_pa=8.5)
         cement_f = FluidSpec(name="tail", role=FluidRole.TAIL, density_kg_m3=1900.0,
                               rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.180, yield_stress_pa=14.0)
-        out = s._compute_props(lead, tail, spacer, w_prev, geom, mud_f, None, cement_f, None)
+        out = s._compute_props(lead, tail, spacer, np.zeros_like(lead), w_prev, geom, mud_f, None, cement_f, None)
         # 期望多返回 m_field + 相黏度场 eta1/eta2（T1-4）
         assert len(out) == 7
         mu, rho, mud, tau_y, m_field, eta1, eta2 = out
@@ -381,7 +381,7 @@ class TestTwoLayerViscosity:
         tail = np.zeros((ny, nz))
         spacer = np.zeros((ny, nz))
         _, _, _, _, _, eta1, eta2 = s._compute_props(
-            lead, tail, spacer, w_prev, geom, mud_f, None, cement_f, None)
+            lead, tail, spacer, np.zeros_like(lead), w_prev, geom, mud_f, None, cement_f, None)
         c_bar = np.clip(lead + tail, 0.0, 1.0)
         eta_mix = self._compute_eta_mix(c_bar, eta1, eta2)
         np.testing.assert_allclose(eta_mix, eta1, rtol=1e-10)
@@ -402,7 +402,7 @@ class TestTwoLayerViscosity:
         tail = np.zeros((ny, nz))
         spacer = np.zeros((ny, nz))
         _, _, _, _, _, eta1, eta2 = s._compute_props(
-            lead, tail, spacer, w_prev, geom, mud_f, lead_fluid=cement_f, tail_fluid=None, spacer_fluid=None)
+            lead, tail, spacer, np.zeros_like(lead), w_prev, geom, mud_f, lead_fluid=cement_f, tail_fluid=None, spacer_fluid=None)
         c_bar = np.clip(lead + tail, 0.0, 1.0)
         eta_mix = self._compute_eta_mix(c_bar, eta1, eta2)
         np.testing.assert_allclose(eta_mix, eta2, rtol=1e-10)
@@ -423,7 +423,7 @@ class TestTwoLayerViscosity:
         tail = np.zeros((ny, nz))
         spacer = np.zeros((ny, nz))
         _, _, _, _, _, eta1, eta2 = s._compute_props(
-            lead, tail, spacer, w_prev, geom, mud_f, lead_fluid=cement_f, tail_fluid=None, spacer_fluid=None)
+            lead, tail, spacer, np.zeros_like(lead), w_prev, geom, mud_f, lead_fluid=cement_f, tail_fluid=None, spacer_fluid=None)
         c_bar = np.clip(lead + tail, 0.0, 1.0)
         eta_mix = self._compute_eta_mix(c_bar, eta1, eta2)
         eta_min = np.minimum(eta1, eta2)
@@ -467,7 +467,7 @@ class TestBuoyancyForceInjection:
         """由 _compute_props 重建基础流动度 base 与混合物性场。"""
         s = AnnulusD2DGASolver(dt=4.0, nz=20, ny=10, total_t=40.0)
         mu, rho, mud, tau_y, m_field, eta1, eta2 = s._compute_props(
-            lead, tail, spacer, w_prev, geom, mud_f, lead_f, None, None
+            lead, tail, spacer, np.zeros_like(lead), w_prev, geom, mud_f, lead_f, None, None
         )
         c_bar = np.clip(lead + tail, 0.0, 1.0)
         eta_mix = 1.0 / (
@@ -531,7 +531,7 @@ class TestBuoyancyForceInjection:
         geom, ny, nz, mud_f, lead_f, lead, tail, spacer, w_prev = self._setup_heavy_over_light(s)
 
         w, *_ = s._compute_velocity(
-            lead, tail, spacer, geom, q_m3s=0.02, w_prev=w_prev,
+            lead, tail, spacer, np.zeros_like(lead), geom, q_m3s=0.02, w_prev=w_prev,
             mud_fluid=mud_f, lead_fluid=lead_f, tail_fluid=None, spacer_fluid=None,
         )
         assert np.all(w > 0), "速度应为正"
@@ -613,7 +613,7 @@ class TestStaticWallLayer:
         wall[:, :nz//2] = 1.0
 
         w, *_ = s._compute_velocity(
-            lead, tail, spacer, geom, 0.02, w_prev, mud_f, lead_f, None, None, wall=wall,
+            lead, tail, spacer, np.zeros_like(lead), geom, 0.02, w_prev, mud_f, lead_f, None, None, wall=wall,
         )
 
         # wall=1 处速度 ≈ 0
@@ -665,3 +665,86 @@ class TestStaticWallLayer:
         s = AnnulusD2DGASolver(dt=4.0, nz=20, ny=8, total_t=40.0, c_min=0.05)
         res = s.run(well, fluids, _inlet)
         assert np.all(res.wall_field == 0.0), "水泥前锋未到达时 wall 场应全为 0"
+
+
+class TestFlusherField:
+    """T1-6: FLUSHER 独立浓度场（被动平流相）测试。"""
+
+    def test_annulus_result_default_flusher_field_none(self):
+        """AnnulusSimulationResult 默认 flusher_field=None 后向兼容。"""
+        from cemdisp.models2d.annulus_d2dga import AnnulusSimulationResult
+        result = AnnulusSimulationResult(
+            well_name="test",
+            geom={},
+            cement_field=np.zeros((2, 2)),
+            spacer_field=np.zeros((2, 2)),
+            wall_field=np.zeros((2, 2)),
+            metrics=None,  # type: ignore[arg-type]
+            depth_profiles=None,  # type: ignore[arg-type]
+            summary={},
+        )
+        assert result.flusher_field is None
+        assert result.flusher_snapshots == ()
+
+    def test_flusher_injected_via_inlet(self):
+        """flusher 通过入口注入后 flusher_field 非空且独立于 cement/spacer。"""
+        from cemdisp.models2d.boundary_bridge import AnnulusInletState
+        well = _toy_well()
+        mud = FluidSpec(name="mud", role=FluidRole.MUD, density_kg_m3=1900.0,
+                        rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.053, yield_stress_pa=8.5)
+        lead = FluidSpec(name="lead", role=FluidRole.LEAD, density_kg_m3=1930.0,
+                         rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.180, yield_stress_pa=14.0)
+        flusher = FluidSpec(name="flusher", role=FluidRole.FLUSHER, density_kg_m3=1850.0,
+                            rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.04, yield_stress_pa=3.0)
+        fluids = (mud, lead, flusher)
+
+        def _inlet(t: float):
+            return AnnulusInletState(
+                time_s=t, flow_rate_m3_s=0.02, stage_name="flusher",
+                phase_fractions=(("flusher", 1.0),),
+            )
+
+        s = AnnulusD2DGASolver(dt=4.0, nz=20, ny=8, total_t=40.0)
+        res = s.run(well, fluids, _inlet)
+        assert res.flusher_field is not None
+        assert np.any(res.flusher_field > 0), "flusher 应出现在求解域内"
+        cement = np.clip(res.lead_field + res.tail_field, 0.0, 1.0)
+        assert np.all(cement == 0.0), "flusher 不应混入 lead/tail"
+        assert np.all(res.spacer_field == 0.0), "flusher 不应混入 spacer"
+
+    def test_flusher_not_mixed_with_cement_on_coexistence(self):
+        """flusher 与水泥共存时，cement/spacer 场不受 flusher 侵入。"""
+        from cemdisp.models2d.boundary_bridge import AnnulusInletState
+        well = _toy_well()
+        mud = FluidSpec(name="mud", role=FluidRole.MUD, density_kg_m3=1900.0,
+                        rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.053, yield_stress_pa=8.5)
+        lead = FluidSpec(name="lead", role=FluidRole.LEAD, density_kg_m3=1930.0,
+                         rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.180, yield_stress_pa=14.0)
+        flusher = FluidSpec(name="flusher", role=FluidRole.FLUSHER, density_kg_m3=1850.0,
+                            rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.04, yield_stress_pa=3.0)
+        fluids = (mud, lead, flusher)
+
+        # 分阶段注入：先 flusher，后水泥，验证 flusher 场和水泥场各自独立
+        def _inlet(t: float):
+            if t < 20.0:
+                return AnnulusInletState(
+                    time_s=t, flow_rate_m3_s=0.02, stage_name="flusher",
+                    phase_fractions=(("flusher", 1.0),),
+                )
+            else:
+                return AnnulusInletState(
+                    time_s=t, flow_rate_m3_s=0.02, stage_name="cement",
+                    phase_fractions=(("cement", 1.0), ("lead", 1.0)),
+                )
+
+        s = AnnulusD2DGASolver(dt=4.0, nz=20, ny=8, total_t=40.0)
+        res = s.run(well, fluids, _inlet)
+        assert res.flusher_field is not None
+        # flusher 应在域内存在（前 20s 注入）
+        assert np.any(res.flusher_field > 0), "flusher 应出现在求解域内"
+        # cement 应在域内存在（后 20s 注入）
+        cement = np.clip(res.lead_field + res.tail_field, 0.0, 1.0)
+        assert np.any(cement > 0), "cement 应出现在求解域内"
+        # 验证 flusher 与 cement 不混：flusher 注入期间前锋处 cement 应为 0
+        # 注意：数值扩散/弥散会导致界面处两相轻微重叠，允许 5% 容差
+        assert np.all(cement + res.flusher_field <= 1.05), "flusher+cement 不应超 1.05"
