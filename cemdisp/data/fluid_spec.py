@@ -17,6 +17,7 @@
     * LEAD: 领浆（前置水泥浆）
     * TAIL: 尾浆（水泥浆主体）
     * DISPLACEMENT: 顶替液
+    * FLUSHER: 冲洗液（Yang 2021 mud-spacer-flusher-cement 序列 cement 前独立相）
     * OTHER: 其他流体
 
 - FluidSpec: 单种流体的完整物性规格
@@ -54,6 +55,7 @@ class FluidRole(str, Enum):
     INTERMEDIATE = "intermediate"
     TAIL = "tail"
     DISPLACEMENT = "displacement"
+    FLUSHER = "flusher"  # 冲洗液（Yang 2021 mud-spacer-flusher-cement 序列 cement 前独立相）
     OTHER = "other"
 
 
