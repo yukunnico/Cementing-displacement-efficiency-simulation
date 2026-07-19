@@ -247,5 +247,89 @@ class TestSyncCard(unittest.TestCase):
         self.assertEqual(card["代理提醒"], "")
 
 
+class TestFlusherPhaseMapping(unittest.TestCase):
+    """测试 FLUSHER 流体→"flusher" 相名映射（T1-6 Task 2）。"""
+
+    def test_flusher_maps_to_flusher_phase(self) -> None:
+        """FLUSHER 角色映射为独立 flusher 相，不并入 spacer。"""
+
+        timeline = _timeline_with_events(
+            ShoeEvent(
+                time_s=0.0,
+                kind=ShoeEventKind.FRONT_ARRIVAL,
+                flow_rate_m3_s=0.01,
+                stage_name="注冲洗液",
+                phase_fractions=(("冲洗液", 1.0),),
+            ),
+        )
+        fluids = _fluids() + (
+            FluidSpec(name="冲洗液", role=FluidRole.FLUSHER, density_kg_m3=1500.0, plastic_viscosity_pa_s=0.03),
+        )
+        provider = build_coupled_annulus_inlet_provider(
+            timeline, _provenance(), fluids, split_cement_phases=False
+        )
+        state = provider(0.0)
+        self.assertEqual(state.phase_fractions, (("flusher", 1.0),))
+
+    def test_flusher_does_not_merge_into_spacer(self) -> None:
+        """FLUSHER 与 SPACER 同时存在时，flusher 保持独立不合并到 spacer。"""
+
+        timeline = _timeline_with_events(
+            ShoeEvent(
+                time_s=0.0,
+                kind=ShoeEventKind.FRONT_ARRIVAL,
+                flow_rate_m3_s=0.01,
+                stage_name="混合出流",
+                phase_fractions=(("隔离液", 0.5), ("冲洗液", 0.5)),
+            ),
+        )
+        fluids = _fluids() + (
+            FluidSpec(name="冲洗液", role=FluidRole.FLUSHER, density_kg_m3=1500.0, plastic_viscosity_pa_s=0.03),
+        )
+        provider = build_coupled_annulus_inlet_provider(
+            timeline, _provenance(), fluids, split_cement_phases=False
+        )
+        state = provider(0.0)
+        mapped = dict(state.phase_fractions)
+        self.assertIn("flusher", mapped, "FLUSHER 应独立存在于 phase_fractions")
+        self.assertIn("spacer", mapped, "SPACER 应独立存在于 phase_fractions")
+        self.assertAlmostEqual(mapped["spacer"] + mapped["flusher"], 1.0,
+                               msg="spacer 与 flusher 分数之和应为 1.0")
+
+    def test_annulus_inlet_state_supports_flusher(self) -> None:
+        """AnnulusInletState 直接构造含 flusher 分数不报错。"""
+
+        state = AnnulusInletState(
+            time_s=0.0,
+            flow_rate_m3_s=0.01,
+            stage_name="测试",
+            phase_fractions=(("flusher", 1.0),),
+        )
+        mapped = dict(state.phase_fractions)
+        self.assertIn("flusher", mapped)
+        self.assertEqual(mapped["flusher"], 1.0)
+
+    def test_flusher_with_split_cement_phases(self) -> None:
+        """split_cement_phases=True 时 FLUSHER 仍映射为独立 flusher。"""
+
+        timeline = _timeline_with_events(
+            ShoeEvent(
+                time_s=0.0,
+                kind=ShoeEventKind.FRONT_ARRIVAL,
+                flow_rate_m3_s=0.01,
+                stage_name="注冲洗液",
+                phase_fractions=(("冲洗液", 1.0),),
+            ),
+        )
+        fluids = _fluids() + (
+            FluidSpec(name="冲洗液", role=FluidRole.FLUSHER, density_kg_m3=1500.0, plastic_viscosity_pa_s=0.03),
+        )
+        provider = build_coupled_annulus_inlet_provider(
+            timeline, _provenance(), fluids, split_cement_phases=True
+        )
+        state = provider(0.0)
+        self.assertEqual(state.phase_fractions, (("flusher", 1.0),))
+
+
 if __name__ == "__main__":
     _ = unittest.main()
