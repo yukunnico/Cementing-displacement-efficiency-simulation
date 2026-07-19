@@ -387,34 +387,48 @@ class TestFlusherLoaderMapping(unittest.TestCase):
         role_by_name = {fluid.name: fluid.role for fluid in fluids}
         return [role_by_name.get(step.fluid_name) for step in schedule.steps]
 
-    def test_hu102_has_flusher_role_and_step(self):
-        """呼102默认加载应包含 FLUSHER 流体及对应 schedule step。"""
+    def test_hu102_strict_mode_no_flusher_step(self):
+        """呼102严格现场模式（默认）schedule 中不含 FLUSHER step，但流体定义保留。"""
         from cemdisp.data.loaders.hu102_loader import load_hu102_tailpipe
-        well_spec, fluids, schedule, _ = load_hu102_tailpipe()
+        _, fluids, schedule, _ = load_hu102_tailpipe()
         roles = [fluid.role for fluid in fluids]
         self.assertIn(FluidRole.FLUSHER, roles)
         step_roles = self._step_fluid_roles(schedule, fluids)
-        self.assertIn(FluidRole.FLUSHER, step_roles)
+        self.assertNotIn(FluidRole.FLUSHER, step_roles)
         # 现有"冲洗液"为套管清洗液，保留 WASH
         wash = next((f for f in fluids if f.name == "冲洗液"), None)
         self.assertIsNotNone(wash)
         self.assertEqual(wash.role, FluidRole.WASH)
 
-    def test_hu102_include_wash_spacer_keeps_wash_and_adds_flusher(self):
-        """呼102 include_wash_spacer=True 时，冲洗液仍为 WASH，且仍有 FLUSHER。"""
+    def test_hu102_include_wash_spacer_has_flusher_step(self):
+        """呼102 include_wash_spacer=True 时，冲洗液仍为 WASH，且 schedule 含 FLUSHER。"""
         from cemdisp.data.loaders.hu102_loader import load_hu102_tailpipe
         _, fluids, schedule, _ = load_hu102_tailpipe(include_wash_spacer=True)
         roles = [fluid.role for fluid in fluids]
         self.assertIn(FluidRole.FLUSHER, roles)
         self.assertIn(FluidRole.WASH, roles)
+        step_roles = self._step_fluid_roles(schedule, fluids)
+        self.assertIn(FluidRole.FLUSHER, step_roles)
         wash = next((f for f in fluids if f.name == "冲洗液"), None)
         self.assertIsNotNone(wash)
         self.assertEqual(wash.role, FluidRole.WASH)
 
-    def test_ht1_004_lead_mud_remains_wash_and_has_flusher(self):
-        """呼1-004 先导浆为套管清洗液保留 WASH，同时新增 FLUSHER。"""
+    def test_ht1_004_strict_mode_no_flusher_step(self):
+        """呼1-004 严格现场模式（默认）schedule 中不含 FLUSHER step，先导浆保留 WASH。"""
         from cemdisp.data.loaders.ht1_004_loader import load_ht1_004_tailpipe
         _, fluids, schedule, _ = load_ht1_004_tailpipe()
+        roles = [fluid.role for fluid in fluids]
+        self.assertIn(FluidRole.FLUSHER, roles)
+        step_roles = self._step_fluid_roles(schedule, fluids)
+        self.assertNotIn(FluidRole.FLUSHER, step_roles)
+        lead_mud = next((f for f in fluids if f.name == "先导浆"), None)
+        self.assertIsNotNone(lead_mud)
+        self.assertEqual(lead_mud.role, FluidRole.WASH)
+
+    def test_ht1_004_include_wash_spacer_has_flusher_step(self):
+        """呼1-004 include_wash_spacer=True 时，先导浆保留 WASH，且 schedule 含 FLUSHER。"""
+        from cemdisp.data.loaders.ht1_004_loader import load_ht1_004_tailpipe
+        _, fluids, schedule, _ = load_ht1_004_tailpipe(include_wash_spacer=True)
         roles = [fluid.role for fluid in fluids]
         self.assertIn(FluidRole.FLUSHER, roles)
         step_roles = self._step_fluid_roles(schedule, fluids)

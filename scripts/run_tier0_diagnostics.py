@@ -115,6 +115,7 @@ def print_summary(payload: dict) -> None:
               f"eta_N = {_fmt(dm['eta_narrow'])}，eta_E = {_fmt(dm['eta_global'])}，"
               f"界面长度比 = {_fmt(dm['interface_length_ratio'])}，"
               f"t_br = {_fmt(dm['t_br_s'])} s（t_br_hat = {_fmt(dm['t_br_hat'])}），"
+              f"mean_flusher = {_fmt(dm['mean_flusher'])}，"
               f"质量分区 green/yellow/red = {dm['quality_zone_counts']}")
     else:
         print("[T0-4/5/7 顶替指标] 失败（见 notes）")

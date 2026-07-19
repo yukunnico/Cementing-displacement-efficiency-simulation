@@ -790,6 +790,14 @@ class AnnulusD2DGASolver:
                 lead = self._smooth_dispersion(lead, axial=0.018, azimuthal=0.015)
                 tail = self._smooth_dispersion(tail, axial=0.018, azimuthal=0.015)
                 spacer = self._smooth_dispersion(spacer, axial=0.012, azimuthal=0.012)
+                # T1-6: 弥散后再次执行五相过填修正，防止 _smooth_dispersion 数值扩散
+                # 使 lead+tail+spacer+flusher 再次超过 1，破坏体积分数闭合。
+                tracked_total = lead + tail + spacer + flusher
+                overfilled = tracked_total > 1.0
+                lead[overfilled] /= tracked_total[overfilled]
+                tail[overfilled] /= tracked_total[overfilled]
+                spacer[overfilled] /= tracked_total[overfilled]
+                flusher[overfilled] /= tracked_total[overfilled]
 
                 # R2: I3 浮力弥散通量（式 4.25 第二项）—— 仅作用于水泥相(lead+tail)
                 if self.enable_d2dga_i3_flux and self.enable_d2dga:
