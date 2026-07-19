@@ -279,6 +279,14 @@ HT1_004_BASE_FLUID_YP_PA = 9.0          # YP=9Pa (MATLAB tau9)
 HT1_004_WELL_MUD_PV_PA_S = 0.055        # 井浆(替浆段) PV=55mPa·s (MATLAB miu91-95)
 HT1_004_WELL_MUD_YP_PA = 9.5            # YP=9.5Pa (MATLAB tau91-95)
 
+# 合成 FLUSHER（冲洗液）参数：本井设计为先导浆+隔离液+领/尾浆，无 cement 前独立冲洗液，
+# 故加入合成 FLUSHER 以验证 mud-spacer-flusher-cement 序列可表达。
+HT1_004_FLUSHER_DENSITY_KG_M3 = 1880.0
+HT1_004_FLUSHER_PV_PA_S = 0.050
+HT1_004_FLUSHER_YP_PA = 9.0
+HT1_004_FLUSHER_VOLUME_M3 = 5.0
+HT1_004_FLUSHER_RATE_M3_MIN = 1.2
+
 # ===========================================================================
 # 泵注体积/排量 [优化参数] 来源：优化参数.docx（2026-06-11）
 # 替浆分5级降排量：1.15→1.05→0.95→0.85→0.75m³/min，总量51.1m³
@@ -420,6 +428,8 @@ def load_ht1_004_tailpipe(
                   RheologyModel.BINGHAM, HT1_004_BASE_FLUID_PV_PA_S, HT1_004_BASE_FLUID_YP_PA),
         FluidSpec("井浆", FluidRole.DISPLACEMENT, HT1_004_WELL_MUD_DENSITY_KG_M3,
                   RheologyModel.BINGHAM, HT1_004_WELL_MUD_PV_PA_S, HT1_004_WELL_MUD_YP_PA),
+        FluidSpec("冲洗液（FLUSHER）", FluidRole.FLUSHER, HT1_004_FLUSHER_DENSITY_KG_M3,
+                  RheologyModel.BINGHAM, HT1_004_FLUSHER_PV_PA_S, HT1_004_FLUSHER_YP_PA),
     )
 
     # --- 施工程序（参照MATLAB脚本 + 设计文档） ---
@@ -434,6 +444,9 @@ def load_ht1_004_tailpipe(
             PumpingScheduleStep("注入隔离液2", "隔离液2",
                                 HT1_004_SPACER2_VOLUME_M3, HT1_004_SPACER_RATE_M3_MIN,
                                 remarks="隔离液2 10m³@1.2m³/min，密度1.75g/cm³（优化参数）。"),
+            PumpingScheduleStep("注入冲洗液（FLUSHER）", "冲洗液（FLUSHER）",
+                                HT1_004_FLUSHER_VOLUME_M3, HT1_004_FLUSHER_RATE_M3_MIN,
+                                remarks="合成冲洗液（FLUSHER）5m³@1.2m³/min，密度1.88g/cm³（验证序列可表达）。"),
             PumpingScheduleStep("注入领浆", "领浆",
                                 HT1_004_LEAD_VOLUME_M3, HT1_004_CEMENT_RATE_M3_MIN,
                                 remarks="领浆 48m³@1.2m³/min，密度1.93g/cm³，PV=170mPa·s/YP=13Pa（优化参数）。"),
