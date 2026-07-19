@@ -748,3 +748,111 @@ class TestFlusherField:
         # 验证 flusher 与 cement 不混：flusher 注入期间前锋处 cement 应为 0
         # 注意：数值扩散/弥散会导致界面处两相轻微重叠，允许 5% 容差
         assert np.all(cement + res.flusher_field <= 1.05), "flusher+cement 不应超 1.05"
+
+    def test_five_phase_closure_in_compute_props(self):
+        """_compute_props 五相闭合：lead+tail+spacer+flusher+mud ≈ 1。"""
+        s = _make_solver()
+        well = _toy_well()
+        geom = s._build_geom(well)
+        ny, nz = s.ny, s.nz
+        lead = np.full((ny, nz), 0.3)
+        tail = np.full((ny, nz), 0.2)
+        spacer = np.full((ny, nz), 0.1)
+        flusher = np.full((ny, nz), 0.05)
+        w_prev = np.full((ny, nz), 0.4)
+        mud_f = FluidSpec(name="mud", role=FluidRole.MUD, density_kg_m3=1900.0,
+                          rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.053, yield_stress_pa=8.5)
+        cement_f = FluidSpec(name="tail", role=FluidRole.TAIL, density_kg_m3=1900.0,
+                              rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.180, yield_stress_pa=14.0)
+        spacer_f = FluidSpec(name="spacer", role=FluidRole.SPACER, density_kg_m3=1850.0,
+                              rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.07, yield_stress_pa=5.0)
+        flusher_f = FluidSpec(name="flusher", role=FluidRole.FLUSHER, density_kg_m3=1850.0,
+                               rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.04, yield_stress_pa=3.0)
+        out = s._compute_props(lead, tail, spacer, flusher, w_prev, geom, mud_f, cement_f, None, spacer_f)
+        mu, rho, mud, tau_y, m_field, eta1, eta2 = out
+        # 五相闭合：sum = lead + tail + spacer + flusher + mud ≈ 1
+        phase_sum = lead + tail + spacer + flusher + mud
+        assert np.allclose(phase_sum, 1.0, atol=1e-10), (
+            f"五相之和应 ≈ 1，实际 min={phase_sum.min()} max={phase_sum.max()}"
+        )
+
+    def test_flusher_reduces_mud_in_compute_props(self):
+        """flusher 注入后 mud 分数减少，且 flusher 不参与 c_bar/m_field。"""
+        s = _make_solver()
+        well = _toy_well()
+        geom = s._build_geom(well)
+        ny, nz = s.ny, s.nz
+        lead = np.full((ny, nz), 0.3)
+        tail = np.zeros((ny, nz))
+        spacer = np.full((ny, nz), 0.15)
+        w_prev = np.full((ny, nz), 0.4)
+        mud_f = FluidSpec(name="mud", role=FluidRole.MUD, density_kg_m3=1900.0,
+                          rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.053, yield_stress_pa=8.5)
+        cement_f = FluidSpec(name="lead", role=FluidRole.LEAD, density_kg_m3=1930.0,
+                              rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.180, yield_stress_pa=14.0)
+        spacer_f = FluidSpec(name="spacer", role=FluidRole.SPACER, density_kg_m3=1850.0,
+                              rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.07, yield_stress_pa=5.0)
+        # 无 flusher 时：mud1 = 1 - lead - tail - spacer
+        out_no_flusher = s._compute_props(lead, tail, spacer, np.zeros_like(lead), w_prev, geom, mud_f, cement_f, None, spacer_f)
+        mu1, rho1, mud1, tau_y1, m_field1, eta1_1, eta2_1 = out_no_flusher
+        sum_no_flusher = lead + tail + spacer + mud1
+        assert np.allclose(sum_no_flusher, 1.0, atol=1e-10), "四相闭合应 ≈ 1"
+        # 有 flusher 时：mud2 = 1 - lead - tail - spacer - flusher
+        flusher = np.full((ny, nz), 0.08)
+        out_with_flusher = s._compute_props(lead, tail, spacer, flusher, w_prev, geom, mud_f, cement_f, None, spacer_f)
+        mu2, rho2, mud2, tau_y2, m_field2, eta1_2, eta2_2 = out_with_flusher
+        sum_with_flusher = lead + tail + spacer + flusher + mud2
+        assert np.allclose(sum_with_flusher, 1.0, atol=1e-10), "五相闭合应 ≈ 1"
+        # 有 flusher 时 mud 应减少（约等于 flusher 分数）
+        # 注意：数值舍入，允许微小差异
+        assert np.all(mud2 <= mud1 + 1e-10), "flusher 注入后 mud 应减少或不变"
+        # flusher 不参与 m_field（被动相）：m_field 与无 flusher 时一致
+        assert np.allclose(m_field1, m_field2, atol=1e-6), "flusher 不应影响 m_field"
+
+    def test_five_phase_closure_in_run_result(self):
+        """完整 run 后五相闭合 sum(lead+tail+spacer+flusher+mud) ≈ 1。"""
+        from cemdisp.models2d.boundary_bridge import AnnulusInletState
+        well = _toy_well()
+        mud = FluidSpec(name="mud", role=FluidRole.MUD, density_kg_m3=1900.0,
+                        rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.053, yield_stress_pa=8.5)
+        lead = FluidSpec(name="lead", role=FluidRole.LEAD, density_kg_m3=1930.0,
+                         rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.180, yield_stress_pa=14.0)
+        spacer = FluidSpec(name="spacer", role=FluidRole.SPACER, density_kg_m3=1850.0,
+                           rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.07, yield_stress_pa=5.0)
+        flusher = FluidSpec(name="flusher", role=FluidRole.FLUSHER, density_kg_m3=1850.0,
+                            rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.04, yield_stress_pa=3.0)
+        fluids = (mud, lead, spacer, flusher)
+
+        # 分阶段注入：flusher → spacer → cement
+        def _inlet(t: float):
+            if t < 10.0:
+                return AnnulusInletState(
+                    time_s=t, flow_rate_m3_s=0.02, stage_name="flusher",
+                    phase_fractions=(("flusher", 1.0),),
+                )
+            elif t < 20.0:
+                return AnnulusInletState(
+                    time_s=t, flow_rate_m3_s=0.02, stage_name="spacer",
+                    phase_fractions=(("spacer", 1.0),),
+                )
+            else:
+                return AnnulusInletState(
+                    time_s=t, flow_rate_m3_s=0.02, stage_name="cement",
+                    phase_fractions=(("cement", 1.0), ("lead", 1.0)),
+                )
+
+        s = AnnulusD2DGASolver(dt=4.0, nz=20, ny=8, total_t=40.0)
+        res = s.run(well, fluids, _inlet)
+        # 五相闭合检查：result 中存 lead_field, tail_field, spacer_field, flusher_field
+        # mud 由 1 - sum 反算
+        lead_f = res.lead_field
+        tail_f = res.tail_field
+        spacer_f = res.spacer_field
+        flusher_f = res.flusher_field
+        assert flusher_f is not None
+        mud_f = np.clip(1.0 - lead_f - tail_f - spacer_f - flusher_f, 0.0, 1.0)
+        phase_sum = lead_f + tail_f + spacer_f + flusher_f + mud_f
+        # 允许 1e-10 舍入误差
+        assert np.allclose(phase_sum, 1.0, atol=1e-10), (
+            f"run 后五相之和应 ≈ 1，min={phase_sum.min()} max={phase_sum.max()}"
+        )
