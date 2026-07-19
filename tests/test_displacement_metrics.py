@@ -289,6 +289,30 @@ class TestW0Estimation:
         assert any("w0_m_s" in note for note in res.notes)
 
 
+class TestMeanFlusher:
+    def test_mean_flusher_extracted_from_metrics(self):
+        """metrics 含 mean_flusher 列时，最终值应被正确提取。"""
+        geom = _make_geom()
+        metrics = _make_metrics([
+            _metrics_row(0.0, 0.0, 0.0, 0.0, 0.0),
+            _metrics_row(10.0, 100.0, 100.0, 1.0, 1.0),
+        ])
+        metrics["mean_flusher"] = [0.0, 0.123]
+        res = compute_displacement_metrics(
+            _make_result(np.ones((8, 5)), np.zeros((8, 5)), geom, metrics)
+        )
+        assert res.mean_flusher == pytest.approx(0.123)
+
+    def test_mean_flusher_defaults_to_zero_when_column_missing(self):
+        """metrics 不含 mean_flusher 列时，回退为 0.0（向后兼容）。"""
+        geom = _make_geom()
+        metrics = _make_metrics([_metrics_row(10.0, 100.0, 100.0, 1.0, 1.0)])
+        res = compute_displacement_metrics(
+            _make_result(np.ones((8, 5)), np.zeros((8, 5)), geom, metrics)
+        )
+        assert res.mean_flusher == pytest.approx(0.0)
+
+
 class TestResultStructure:
     def test_to_dict_keys_and_types(self):
         geom = _make_geom()
@@ -300,7 +324,7 @@ class TestResultStructure:
         expected_keys = {
             "mud_retention_fraction", "phi_m_phi_c_profile", "quality_zone_counts",
             "interface_length_ratio", "eta_narrow", "eta_global",
-            "t_br_s", "t_br_hat", "w0_m_s", "notes",
+            "t_br_s", "t_br_hat", "w0_m_s", "mean_flusher", "notes",
         }
         assert set(d.keys()) == expected_keys
         assert isinstance(d["phi_m_phi_c_profile"], list)

@@ -338,8 +338,14 @@ def _depth_points(values: tuple[tuple[float, float], ...]) -> tuple[DepthValuePo
 def load_ht1_004_tailpipe(
     *,
     reference_root: Path | None = None,
+    include_wash_spacer: bool = False,
 ) -> tuple[WellSpec, tuple[FluidSpec, ...], PumpingSchedule, ValidationData]:
     """加载呼1-004井（HT1-004）168.3+139.7mm双径尾管段标准模型输入。
+
+    Args:
+        reference_root: 可选参考资料根目录。
+        include_wash_spacer: 是否注入合成 FLUSHER（冲洗液）步骤以验证
+            mud-spacer-flusher-cement 序列可表达。默认为 False（严格现场模式）。
 
     Returns:
         (well_spec, fluids, schedule, validation_data)
@@ -433,6 +439,15 @@ def load_ht1_004_tailpipe(
     )
 
     # --- 施工程序（参照MATLAB脚本 + 设计文档） ---
+    # 合成 FLUSHER 步骤：仅在 include_wash_spacer=True 时注入，用于验证 mud-spacer-flusher-cement 序列可表达。
+    flusher_step: tuple[PumpingScheduleStep, ...] = ()
+    if include_wash_spacer:
+        flusher_step = (
+            PumpingScheduleStep("注入冲洗液（FLUSHER）", "冲洗液（FLUSHER）",
+                                HT1_004_FLUSHER_VOLUME_M3, HT1_004_FLUSHER_RATE_M3_MIN,
+                                remarks="合成冲洗液（FLUSHER）5m³@1.2m³/min，密度1.88g/cm³（验证序列可表达）。"),
+        )
+
     schedule = PumpingSchedule(
         steps=(
             PumpingScheduleStep("注入先导浆", "先导浆",
@@ -444,9 +459,7 @@ def load_ht1_004_tailpipe(
             PumpingScheduleStep("注入隔离液2", "隔离液2",
                                 HT1_004_SPACER2_VOLUME_M3, HT1_004_SPACER_RATE_M3_MIN,
                                 remarks="隔离液2 10m³@1.2m³/min，密度1.75g/cm³（优化参数）。"),
-            PumpingScheduleStep("注入冲洗液（FLUSHER）", "冲洗液（FLUSHER）",
-                                HT1_004_FLUSHER_VOLUME_M3, HT1_004_FLUSHER_RATE_M3_MIN,
-                                remarks="合成冲洗液（FLUSHER）5m³@1.2m³/min，密度1.88g/cm³（验证序列可表达）。"),
+            *flusher_step,
             PumpingScheduleStep("注入领浆", "领浆",
                                 HT1_004_LEAD_VOLUME_M3, HT1_004_CEMENT_RATE_M3_MIN,
                                 remarks="领浆 48m³@1.2m³/min，密度1.93g/cm³，PV=170mPa·s/YP=13Pa（优化参数）。"),
@@ -488,11 +501,13 @@ def load_ht1_004_tailpipe(
                                 remarks="替浆段5 9.4m³@0.75m³/min（优化7.1+2.3m³补足尾浆全入环空）。"),
         ),
         notes=(
-            "施工顺序：先导浆→隔离液1→隔离液2→领浆→尾浆→压塞液→钻井液"
-            "→保护液→基液→5级降排量替浆。",
+            "施工顺序：先导浆→隔离液1→隔离液2"
+            + ("→冲洗液（FLUSHER）" if include_wash_spacer else "")
+            + "→领浆→尾浆→压塞液→钻井液→保护液→基液→5级降排量替浆。",
             "替浆总量(不含压塞液): 29+14+1+14+10+10+10+9.4=97.4m³。",
             "泵注参数参照优化参数.docx（2026-06-11），末段补足2.3m³保证尾浆全入环空。",
             "排量: 1.4→1.2→1.2→1.2→1.25→1.2→1.5→1.4→1.4→1.15→1.05→0.95→0.85→0.75 m³/min。",
+            "合成FLUSHER步骤仅在 include_wash_spacer=True 时注入，用于验证序列可表达。",
         ),
     )
 

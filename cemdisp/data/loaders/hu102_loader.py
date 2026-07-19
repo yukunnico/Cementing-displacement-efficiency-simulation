@@ -280,7 +280,8 @@ def load_hu102_tailpipe(
             ),
         )
 
-    # 合成 FLUSHER 步骤：位于隔离液之后、水泥浆之前，验证 mud-spacer-flusher-cement 序列可表达。
+    # 合成 FLUSHER 步骤：与前置液/隔离液同属邻井代理敏感性输入，仅 include_wash_spacer=True 时注入，
+    # 位于隔离液之后、水泥浆之前，验证 mud-spacer-flusher-cement 序列可表达。
     flusher_step = PumpingScheduleStep(
         step_name="注入冲洗液（FLUSHER）",
         fluid_name="冲洗液（FLUSHER）",
@@ -289,8 +290,12 @@ def load_hu102_tailpipe(
         remarks=f"合成冲洗液（FLUSHER）{HU102_FLUSHER_VOLUME_M3}m³，密度{HU102_FLUSHER_DENSITY_KG_M3/1000:.2f}g/cm³（呼103邻井代理，验证序列可表达）。",
     )
 
+    front_steps = optional_front_steps
+    if include_wash_spacer:
+        front_steps = front_steps + (flusher_step,)
+
     schedule = PumpingSchedule(
-        steps=optional_front_steps + (flusher_step,) + (
+        steps=front_steps + (
             PumpingScheduleStep(
                 step_name="注入尾管水泥浆",
                 fluid_name="尾管水泥浆",
@@ -308,9 +313,10 @@ def load_hu102_tailpipe(
         ),
         notes=(
             "按现场记录（10042.xlsx Row 26）：尾浆+替浆液两步为主程序。",
-            "严格现场模式默认不注入前置液/隔离液；10042.xlsx 主作业记录未见冲洗液、隔离液或领浆注入量。",
-            "平衡液/隔离液参数仅保留为 include_wash_spacer=True 时的邻井代理敏感性输入，不作为呼102现场实录。",
-            "include_wash_spacer=True 时才加入邻井代理的平衡液(10m³)与驱油隔离液(15m³)。",
+            "严格现场模式（include_wash_spacer=False）默认不注入前置液/隔离液/合成FLUSHER。",
+            "10042.xlsx 主作业记录未见冲洗液、隔离液、领浆或独立FLUSHER注入量。",
+            "平衡液/隔离液/合成FLUSHER参数仅保留为 include_wash_spacer=True 时的邻井代理敏感性输入，不作为呼102现场实录。",
+            "include_wash_spacer=True 时才加入邻井代理的平衡液(10m³)、驱油隔离液(15m³)及合成FLUSHER(5m³)。",
         ),
     )
 

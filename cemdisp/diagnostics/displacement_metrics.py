@@ -74,6 +74,7 @@ class DisplacementMetricsResult:
         t_br_s: 突破时间 [s]；模拟结束时未突破为 inf
         t_br_hat: 无量纲突破时间 t_br·ŵ₀/L；未突破为 inf，ŵ₀ 不可估计时为 nan
         w0_m_s: 实际采用的平均泵速 ŵ₀ [m/s]（外部给定或自动估计值；不可估计为 nan）
+        mean_flusher: 最终时刻环空平均冲洗液（flusher）体积分数（T1-6）
         notes: 约定与警告说明列表
     """
 
@@ -86,6 +87,7 @@ class DisplacementMetricsResult:
     t_br_s: float
     t_br_hat: float
     w0_m_s: float
+    mean_flusher: float
     notes: tuple[str, ...] = ()
 
     def to_dict(self) -> Dict[str, object]:
@@ -100,6 +102,7 @@ class DisplacementMetricsResult:
             "t_br_s": float(self.t_br_s),
             "t_br_hat": float(self.t_br_hat),
             "w0_m_s": float(self.w0_m_s),
+            "mean_flusher": float(self.mean_flusher),
             "notes": list(self.notes),
         }
 
@@ -342,6 +345,11 @@ def compute_displacement_metrics(
         w0 = float("nan")
         w0_source = "不可用（metrics 为空）"
 
+    # T1-6: 最终时刻环空平均冲洗液体积分数（metrics 末行 mean_flusher；缺失则回退 0）
+    mean_flusher = 0.0
+    if len(metrics) > 0 and "mean_flusher" in metrics.columns:
+        mean_flusher = float(metrics["mean_flusher"].iloc[-1])
+
     if not np.isfinite(t_br):
         t_br_hat = float("inf")
         notes.append("模拟结束时水泥前缘未到达出口 s_max，t_br = inf（未突破）。")
@@ -365,5 +373,6 @@ def compute_displacement_metrics(
         t_br_s=t_br,
         t_br_hat=t_br_hat,
         w0_m_s=w0,
+        mean_flusher=mean_flusher,
         notes=tuple(notes),
     )

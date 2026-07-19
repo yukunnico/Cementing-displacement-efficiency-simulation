@@ -844,14 +844,18 @@ class TestFlusherField:
         s = AnnulusD2DGASolver(dt=4.0, nz=20, ny=8, total_t=40.0)
         res = s.run(well, fluids, _inlet)
         # 五相闭合检查：result 中存 lead_field, tail_field, spacer_field, flusher_field
-        # mud 由 1 - sum 反算
+        # mud 由 1 - sum 反算；要求四相显式体积分数之和始终不超过 1（I3 修复验证）。
         lead_f = res.lead_field
         tail_f = res.tail_field
         spacer_f = res.spacer_field
         flusher_f = res.flusher_field
         assert flusher_f is not None
-        mud_f = np.clip(1.0 - lead_f - tail_f - spacer_f - flusher_f, 0.0, 1.0)
-        phase_sum = lead_f + tail_f + spacer_f + flusher_f + mud_f
+        tracked_sum = lead_f + tail_f + spacer_f + flusher_f
+        assert np.all(tracked_sum <= 1.0 + 1e-12), (
+            f"run 后显式四相之和应 ≤ 1，max={tracked_sum.max()}"
+        )
+        mud_f = np.clip(1.0 - tracked_sum, 0.0, 1.0)
+        phase_sum = tracked_sum + mud_f
         # 允许 1e-10 舍入误差
         assert np.allclose(phase_sum, 1.0, atol=1e-10), (
             f"run 后五相之和应 ≈ 1，min={phase_sum.min()} max={phase_sum.max()}"
