@@ -90,6 +90,12 @@ HU102_WASH_DENSITY_KG_M3 = 2050.0    # 平衡液/冲洗液密度（呼探1-002�
 HU102_WASH_PV_PA_S = 0.035           # 平衡液/冲洗液塑性粘度（呼探1-002邻井代理）
 HU102_WASH_YP_PA = 8.0               # 平衡液/冲洗液屈服值（呼探1-002邻井代理）
 HU102_WASH_VOLUME_M3 = 10.0          # 平衡液/冲洗液设计体积（呼探1-002邻井代理）
+# 合成 FLUSHER（冲洗液）参数：用于验证 mud-spacer-flusher-cement 序列可表达，
+# 本井现场记录无真实冲洗液，故采用邻井呼103代理值（ρ=1880, PV=0.025, YP=1.5）。
+HU102_FLUSHER_DENSITY_KG_M3 = 1880.0
+HU102_FLUSHER_PV_PA_S = 0.025
+HU102_FLUSHER_YP_PA = 1.5
+HU102_FLUSHER_VOLUME_M3 = 5.0
 HU102_SPACER_DENSITY_KG_M3 = 2050.0  # 驱油隔离液密度（呼探1-002设计值2.05g/cm³）
 HU102_SPACER_PV_PA_S = 0.035         # 驱油隔离液塑性粘度（呼探1-002邻井代理）
 HU102_SPACER_YP_PA = 8.0             # 驱油隔离液屈服值（呼探1-002邻井代理）
@@ -242,6 +248,14 @@ def load_hu102_tailpipe(
             plastic_viscosity_pa_s=HU102_SPACER_PV_PA_S,
             yield_stress_pa=HU102_SPACER_YP_PA,
         ),
+        FluidSpec(
+            name="冲洗液（FLUSHER）",
+            role=FluidRole.FLUSHER,
+            density_kg_m3=HU102_FLUSHER_DENSITY_KG_M3,
+            rheology_model=RheologyModel.BINGHAM,
+            plastic_viscosity_pa_s=HU102_FLUSHER_PV_PA_S,
+            yield_stress_pa=HU102_FLUSHER_YP_PA,
+        ),
     )
 
     # 前置液/隔离液步骤：仅在显式要求敏感性分析时加入。
@@ -266,8 +280,17 @@ def load_hu102_tailpipe(
             ),
         )
 
+    # 合成 FLUSHER 步骤：位于隔离液之后、水泥浆之前，验证 mud-spacer-flusher-cement 序列可表达。
+    flusher_step = PumpingScheduleStep(
+        step_name="注入冲洗液（FLUSHER）",
+        fluid_name="冲洗液（FLUSHER）",
+        volume_m3=HU102_FLUSHER_VOLUME_M3,
+        rate_m3_min=HU102_RATE_M3_MIN,
+        remarks=f"合成冲洗液（FLUSHER）{HU102_FLUSHER_VOLUME_M3}m³，密度{HU102_FLUSHER_DENSITY_KG_M3/1000:.2f}g/cm³（呼103邻井代理，验证序列可表达）。",
+    )
+
     schedule = PumpingSchedule(
-        steps=optional_front_steps + (
+        steps=optional_front_steps + (flusher_step,) + (
             PumpingScheduleStep(
                 step_name="注入尾管水泥浆",
                 fluid_name="尾管水泥浆",

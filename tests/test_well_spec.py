@@ -379,5 +379,50 @@ class TestFluidRoleFlusher(unittest.TestCase):
         self.assertEqual(FluidRole.FLUSHER, "flusher")
 
 
+class TestFlusherLoaderMapping(unittest.TestCase):
+    """验证 hu102 / ht1_004 加载器按 mud-spacer-flusher-cement 序列映射 FLUSHER。"""
+
+    def _step_fluid_roles(self, schedule, fluids):
+        """根据 schedule step 的 fluid_name 返回对应 FluidRole 列表。"""
+        role_by_name = {fluid.name: fluid.role for fluid in fluids}
+        return [role_by_name.get(step.fluid_name) for step in schedule.steps]
+
+    def test_hu102_has_flusher_role_and_step(self):
+        """呼102默认加载应包含 FLUSHER 流体及对应 schedule step。"""
+        from cemdisp.data.loaders.hu102_loader import load_hu102_tailpipe
+        well_spec, fluids, schedule, _ = load_hu102_tailpipe()
+        roles = [fluid.role for fluid in fluids]
+        self.assertIn(FluidRole.FLUSHER, roles)
+        step_roles = self._step_fluid_roles(schedule, fluids)
+        self.assertIn(FluidRole.FLUSHER, step_roles)
+        # 现有"冲洗液"为套管清洗液，保留 WASH
+        wash = next((f for f in fluids if f.name == "冲洗液"), None)
+        self.assertIsNotNone(wash)
+        self.assertEqual(wash.role, FluidRole.WASH)
+
+    def test_hu102_include_wash_spacer_keeps_wash_and_adds_flusher(self):
+        """呼102 include_wash_spacer=True 时，冲洗液仍为 WASH，且仍有 FLUSHER。"""
+        from cemdisp.data.loaders.hu102_loader import load_hu102_tailpipe
+        _, fluids, schedule, _ = load_hu102_tailpipe(include_wash_spacer=True)
+        roles = [fluid.role for fluid in fluids]
+        self.assertIn(FluidRole.FLUSHER, roles)
+        self.assertIn(FluidRole.WASH, roles)
+        wash = next((f for f in fluids if f.name == "冲洗液"), None)
+        self.assertIsNotNone(wash)
+        self.assertEqual(wash.role, FluidRole.WASH)
+
+    def test_ht1_004_lead_mud_remains_wash_and_has_flusher(self):
+        """呼1-004 先导浆为套管清洗液保留 WASH，同时新增 FLUSHER。"""
+        from cemdisp.data.loaders.ht1_004_loader import load_ht1_004_tailpipe
+        _, fluids, schedule, _ = load_ht1_004_tailpipe()
+        roles = [fluid.role for fluid in fluids]
+        self.assertIn(FluidRole.FLUSHER, roles)
+        step_roles = self._step_fluid_roles(schedule, fluids)
+        self.assertIn(FluidRole.FLUSHER, step_roles)
+        lead_mud = next((f for f in fluids if f.name == "先导浆"), None)
+        self.assertIsNotNone(lead_mud)
+        self.assertEqual(lead_mud.role, FluidRole.WASH)
+
+
 if __name__ == "__main__":
     unittest.main()
