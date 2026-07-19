@@ -149,6 +149,9 @@ class AnnulusSimulationResult:
     notes: Tuple[str, ...] = field(default_factory=tuple)
     lead_field: Array = field(default_factory=lambda: np.empty((0, 0), dtype=float))
     tail_field: Array = field(default_factory=lambda: np.empty((0, 0), dtype=float))
+    # T1-6: FLUSHER 独立浓度场（被动平流相，不参与 D2DGA 闭包）
+    flusher_field: Array | None = field(default=None)
+    flusher_snapshots: Tuple[Array, ...] = field(default_factory=tuple)
 
 
 class AnnulusD2DGASolver:
@@ -338,15 +341,16 @@ class AnnulusD2DGASolver:
     def _pick_fluids(
         self,
         fluids: Tuple[FluidSpec, ...],
-    ) -> Tuple[FluidSpec, FluidSpec | None, FluidSpec | None, FluidSpec | None]:
-        """从流体列表中选取钻井液、领浆、尾浆和可选前置/隔离液。"""
+    ) -> Tuple[FluidSpec, FluidSpec | None, FluidSpec | None, FluidSpec | None, FluidSpec | None]:
+        """从流体列表中选取钻井液、领浆、尾浆、可选前置/隔离液和可选冲洗液。"""
         mud = next((fluid for fluid in fluids if fluid.role == FluidRole.MUD), None)
         lead = next((fluid for fluid in fluids if fluid.role == FluidRole.LEAD), None)
         tail = next((fluid for fluid in fluids if fluid.role == FluidRole.TAIL), None)
         spacer = next((fluid for fluid in fluids if fluid.role in {FluidRole.WASH, FluidRole.SPACER}), None)
+        flusher = next((fluid for fluid in fluids if fluid.role == FluidRole.FLUSHER), None)
         if mud is None or (lead is None and tail is None):
             raise ValueError("需要钻井液和至少一个水泥浆流体")
-        return mud, lead, tail, spacer
+        return mud, lead, tail, spacer, flusher
 
     @staticmethod
     def _fluid_yield_stress(fluid: FluidSpec) -> float:
@@ -427,6 +431,7 @@ class AnnulusD2DGASolver:
         lead: Array,
         tail: Array,
         spacer: Array,
+        flusher: Array,
         w_prev: Array,
         geom: Dict[str, Array],
         mud_fluid: FluidSpec,
@@ -434,9 +439,10 @@ class AnnulusD2DGASolver:
         tail_fluid: FluidSpec | None,
         spacer_fluid: FluidSpec | None,
     ) -> Tuple[Array, Array, Array, Array, Array, Array, Array]:
-        """计算四相混合物系的表观粘度、密度、钻井液分数、混合屈服应力、黏度比 m 场及相黏度场（η1=泥浆相, η2=水泥相）。"""
-        # 四相体积分数闭合：显式跟踪领浆、尾浆和前置/隔离液，钻井液由守恒关系反算。
-        mud = np.clip(1.0 - lead - tail - spacer, 0.0, 1.0)
+        """计算混合物系的表观粘度、密度、钻井液分数、混合屈服应力、黏度比 m 场及相黏度场（η1=泥浆相, η2=水泥相）。
+        T1-6: flusher 仅参与体积闭合（五相），不参与 D2DGA 闭包。"""
+        # 五相体积分数闭合：显式跟踪领浆、尾浆、前置/隔离液和冲洗液，钻井液由守恒关系反算。
+        mud = np.clip(1.0 - lead - tail - spacer - flusher, 0.0, 1.0)
         effective_b = geom.get("effective_b", geom["b"])
         gamma = np.maximum(6.0 * np.abs(w_prev) / np.maximum(effective_b, 1.0e-5), 1.0e-6)
         mu = mud * self._apparent_viscosity(mud_fluid, gamma)
@@ -520,6 +526,7 @@ class AnnulusD2DGASolver:
         lead: Array,
         tail: Array,
         spacer: Array,
+        flusher: Array,
         geom: Dict[str, Array],
         q_m3s: float,
         w_prev: Array,
@@ -537,6 +544,8 @@ class AnnulusD2DGASolver:
         3. 根据密度差（顶替液 vs 被顶替液）计算浮力稳定系数；
         4. 用浮力修正项调整宽边/窄边速度分配；
         5. 由截面排量约束得到轴向速度 ``w``。
+
+        T1-6: flusher 仅参与体积闭合，不参与 D2DGA 闭包/两层黏度/浮力修正。
 
         Returns:
             w: 井深方向速度（轴向速度）
@@ -556,6 +565,7 @@ class AnnulusD2DGASolver:
             lead,
             tail,
             spacer,
+            flusher,
             w_prev,
             geom,
             mud_fluid,
@@ -647,11 +657,11 @@ class AnnulusD2DGASolver:
         # 返回正则化后的黏度 mu_reg，确保下游 mobility 指标反映屈服死区效应
         return w, v, mu_reg, rho, mud, Re, mu_turbulent, m_field
 
-    def _depth_profiles(self, geom: Dict[str, Array], lead: Array, tail: Array, spacer: Array, wall: Array) -> pd.DataFrame:
-        """计算深度方向的平均剖面数据。"""
+    def _depth_profiles(self, geom: Dict[str, Array], lead: Array, tail: Array, spacer: Array, flusher: Array, wall: Array) -> pd.DataFrame:
+        """计算深度方向的平均剖面数据。T1-6: 含冲洗液平均浓度。"""
         cement = np.clip(lead + tail, 0.0, 1.0)
         eff = cement
-        mud = np.clip(1.0 - lead - tail - spacer, 0.0, 1.0)
+        mud = np.clip(1.0 - lead - tail - spacer - flusher, 0.0, 1.0)
         return pd.DataFrame(
             {
                 "井深_m": geom["md"],
@@ -659,6 +669,7 @@ class AnnulusD2DGASolver:
                 "尾浆平均浓度": np.average(tail, axis=0, weights=geom["b"]),
                 "水泥平均浓度": np.average(cement, axis=0, weights=geom["b"]),
                 "前置液隔离液平均浓度": np.average(spacer, axis=0, weights=geom["b"]),
+                "冲洗液平均浓度": np.average(flusher, axis=0, weights=geom["b"]),
                 "平均有效顶替效率": np.average(eff, axis=0, weights=geom["b"]),
                 "钻井液平均浓度": np.average(mud, axis=0, weights=geom["b"]),
                 "宽边有效效率": eff[0],
@@ -684,11 +695,12 @@ class AnnulusD2DGASolver:
     ) -> AnnulusSimulationResult:
         """运行论文口径的环空二维顶替求解。"""
 
-        mud_fluid, lead_fluid, tail_fluid, spacer_fluid = self._pick_fluids(fluids)
+        mud_fluid, lead_fluid, tail_fluid, spacer_fluid, flusher_fluid = self._pick_fluids(fluids)
         geom = self._build_geom(well_spec)
         lead = np.zeros((self.ny, self.nz), dtype=float)
         tail = np.zeros((self.ny, self.nz), dtype=float)
         spacer = np.zeros((self.ny, self.nz), dtype=float)
+        flusher = np.zeros((self.ny, self.nz), dtype=float)  # T1-6: FLUSHER 独立浓度场
         # wall 场初始化为零；T1-5 后按 c < c_min 判据在泵注阶段动态更新（式 2.35-2.41）
         wall = np.zeros((self.ny, self.nz), dtype=float)
         # 水泥前锋到达标记：c_min 壁面判据只在前锋已到达的网格生效
@@ -703,11 +715,13 @@ class AnnulusD2DGASolver:
         lead_snapshots: list[Array] = []
         tail_snapshots: list[Array] = []
         spacer_snapshots: list[Array] = []
+        flusher_snapshots: list[Array] = []  # T1-6
         wall_snapshots: list[Array] = []
         snapshot_times: list[float] = []
         cumulative_lead_in_m3 = 0.0
         cumulative_tail_in_m3 = 0.0
         cumulative_spacer_in_m3 = 0.0
+        cumulative_flusher_in_m3 = 0.0  # T1-6
 
         final_step_index = int(self.total_t / self.dt)
         for step_index in range(final_step_index + 1):
@@ -717,6 +731,7 @@ class AnnulusD2DGASolver:
             inlet_lead_fraction = _phase_fraction(inlet_state, "lead")
             inlet_tail_fraction = _phase_fraction(inlet_state, "tail") + inlet_cement_fraction
             inlet_spacer_fraction = _phase_fraction(inlet_state, "spacer")
+            inlet_flusher_fraction = _phase_fraction(inlet_state, "flusher")  # T1-6
 
             # 泵停判断：排量低于阈值时认为泵已停止。
             # 泵停后水泥场冻结——不再平流、扩散或壁面清除，
@@ -729,6 +744,7 @@ class AnnulusD2DGASolver:
                     lead,
                     tail,
                     spacer,
+                    flusher,  # T1-6
                     geom,
                     inlet_state.flow_rate_m3_s,
                     w_prev,
@@ -757,15 +773,18 @@ class AnnulusD2DGASolver:
                 lead_adv = _bilinear_interp(lead, ysrc, ssrc, geom, inlet_lead_fraction)
                 tail_adv = _bilinear_interp(tail, ysrc, ssrc, geom, inlet_tail_fraction)
                 spacer_adv = _bilinear_interp(spacer, ysrc, ssrc, geom, inlet_spacer_fraction)
+                flusher_adv = _bilinear_interp(flusher, ysrc, ssrc, geom, inlet_flusher_fraction)  # T1-6
                 lead = np.clip(lead_adv, 0.0, 1.0)
                 tail = np.clip(tail_adv, 0.0, 1.0)
                 spacer = np.clip(spacer_adv, 0.0, 1.0)
-                # 数值扩散可能使显式两相之和略超1；按比例压回可行域，保持泥浆分数非负。
-                tracked_total = lead + tail + spacer
+                flusher = np.clip(flusher_adv, 0.0, 1.0)  # T1-6
+                # 数值扩散可能使显式相之和略超1；按比例压回可行域，保持泥浆分数非负。
+                tracked_total = lead + tail + spacer + flusher  # T1-6: 五相过填修正
                 overfilled = tracked_total > 1.0
                 lead[overfilled] /= tracked_total[overfilled]
                 tail[overfilled] /= tracked_total[overfilled]
                 spacer[overfilled] /= tracked_total[overfilled]
+                flusher[overfilled] /= tracked_total[overfilled]  # T1-6
 
                 # D2DGA间隙尺度弥散：在低浓度前锋更强，模拟间隙尺度分散效应
                 lead = self._smooth_dispersion(lead, axial=0.018, azimuthal=0.015)
@@ -812,13 +831,15 @@ class AnnulusD2DGASolver:
                     tail = np.clip(tail, 0.0, 1.0)
 
                 # D2DGA 通量放大会改变前锋形态，但不应让各相总量超过累计入环空体积。
-                # 这里按入口累计体积对领浆、尾浆和前置液/隔离液分别做体积上限约束。
+                # 这里按入口累计体积对领浆、尾浆、前置液/隔离液和冲洗液分别做体积上限约束。
                 cumulative_lead_in_m3 += inlet_state.flow_rate_m3_s * inlet_lead_fraction * self.dt
                 cumulative_tail_in_m3 += inlet_state.flow_rate_m3_s * inlet_tail_fraction * self.dt
                 cumulative_spacer_in_m3 += inlet_state.flow_rate_m3_s * inlet_spacer_fraction * self.dt
+                cumulative_flusher_in_m3 += inlet_state.flow_rate_m3_s * inlet_flusher_fraction * self.dt  # T1-6
                 lead = _limit_phase_volume(lead, geom, cumulative_lead_in_m3, self.open_outlet)
                 tail = _limit_phase_volume(tail, geom, cumulative_tail_in_m3, self.open_outlet)
                 spacer = _limit_phase_volume(spacer, geom, cumulative_spacer_in_m3, self.open_outlet)
+                flusher = _limit_phase_volume(flusher, geom, cumulative_flusher_in_m3, self.open_outlet)  # T1-6
 
                 # T1-5: static wall layer c_min 判据（Bararpour 2025 式 2.35-2.41）
                 # 局部水泥浓度 c < c_min 处壁面层泥浆滞留不流动 → wall=1
@@ -834,6 +855,7 @@ class AnnulusD2DGASolver:
                     lead,
                     tail,
                     spacer,
+                    flusher,  # T1-6
                     geom,
                     0.0,
                     w_prev,
@@ -853,6 +875,7 @@ class AnnulusD2DGASolver:
                 lead_snapshots.append(lead.copy())
                 tail_snapshots.append(tail.copy())
                 spacer_snapshots.append(spacer.copy())
+                flusher_snapshots.append(flusher.copy())  # T1-6
                 wall_snapshots.append(wall.copy())
                 snapshot_times.append(current_time_s)
 
@@ -892,6 +915,7 @@ class AnnulusD2DGASolver:
                     float(np.mean(wall)),
                     float(np.mean(cement)),
                     float(np.mean(mud)),
+                    float(np.mean(flusher)),  # T1-6
                 ]
             )
 
@@ -911,10 +935,11 @@ class AnnulusD2DGASolver:
             "mean_wall_mud",
             "mean_cement",
             "mean_mud",
+            "mean_flusher",  # T1-6
         ]
         metrics = pd.DataFrame(data=rows, columns=pd.Index(metric_columns))
         cement = np.clip(lead + tail, 0.0, 1.0)
-        depth_profiles = self._depth_profiles(geom, lead, tail, spacer, wall)
+        depth_profiles = self._depth_profiles(geom, lead, tail, spacer, flusher, wall)  # T1-6
         final = metrics.iloc[-1]
 
         # Extract values into locals so both nested Chinese keys and top-level English
@@ -962,6 +987,7 @@ class AnnulusD2DGASolver:
             geom=geom,
             cement_field=cement,
             spacer_field=spacer,
+            flusher_field=flusher,  # T1-6
             wall_field=wall,
             metrics=metrics,
             depth_profiles=depth_profiles,
@@ -971,10 +997,11 @@ class AnnulusD2DGASolver:
             lead_snapshots=tuple(lead_snapshots),
             tail_snapshots=tuple(tail_snapshots),
             spacer_snapshots=tuple(spacer_snapshots),
+            flusher_snapshots=tuple(flusher_snapshots),  # T1-6
             wall_snapshots=tuple(wall_snapshots),
             snapshot_times_s=tuple(snapshot_times),
             notes=(
-                "当前显式跟踪领浆、尾浆与前置液/隔离液三类入环空相，钻井液由体积分数闭合反算。",
+                "当前显式跟踪领浆、尾浆与前置液/隔离液/冲洗液五类入环空相，钻井液由体积分数闭合反算。",
                 "solver 核心仅保留论文口径的几何、流动度、D2DGA 通量修正与求解域效率输出。",
                 "泥饼、温度、凝胶强度、湍流修正与 CBL 质量惩罚不再影响求解结果；相关字段仅作兼容占位。",
             ),

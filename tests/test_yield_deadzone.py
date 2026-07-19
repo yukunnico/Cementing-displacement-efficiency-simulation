@@ -129,7 +129,7 @@ class TestYieldRegularization(unittest.TestCase):
         }
 
         mu, rho, mud_frac, tau_y, m_field, eta1, eta2 = solver._compute_props(
-            lead, tail, spacer_field, w_prev, geom,
+            lead, tail, spacer_field, np.zeros_like(lead), w_prev, geom,
             mud, None, None, spacer,
         )
 
@@ -207,7 +207,7 @@ class TestNarrowSideDeadzoneEffect(unittest.TestCase):
         }
 
         w, v, mu_reg, rho, mud_frac, Re, mu_turbulent, m_field = solver._compute_velocity(
-            lead_field, tail_field, spacer_field, geom,
+            lead_field, tail_field, spacer_field, np.zeros_like(lead_field), geom,
             q_m3s=0.01, w_prev=w_prev,
             mud_fluid=mud, lead_fluid=lead, tail_fluid=None, spacer_fluid=None,
         )
@@ -239,7 +239,7 @@ class TestNarrowSideDeadzoneEffect(unittest.TestCase):
         geom = {"b": np.ones((ny, nz)) * 0.02, "effective_b": np.ones((ny, nz)) * 0.02}
 
         result = solver._compute_props(
-            lead, tail, spacer, w_prev, geom,
+            lead, tail, spacer, np.zeros_like(lead), w_prev, geom,
             mud, None, None, None,
         )
         self.assertEqual(len(result), 7)
