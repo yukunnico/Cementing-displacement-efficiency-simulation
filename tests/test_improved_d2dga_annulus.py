@@ -972,3 +972,59 @@ class TestCFLAdaptive:
         s = AnnulusD2DGASolver(dt=4.0, nz=20, ny=8, total_t=40.0, enable_cfl_adaptive=False)
         res = s.run(well, fluids, _inlet)
         assert float(res.summary["effective_efficiency"]) > 0.0
+
+    # ── Task 2: while 循环 + 最后步裁剪 + 泵停补 dt_step ──
+
+    def test_cfl_adaptive_final_time_accuracy(self):
+        """enable_cfl_adaptive=True 时最后步 current_time_s ≈ total_t（误差<1e-6）。"""
+        from cemdisp.models2d.boundary_bridge import AnnulusInletState
+        well = _toy_well()
+        mud = FluidSpec(name="mud", role=FluidRole.MUD, density_kg_m3=1900.0,
+                        rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.053, yield_stress_pa=8.5)
+        lead = FluidSpec(name="lead", role=FluidRole.LEAD, density_kg_m3=1930.0,
+                         rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.180, yield_stress_pa=14.0)
+        fluids = (mud, lead)
+
+        def _inlet(t: float):
+            return AnnulusInletState(
+                time_s=t, flow_rate_m3_s=0.02, stage_name="pump",
+                phase_fractions=(("cement", 1.0), ("lead", 1.0)),
+            )
+
+        total_t = 40.0
+        s = AnnulusD2DGASolver(dt=4.0, nz=20, ny=8, total_t=total_t, enable_cfl_adaptive=True)
+        res = s.run(well, fluids, _inlet)
+        last_time = float(res.metrics["time_s"].iloc[-1])
+        assert abs(last_time - total_t) < 1e-6, (
+            f"最后时间步应 ≈ total_t={total_t}，实际={last_time:.10f}"
+        )
+
+    def test_disable_cfl_adaptive_baseline_time(self):
+        """enable_cfl_adaptive=False 时复现固定 dt 基线：current_time_s = step_index * dt。"""
+        from cemdisp.models2d.boundary_bridge import AnnulusInletState
+        well = _toy_well()
+        mud = FluidSpec(name="mud", role=FluidRole.MUD, density_kg_m3=1900.0,
+                        rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.053, yield_stress_pa=8.5)
+        lead = FluidSpec(name="lead", role=FluidRole.LEAD, density_kg_m3=1930.0,
+                         rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.180, yield_stress_pa=14.0)
+        fluids = (mud, lead)
+
+        def _inlet(t: float):
+            return AnnulusInletState(
+                time_s=t, flow_rate_m3_s=0.02, stage_name="pump",
+                phase_fractions=(("cement", 1.0), ("lead", 1.0)),
+            )
+
+        dt = 4.0
+        total_t = 40.0
+        s = AnnulusD2DGASolver(dt=dt, nz=20, ny=8, total_t=total_t, enable_cfl_adaptive=False)
+        res = s.run(well, fluids, _inlet)
+        times = res.metrics["time_s"].to_list()
+        expected = [i * dt for i in range(int(total_t / dt) + 1)]
+        assert len(times) == len(expected), (
+            f"时间点数量应={len(expected)}，实际={len(times)}"
+        )
+        for actual, exp in zip(times, expected):
+            assert abs(actual - exp) < 1e-12, (
+                f"时间点应={exp}，实际={actual}"
+            )

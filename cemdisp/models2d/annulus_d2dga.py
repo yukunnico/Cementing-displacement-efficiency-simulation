@@ -769,9 +769,20 @@ class AnnulusD2DGASolver:
         cumulative_spacer_in_m3 = 0.0
         cumulative_flusher_in_m3 = 0.0  # T1-6
 
-        final_step_index = int(self.total_t / self.dt)
-        for step_index in range(final_step_index + 1):
-            current_time_s = step_index * self.dt
+        # T1-7: CFL 自适应 → while 循环（每步 current_time_s += dt_step），
+        # 固定 dt → for 仿真（current_time_s = step_index * dt，复现基线）
+        # 统一循环体，仅在循环入口/出口按 enable_cfl_adaptive 分支
+        step_index = 0
+        current_time_s = 0.0
+        if not self.enable_cfl_adaptive:
+            final_step_index = int(self.total_t / self.dt)
+
+        while True:
+            if not self.enable_cfl_adaptive:
+                if step_index > final_step_index:
+                    break
+                current_time_s = step_index * self.dt
+                dt_step = self.dt
             inlet_state = inlet_state_provider(current_time_s)
             inlet_cement_fraction = _phase_fraction(inlet_state, "cement")
             inlet_lead_fraction = _phase_fraction(inlet_state, "lead")
@@ -820,8 +831,8 @@ class AnnulusD2DGASolver:
 
                 w_d2dga = w * f_amp
                 v_d2dga = v * f_amp
-                ysrc = ygrid - v_d2dga * self.dt
-                ssrc = sgrid - w_d2dga * self.dt
+                ysrc = ygrid - v_d2dga * dt_step
+                ssrc = sgrid - w_d2dga * dt_step
                 lead_adv = _bilinear_interp(lead, ysrc, ssrc, geom, inlet_lead_fraction)
                 tail_adv = _bilinear_interp(tail, ysrc, ssrc, geom, inlet_tail_fraction)
                 spacer_adv = _bilinear_interp(spacer, ysrc, ssrc, geom, inlet_spacer_fraction)
@@ -888,17 +899,17 @@ class AnnulusD2DGASolver:
                     ds = float(np.min(np.diff(geom["s"])))
                     step_limit = self.alpha_cfl * ds / max(self.dt, 1.0e-9)
                     div_q_clipped = np.clip(div_q, -step_limit, step_limit)
-                    lead = lead - div_q_clipped * lead_frac * self.dt
-                    tail = tail - div_q_clipped * tail_frac * self.dt
+                    lead = lead - div_q_clipped * lead_frac * dt_step
+                    tail = tail - div_q_clipped * tail_frac * dt_step
                     lead = np.clip(lead, 0.0, 1.0)
                     tail = np.clip(tail, 0.0, 1.0)
 
                 # D2DGA 通量放大会改变前锋形态，但不应让各相总量超过累计入环空体积。
                 # 这里按入口累计体积对领浆、尾浆、前置液/隔离液和冲洗液分别做体积上限约束。
-                cumulative_lead_in_m3 += inlet_state.flow_rate_m3_s * inlet_lead_fraction * self.dt
-                cumulative_tail_in_m3 += inlet_state.flow_rate_m3_s * inlet_tail_fraction * self.dt
-                cumulative_spacer_in_m3 += inlet_state.flow_rate_m3_s * inlet_spacer_fraction * self.dt
-                cumulative_flusher_in_m3 += inlet_state.flow_rate_m3_s * inlet_flusher_fraction * self.dt  # T1-6
+                cumulative_lead_in_m3 += inlet_state.flow_rate_m3_s * inlet_lead_fraction * dt_step
+                cumulative_tail_in_m3 += inlet_state.flow_rate_m3_s * inlet_tail_fraction * dt_step
+                cumulative_spacer_in_m3 += inlet_state.flow_rate_m3_s * inlet_spacer_fraction * dt_step
+                cumulative_flusher_in_m3 += inlet_state.flow_rate_m3_s * inlet_flusher_fraction * dt_step  # T1-6
                 lead = _limit_phase_volume(lead, geom, cumulative_lead_in_m3, self.open_outlet)
                 tail = _limit_phase_volume(tail, geom, cumulative_tail_in_m3, self.open_outlet)
                 spacer = _limit_phase_volume(spacer, geom, cumulative_spacer_in_m3, self.open_outlet)
@@ -929,10 +940,24 @@ class AnnulusD2DGASolver:
                     wall=wall,
                 )
                 # 泵停后保持上一时刻浓度场，不再引入停泵滑移或额外壁面过程。
+                # T1-7: 泵停分支也补 dt_step 计算（while 循环需 dt_step 推进时间）
+                if self.enable_cfl_adaptive:
+                    dt_step = self._compute_cfl_dt_step(w, v, geom, current_time_s)
+                else:
+                    dt_step = self.dt
+
+            # T1-7: 记录时间（while 分支记录步后时间 current_time_s+dt_step，
+            # for 分支记录步前时间 current_time_s 复现基线）
+            record_time = current_time_s + dt_step if self.enable_cfl_adaptive else current_time_s
+            _last_step = (
+                current_time_s + dt_step >= self.total_t - 1e-9
+                if self.enable_cfl_adaptive
+                else step_index == int(self.total_t / self.dt)
+            )
 
             # 在物理场更新后、指标计算前保存快照，确保快照与本步指标使用同一状态。
             # 使用 copy() 固化二维场，避免后续时间步原地更新影响已保存结果。
-            if step_index % self.save_interval == 0 or step_index == int(self.total_t / self.dt):
+            if step_index % self.save_interval == 0 or _last_step:
                 cement = np.clip(lead + tail, 0.0, 1.0)
                 cement_snapshots.append(cement.copy())
                 lead_snapshots.append(lead.copy())
@@ -940,7 +965,7 @@ class AnnulusD2DGASolver:
                 spacer_snapshots.append(spacer.copy())
                 flusher_snapshots.append(flusher.copy())  # T1-6
                 wall_snapshots.append(wall.copy())
-                snapshot_times.append(current_time_s)
+                snapshot_times.append(record_time)
 
             cement = np.clip(lead + tail, 0.0, 1.0)
             eff = cement
@@ -963,8 +988,8 @@ class AnnulusD2DGASolver:
 
             rows.append(
                 [
-                    current_time_s,
-                    current_time_s / 60.0,
+                    record_time,
+                    record_time / 60.0,
                     inlet_state.stage_name,
                     bulk_fill,
                     effective_efficiency,
@@ -981,6 +1006,13 @@ class AnnulusD2DGASolver:
                     float(np.mean(flusher)),  # T1-6
                 ]
             )
+
+            # T1-7: 时间步进（while 分支：current_time_s += dt_step；for 分支：step_index 自增）
+            if self.enable_cfl_adaptive:
+                current_time_s += dt_step
+                if current_time_s >= self.total_t - 1e-9:
+                    break
+            step_index += 1
 
         metric_columns = [
             "time_s",
