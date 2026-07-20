@@ -205,6 +205,9 @@ class AnnulusD2DGASolver:
         yield_regularization_M: float = 100.0,
         open_outlet: bool = True,
         alpha_cfl: float = 0.5,
+        enable_cfl_adaptive: bool = True,
+        cfl_number: float = 0.5,
+        dt_min: float = 0.1,
         c_min: float = 0.05,
     ) -> None:
         """初始化环空二维求解器参数。
@@ -230,6 +233,12 @@ class AnnulusD2DGASolver:
                 False: 封闭出口，按累计入环空体积限制场量，适用于模拟整个环空。
             alpha_cfl: CFL 裁剪系数，默认 0.5。控制单步 I3 通量散度裁剪上限
                 |div_q|·dt ≤ alpha_cfl·min(ds)，其中 ds 取轴向网格最小间距。
+            enable_cfl_adaptive: 是否启用全局 CFL 自适应时间步，默认 True。
+                True: 每步按 CFL 条件动态调整 dt_step；
+                False: 固定 dt 复现基线。
+            cfl_number: 全局 CFL 数（半拉格朗日保守估计），默认 0.5。
+                独立于 T1-2 alpha_cfl（局部 I3 通量裁剪）。
+            dt_min: 自适应时间步下限（秒），默认 0.1。防 CFL 过小步数爆炸。
             c_min: 壁面静止层浓度阈值（Bararpour 2025 式 2.35-2.41），默认 0.05。
                 局部水泥浓度 c < c_min 时该处壁面层泥浆滞留不流动（wall=1）。
         """
@@ -247,6 +256,9 @@ class AnnulusD2DGASolver:
         self.enable_true_buoyancy: bool = enable_true_buoyancy
         self.open_outlet: bool = open_outlet
         self.alpha_cfl: float = alpha_cfl
+        self.enable_cfl_adaptive: bool = enable_cfl_adaptive
+        self.cfl_number: float = cfl_number
+        self.dt_min: float = dt_min
         self.c_min: float = c_min
 
     def _build_geom(self, well_spec: WellSpec, mud_cake_thickness: Array | None = None) -> Dict[str, Array]:
@@ -661,6 +673,36 @@ class AnnulusD2DGASolver:
         # 返回正则化后的黏度 mu_reg，确保下游 mobility 指标反映屈服死区效应
         return w, v, mu_reg, rho, mud, Re, mu_turbulent, m_field
 
+    def _compute_cfl_dt_step(self, w: Array, v: Array, geom: Dict[str, Array], current_time_s: float) -> float:
+        """根据 CFL 条件计算自适应时间步长。
+
+        CFL 条件：dt_step * (max|w|/Δs + max|v|/Δy) ≤ cfl_number
+
+        Args:
+            w: 轴向速度场 (ny×nz)
+            v: 横向速度场 (ny×nz)
+            geom: 几何参数字典
+            current_time_s: 当前时间（秒）
+
+        Returns:
+            dt_step: 自适应时间步长，满足 dt_min ≤ dt_step ≤ min(dt, total_t - current_time_s)
+        """
+        ds = float(np.min(np.diff(geom["s"])))
+        dy_arr = np.gradient(geom["y"])[:, None]
+        dy_min = float(np.min(dy_arr)) if dy_arr.size else ds
+        denom = max(
+            float(np.max(np.abs(w))) / max(ds, 1e-12)
+            + float(np.max(np.abs(v))) / max(dy_min, 1e-12),
+            1e-12,
+        )
+        dt_cfl = self.cfl_number / denom
+        dt_step = min(dt_cfl, self.dt, self.total_t - current_time_s)
+        dt_step = max(dt_step, self.dt_min)
+        # 最后步裁剪精确到 total_t
+        if current_time_s + dt_step >= self.total_t:
+            dt_step = self.total_t - current_time_s
+        return dt_step
+
     def _depth_profiles(self, geom: Dict[str, Array], lead: Array, tail: Array, spacer: Array, flusher: Array, wall: Array) -> pd.DataFrame:
         """计算深度方向的平均剖面数据。T1-6: 含冲洗液平均浓度。"""
         cement = np.clip(lead + tail, 0.0, 1.0)
@@ -759,6 +801,12 @@ class AnnulusD2DGASolver:
                     wall=wall,
                 )
                 w_prev = w
+
+                # T1-7: CFL 自适应时间步（dt 计算，循环结构 Task 2 改）
+                if self.enable_cfl_adaptive:
+                    dt_step = self._compute_cfl_dt_step(w, v, geom, current_time_s)
+                else:
+                    dt_step = self.dt
 
                 cement = np.clip(lead + tail, 0.0, 1.0)
                 if self.enable_d2dga:

@@ -861,3 +861,114 @@ class TestFlusherField:
         assert np.allclose(phase_sum, 1.0, atol=1e-10), (
             f"run 后五相之和应 ≈ 1，min={phase_sum.min()} max={phase_sum.max()}"
         )
+
+
+class TestCFLAdaptive:
+    """T1-7: CFL 自适应时间步参数 + dt_step 计算逻辑测试。"""
+
+    def test_constructor_has_cfl_adaptive_defaults(self):
+        """enable_cfl_adaptive 默认 True, cfl_number 默认 0.5, dt_min 默认 0.1。"""
+        s = AnnulusD2DGASolver(dt=4.0, nz=20, ny=10, total_t=40.0)
+        assert hasattr(s, "enable_cfl_adaptive")
+        assert s.enable_cfl_adaptive is True
+        assert s.cfl_number == 0.5
+        assert s.dt_min == 0.1
+
+    def test_constructor_custom_cfl_adaptive_params(self):
+        """自定义 enable_cfl_adaptive/cfl_number/dt_min 参数存储正确。"""
+        s = AnnulusD2DGASolver(
+            dt=4.0, nz=20, ny=10, total_t=40.0,
+            enable_cfl_adaptive=False, cfl_number=0.3, dt_min=0.05,
+        )
+        assert s.enable_cfl_adaptive is False
+        assert s.cfl_number == 0.3
+        assert s.dt_min == 0.05
+
+    def test_cfl_adaptive_dt_step_upper_bound(self):
+        """enable_cfl_adaptive=True 时 dt_step ≤ dt_user (self.dt)。"""
+        s = AnnulusD2DGASolver(dt=4.0, nz=20, ny=10, total_t=40.0)
+        well = _toy_well()
+        geom = s._build_geom(well)
+        ny, nz = s.ny, s.nz
+        w = np.full((ny, nz), 0.5)
+        v = np.zeros((ny, nz))
+        dt_step = s._compute_cfl_dt_step(w, v, geom, current_time_s=0.0)
+        assert dt_step <= s.dt + 1e-12, (
+            f"dt_step={dt_step:.6f} 应 ≤ dt_user={s.dt}"
+        )
+
+    def test_cfl_adaptive_dt_step_lower_bound(self):
+        """enable_cfl_adaptive=True 时 dt_step ≥ dt_min。"""
+        s = AnnulusD2DGASolver(dt=4.0, nz=20, ny=10, total_t=40.0)
+        well = _toy_well()
+        geom = s._build_geom(well)
+        ny, nz = s.ny, s.nz
+        w = np.full((ny, nz), 50.0)  # 大速度迫使 CFL 步长很小
+        v = np.zeros((ny, nz))
+        dt_step = s._compute_cfl_dt_step(w, v, geom, current_time_s=0.0)
+        assert dt_step >= s.dt_min - 1e-12, (
+            f"dt_step={dt_step:.6f} 应 ≥ dt_min={s.dt_min}"
+        )
+
+    def test_cfl_adaptive_cfl_less_than_one(self):
+        """enable_cfl_adaptive=True 时 CFL 数 < 1。"""
+        s = AnnulusD2DGASolver(dt=4.0, nz=20, ny=10, total_t=40.0)
+        well = _toy_well()
+        geom = s._build_geom(well)
+        ny, nz = s.ny, s.nz
+        w = np.full((ny, nz), 0.5)
+        v = np.full((ny, nz), 0.2)
+        dt_step = s._compute_cfl_dt_step(w, v, geom, current_time_s=0.0)
+        ds = float(np.min(np.diff(geom["s"])))
+        dy_arr = np.gradient(geom["y"])[:, None]
+        dy_min = float(np.min(dy_arr)) if dy_arr.size else ds
+        denom = max(
+            float(np.max(np.abs(w))) / max(ds, 1e-12)
+            + float(np.max(np.abs(v))) / max(dy_min, 1e-12),
+            1e-12,
+        )
+        cfl_actual = dt_step * denom
+        assert cfl_actual < 1.0 + 1e-12, (
+            f"CFL={cfl_actual:.6f} 应 < 1"
+        )
+
+    def test_cfl_adaptive_run_does_not_crash(self):
+        """enable_cfl_adaptive=True 完整 run 不崩溃。"""
+        from cemdisp.models2d.boundary_bridge import AnnulusInletState
+        well = _toy_well()
+        mud = FluidSpec(name="mud", role=FluidRole.MUD, density_kg_m3=1900.0,
+                        rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.053, yield_stress_pa=8.5)
+        lead = FluidSpec(name="lead", role=FluidRole.LEAD, density_kg_m3=1930.0,
+                         rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.180, yield_stress_pa=14.0)
+        fluids = (mud, lead)
+
+        def _inlet(t: float):
+            return AnnulusInletState(
+                time_s=t, flow_rate_m3_s=0.02, stage_name="pump",
+                phase_fractions=(("cement", 1.0), ("lead", 1.0)),
+            )
+
+        s = AnnulusD2DGASolver(dt=4.0, nz=20, ny=8, total_t=40.0, enable_cfl_adaptive=True)
+        res = s.run(well, fluids, _inlet)
+        assert res is not None
+        assert float(res.summary["effective_efficiency"]) > 0.0
+
+    def test_disable_cfl_adaptive_fixed_dt(self):
+        """enable_cfl_adaptive=False 时使用固定 dt，运行不崩溃。"""
+        from cemdisp.models2d.boundary_bridge import AnnulusInletState
+        well = _toy_well()
+        mud = FluidSpec(name="mud", role=FluidRole.MUD, density_kg_m3=1900.0,
+                        rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.053, yield_stress_pa=8.5)
+        lead = FluidSpec(name="lead", role=FluidRole.LEAD, density_kg_m3=1930.0,
+                         rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.180, yield_stress_pa=14.0)
+        fluids = (mud, lead)
+
+        def _inlet(t: float):
+            return AnnulusInletState(
+                time_s=t, flow_rate_m3_s=0.02, stage_name="pump",
+                phase_fractions=(("cement", 1.0), ("lead", 1.0)),
+            )
+
+        s = AnnulusD2DGASolver(dt=4.0, nz=20, ny=8, total_t=40.0, enable_cfl_adaptive=False)
+        res = s.run(well, fluids, _inlet)
+        assert float(res.summary["effective_efficiency"]) > 0.0
