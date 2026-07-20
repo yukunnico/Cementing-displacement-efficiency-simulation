@@ -101,6 +101,7 @@ def run_one_level(
     well_spec_override: WellSpec | None = None,
     run_id: str | None = None,
     eccentricity: float = 0.17,
+    enable_cfl_adaptive: bool = False,
 ) -> AnnulusSimulationResult:
     """Run a single ablation level, returning the full simulation result.
 
@@ -126,6 +127,9 @@ def run_one_level(
         If None, falls back to ``level.name``.
     eccentricity : float
         Casing eccentricity (0..1). Default 0.17 matches HT1-004 field data.
+    enable_cfl_adaptive : bool
+        是否启用全局 CFL 自适应时间步，默认 False 保 ablation 基线复现。
+        True 则重跑（dt 动态调整，CFL<1）。
     """
     loaded_well, fluids, schedule, _ = load_ht1_004_tailpipe()
     well_spec = well_spec_override if well_spec_override is not None else loaded_well
@@ -153,6 +157,7 @@ def run_one_level(
         enable_d2dga_auto_m=level.enable_d2dga_auto_m,
         enable_d2dga_i3_flux=level.enable_d2dga_i3_flux,
         enable_true_buoyancy=level.enable_true_buoyancy,
+        enable_cfl_adaptive=enable_cfl_adaptive,
         open_outlet=True,
     )
 
@@ -176,12 +181,18 @@ def run_full_ablation(
     output_dir: str | None = None,
     run_id_prefix: str = "ht1_004_ablation",
     eccentricity: float = 0.17,
+    enable_cfl_adaptive: bool = False,
 ) -> Dict[str, AnnulusSimulationResult]:
     """Run all ablation levels, returning {level_name: result}.
 
     Each level gets a unique run_id = ``{run_id_prefix}_{level.name}`` so the
     dumped JSONs are never overwritten by other scripts sharing the same
     output_dir.
+
+    Parameters
+    ----------
+    enable_cfl_adaptive : bool
+        是否启用全局 CFL 自适应时间步，默认 False 保 ablation 基线复现。
     """
     if levels is None:
         levels = ABLATION_LEVELS
@@ -191,6 +202,7 @@ def run_full_ablation(
         results[lv.name] = run_one_level(
             lv, nz=nz, dt=dt, total_t=total_t, output_dir=output_dir,
             run_id=run_id, eccentricity=eccentricity,
+            enable_cfl_adaptive=enable_cfl_adaptive,
         )
     return results
 
