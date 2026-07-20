@@ -137,14 +137,20 @@ def _b_weighted_azimuth_mean(field: np.ndarray, b: np.ndarray, y: np.ndarray, ep
 
 
 def _final_mud_field(result: "AnnulusSimulationResult") -> np.ndarray:
-    """最终时刻泥浆体积分数场 mud = clip(1 − cement − spacer, 0, 1)。
+    """最终时刻泥浆体积分数场 mud = clip(1 − cement − spacer − flusher, 0, 1)。
 
     与 annulus_d2dga._depth_profiles 的钻井液定义一致（体积分数闭合反算：
-    显式跟踪领浆/尾浆/前置液，钻井液 = 1 − 三相之和）。
+    显式跟踪领浆/尾浆/前置液/冲洗液，钻井液 = 1 − 四相之和）。
+    T1-6 后 flusher_field 可能为 None（旧结果或 mock），此时按零处理。
     """
     cement = np.clip(np.asarray(result.cement_field, dtype=float), 0.0, 1.0)
     spacer = np.clip(np.asarray(result.spacer_field, dtype=float), 0.0, 1.0)
-    return np.clip(1.0 - cement - spacer, 0.0, 1.0)
+    flusher = getattr(result, "flusher_field", None)
+    if flusher is None:
+        flusher = np.zeros_like(cement)
+    else:
+        flusher = np.clip(np.asarray(flusher, dtype=float), 0.0, 1.0)
+    return np.clip(1.0 - cement - spacer - flusher, 0.0, 1.0)
 
 
 def _mud_retention_fraction(mud: np.ndarray, geom: Dict[str, np.ndarray]) -> float:

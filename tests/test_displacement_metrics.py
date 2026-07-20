@@ -36,12 +36,19 @@ def _make_metrics(rows: list[dict]) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def _make_result(cement: np.ndarray, spacer: np.ndarray, geom: dict, metrics: pd.DataFrame) -> SimpleNamespace:
+def _make_result(
+    cement: np.ndarray,
+    spacer: np.ndarray,
+    geom: dict,
+    metrics: pd.DataFrame,
+    flusher: np.ndarray | None = None,
+) -> SimpleNamespace:
     return SimpleNamespace(
         well_name="mock_well",
         geom=geom,
         cement_field=cement,
         spacer_field=spacer,
+        flusher_field=flusher,
         metrics=metrics,
     )
 
@@ -311,6 +318,51 @@ class TestMeanFlusher:
             _make_result(np.ones((8, 5)), np.zeros((8, 5)), geom, metrics)
         )
         assert res.mean_flusher == pytest.approx(0.0)
+
+
+class TestFlusherAffectsMudRetention:
+    """T1-6：泥浆滞留计算必须扣除 FLUSHER，否则含冲洗液时会高估泥浆滞留。"""
+
+    def test_all_flusher_field_gives_zero_mud_retention(self):
+        """全冲洗液（cement=0, spacer=0, flusher=1）→ mud = 0，滞留应为 0。"""
+        geom = _make_geom()
+        cement = np.zeros((8, 5))
+        spacer = np.zeros((8, 5))
+        flusher = np.ones((8, 5))
+        metrics = _make_metrics([_metrics_row(0.0, 0.0, 0.0, 0.0, 0.0)])
+        res = compute_displacement_metrics(
+            _make_result(cement, spacer, geom, metrics, flusher=flusher)
+        )
+        assert res.mud_retention_fraction == pytest.approx(0.0, abs=1e-9)
+
+    def test_flusher_reduces_mud_retention(self):
+        """cement=0, spacer=0, flusher=0.2 → mud = 0.8，滞留应为 0.8。"""
+        geom = _make_geom()
+        cement = np.zeros((8, 5))
+        spacer = np.zeros((8, 5))
+        flusher = np.full((8, 5), 0.2)
+        metrics = _make_metrics([_metrics_row(0.0, 0.0, 0.0, 0.0, 0.0)])
+        res = compute_displacement_metrics(
+            _make_result(cement, spacer, geom, metrics, flusher=flusher)
+        )
+        assert res.mud_retention_fraction == pytest.approx(0.8, abs=1e-9)
+
+    def test_missing_flusher_field_backwards_compatible(self):
+        """旧结果/mock 无 flusher_field 时，按 0 处理，保持三相口径。"""
+        geom = _make_geom()
+        cement = np.full((8, 5), 0.5)
+        spacer = np.zeros((8, 5))
+        metrics = _make_metrics([_metrics_row(0.0, 0.0, 0.0, 0.5, 0.5)])
+        # 显式构造无 flusher_field 的 result
+        result = SimpleNamespace(
+            well_name="mock_well",
+            geom=geom,
+            cement_field=cement,
+            spacer_field=spacer,
+            metrics=metrics,
+        )
+        res = compute_displacement_metrics(result)
+        assert res.mud_retention_fraction == pytest.approx(0.5, abs=1e-9)
 
 
 class TestResultStructure:
