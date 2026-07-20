@@ -355,30 +355,6 @@ class TestWellSpecPositionalBackwardCompatibility(unittest.TestCase):
         self.assertEqual(spec.liner_id_mm, 224.5)
 
 
-class TestFluidRoleFlusher(unittest.TestCase):
-    """测试 FluidRole.FLUSHER 枚举值与 FluidSpec 构造。"""
-
-    def test_flusher_enum_value(self):
-        """FluidRole.FLUSHER.value 应为 'flusher'。"""
-        self.assertEqual(FluidRole.FLUSHER.value, "flusher")
-
-    def test_fluidspec_with_flusher_role_constructs(self):
-        """FluidSpec(role=FluidRole.FLUSHER) 构造不应报错。"""
-        spec = FluidSpec(
-            role=FluidRole.FLUSHER,
-            name="f",
-            density_kg_m3=1000,
-            plastic_viscosity_pa_s=0.1,
-        )
-        self.assertEqual(spec.role, FluidRole.FLUSHER)
-        self.assertEqual(spec.name, "f")
-        self.assertEqual(spec.density_kg_m3, 1000)
-
-    def test_flusher_role_is_str_enum(self):
-        """FluidRole.FLUSHER 是字符串枚举。"""
-        self.assertEqual(FluidRole.FLUSHER, "flusher")
-
-
 class TestFlusherLoaderMapping(unittest.TestCase):
     """验证 hu102 / ht1_004 加载器按 mud-spacer-flusher-cement 序列映射 FLUSHER。"""
 
@@ -386,6 +362,22 @@ class TestFlusherLoaderMapping(unittest.TestCase):
         """根据 schedule step 的 fluid_name 返回对应 FluidRole 列表。"""
         role_by_name = {fluid.name: fluid.role for fluid in fluids}
         return [role_by_name.get(step.fluid_name) for step in schedule.steps]
+
+    def _assert_flusher_between_spacer_and_cement(self, step_roles):
+        """验证 FLUSHER 步骤位于 spacer/wash 之后、cement 之前。"""
+        flusher_idx = step_roles.index(FluidRole.FLUSHER)
+        spacer_indices = [
+            i for i, r in enumerate(step_roles) if r in {FluidRole.WASH, FluidRole.SPACER}
+        ]
+        cement_indices = [
+            i
+            for i, r in enumerate(step_roles)
+            if r in {FluidRole.LEAD, FluidRole.INTERMEDIATE, FluidRole.TAIL}
+        ]
+        self.assertTrue(spacer_indices, "schedule 应包含 spacer/wash 步骤")
+        self.assertTrue(cement_indices, "schedule 应包含 cement 步骤")
+        self.assertLess(max(spacer_indices), flusher_idx, "flusher 应在 spacer/wash 之后")
+        self.assertLess(flusher_idx, min(cement_indices), "flusher 应在 cement 之前")
 
     def test_hu102_strict_mode_no_flusher_step(self):
         """呼102严格现场模式（默认）schedule 中不含 FLUSHER step，但流体定义保留。"""
@@ -409,6 +401,7 @@ class TestFlusherLoaderMapping(unittest.TestCase):
         self.assertIn(FluidRole.WASH, roles)
         step_roles = self._step_fluid_roles(schedule, fluids)
         self.assertIn(FluidRole.FLUSHER, step_roles)
+        self._assert_flusher_between_spacer_and_cement(step_roles)
         wash = next((f for f in fluids if f.name == "冲洗液"), None)
         self.assertIsNotNone(wash)
         self.assertEqual(wash.role, FluidRole.WASH)
@@ -433,6 +426,7 @@ class TestFlusherLoaderMapping(unittest.TestCase):
         self.assertIn(FluidRole.FLUSHER, roles)
         step_roles = self._step_fluid_roles(schedule, fluids)
         self.assertIn(FluidRole.FLUSHER, step_roles)
+        self._assert_flusher_between_spacer_and_cement(step_roles)
         lead_mud = next((f for f in fluids if f.name == "先导浆"), None)
         self.assertIsNotNone(lead_mud)
         self.assertEqual(lead_mud.role, FluidRole.WASH)

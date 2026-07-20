@@ -342,7 +342,11 @@ class AnnulusD2DGASolver:
         self,
         fluids: Tuple[FluidSpec, ...],
     ) -> Tuple[FluidSpec, FluidSpec | None, FluidSpec | None, FluidSpec | None, FluidSpec | None]:
-        """从流体列表中选取钻井液、领浆、尾浆、可选前置/隔离液和可选冲洗液。"""
+        """从流体列表中选取钻井液、领浆、尾浆、可选前置/隔离液和可选冲洗液。
+
+        自 T1-6 起返回 5 元组 (mud, lead, tail, spacer, flusher)，
+        其中 lead/tail/spacer/flusher 均可为 None。
+        """
         mud = next((fluid for fluid in fluids if fluid.role == FluidRole.MUD), None)
         lead = next((fluid for fluid in fluids if fluid.role == FluidRole.LEAD), None)
         tail = next((fluid for fluid in fluids if fluid.role == FluidRole.TAIL), None)
@@ -786,10 +790,13 @@ class AnnulusD2DGASolver:
                 spacer[overfilled] /= tracked_total[overfilled]
                 flusher[overfilled] /= tracked_total[overfilled]  # T1-6
 
-                # D2DGA间隙尺度弥散：在低浓度前锋更强，模拟间隙尺度分散效应
+                # D2DGA间隙尺度弥散：在低浓度前锋更强，模拟间隙尺度分散效应。
+                # 数值弥散可能使显式相之和略超 1；后续两次 overfilled 修正将其压回可行域，
+                # 允许不超过 1e-12 的数值扩散容差。
                 lead = self._smooth_dispersion(lead, axial=0.018, azimuthal=0.015)
                 tail = self._smooth_dispersion(tail, axial=0.018, azimuthal=0.015)
                 spacer = self._smooth_dispersion(spacer, axial=0.012, azimuthal=0.012)
+                flusher = self._smooth_dispersion(flusher, axial=0.012, azimuthal=0.012)
                 # T1-6: 弥散后再次执行五相过填修正，防止 _smooth_dispersion 数值扩散
                 # 使 lead+tail+spacer+flusher 再次超过 1，破坏体积分数闭合。
                 tracked_total = lead + tail + spacer + flusher

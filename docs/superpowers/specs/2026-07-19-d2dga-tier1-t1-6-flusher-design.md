@@ -96,7 +96,7 @@ flusher 作为 `FluidSpec`（role=FLUSHER）加入 `PumpingSchedule`，`CasingFl
 - **`AnnulusSimulationResult` 后向兼容**：`flusher_field`/`flusher_snapshots` 默认 None/空，下游脚本（`quality_proxy`/`tier0_diagnostics`/ablation/plot）不引用这两个字段则不破坏；引用处加 `getattr` 守卫。
 - **五相闭合同步**：所有 `mud = 1 - ...` 处（`_compute_props` 行 438-440、`_depth_profiles` 行 650-677 的 mud 列）同步改五相。
 - **flusher 被动**：不进 `c_bar`/`m_field`/`eta1/eta2`/体力/I3/两层闭包/static wall。D2DGA 物理闭包（T1-1~T1-5）零改动。
-- **Tier0 诊断复跑**：flusher 不影响 muskat_regime/浮力分类/η_N（因不参与通量/体力），诊断结果对 flusher 引入应不变（仅多 mean_flusher 指标）。
+- **Tier0 诊断复跑**：flusher 不影响 muskat_regime/浮力分类/η_N（因不参与通量/体力）；诊断结果对 flusher 引入保持分类不变（flow_class/muskat_regime 不变），数值漂移 ≤ 1%（合成 FLUSHER 延长泵注总时长导致物性场重算），并新增 mean_flusher 指标。
 - **入口相名**：`run` 内 `"cement"/"lead"/"tail"/"spacer"` 硬编码处（行 716-719）加 `"flusher"`。
 
 ---
