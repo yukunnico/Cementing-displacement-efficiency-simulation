@@ -183,10 +183,10 @@ def build_coupled_annulus_inlet_provider(
             return (("tail", 1.0),)
         if role in {FluidRole.LEAD, FluidRole.INTERMEDIATE, FluidRole.TAIL}:
             return (("cement", 1.0),)
-        if role in {FluidRole.WASH, FluidRole.SPACER}:
-            return (("spacer", 1.0),)
         if role == FluidRole.FLUSHER:
             return (("flusher", 1.0),)
+        if role in {FluidRole.WASH, FluidRole.SPACER}:
+            return (("spacer", 1.0),)
         return (("mud", 1.0),)
 
     def _legacy_provider(time_s: float) -> AnnulusInletState:
