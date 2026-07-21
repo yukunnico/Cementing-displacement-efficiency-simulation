@@ -280,37 +280,65 @@ class CasingFlowSolver:
         fluid: FluidSpec,
         mean_velocity_m_s: float,
     ) -> float:
-        """计算管内层流轴向弥散系数（Taylor-Aris 型）。
+        """管内层流轴向弥散系数（Taylor-Aris + 屈服应力修正）。
+
+        T1-8: Newtonian → Taylor-Aris; Power-law → Batot et al. (2016) 式(28);
+        Bingham → Fan & Wang (1966); HB → 等效 Bingham 近似。
 
         Args:
-            pipe_radius_m: 套管内半径 (m)
-            fluid: 当前管内流体规格
-            mean_velocity_m_s: 截面平均速度 (m/s)
+            pipe_radius_m: 套管内半径 [m]
+            fluid: 管内流体规格
+            mean_velocity_m_s: 截面平均速度 [m/s]
 
         Returns:
-            有效轴向弥散系数 D_eff (m²/s)
+            有效轴向弥散系数 D_eff [m²/s]（仅对流弥散部分）
         """
         if mean_velocity_m_s < 1e-9:
             return 0.0
 
+        import math as _math
         from cemdisp.data.fluid_spec import RheologyModel
 
+        U = mean_velocity_m_s
+        R = pipe_radius_m
+        d_mol = 1.0e-9  # 分子扩散系数 [m²/s]
+        Pe = 2.0 * U * R / d_mol  # Péclet 数
+
         if fluid.rheology_model == RheologyModel.NEWTONIAN:
-            # 牛顿流体: D_eff = U²R² / (192 × D_mol)
-            # D_mol ~ 1e-9 for typical fluids
-            d_mol = 1.0e-9
-            return (mean_velocity_m_s ** 2) * (pipe_radius_m ** 2) / (192.0 * d_mol)
+            return d_mol * Pe**2 / 192.0
 
         elif fluid.rheology_model == RheologyModel.POWER_LAW:
             n = fluid.power_law_n if fluid.power_law_n is not None else 1.0
-            # 幂律修正: κ ≈ 48n + 144 (拟合)
-            k_factor = 48.0 * n + 144.0
-            d_mol = 1.0e-9
-            return (mean_velocity_m_s ** 2) * (pipe_radius_m ** 2) / (k_factor * d_mol)
+            # Batot et al. (2016) 式(28)
+            factor = 24.0 * n**2 / ((3.0 * n + 1.0) * (5.0 * n + 1.0))
+            return d_mol * Pe**2 / 192.0 * factor
 
         elif fluid.rheology_model in (RheologyModel.BINGHAM, RheologyModel.HERSCHEL_BULKLEY):
-            # 有屈服应力流体：中心塞流区抑制弥散 → 用更小的 D_eff
-            return self.dispersion_alpha * mean_velocity_m_s * pipe_radius_m
+            # T1-8: Fan & Wang (1966) Bingham Taylor 弥散
+            tau_y = fluid.yield_stress_pa if fluid.yield_stress_pa is not None else 0.0
+            if fluid.rheology_model == RheologyModel.HERSCHEL_BULKLEY:
+                k_cons = fluid.consistency_k if fluid.consistency_k is not None else 0.01
+                n_hb = fluid.power_law_n if fluid.power_law_n is not None else 1.0
+                shear_rate_w = max(8.0 * U / (2.0 * R), 1e-6)
+                mu_app = tau_y / max(shear_rate_w, 1e-9) + k_cons * shear_rate_w**(n_hb - 1.0)
+            else:
+                mu_app = fluid.plastic_viscosity_pa_s if fluid.plastic_viscosity_pa_s is not None else 0.01
+
+            xi0 = tau_y * R / max(4.0 * mu_app * U, 1e-12)
+            xi0 = min(xi0, 0.999)
+
+            if xi0 < 1e-9:
+                return d_mol * Pe**2 / 192.0
+
+            # Fan & Wang (1966) k(ξ₀) 多项式
+            xi = xi0; xi2 = xi**2; xi4 = xi2**2; xi8 = xi4**2
+            num = (3.0/8.0 - 44.0/35.0*xi + 16.0/15.0*xi2 + xi4
+                   - 28.0/15.0*xi4*xi - 3.0/5.0*xi4*xi2 + 8.0/5.0*xi4*xi2*xi
+                   - 29.0/56.0*xi8 + 1.0/5.0*xi8*xi2 - xi8*_math.log(max(xi, 1e-12)))
+            den = 2.0 * (3.0 + 2.0*xi + xi2) * (1.0 - xi)**4
+            k = max(num / max(den, 1e-12), 0.0)
+
+            return d_mol * Pe**2 / 48.0 * k
 
         else:
             return self.dispersion_alpha * mean_velocity_m_s * pipe_radius_m

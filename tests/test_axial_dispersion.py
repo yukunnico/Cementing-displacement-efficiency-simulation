@@ -29,7 +29,7 @@ class TestDispersionCoefficient(unittest.TestCase):
         )
 
     def test_newtonian_dispersion_formula(self) -> None:
-        """牛顿流体的弥散系数公式：D_eff = U²R² / (192 × D_mol)。"""
+        """牛顿流体 Taylor-Aris: D_eff = D_mol·Pe²/192 = U²R²/(48·D_mol)。"""
         solver = self._make_solver()
         fluid = FluidSpec(
             name="water",
@@ -38,44 +38,31 @@ class TestDispersionCoefficient(unittest.TestCase):
             rheology_model=RheologyModel.NEWTONIAN,
             plastic_viscosity_pa_s=0.001,
         )
-        R = 0.05  # 0.1m 内径
-        U = 1.0   # 1 m/s
-
-        D_eff = solver._compute_dispersion_coefficient(R, fluid, U)
-
-        # D_mol = 1e-9, D_eff = 1² × 0.05² / (192 × 1e-9) ≈ 13020.8
-        expected = (U ** 2) * (R ** 2) / (192.0 * 1.0e-9)
-        self.assertAlmostEqual(D_eff, expected, places=3)
-
-    def test_power_law_n05_greater_than_n10(self) -> None:
-        """幂律流体 n=0.5 的弥散系数大于 n=1.0（因为分母更小）。"""
-        solver = self._make_solver()
-        fluid_n05 = FluidSpec(
-            name="pl05",
-            role=FluidRole.MUD,
-            density_kg_m3=1200.0,
-            rheology_model=RheologyModel.POWER_LAW,
-            power_law_n=0.5,
-            consistency_k=0.5,
-        )
-        fluid_n10 = FluidSpec(
-            name="pl10",
-            role=FluidRole.MUD,
-            density_kg_m3=1200.0,
-            rheology_model=RheologyModel.POWER_LAW,
-            power_law_n=1.0,
-            consistency_k=0.5,
-        )
         R = 0.05
         U = 1.0
 
+        D_eff = solver._compute_dispersion_coefficient(R, fluid, U)
+
+        expected = (U ** 2) * (R ** 2) / (48.0 * 1.0e-9)
+        self.assertAlmostEqual(D_eff, expected, places=3)
+
+    def test_power_law_shear_thinning_reduces_dispersion(self) -> None:
+        """幂律 n<1（剪切稀化）→ 速度剖面变平 → 弥散减小（Batot 2016）。"""
+        solver = self._make_solver()
+        fluid_n05 = FluidSpec(
+            name="pl05", role=FluidRole.MUD, density_kg_m3=1200.0,
+            rheology_model=RheologyModel.POWER_LAW, power_law_n=0.5, consistency_k=0.5,
+        )
+        fluid_n10 = FluidSpec(
+            name="pl10", role=FluidRole.MUD, density_kg_m3=1200.0,
+            rheology_model=RheologyModel.POWER_LAW, power_law_n=1.0, consistency_k=0.5,
+        )
+        R = 0.05
+        U = 1.0
         D_eff_05 = solver._compute_dispersion_coefficient(R, fluid_n05, U)
         D_eff_10 = solver._compute_dispersion_coefficient(R, fluid_n10, U)
-
-        # n=0.5: k_factor = 48*0.5 + 144 = 168
-        # n=1.0: k_factor = 48*1.0 + 144 = 192
-        # 分母更小 → 弥散系数更大
-        self.assertGreater(D_eff_05, D_eff_10)
+        # n=0.5 速度剖面更扁平 → 弥散更小
+        self.assertLess(D_eff_05, D_eff_10)
 
     def test_zero_velocity_returns_zero(self) -> None:
         """停泵时 (U=0) 弥散系数为 0。"""
@@ -90,23 +77,38 @@ class TestDispersionCoefficient(unittest.TestCase):
         D_eff = solver._compute_dispersion_coefficient(0.05, fluid, 0.0)
         self.assertEqual(D_eff, 0.0)
 
-    def test_bingham_uses_alpha(self) -> None:
-        """Bingham 流体使用 dispersion_alpha × U × R 形式。"""
-        solver = self._make_solver(alpha=0.3)
+    def test_bingham_dispersion_fan_wang(self) -> None:
+        """Bingham 流体 → Fan & Wang (1966) 公式，τ_y=0 时退化为牛顿。"""
+        solver = self._make_solver()
         fluid = FluidSpec(
             name="mud",
             role=FluidRole.MUD,
             density_kg_m3=1200.0,
             rheology_model=RheologyModel.BINGHAM,
             plastic_viscosity_pa_s=0.05,
-            yield_stress_pa=10.0,
+            yield_stress_pa=0.0,  # 零屈服 → 牛顿极限
         )
         R = 0.05
         U = 1.0
 
         D_eff = solver._compute_dispersion_coefficient(R, fluid, U)
-        expected = 0.3 * U * R
-        self.assertAlmostEqual(D_eff, expected, places=6)
+        expected = (U ** 2) * (R ** 2) / (48.0 * 1.0e-9)
+        self.assertAlmostEqual(D_eff, expected, places=3)
+
+    def test_bingham_yield_stress_reduces_dispersion(self) -> None:
+        """屈服应力增大 → 柱塞增大 → 弥散减小。"""
+        solver = self._make_solver()
+        def _make_bingham(tau_y: float) -> FluidSpec:
+            return FluidSpec(
+                name="bh", role=FluidRole.MUD, density_kg_m3=1200.0,
+                rheology_model=RheologyModel.BINGHAM,
+                plastic_viscosity_pa_s=0.05, yield_stress_pa=tau_y,
+            )
+        R = 0.05
+        U = 1.0
+        D_low = solver._compute_dispersion_coefficient(R, _make_bingham(1.0), U)
+        D_high = solver._compute_dispersion_coefficient(R, _make_bingham(20.0), U)
+        self.assertLess(D_high, D_low)  # 更大的屈服应力 → 更大塞流 → 更小弥散
 
 
 class TestDispersionTimeline(unittest.TestCase):

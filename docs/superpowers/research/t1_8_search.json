@@ -1,0 +1,45 @@
+{
+  "query": "JNNFM 2016 Bingham yield stress Taylor dispersion pipe flow",
+  "follow_up_questions": null,
+  "answer": null,
+  "images": [],
+  "results": [
+    {
+      "url": "https://www.researchgate.net/publication/287916225_Yield_stress_viscosity_and_non-Newtonian_turbulent_pipe_flow",
+      "title": "Yield stress, viscosity and non-Newtonian turbulent pipe flow",
+      "content": "The paper deals with the mathematical modelling of fully developed turbu- lent flow of a Bingham hydromixture in a pipe.",
+      "score": 0.35891515,
+      "raw_content": null
+    },
+    {
+      "url": "https://pure.aber.ac.uk/ws/portalfiles/portal/96639504/Article.pdf",
+      "title": "Predicting yielding in the pressure-driven flow of a Bingham ...",
+      "content": "by TG Roberts · 2023 · Cited by 4 — A moving yield-stress fluid consists of unyielded, or plug, regions, which can be either static or moving depending on the local stresses and",
+      "score": 0.18875761,
+      "raw_content": null
+    },
+    {
+      "url": "https://arxiv.org/pdf/2509.22192",
+      "title": "Predicting the distribution of yield-stress fluids in branched pipe ...",
+      "content": "Fonte, Anne Juel • A reduced-order network model accurately predicts yield-stress ﬂuid distribu-tion in pipe manifolds. • Wall slip is incorporated via a power-law model calibrated using capillary rheometry. • The manifold system can be used to extract slip parameters without direct pressure measurements. Predictions from the model are validated against both bench-scale experiments and fully resolved computational ﬂuid dynamics simulations, showing excellent agreement across a range of ﬂow conditions. Furthermore, we show that the problem can be inverted: measured distribution proﬁles can be used to estimate slip parameters, oﬀering a practical method for slip characterisation without pressure measurement. Maldistribution arises from dissimilar resistances to ﬂow in the outlet branches (Miller, 1978; Yazici et al., 2024), as well as dynamical eﬀects that arise due to inertial (Chen and Sparrow, 2009), thermal (Baikin et al., 2011; Aka and Narayan, 2022), or elastic instabilities (Varshney et al., 2016) in diﬀerent sections of the pipeline such as bends and bifurcations. The distribution proﬁle in the manifold outlets depends on the resistance to ﬂow throughout the diﬀerent paths of the network, determined by the total pressure drop across each branch.",
+      "score": 0.09492092,
+      "raw_content": null
+    },
+    {
+      "url": "https://arxiv.org/pdf/2603.09801",
+      "title": "Network modelling of yield-stress fluid flow in randomly disordered porous ...",
+      "content": "Yield-stress fluid flow through porous media is governed by a strong coupling between rheology and pore-scale geome- try, leading to nonlinear,",
+      "score": 0.08810389,
+      "raw_content": null
+    },
+    {
+      "url": "https://research-repository.rmit.edu.au/articles/thesis/Helical_flow_of_yield_stress_fluids_/27590511",
+      "title": "Helical flow of yield stress fluids. - RMIT University - Figshare",
+      "content": "by F Alharbi · 2024 · Cited by 1 — This review focuses on four aspects of these fluids and flows - yield stress fluid in application, using helical flow in rheometers,",
+      "score": 0.057774507,
+      "raw_content": null
+    }
+  ],
+  "response_time": 1.07,
+  "request_id": "72904e8c-3f7a-41e9-8dbd-5fe116cec91c"
+}

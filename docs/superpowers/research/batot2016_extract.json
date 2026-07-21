@@ -1,0 +1,11 @@
+{
+  "results": [],
+  "failed_results": [
+    {
+      "url": "https://www.researchgate.net/publication/285637189_Analytical_and_numerical_investigation_of_the_advective_and_dispersive_transport_in_Herschel-Bulkley_fluids_by_means_of_a_Lattice-Boltzmann_Two-Relaxation-Time_scheme",
+      "error": "Failed to fetch url"
+    }
+  ],
+  "response_time": 0.28,
+  "request_id": "c80acaad-6cea-4c52-8b71-4223bdcb3fe1"
+}

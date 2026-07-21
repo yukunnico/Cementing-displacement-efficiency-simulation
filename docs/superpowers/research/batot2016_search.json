@@ -1,0 +1,45 @@
+{
+  "query": "Batot Talon Peysson Fleury Bauer 2016 Herschel-Bulkley Taylor dispersion E(z_c) A(z_c) Chemical Engineering Science",
+  "follow_up_questions": null,
+  "answer": null,
+  "images": [],
+  "results": [
+    {
+      "url": "https://en.wikipedia.org/wiki/Herschel%E2%80%93Bulkley_fluid",
+      "title": "Herschel–Bulkley fluid",
+      "content": "The **Herschel–Bulkley fluid** is a generalized model of a non-Newtonian fluid, in which the strain \"Strain (materials science)\") experienced by the fluid is related to the stress \"Stress (physics)\") in a complicated, non-linear way. Generalized model of a non-Newtonian fluid. Three parameters characterize this relationship: the consistency *k*, the flow index *n*, and the yield shear stress {\\displaystyle \\tau _{0}}. where {\\displaystyle \\tau } is the shear stress [Pa], {\\displaystyle \\tau _{0}} the yield stress [Pa], {\\displaystyle k} the consistency index [Pa{\\displaystyle \\cdot }s{\\displaystyle ^{n}}], {\\displaystyle {\\dot {\\gamma }}} the shear rate [s{\\displaystyle ^{-1}}], and {\\displaystyle n} the flow index [dimensionless]. For {\\displaystyle n<1} the fluid is shear-thinning, whereas for {\\displaystyle n>1} the fluid is shear-thickening. If {\\displaystyle n=1} and {\\displaystyle \\tau _{0}=0}, this model reduces to that of a Newtonian fluid. Its value is chosen such that {\\displaystyle \\mu _{0}=k{\\dot {\\gamma }}_{0}^{n-1}+\\tau _{0}{\\dot {\\gamma }}_{0}^{-1}} to ensure the viscosity is a continuous function of strain rate.",
+      "score": 0.4352539,
+      "raw_content": null
+    },
+    {
+      "url": "https://www.scribd.com/document/29501544/Herschel-Bulkley",
+      "title": "Herschel-Bulkley Fluid Model Overview | PDF | Shear Stress",
+      "content": "# Herschel-Bulkley Fluid Model Overview. ## Uploaded by. AI-enhanced title and description. The Herschel-Bulkley fluid is a generalized model of a non-Newtonian fluid that is characterized by three parameters: consistency (k), flow index (n), and yield shear stress (τ0). It requires an initial yield stress to be exceeded before flow starts. Fluids described by this model include drilling fluids and certain paints. The Herschel-Bulkley model reduces to the Newtonian or Bingham models under certain conditions and can predict the non-linear stress-strain behavior of many complex fluids more accurately than other models. ## Share this document. ## Footer menu. ## Support. ## Legal. ## Social. ## Get our free apps. Scribd - Download on the App Store. Scribd - Get it on Google Play.",
+      "score": 0.22913864,
+      "raw_content": null
+    },
+    {
+      "url": "https://www.researchgate.net/publication/316938078_Effect_of_chemical_reaction_in_solute_dispersion_in_Herschel-Bulkley_fluid_flow_with_applications_to_blood_flow",
+      "title": "Effect of chemical reaction in solute dispersion in Herschel ...",
+      "content": "Effect of chemical reaction in solute dispersion in Herschel-Bulkley fluid flow with applications to blood flow. Herschel-Bulkley fluid model.",
+      "score": 0.21295168,
+      "raw_content": null
+    },
+    {
+      "url": "https://www.researchgate.net/publication/346037285_Analysis_of_the_flow_properties_of_a_Herschel-Bulkley_fluid_using_short_back_extrusion_viscometry_and_considering_time-dependent_and_stress_growth_behaviors",
+      "title": "Analysis of the flow properties of a Herschel–Bulkley fluid ...",
+      "content": "Herschel–Bulkley fluids exhibit semisolid properties and thixotropic flow characteristics, specifically, stress growth or time-dependent behavior.",
+      "score": 0.20201814,
+      "raw_content": null
+    },
+    {
+      "url": "https://www.researchgate.net/figure/for-the-parameters-of-Herschel-Bulkley-model-mean-of-three-replicatesstandard-deviation_tbl1_226211369",
+      "title": "for the parameters of Herschel-Bulkley model (mean ...",
+      "content": "Covering flow curve identification, yield stress characterization, and viscosity prediction, it compares machine learning techniques in these areas. The study",
+      "score": 0.19273713,
+      "raw_content": null
+    }
+  ],
+  "response_time": 1.89,
+  "request_id": "aad8644e-29a3-43fd-9340-65ef0dc5e58a"
+}

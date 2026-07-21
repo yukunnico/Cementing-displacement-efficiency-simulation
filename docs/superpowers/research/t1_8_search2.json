@@ -1,0 +1,45 @@
+{
+  "query": "Taylor dispersion yield stress fluid pipe 2016 Journal Non-Newtonian Fluid Mechanics",
+  "follow_up_questions": null,
+  "answer": null,
+  "images": [],
+  "results": [
+    {
+      "url": "https://www.sciencedirect.com/science/article/abs/pii/S0377025716300945",
+      "title": "Axial dispersion in weakly turbulent flows of yield stress fluids",
+      "content": "## Journal of Non-Newtonian Fluid Mechanics. Image 4: Journal of Non-Newtonian Fluid Mechanics. # Axial dispersion in weakly turbulent flows of yield stress fluids. *   •New results on turbulent wall layers and dispersion for Herschel-Bulkley fluids in weakly turbulent flows. We analyze turbulent flows of shear-thinning yield stress fluids in both pipe and channel geometries. We lay down a consistent procedure for hydraulic calculation of Herschel-Bulkley fluids; i.e. finding the relationship between the mean velocity and the wall shear stress. We show that for weakly turbulent flows it is necessary to include an analysis of wall layers in studying dispersion. The aim of this paper is to explore the effects of the yield stress on dispersion of mass in weakly turbulent duct flows. The fluids used in primary cementing are drilling fluids, washes, spacer fluids and cement slurries, all of which are characterised within the industry as shear-thinning yield stress fluids, e.g.Herschel-Bulkley fluids.",
+      "score": 0.73299384,
+      "raw_content": null
+    },
+    {
+      "url": "https://pastel.hal.science/tel-05603445v1/document",
+      "title": "From wall slip in complex fluids to soft Taylor dispersion.",
+      "content": "“Liquids with apparent yield stresses”. Journal of Non-Newtonian Fluid Mechanics 81 (1999), pp. 133–178 (cit. on p. 12). [30] Q.D. Nguyen and D.V. Boger",
+      "score": 0.52451706,
+      "raw_content": null
+    },
+    {
+      "url": "https://pubs.aip.org/aip/pof/article-pdf/doi/10.1063/5.0096941/16566274/061908_1_online.pdf",
+      "title": "Unsteady solute dispersion in non-Newtonian fluid flow in a tube with ...",
+      "content": "by S Singh · 2022 · Cited by 25 — Taylor41 initiated the study of solute dispersion in a straight circular pipe to fig- ure out the effective dispersion coefficient.",
+      "score": 0.41905406,
+      "raw_content": null
+    },
+    {
+      "url": "https://www.cambridge.org/core/journals/journal-of-fluid-mechanics/article/tayloraris-dispersion-in-shearratedependent-fluid-flows/5FC24669436484B73801C9A4AB86DD04",
+      "title": "Taylor–Aris dispersion in shear-rate-dependent fluid flows",
+      "content": "We study the role of a shear-rate-dependent viscosity on the dispersion of passive tracers when placed in a steady pressure-driven flow of a non",
+      "score": 0.40302688,
+      "raw_content": null
+    },
+    {
+      "url": "https://www.sciencedirect.com/topics/engineering/non-newtonian-fluid-mechanics",
+      "title": "Non-Newtonian Fluid Mechanics - an overview",
+      "content": "Non-Newtonian fluid mechanics refers to the study of fluid flows that do not follow Newton's law of viscosity, exhibiting various patterns and behaviors",
+      "score": 0.37772483,
+      "raw_content": null
+    }
+  ],
+  "response_time": 0.82,
+  "request_id": "97c34ee1-17b8-4732-9028-8562123515ff"
+}

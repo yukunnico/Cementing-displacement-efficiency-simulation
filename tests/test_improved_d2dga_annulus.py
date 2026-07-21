@@ -885,16 +885,16 @@ class TestCFLAdaptive:
         assert s.dt_min == 0.05
 
     def test_cfl_adaptive_dt_step_upper_bound(self):
-        """enable_cfl_adaptive=True 时 dt_step ≤ dt_user (self.dt)。"""
+        """enable_cfl_adaptive=True 时 dt_step ≤ dt_user (self.dt)；用小速度使 CFL 不限制，验证上界切断。"""
         s = AnnulusD2DGASolver(dt=4.0, nz=20, ny=10, total_t=40.0)
         well = _toy_well()
         geom = s._build_geom(well)
         ny, nz = s.ny, s.nz
-        w = np.full((ny, nz), 0.5)
+        w = np.full((ny, nz), 0.001)  # 极小速度 → dt_cfl 极大 → dt_step 受 dt_user 限制
         v = np.zeros((ny, nz))
         dt_step = s._compute_cfl_dt_step(w, v, geom, current_time_s=0.0)
-        assert dt_step <= s.dt + 1e-12, (
-            f"dt_step={dt_step:.6f} 应 ≤ dt_user={s.dt}"
+        assert dt_step == s.dt, (
+            f"dt_step={dt_step:.6f} 应等于 dt_user={s.dt}（小速度下 CFL 不限制）"
         )
 
     def test_cfl_adaptive_dt_step_lower_bound(self):
@@ -908,6 +908,25 @@ class TestCFLAdaptive:
         dt_step = s._compute_cfl_dt_step(w, v, geom, current_time_s=0.0)
         assert dt_step >= s.dt_min - 1e-12, (
             f"dt_step={dt_step:.6f} 应 ≥ dt_min={s.dt_min}"
+        )
+
+    def test_cfl_adaptive_dt_step_zero_velocity(self):
+        """w=v=0 零速度路径：denom 退化为 1e-12 守卫值，dt_step = min(dt, total_t - current_time_s)，不除零崩溃。"""
+        s = AnnulusD2DGASolver(dt=4.0, nz=20, ny=10, total_t=40.0)
+        well = _toy_well()
+        geom = s._build_geom(well)
+        ny, nz = s.ny, s.nz
+        w = np.zeros((ny, nz))
+        v = np.zeros((ny, nz))
+        dt_step = s._compute_cfl_dt_step(w, v, geom, current_time_s=0.0)
+        # w=v=0 → denom=1e-12 → dt_cfl 极大 → dt_step = min(dt, total_t) = dt
+        assert dt_step == s.dt, (
+            f"零速度下 dt_step={dt_step:.6f} 应等于 dt_user={s.dt}"
+        )
+        # 验证不处于 total_t 末期时仍受 total_t 限制
+        dt_step_near_end = s._compute_cfl_dt_step(w, v, geom, current_time_s=38.0)
+        assert dt_step_near_end == 2.0, (
+            f"零速度近末期 dt_step={dt_step_near_end:.6f} 应等于 total_t - current_time_s = 2.0"
         )
 
     def test_cfl_adaptive_cfl_less_than_one(self):
@@ -1000,7 +1019,7 @@ class TestCFLAdaptive:
         )
 
     def test_disable_cfl_adaptive_baseline_time(self):
-        """enable_cfl_adaptive=False 时复现固定 dt 基线：current_time_s = step_index * dt。"""
+        """enable_cfl_adaptive=False 时固定 dt 记录步后时间（统一步后语义），最后步裁剪到 total_t。"""
         from cemdisp.models2d.boundary_bridge import AnnulusInletState
         well = _toy_well()
         mud = FluidSpec(name="mud", role=FluidRole.MUD, density_kg_m3=1900.0,
@@ -1020,7 +1039,8 @@ class TestCFLAdaptive:
         s = AnnulusD2DGASolver(dt=dt, nz=20, ny=8, total_t=total_t, enable_cfl_adaptive=False)
         res = s.run(well, fluids, _inlet)
         times = res.metrics["time_s"].to_list()
-        expected = [i * dt for i in range(int(total_t / dt) + 1)]
+        # 步后时间：第 i 步记录 (i+1)*dt，最后一步裁剪到 total_t
+        expected = [min((i + 1) * dt, total_t) for i in range(int(total_t / dt) + 1)]
         assert len(times) == len(expected), (
             f"时间点数量应={len(expected)}，实际={len(times)}"
         )
