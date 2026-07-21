@@ -52,6 +52,9 @@ from cemdisp.data.loaders.ht1_001_loader import (
 from cemdisp.data.loaders.ht1_003_loader import (
     load_ht1_003_tailpipe,
 )
+from cemdisp.data.loaders.ht1_004_loader import (
+    load_ht1_004_tailpipe,
+)
 
 
 Hu101LoaderResult = tuple[WellSpec, tuple[FluidSpec, ...], PumpingSchedule, ValidationData]
@@ -61,6 +64,7 @@ Hu1LoaderResult = tuple[WellSpec, tuple[FluidSpec, ...], PumpingSchedule, Valida
 Hu2LoaderResult = tuple[WellSpec, tuple[FluidSpec, ...], PumpingSchedule, ValidationData]
 Ht1_001LoaderResult = tuple[WellSpec, tuple[FluidSpec, ...], PumpingSchedule, ValidationData]
 Ht1_003LoaderResult = tuple[WellSpec, tuple[FluidSpec, ...], PumpingSchedule, ValidationData]
+Ht1_004LoaderResult = tuple[WellSpec, tuple[FluidSpec, ...], PumpingSchedule, ValidationData]
 
 __all__ = [
     "Hu101LoaderResult",
@@ -83,4 +87,6 @@ __all__ = [
     "load_hu2_tailpipe",
     "load_ht1_001_tailpipe",
     "load_ht1_003_tailpipe",
+    "load_ht1_004_tailpipe",
+    "Ht1_004LoaderResult",
 ]

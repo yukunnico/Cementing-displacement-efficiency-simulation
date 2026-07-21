@@ -1084,7 +1084,7 @@ class AnnulusD2DGASolver:
             "mixing_index": mix_idx,
             "buoyancy_number": b_number,
         }
-        return AnnulusSimulationResult(
+        result = AnnulusSimulationResult(
             well_name=well_spec.well_name,
             geom=geom,
             cement_field=cement,
@@ -1110,3 +1110,13 @@ class AnnulusD2DGASolver:
             lead_field=lead,
             tail_field=tail,
         )
+
+        # Tier 0 诊断聚合：纯后处理，注入 result.summary（dict 可安全追加）
+        try:
+            from cemdisp.diagnostics.tier0_diagnostics import compute_all_tier0_diagnostics
+            tier0 = compute_all_tier0_diagnostics(result, fluids=fluids, well_spec=well_spec)
+            result.summary["tier0_diagnostics"] = tier0.to_dict()  # type: ignore[index]
+        except Exception:
+            pass  # 诊断失败不影响主求解
+
+        return result
