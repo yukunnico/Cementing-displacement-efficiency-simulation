@@ -113,8 +113,10 @@ def run_one_level(
     5. Run 2D D2DGA solver with the level's switches
     6. Optionally dump summary JSON to a unique filename
 
-    All three switches are forwarded to the solver. enable_true_buoyancy
-    (Task 5) has no logic yet and is a placeholder.
+    All three switches (enable_d2dga_auto_m, enable_d2dga_i3_flux,
+    enable_true_buoyancy) are forwarded to the solver. T1-3b has been
+    implemented (Zhang 2022 式 4.24); enable_true_buoyancy=False falls
+    back to simplified (2φ−1) proxy.
 
     Parameters
     ----------

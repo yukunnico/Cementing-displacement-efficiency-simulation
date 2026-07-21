@@ -1,0 +1,11 @@
+{
+  "results": [],
+  "failed_results": [
+    {
+      "url": "https://doi.org/10.1016/j.ces.2015.11.019",
+      "error": "Failed to fetch url"
+    }
+  ],
+  "response_time": 5.41,
+  "request_id": "986334ad-8f35-48eb-aa6b-36604023f5a9"
+}

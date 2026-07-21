@@ -615,7 +615,12 @@ class AnnulusD2DGASolver:
         c_bar = np.clip(lead + tail, 0.0, 1.0)  # 局部水泥浓度
         eta_mix = 1.0 / (c_bar**3 / np.maximum(eta2, 1.0e-9)
                          + (1.0 - c_bar**3) / np.maximum(eta1, 1.0e-9))
+        # T1-3b: I₁(c̄,m) 乘子（Zhang 2022 式 4.22，S ∝ 1/(2I₁)）
+        # 牛顿极限 m→1 时 I₁=1/3，不改变 base 形状；m≠1 时修正方位分布
+        m_local = float(np.mean(m_field)) if np.all(np.isfinite(m_field)) else self.d2dga_viscosity_ratio
+        i1_base = d2dga_dispersion_I1(c_bar, m_local)
         base = (b / np.maximum(b_mean, 1.0e-12)) ** 2 / np.maximum(eta_mix, 1.0e-9)
+        base = base * i1_base  # I₁ 乘子
 
         # === 速度场流动度：偏心通道主导 + 浮力修正 ===
         # density_contrast > 0 表示顶替液更重（水泥重 vs 泥浆轻），有助于窄边推进
@@ -638,12 +643,9 @@ class AnnulusD2DGASolver:
             f_phi_arr, _ = self._buoyancy_force_vector(geom, beta_deg_local)
             rho_displaced = mud_fluid.density_kg_m3 / 1000.0
             delta_rho = (rho - rho_displaced)  # g/cc 局部密度差
-            m_local = float(np.mean(m_field)) if np.all(np.isfinite(m_field)) else self.d2dga_viscosity_ratio
-            c_bar = np.clip(lead + tail, 0.0, 1.0)
-            i1 = d2dga_dispersion_I1(c_bar, m_local)
             i2 = d2dga_dispersion_I2(c_bar, m_local)
             # 式 4.24: 方位修正 = Δρ·f_phi·(I2/I1)；重顶替轻→窄边(f_phi 大) pref 提升
-            correction = np.clip(delta_rho * (i2 / np.maximum(i1, 1.0e-12)), -0.5, 0.5)
+            correction = np.clip(delta_rho * (i2 / np.maximum(i1_base, 1.0e-12)), -0.5, 0.5)
             buoyancy_shape = 1.0 + correction * f_phi_arr
         else:
             # R0/R1/R2: 保留 buoyancy_shape 代理（旧论文状态）
@@ -777,8 +779,12 @@ class AnnulusD2DGASolver:
         if not self.enable_cfl_adaptive:
             final_step_index = int(self.total_t / self.dt)
 
+        # 单 while 共享循环体（CFL 分支在步进后判 break，固定 dt 分支在步前判 break）。
+        # 若分拆两循环则 ~250 行泵注/停泵/指标逻辑重复，等价于 spec 条件 current_time_s < self.total_t。
         while True:
             if not self.enable_cfl_adaptive:
+                # 用 while+break 而非 for step_index in range(...)：因循环体与 CFL 分支共享，
+                # 拆分两循环将重复 ~250 行逻辑（行 798-1008），保持单循环体减少重复。
                 if step_index > final_step_index:
                     break
                 current_time_s = step_index * self.dt
@@ -897,7 +903,7 @@ class AnnulusD2DGASolver:
                     # 局部 CFL 裁剪防单步越界（非全局限幅）
                     # ds 取轴向网格最小间距，保证非均匀网格下 CFL 条件保守
                     ds = float(np.min(np.diff(geom["s"])))
-                    step_limit = self.alpha_cfl * ds / max(self.dt, 1.0e-9)
+                    step_limit = self.alpha_cfl * ds / max(dt_step, 1.0e-9)
                     div_q_clipped = np.clip(div_q, -step_limit, step_limit)
                     lead = lead - div_q_clipped * lead_frac * dt_step
                     tail = tail - div_q_clipped * tail_frac * dt_step
@@ -946,9 +952,8 @@ class AnnulusD2DGASolver:
                 else:
                     dt_step = self.dt
 
-            # T1-7: 记录时间（while 分支记录步后时间 current_time_s+dt_step，
-            # for 分支记录步前时间 current_time_s 复现基线）
-            record_time = current_time_s + dt_step if self.enable_cfl_adaptive else current_time_s
+            # T1-7: 统一步后时间（current_time_s + dt_step），CFL/固定 dt 分支语义一致
+            record_time = min(current_time_s + dt_step, self.total_t)
             _last_step = (
                 current_time_s + dt_step >= self.total_t - 1e-9
                 if self.enable_cfl_adaptive
@@ -1032,6 +1037,8 @@ class AnnulusD2DGASolver:
             "mean_mud",
             "mean_flusher",  # T1-6
         ]
+        # T1-7: CFL 自适应模式下 dt 缩小 ~34 倍（4s→~0.118s），metrics 行数相应膨胀 ~34 倍，
+        # 属预期行为（数值扩散锐减的代价）；后续可加采样降频优化，非阻塞。
         metrics = pd.DataFrame(data=rows, columns=pd.Index(metric_columns))
         cement = np.clip(lead + tail, 0.0, 1.0)
         depth_profiles = self._depth_profiles(geom, lead, tail, spacer, flusher, wall)  # T1-6

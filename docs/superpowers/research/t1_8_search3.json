@@ -1,0 +1,45 @@
+{
+  "query": "laminar Taylor dispersion yield stress Bingham fluid pipe effective diffusion coefficient",
+  "follow_up_questions": null,
+  "answer": null,
+  "images": [],
+  "results": [
+    {
+      "url": "https://www.researchgate.net/publication/315419234_Basic_characteristics_of_Taylor_dispersion_in_a_laminar_tube_flow_with_wall_absorption_Exchange_rate_advection_velocity_dispersivity_skewness_and_kurtosis_in_their_full_time_dependance",
+      "title": "Basic characteristics of Taylor dispersion in a laminar tube ...",
+      "content": "The axial dispersion coefficient is primarily governed by yield stress, absorption rate, and viscosity parameters, though it is also weakly influenced by the",
+      "score": 0.48191768,
+      "raw_content": null
+    },
+    {
+      "url": "https://link.aps.org/doi/10.1103/PhysRevFluids.4.034501",
+      "title": "Taylor dispersion in the presence of cross flow and interfacial ...",
+      "content": "Image 1: - Physical Review Journals. # Taylor dispersion in the presence of cross flow and interfacial mass transfer. Transverse velocity gradients can enhance the effective diffusion coefficient of a scalar in the primary flow direction, a phenomenon known colloquially as Taylor dispersion. By writing a one-dimensional advection-diffusion-mass-transfer equation for the cross-sectionally averaged concentration, we elucidate how the effective diffusion coefficients, effective advective velocities, and effective mass-transfer rates depend on the strength of the cross flow and the wall transfer coefficient. We perform an asymptotic analysis to investigate the limit of strong cross flow and demonstrate that, in this limit, dispersion rapidly decreases with increasing cross-flow velocity 𝑉 as 𝑉−4 and scales with the Brownian diffusivity 𝐷 as 𝐷 3. ## Log in via your institution. ## Log in via APS Member Subscription. Starting August 1, 2019 APS member subscribers will need to log in using your member credentials instead of your APS Journal Account. *   Log in with APS Journals Account.",
+      "score": 0.40302688,
+      "raw_content": null
+    },
+    {
+      "url": "https://www.atascientific.com.au/wp-content/uploads/2017/02/WP150609UnderstandingTDA.pdf",
+      "title": "Understanding Taylor Dispersion Analysis",
+      "content": "WHITEPAPER Malvern Instruments Worldwide Sales and service centres in over 65 countries www.malvern.com/contact ©2015 Malvern Instruments Limited Understanding Taylor Dispersion Analysis MOLECULAR SIZE PROTEIN STABILITY Taylor Dispersion Analysis (TDA) is a microcapillary flow-based technique whereby a nanoliter-scale sample pulse is injected into the laminar flow of run buffer, which then spreads out axially due to the combined actions of convection and radial diffusion. Detection of the equilibrium concentration profile (or Taylorgram) of the dispersed sample pulse allows the molecular diffusion coefficient and hence hydrodynamic radius of solute molecules to be calculated. The two-window solution (Equation 7) is then used to determine k and hence the WHITEPAPER 7 Understanding Taylor Dispersion Analysis diffusion coefficient D and the hydrodynamic radius Rh of the sample (Equations 2 and 3).",
+      "score": 0.29686365,
+      "raw_content": null
+    },
+    {
+      "url": "https://www.fidabio.com/blogs/achieving-molecular-precision-through-laminar-flow",
+      "title": "What is Laminar Flow and how does it relate to Taylor ...",
+      "content": "Dec 27, 2023 — Within laminar flow, we encounter Taylor dispersion, describing the dispersion of solutes in the flow profile. This phenomenon is instrumental",
+      "score": 0.25072512,
+      "raw_content": null
+    },
+    {
+      "url": "https://www.cambridge.org/core/journals/journal-of-fluid-mechanics/article/taylor-dispersion-analysis-in-a-viscoelastic-fluid-through-arbitrarily-shaped-axisymmetric-channels/41C699B12FFDF655A8831F9C707EA990",
+      "title": "Taylor dispersion analysis in a viscoelastic fluid through ...",
+      "content": "* >Taylor dispersion analysis in a viscoelastic fluid... # Taylor dispersion analysis in a viscoelastic fluid through arbitrarily shaped axisymmetric channels. Published online by Cambridge University Press:  **12 December 2025**. Carlos Teodoro  [Open the ORCID record for Carlos Teodoro [Opens in a new window]](https://orcid.org/0000-0002-4564-9538) ,. Oscar Bautista  [Open the ORCID record for Oscar Bautista [Opens in a new window]](https://orcid.org/0000-0001-9064-6064)  and. Federico Méndez  [Open the ORCID record for Federico Méndez [Opens in a new window]](https://orcid.org/0000-0001-7510-3598). This study investigates Taylor–Aris dispersion in a viscoelastic fluid flowing through axisymmetric channels of arbitrary shape. A30) on Newtonian fluids, we have developed a governing equation for solute dynamics that accounts for the combined effects of fluid viscoelasticity, molecular diffusivity and channel geometry. Akyildiz, F.T. 2002 Dispersion of a solute in a Poiseuille flow of a viscoelastic fluid. 1956 On the dispersion of a solute in a fluid flowing through a tube. & Sebastian, B.T. 2012 Dispersion of a solute in pulsatile non-Newtonian fluid flow through a tube.",
+      "score": 0.18426824,
+      "raw_content": null
+    }
+  ],
+  "response_time": 0.72,
+  "request_id": "33303178-d853-450e-8979-2300d649f919"
+}
