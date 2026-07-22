@@ -17,7 +17,7 @@ from typing import cast
 
 import numpy as np
 
-from cemdisp.data.fluid_spec import FluidSpec
+from cemdisp.data.fluid_spec import FluidRole, FluidSpec
 from cemdisp.data.fluid_provenance import build_injected_fluid_provenance_summary, format_injected_fluid_provenance_markdown
 from cemdisp.data.loaders import load_hu101_tailpipe
 from cemdisp.data.pumping_schedule import PumpingSchedule
@@ -54,9 +54,24 @@ def annulus_stop_time_s(
     casing_result: CasingFlowResult,
     fluids: tuple[FluidSpec, ...],
 ) -> float:
-    """返回 Hu101 环空二维顶替应停止的地面累计时间。"""
+    """返回 Hu101 环空二维顶替应停止的地面累计时间。
 
-    del fluids
+    遍历鞋口前缘序列：找到水泥浆之后的首个非水泥流体到达鞋口的时刻，
+    此时水泥浆已全部进入环空，停止避免替浆液稀释水泥场。
+    """
+
+    cement_roles = {FluidRole.LEAD, FluidRole.INTERMEDIATE, FluidRole.TAIL}
+    fluid_by_name = {f.name: f for f in fluids}
+    found_cement = False
+    for front in casing_result.fronts:
+        fluid = fluid_by_name.get(front.fluid_name)
+        if fluid is None:
+            continue
+        if fluid.role in cement_roles:
+            found_cement = True
+            continue
+        if found_cement:
+            return float(front.time_s)
     return float(casing_result.cement_end_time_s)
 
 
@@ -74,11 +89,11 @@ def run_and_export(
     # 呼101现场施工存在多段排量：1.2、1.5、1.0、0.55 m³/min，并非 Hu102 的单一平均排量。
     # 因此 total_t 不写死为固定小时数，而按现场施工程序逐段累加得到碰压前总时长，
     # 再增加20分钟窗口，覆盖停泵后早期重力分异与场数据导出快照。
-    # 另外沿用 Hu101 legacy 模型的主计算网格口径：nz=500。
+    # 另外沿用 Hu101 legacy 模型的主计算网格口径：nz=250。
     total_t = total_t_s if total_t_s is not None else _schedule_total_time_s(schedule) + 20.0 * 60.0
     solver = AnnulusD2DGASolver(
         total_t=total_t,
-        nz=500,
+        nz=250,
     )
     result = solver.run(well_spec, fluids, inlet_provider)
 
@@ -129,6 +144,10 @@ def run_and_export(
         cement_final=result.cement_field,
         spacer_final=result.spacer_field,
         wall_final=result.wall_field,
+        lead_snapshots=np.array(result.lead_snapshots),
+        tail_snapshots=np.array(result.tail_snapshots),
+        lead_final=result.lead_field,
+        tail_final=result.tail_field,
     )
 
     _ = animate_cement_field(result, output_dir=output_dir, save_format="gif")

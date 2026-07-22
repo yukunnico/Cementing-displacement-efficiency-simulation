@@ -776,6 +776,8 @@ class AnnulusD2DGASolver:
         # 统一循环体，仅在循环入口/出口按 enable_cfl_adaptive 分支
         step_index = 0
         current_time_s = 0.0
+        _progress_next_pct = 0.0  # 下一个需要打印的进度百分比
+        print(f"[D2DGA] 开始环空二维模拟 total_t={self.total_t:.0f}s nz={self.nz} ny={self.ny}")
         if not self.enable_cfl_adaptive:
             final_step_index = int(self.total_t / self.dt)
 
@@ -1015,8 +1017,19 @@ class AnnulusD2DGASolver:
             # T1-7: 时间步进（while 分支：current_time_s += dt_step；for 分支：step_index 自增）
             if self.enable_cfl_adaptive:
                 current_time_s += dt_step
+                # 进度输出：每 10% 打印一次
+                pct = current_time_s / self.total_t * 100.0
+                if pct >= _progress_next_pct:
+                    print(f"  [D2DGA] 进度 {pct:.0f}% ({current_time_s:.0f}s/{self.total_t:.0f}s, dt={dt_step:.3f}s)")
+                    _progress_next_pct += 10.0
                 if current_time_s >= self.total_t - 1e-9:
                     break
+            else:
+                # 固定 dt 模式的进度输出
+                pct = current_time_s / self.total_t * 100.0
+                if pct >= _progress_next_pct:
+                    print(f"  [D2DGA] 进度 {pct:.0f}% ({current_time_s:.0f}s/{self.total_t:.0f}s)")
+                    _progress_next_pct += 10.0
             step_index += 1
 
         metric_columns = [
