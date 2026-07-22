@@ -18,7 +18,7 @@ from typing import cast
 
 import numpy as np
 
-from cemdisp.data.fluid_spec import FluidSpec
+from cemdisp.data.fluid_spec import FluidRole, FluidSpec
 from cemdisp.data.fluid_provenance import build_injected_fluid_provenance_summary, format_injected_fluid_provenance_markdown
 from cemdisp.data.loaders import load_hu102_tailpipe
 from cemdisp.data.pumping_schedule import PumpingSchedule
@@ -67,7 +67,7 @@ def run_and_export(
     # Hu102 严格现场模式下，这里的 total_t_s 由 1D 鞋口时序决定：
     # 当替浆液第一次到达鞋口时，代表整段水泥浆已全部进入环空，
     # 环空顶替计算到此结束，不再继续让替浆液入环空稀释既有水泥场。
-    solver = AnnulusD2DGASolver(total_t=total_t_s, nz=500)
+    solver = AnnulusD2DGASolver(total_t=total_t_s, nz=250)
     result = solver.run(well_spec, fluids, inlet_provider)
 
     # 导出CSV
@@ -149,11 +149,22 @@ def annulus_stop_time_s(
 ) -> float:
     """返回 Hu102 环空二维顶替应停止的地面累计时间。
 
-    当水泥浆前缘到达鞋口时，代表整段水泥浆已全部进入环空，
-    环空顶替计算到此结束，不再继续让替浆液入环空稀释既有水泥场。
+    遍历鞋口前缘序列：找到第一种水泥浆（TAIL 等）之后的首个非水泥流体
+    （替浆液）到达鞋口的时刻，此时水泥浆已全部进入环空，停止避免替浆液稀释水泥场。
     """
 
-    del fluids
+    cement_roles = {FluidRole.LEAD, FluidRole.INTERMEDIATE, FluidRole.TAIL}
+    fluid_by_name = {f.name: f for f in fluids}
+    found_cement = False
+    for front in casing_result.fronts:
+        fluid = fluid_by_name.get(front.fluid_name)
+        if fluid is None:
+            continue
+        if fluid.role in cement_roles:
+            found_cement = True
+            continue
+        if found_cement:
+            return float(front.time_s)
     return float(casing_result.cement_end_time_s)
 
 
@@ -276,3 +287,7 @@ def run_hu102_tailpipe_initial() -> None:
         inlet_provider=coupled_provider,
         total_t_s=annulus_stop_time_value_s,
     )
+
+
+if __name__ == "__main__":
+    run_hu102_tailpipe_initial()

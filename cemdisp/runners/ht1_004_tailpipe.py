@@ -44,6 +44,14 @@ from cemdisp.reporting.plots import (
     plot_time_series,
 )
 from cemdisp.reporting.reference_figures import export_reference_figure_set
+
+# scripts/ 是项目根下的独立脚本目录，未注册为 Python 包，运行时需手动加入 sys.path
+import sys
+
+_PROJECT_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(_PROJECT_ROOT))
+
+from scripts.export_depth_time_concentration import export_depth_time_csv  # noqa: E402
 from cemdisp.transport1d import CasingFlowSolver
 from cemdisp.transport1d.casing_flow import CasingFlowResult
 
@@ -73,7 +81,7 @@ def run_and_export(
     well_spec, fluids, schedule, _ = load_ht1_004_tailpipe()
     # 严格现场模式：当替浆液第一次到达鞋口时，水泥浆已全部进入环空，
     # 环空顶替计算到此结束，不再继续让替浆液入环空稀释既有水泥场。
-    solver = AnnulusD2DGASolver(total_t=total_t_s, nz=500)
+    solver = AnnulusD2DGASolver(total_t=total_t_s, nz=250)
     result = solver.run(well_spec, fluids, inlet_provider)
 
     # 导出CSV
@@ -127,7 +135,7 @@ def run_and_export(
     _ = plot_annulus_snapshots(result, output_dir=output_dir)
     _ = plot_final_fields_contour(result, output_dir=output_dir)
 
-    # 导出2D场数据NPZ（水泥/隔离液/壁面快照 + 时间点 + 网格坐标）
+    # 导出2D场数据NPZ（水泥/隔离液/壁面快照 + 时间点 + 网格坐标 + 领浆/尾浆拆分场）
     npz_path = output_dir / f"呼1-004_{mode_title}_2D场数据.npz"
     _ = np.savez(
         npz_path,
@@ -140,10 +148,17 @@ def run_and_export(
         cement_final=result.cement_field,
         spacer_final=result.spacer_field,
         wall_final=result.wall_field,
+        lead_snapshots=np.array(result.lead_snapshots),
+        tail_snapshots=np.array(result.tail_snapshots),
+        lead_final=result.lead_field,
+        tail_final=result.tail_field,
     )
 
     # 导出水泥浓度场时间演化动画（GIF格式）
     _ = animate_cement_field(result, output_dir=output_dir, save_format="gif")
+
+    # 导出环空各深度-各流体浓度随时间变化表
+    export_depth_time_csv(result, output_dir, well_name="呼1-004")
 
     # 打印摘要
     print(f"\n=== {mode_title} ===")
@@ -282,7 +297,7 @@ def run_ht1_004_tailpipe_initial() -> None:
     casing_solver = CasingFlowSolver(enable_gravity=True)
     casing_result = casing_solver.run(well_spec, fluids, schedule)
     coupled_provider = build_coupled_annulus_inlet_provider(
-        casing_result, casing_solver, fluids
+        casing_result, casing_solver, fluids, split_cement_phases=True
     )
     annulus_stop_time_value_s = annulus_stop_time_s(
         casing_result=casing_result, fluids=fluids

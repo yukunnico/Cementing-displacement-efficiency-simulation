@@ -67,7 +67,7 @@ def run_and_export(
     # HT1-003 严格现场模式下，这里的 total_t_s 由 1D 鞋口时序决定：
     # 当替浆液第一次到达鞋口时，代表整段水泥浆已全部进入环空，
     # 环空顶替计算到此结束，不再继续让替浆液入环空稀释既有水泥场。
-    solver = AnnulusD2DGASolver(total_t=total_t_s, nz=500)
+    solver = AnnulusD2DGASolver(total_t=total_t_s, nz=250)
     result = solver.run(well_spec, fluids, inlet_provider)
 
     # 导出CSV
@@ -119,7 +119,7 @@ def run_and_export(
     _ = plot_annulus_snapshots(result, output_dir=output_dir)
     _ = plot_final_fields_contour(result, output_dir=output_dir)
 
-    # 导出2D场数据NPZ（水泥/隔离液/壁面快照 + 时间点 + 网格坐标）
+    # 导出2D场数据NPZ（水泥/隔离液/壁面快照 + 时间点 + 网格坐标 + 领浆/尾浆拆分场）
     npz_path = output_dir / f"呼1-003_{mode_title}_2D场数据.npz"
     _ = np.savez(
         npz_path,
@@ -132,6 +132,10 @@ def run_and_export(
         cement_final=result.cement_field,
         spacer_final=result.spacer_field,
         wall_final=result.wall_field,
+        lead_snapshots=np.array(result.lead_snapshots),
+        tail_snapshots=np.array(result.tail_snapshots),
+        lead_final=result.lead_field,
+        tail_final=result.tail_field,
     )
 
     # 导出水泥浓度场时间演化动画（GIF格式）
@@ -273,7 +277,9 @@ def run_ht1_003_tailpipe_initial() -> None:
     # 套管内同样启用重力项，使鞋口边界能反映停泵后的密度分异趋势。
     casing_solver = CasingFlowSolver(enable_gravity=True)
     casing_result = casing_solver.run(well_spec, fluids, schedule)
-    coupled_provider = build_coupled_annulus_inlet_provider(casing_result, casing_solver, fluids)
+    coupled_provider = build_coupled_annulus_inlet_provider(
+        casing_result, casing_solver, fluids, split_cement_phases=True
+    )
     annulus_stop_time_value_s = annulus_stop_time_s(casing_result=casing_result, fluids=fluids)
     _export_casing_flow_timing(
         output_dir=output_dir,

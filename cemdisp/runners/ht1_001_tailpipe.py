@@ -27,6 +27,7 @@ from cemdisp.data.pumping_schedule import PumpingSchedule
 from cemdisp.models2d import AnnulusD2DGASolver
 from cemdisp.models2d.boundary_bridge import AnnulusInletState, build_coupled_annulus_inlet_provider
 from cemdisp.reporting.animation import animate_cement_field
+from cemdisp.reporting.reference_figures import export_reference_figure_set
 from cemdisp.reporting.contour_plots import (
     plot_annulus_snapshots,
     plot_depth_time_contour,
@@ -84,7 +85,7 @@ def run_and_export(
 
     # 呼探1-001严格现场模式下，二维求解时长由 1D 套管内前沿追踪确定：
     # 当替浆液第一次到达鞋口时，水泥浆柱已全部进入环空，随后不再让替浆液继续稀释水泥场。
-    solver = AnnulusD2DGASolver(total_t=total_t_s)
+    solver = AnnulusD2DGASolver(total_t=total_t_s, nz=250)
     result = solver.run(well_spec, fluids, inlet_provider)
 
     # 导出时间序列与深度剖面 CSV；列名由求解器保持中文口径。
@@ -128,6 +129,9 @@ def run_and_export(
     _ = plot_risk_indices(result, output_dir=output_dir)
     _ = plot_efficiency_summary_bar(result, output_dir=output_dir)
 
+    # 导出参考项目风格图件（顶替效率时程、水泥体积分数剖面、宽窄边前沿推进等）
+    _ = export_reference_figure_set(result, well_spec, output_dir=output_dir)
+
     # 导出二维云图：深度-时间等值线、多时刻截面快照与最终场图。
     _ = plot_depth_time_contour(result, output_dir=output_dir)
     _ = plot_annulus_snapshots(result, output_dir=output_dir)
@@ -166,9 +170,24 @@ def annulus_stop_time_s(
     casing_result: CasingFlowResult,
     fluids: tuple[FluidSpec, ...],
 ) -> float:
-    """确定呼探1-001井环空二维顶替应停止的地面累计时间。"""
+    """确定呼探1-001井环空二维顶替应停止的地面累计时间。
 
-    del fluids
+    遍历鞋口前缘序列：找到水泥浆之后的首个非水泥流体到达鞋口的时刻，
+    此时水泥浆已全部进入环空，停止避免替浆液稀释水泥场。
+    """
+
+    cement_roles = {FluidRole.LEAD, FluidRole.INTERMEDIATE, FluidRole.TAIL}
+    fluid_by_name = {f.name: f for f in fluids}
+    found_cement = False
+    for front in casing_result.fronts:
+        fluid = fluid_by_name.get(front.fluid_name)
+        if fluid is None:
+            continue
+        if fluid.role in cement_roles:
+            found_cement = True
+            continue
+        if found_cement:
+            return float(front.time_s)
     return float(casing_result.cement_end_time_s)
 
 
