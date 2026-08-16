@@ -155,16 +155,23 @@ def annulus_stop_time_s(
 
     cement_roles = {FluidRole.LEAD, FluidRole.INTERMEDIATE, FluidRole.TAIL}
     fluid_by_name = {f.name: f for f in fluids}
-    found_cement = False
-    for front in casing_result.fronts:
+    # 按到达时间升序排序后再扫描，对个别井的乱序 fronts 自防御：
+    # 不可压缩管流下 front 本应按泵序单调，但历史上当某前缘在泵注结束前
+    # 未到达鞋口时会回退为该步骤结束时间而插到更早前缘之间。
+    # 排序后取"末段水泥之后的首个非水泥"到达时刻，不提前截断环空顶替。
+    sorted_fronts = sorted(casing_result.fronts, key=lambda f: f.time_s)
+    last_cement_time_s: float | None = None
+    for front in sorted_fronts:
         fluid = fluid_by_name.get(front.fluid_name)
-        if fluid is None:
-            continue
-        if fluid.role in cement_roles:
-            found_cement = True
-            continue
-        if found_cement:
-            return float(front.time_s)
+        if fluid is not None and fluid.role in cement_roles:
+            last_cement_time_s = front.time_s
+    if last_cement_time_s is not None:
+        for front in sorted_fronts:
+            fluid = fluid_by_name.get(front.fluid_name)
+            if fluid is None or fluid.role in cement_roles:
+                continue
+            if front.time_s >= last_cement_time_s - 1.0e-9:
+                return float(front.time_s)
     return float(casing_result.cement_end_time_s)
 
 
