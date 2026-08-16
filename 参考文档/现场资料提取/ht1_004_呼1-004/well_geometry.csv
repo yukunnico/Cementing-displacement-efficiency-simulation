@@ -1,0 +1,29 @@
+well_id,item,value,unit,top_md_m,bottom_md_m,data_type,source_description,confidence,notes
+ht1_004,simulation_top_md,5243.207,m,5243.207,7660,design_value,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 四.4.2,high,悬挂器喇叭口/回接筒顶5243.207m，水泥浆预返5243.207m；模拟段可取5243.207-7660m；CBL图头悬挂器位置5245.010-5251.110m
+ht1_004,simulation_bottom_md,7660,m,5243.207,7660,field_measured,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 一.1.1/作业史 一,high,实际完钻井深7660m（设计井深7600m）
+ht1_004,liner_hanger_md,5243.207,m,,,field_measured,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 四.4.2/作业史 六,high,悬挂器喇叭口/回接筒管串排列顶深5243.207m；悬挂器本体下深5251.11m(作业史八，井斜0.12°)；CBL头悬挂器位置5245.010-5251.110m
+ht1_004,liner_top_md,5251.107,m,,,field_measured,HT1-004井油层尾管固井作业史.doc 九.套管数据表/逐根表,high,168.3mm尾管顶深（悬挂器本体5251.107m；逐根表最上部BG140V 98号下深5261.433m）
+ht1_004,liner_shoe_md,7660,m,,,field_measured,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 六.6.1/作业史 九,high,加长引鞋139.7mm*TP-G2下深7660m（浮鞋7659.04-7660m）
+ht1_004,openhole_top_md,5578,m,5578,7660,field_measured,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 一.1.2.1,high,273.1mm技套鞋5578m，裸眼自5578m
+ht1_004,openhole_bottom_md,7660,m,5578,7660,field_measured,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 一.1.1,high,完钻井深
+ht1_004,casing_inner_diameter,245.37,mm,0,5578,design_value,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 五.5.1/1.4.2,high,273.1mm技套内径；计算值245.42mm(273.1-2*13.84)，设计电测井径表用245.37mm
+ht1_004,casing_outer_diameter,273.1,mm,0,5578,field_measured,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 一.1.2.1,high,技术套管外径273.1*BG140V*13.84mm
+ht1_004,liner_inner_diameter,138.9,mm,5251.107,7376.656,field_measured,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 六.6.1/施工记录表,high,168.3mm段内径=168.3-2*14.7=138.9mm
+ht1_004,liner_inner_diameter,107.94,mm,7376.656,7660,field_measured,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 六.6.1/施工记录表,high,139.7mm段内径=139.7-2*15.88=107.94mm
+ht1_004,liner_outer_diameter,168.3,mm,5251.107,7376.656,field_measured,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 六.6.1/作业史,high,上段168.3mm（实下168.28mm，壁厚14.7mm，TP-SFJ扣，长度2135.38m）
+ht1_004,liner_outer_diameter,139.7,mm,7376.656,7660,field_measured,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 六.6.1/作业史,high,下段139.7mm（壁厚15.88mm，TP-G2扣，长度283.344m）
+ht1_004,borehole_nominal_diameter,241.3,mm,5578,7521,field_measured,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 一.1.2.1,high,四开上段钻头241.3mm*7521m
+ht1_004,borehole_nominal_diameter,215.9,mm,7521,7660,field_measured,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 一.1.2.1,high,四开下段钻头215.9mm*7660m
+ht1_004,drill_bit_size,241.3,mm,5578,7521,field_measured,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 一.1.2.1/施工记录表,high,钻头程序Φ241.3mm*7521m
+ht1_004,drill_bit_size,215.9,mm,7521,7660,field_measured,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 一.1.2.1/施工记录表,high,钻头程序Φ215.9mm*7660m
+ht1_004,float_collar_md,7647.882,m,,,field_measured,HT1-004井油层尾管固井作业史.doc 八/九,high,浮箍1(强制式)下深7647.61-7647.88m；扣型TP-G2，耐温200℃
+ht1_004,float_collar_md,7636.202,m,,,field_measured,HT1-004井油层尾管固井作业史.doc 八/九,high,弹浮式浮箍2下深7635.93-7636.20m；扣型TP-G2，耐温200℃
+ht1_004,float_shoe_md,7660,m,,,field_measured,HT1-004井油层尾管固井作业史.doc 八,high,加长引鞋下深7659.04-7660.00m；TP-G2扣，耐温200℃
+ht1_004,ball_seat_md,7560.286,m,,,field_measured,HT1-004井油层尾管固井作业史.doc 八/九,high,球座/锁紧座有效下深7560.286m（本体7560.29-7560.62m，井斜6.9°）；阻流板位置7560.286m
+ht1_004,cement_return_md,5243.207,m,,,design_value,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 前言/四.4.2,high,水泥浆预返5243.207m（重叠334.793m）；CBL图头未见实测水泥面文字
+ht1_004,artificial_bottom_md,7560.29,m,,,field_measured,HT1-004_固井质量测井评价图 图头(数字化),high,人工井底7560.290m；作业史阻流板/锁紧座7560.286m
+ht1_004,overlap_length,334.793,m,,,design_value,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 前言,high,悬挂器顶部5243.207-技套鞋5578m重叠段334.793m
+ht1_004,float_shoe_to_seat,99.71,m,,,field_measured,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 四.4.2/作业史 九,high,下塞/下部结构长度99.71m（作业史下部结构长度99.714m）
+ht1_004,avg_caliper_upper,244,mm,5578,7521,field_measured,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 一.1.4.3,high,平均井径5578-7521m 244mm，扩大率1.1%
+ht1_004,avg_caliper_lower,222,mm,7521,7660,field_measured,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 一.1.4.3,high,平均井径7521-7660m 222mm，扩大率2.8%
+ht1_004,sim_cement_fill_rate,99.3,%,5241,7660,interpreted,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 八.2.2 备注,medium,斯伦贝谢软件单级固井模拟：5241-7660m水泥充填率99.3%；附加井段5241-4941m水泥含量55%；尾浆混窜至6200m

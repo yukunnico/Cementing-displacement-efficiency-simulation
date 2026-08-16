@@ -1,0 +1,10 @@
+﻿well_id,event_time_min,event_md_m,event_type,description,related_stage,source_description,confidence,notes
+ht1_003,,7463.71,lost_circulation,钻进期间井漏：7463.71m喀拉扎组，排量27.5-28L/s泵压36-38MPa，密度2.00g/cm3，出口流量29.1%↓21.7%，漏失3.6m3漏速16.6m3/h；密度降至1.95并泵入堵漏剂解除,,field_measured,HT1-003井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 一.1.6,high,钻进复杂
+ht1_003,,7100,water_influx_circulation,下套管至7100m循环期间：顶通压力10MPa，顶通后瞬间降至4MPa，反推环空出水，液柱压力降低导致泵压下降,,field_measured,HT1-003井168.3+139.7mm油层尾管固井总结.doc (二)/作业史 六,high,水层出水，循环泵压远低于控压
+ht1_003,,200,water_influx_running,下套管至200m顶通：出口顶替出6方低密度钻井液，环空液柱压力降低0.01g/cm3，水层压稳失衡出水；低密度钻井液排出后返浆正常,,field_measured,HT1-003井168.3+139.7mm油层尾管固井总结.doc (三)固井分析,medium,总结建议：顶通及灌浆均用重浆确保压稳
+ht1_003,,,pump_ball_seat,投球坐挂：2026-05-27 9:40投硫化铜球，9:46开泵送球(排量0.57m3/min泵压7MPa)，10:10球到位憋压12MPa悬重257→135t下放7.1m坐挂成功，18MPa憋通球座,,field_measured,HT1-003井168.3+139.7mm油层尾管固井总结.doc/作业史 八(4),high,大陆架一体式平衡液缸尾管悬挂器，施工正常
+ht1_003,,,release,倒扣丢手：14:00停泵调整悬重160t，正转30圈基本无回转，上提180t继续上提0.7m悬重不变，下压30t固井,,field_measured,HT1-003井168.3+139.7mm油层尾管固井总结.doc/作业史 八(4),high,丢手成功
+ht1_003,,,bump_pressure,碰压19-25MPa，放回水800L断流，放回水正常,,field_measured,HT1-003井168.3+139.7mm尾管固井施工记录表.doc/固井总结,high,正常碰压
+ht1_003,,,circulate_high_pressure,循环排混浆：排量2.4m3/min压力28.7MPa，控压5MPa，循环103方出口密度降低,,field_measured,HT1-003井168.3+139.7mm油层尾管固井总结.doc/作业史 七.6,high,碰压后循环排混浆
+ht1_003,,,shut_in_pressure,候凝：2026-05-28 4:00开始，环空井口加压12.9MPa加压54h，憋压候凝72h,,field_measured,HT1-003井168.3+139.7mm尾管固井施工记录表.doc 候凝,high,设计候凝至领浆:隔离液2=8:2混浆强度3.5MPa后开井
+ht1_003,,,mud_low_return,下套管至7100m时泵压异常低(3-4MPa控压6-7MPa)，判断水柱已形成；期间活动上提无法提开，出水循环至管内后继续下套管保证到底,,field_measured,HT1-003井168.3+139.7mm油层尾管固井总结.doc (三)固井分析,medium,水层出水导致环空液柱压力异常

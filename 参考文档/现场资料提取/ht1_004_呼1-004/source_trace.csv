@@ -1,0 +1,33 @@
+﻿well_id,data_file,field_name,value,unit,data_type,source_file,source_location,source_type,extraction_method,confidence,needs_human_review,notes
+ht1_004,,well_name_cn,呼1-004,,field_measured,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc,封面/前言,word_text,word_com,high,0,
+ht1_004,,alias,HT1-004,,field_measured,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc,封面,word_text,word_com,high,0,
+ht1_004,,block,准噶尔盆地南缘冲断带霍玛吐背斜带呼西背斜,,field_measured,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc,封面/一.1.1,word_text,word_com,high,0,
+ht1_004,,field,呼西背斜呼探1井区,,field_measured,HT1-004_固井质量测井评价图 图头 地区,图头,pdf_text,pymupdf,high,0,数字化图头文字层
+ht1_004,,well_type,直井,,field_measured,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc,封面/作业史 一,word_text,word_com,high,0,
+ht1_004,,cementing_type,油层尾管精细控压固井(168.3+139.7mm复合尾管),,field_measured,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc,标题,word_text,word_com,high,0,
+ht1_004,,actual_td,7660,m,field_measured,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc,一.1.1/作业史 一,word_text,word_com,high,0,完钻井深；设计井深7600m
+ht1_004,,hanger_md,5243.207,m,field_measured,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc,前言/四.4.2,word_text,word_com,high,0,悬挂器喇叭口/回接筒顶；作业史悬挂器位置5243.207-5251.107m
+ht1_004,,hanger_body_md,5251.11,m,field_measured,HT1-004井油层尾管固井作业史.doc,八 工具数据,word_text,word_com,high,0,尾管悬挂器下深5251.11m井斜0.12°
+ht1_004,,liner_shoe_md,7660,m,field_measured,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc,六.6.1,word_text,word_com,high,0,加长引鞋下深7660m
+ht1_004,,openhole,5578-7660,m,field_measured,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc,一.1.2.1,word_text,word_com,high,0,273.1mm技套鞋5578m
+ht1_004,,borehole_nominal,241.3+215.9,mm,field_measured,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc,一.1.2.1,word_text,word_com,high,0,四开双径钻头241.3mm*7521m+215.9mm*7660m
+ht1_004,,liner_sections,168.3(5251-7376.66)+139.7(7376.66-7660),mm,field_measured,HT1-004井油层尾管固井作业史.doc,九/八,word_text,word_com,high,0,168.3mm段长2135.38m壁厚14.7；139.7mm段长283.344m壁厚15.88
+ht1_004,,mud_density,1.91(下套管前)/1.90(固井前),g/cm3,field_measured,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc,一.1.3.1/三.3.3,word_table,word_com,high,0,油基钻井液；洗井结束前1.91固井前1.90
+ht1_004,,mud_pv_yp,53/8.5,mPa.s/Pa,field_measured,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc,一.1.3.1,word_table,word_com,high,0,塑粘53/动切8.5
+ht1_004,,mud_six_speed,123/70/51/31/7/5,deg,field_measured,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc,一.1.3.1,word_table,word_com,high,0,Φ600-Φ3；65C低温组同此
+ht1_004,,caliper_electrical,72段分段井径,mm,field_measured,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc,一.1.4.2,word_table,word_com,high,0,电测井径分段表0-7660m；平均5578-7521 244mm扩1.1%/7521-7660 222mm扩2.8%；最大309/5579
+ht1_004,,inclination_electrical,70点,deg,field_measured,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc,一.1.4.1,word_table,word_com,high,0,井斜方位温度表0-7660m；最大井斜8.35°@7660m；含垂深/狗腿角
+ht1_004,,centralizer_count,100+14+5=119,只,field_measured,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc,六.6.2/作业史 六.2,word_table,word_com,high,0,整体弹性扶正器；168.3*241.3(100只/4根)139.7*241.3(14只/1根)139.7*215.9(5只/2根)
+ht1_004,,centralization_percent,83,%,interpreted,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc,六.6.3,word_text,word_com,medium,0,裸眼段居中度模拟(平均83%)
+ht1_004,,pumping_actual,97.1,m3,field_measured,HT1-004井168.3+139.7mm尾管固井施工记录表.doc/固井总结,替浆,word_table,word_com,high,0,替浆97.1m3排量1.4-0.8碰压9-15MPa；理论=实际
+ht1_004,,cement_volume,48+28=76,m3,field_measured,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc,七.7.1.1,word_table,word_com,high,0,领浆48+尾浆28；灰量161t(设计=实际)
+ht1_004,,lead_thickening,489,min/70Bc,field_measured,化验报告/HT1-004 油层尾管 化验报告.docx,表4 领浆配方与性能,docx_table,python-docx,high,0,第三方复检473min
+ht1_004,,tail_thickening,256,min/70Bc,field_measured,化验报告/HT1-004 油层尾管 化验报告.docx,表5 尾浆配方与性能,docx_table,python-docx,high,0,第三方复检247min
+ht1_004,,lead_strength_24h,3.6,MPa,field_measured,化验报告/HT1-004 油层尾管 化验报告.docx,表4,docx_table,python-docx,high,0,第三方4.7MPa
+ht1_004,,tail_strength_24h,15.2,MPa,field_measured,化验报告/HT1-004 油层尾管 化验报告.docx,表5,docx_table,python-docx,high,0,第三方16.2MPa
+ht1_004,,cbl_conclusion,不合格(一、二界面综合29.99%),,field_measured,HT1-004_固井质量测井评价图 图头,图头,pdf_text,pymupdf,high,0,违反七条红线；RCD充填合格(充填≠胶结)
+ht1_004,,cbl_pass_rate,0.3(尾管段)/30.0(全井),%,interpreted,ht1_004_呼1-004/cbl_digitization/cbl_digitization.csv,逐1m一界面class,csv,pymupdf矢量+脚本,medium,0,全井30.0%与官方29.99%吻合；尾管评价段5245-7581仅0.3%
+ht1_004,,third_party_report,OCR成功(稠化/强度/流变),,field_measured,化验报告/HT1-004井油层尾管第三方检测报告.pdf,9页扫描,scanned_pdf,paddleocr_vl,high,0,与化验报告.docx互证；数值差异为两次试验
+ht1_004,,torque,217条全部合格,N.m,field_measured,XD80502队HT1-004井139.7+168.28㎜上扣扭矩.pdf,63页,pdf_text,pymupdf,high,0,139.7mm TP-G2约24860-24900N.m；168.28mm TP-SFJ约19603-19609N.m
+ht1_004,,design_params_vs_actual,设计vs实际泵注一致(体积/密度)；排量/泵压有差异,,,设计参数.docx vs 施工记录表/总结,对照,docx_table,python-docx,high,0,先导浆设计1.4实际1.2；尾浆设计1.2实际1.0-1.2；泵压实际高于设计；详见extraction_notes
+ht1_004,,optimized_params,优化参数(模型loader输入)非现场值,,optimized_input,参考文档/呼1-004/优化参数.docx,参数表,docx_table,python-docx,high,0,⚠️cemdisp/data/loaders/ht1_004_loader.py泵注为优化参数输入，勿当现场数据抄录；领浆粘度170/屈服13与甲方200/14差异

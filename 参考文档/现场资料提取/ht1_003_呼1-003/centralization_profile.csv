@@ -1,0 +1,5 @@
+﻿well_id,md_m,standoff_ratio,centralization_percent,eccentricity_ratio,data_type,source_description,confidence,notes
+ht1_003,5307,,,,design_value,HT1-003井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 六.6.2/作业史,medium,168.3mm段5307-7091m：整体弹性扶正器75只，间距2根/只(~22.8m)，扶正器外径241.3mm
+ht1_003,7091,,,,design_value,HT1-003井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 六.6.2/作业史,medium,139.7mm段7091-7618m：整体弹性扶正器22只，间距2根/只，扶正器外径215.9mm
+ht1_003,5568,,83,,interpreted,HT1-003井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 六.6.3 居中度模拟图,medium,裸眼段居中度83%(设计模拟)
+ht1_003,7091,,,,model_assumption,,low,139.7mm壁厚15.88mm内径107.94mm较小，球座花篮与丝扣间隙小上附件困难(固井总结)，居中度可能受影响；连续居中度曲线未提供，需模型按扶正器布置估算

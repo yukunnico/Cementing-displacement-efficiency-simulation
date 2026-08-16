@@ -1,0 +1,26 @@
+﻿well_id,item,value,unit,top_md_m,bottom_md_m,data_type,source_description,confidence,notes
+ht1_003,simulation_top_md,5307.539,m,5307.539,7618,field_measured,HT1-003井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 前言/四.4.2,high,水泥返深=悬挂器喇叭口5307.539m，模拟段可取5307.539-7618m
+ht1_003,simulation_bottom_md,7618,m,5307.539,7618,field_measured,HT1-003井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 一.1.1,high,实际完井井深
+ht1_003,liner_hanger_md,5307.539,m,,,field_measured,HT1-003井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 前言,high,悬挂器喇叭口/回接筒顶5307.539m；悬挂器本体5315.439m(作业史)；CBL头悬挂器位置5307.540-5315.440m
+ht1_003,liner_top_md,5316.036,m,,,field_measured,HT1-003井油层尾管固井作业史.doc 九.套管数据表,high,尾管顶深(变扣TP-SFJ公*BG-FJU母 5316.036m)；回接筒顶5307.5m
+ht1_003,liner_shoe_md,7618,m,,,field_measured,HT1-003井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 六.6.1,high,加长引鞋下深7618m
+ht1_003,openhole_top_md,5568,m,5568,7618,field_measured,HT1-003井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 一.1.2.1,high,273.1mm技套鞋5568m，裸眼自5568m
+ht1_003,openhole_bottom_md,7618,m,5568,7618,field_measured,HT1-003井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 一.1.1,high,完钻井深
+ht1_003,casing_inner_diameter,245.42,mm,0,5568,interpreted,HT1-003井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 五.5.1,high,273.1mm技套内径=273.1-2*13.84=245.42mm
+ht1_003,casing_outer_diameter,273.1,mm,0,5568,field_measured,HT1-003井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 一.1.2.1,high,技术套管外径
+ht1_003,liner_inner_diameter,138.9,mm,5316.036,7091.016,field_measured,HT1-003井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 六.6.1/作业史,high,168.3mm段内径=168.3-2*14.7=138.9mm
+ht1_003,liner_inner_diameter,107.94,mm,7091.016,7618,field_measured,HT1-003井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 六.6.1/作业史,high,139.7mm段内径=139.7-2*15.88=107.94mm
+ht1_003,liner_outer_diameter,168.3,mm,5316.036,7091.016,field_measured,HT1-003井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 六.6.1,high,上段168.3mm(实际下入168.28mm)
+ht1_003,liner_outer_diameter,139.7,mm,7091.016,7618,field_measured,HT1-003井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 六.6.1,high,下段139.7mm
+ht1_003,borehole_nominal_diameter,241.3,mm,5568,7096,field_measured,HT1-003井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 一.1.2.1,high,四开上段钻头241.3mm
+ht1_003,borehole_nominal_diameter,215.9,mm,7096,7618,field_measured,HT1-003井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 一.1.2.1,high,四开下段钻头215.9mm
+ht1_003,drill_bit_size,241.3,mm,,,field_measured,HT1-003井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 一.1.2.1,high,钻头程序241.3mm*7096m+215.9mm*7618m
+ht1_003,drill_bit_size,215.9,mm,,,field_measured,HT1-003_固井质量测井评价图_15-3500与_3500-7595_20260622_完井.pdf 图头,high,CBL头显示钻头程序215.900mm*7618m
+ht1_003,float_collar_md,7605.725,m,,,field_measured,HT1-003井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 六.6.1/作业史,high,浮箍1下深7605.72m
+ht1_003,float_collar_md,7594.101,m,,,field_measured,HT1-003井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 六.6.1/作业史,high,浮箍2下深7594.10m
+ht1_003,float_shoe_md,7618,m,,,field_measured,HT1-003井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 六.6.1,high,加长引鞋下深
+ht1_003,ball_seat_md,7514.209,m,,,field_measured,HT1-003井油层尾管固井作业史.doc 九,high,球座/锁紧座有效下深7514.209m(阻流板位置)，本体7514.519m
+ht1_003,cement_return_md,5307.54,m,,,field_measured,HT1-003_固井质量测井评价图_15-3500与_3500-7595_20260622_完井.pdf 图头 水泥面,high,实测一级水泥面5307.540m
+ht1_003,artificial_bottom_md,7514.21,m,,,field_measured,HT1-003_固井质量测井评价图_15-3500与_3500-7595_20260622_完井.pdf 图头 人工井底,high,人工井底7514.210m
+ht1_003,overlap_length,260.461,m,,,field_measured,HT1-003井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 前言,high,尾管重叠段260.461m
+ht1_003,float_shoe_to_seat,103.791,m,,,field_measured,HT1-003井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 四.4.2,high,下塞/下部结构长度103.791m
