@@ -217,13 +217,21 @@ class CasingFlowSolver:
         scheduled_steps = self._build_scheduled_steps(schedule)
         initial_fluid = self._initial_fluid_name(fluids, schedule)
         fluid_by_name = {fluid.name: fluid for fluid in fluids}
+        # 泵注结束时刻：取全部步骤的最晚结束时间（对末尾停泵步骤亦稳健）。
+        # 用于"某前缘/尾缘在泵注结束前未到达鞋口"时的保守上界标记。
+        pumping_end_time_s = max((s.end_time_s for s in scheduled_steps), default=0.0)
 
         # 为每个注入步骤建立"前缘"：前缘位置由累计泵入体积推动，
         # 而不是只由该流体自身注入体积决定。
         fronts: list[InterfaceFront] = []
         for i, scheduled in enumerate(scheduled_steps):
             arrival_time_s = self._front_arrival_time(scheduled, scheduled_steps, pipe_volume_m3)
-            if self.enable_gravity and arrival_time_s is not None:
+            if arrival_time_s is None:
+                # 不可压缩管流下，该前缘在泵注结束前未到达鞋口（目标累计体积
+                # 超过总泵入体积）。若回退到该步骤自身 end_time，会插到更早步骤
+                # 前缘之间导致时间不单调；统一以泵注结束时刻为上界标记。
+                arrival_time_s = pumping_end_time_s
+            elif self.enable_gravity:
                 arrival_time_s = self._gravity_corrected_arrival_time(
                     arrival_time_s,
                     scheduled.step.fluid_name,
@@ -236,36 +244,40 @@ class CasingFlowSolver:
                 InterfaceFront(
                     fluid_name=scheduled.step.fluid_name,
                     distance_m=final_distance_m,
-                    time_s=arrival_time_s if arrival_time_s is not None else scheduled.end_time_s,
+                    time_s=arrival_time_s,
                 )
             )
 
         # 水泥浆停止时刻定义为"最后一段水泥浆尾缘越过鞋口"的地面累计时间。
         # 这与参考项目的环空终止口径一致：后续替浆刚到环空入口时停止二维顶替评价。
+        # 关键约束：水泥结束时刻不得早于任一水泥浆前缘到达时刻。
         cement_end_time_s: float | None = None
         for i, scheduled in enumerate(scheduled_steps):
             fluid = fluid_by_name.get(scheduled.step.fluid_name)
             if fluid is None or fluid.role not in {FluidRole.LEAD, FluidRole.INTERMEDIATE, FluidRole.TAIL}:
                 continue
             rear_arrival_time_s = self._rear_arrival_time(scheduled, scheduled_steps, pipe_volume_m3)
-            if rear_arrival_time_s is not None:
-                if self.enable_gravity:
-                    rear_arrival_time_s = self._gravity_corrected_arrival_time(
-                        rear_arrival_time_s,
-                        scheduled.step.fluid_name,
-                        self._displaced_fluid_name(scheduled_steps, i, initial_fluid),
-                        fluids,
-                        well_spec,
-                    )
-                cement_end_time_s = rear_arrival_time_s
+            if rear_arrival_time_s is None:
+                # 尾缘在泵注结束前未越过鞋口（目标累计体积超过总泵入体积）：
+                # 以泵注结束时刻为上界标记，保证不早于水泥前缘到达时刻。
+                rear_arrival_time_s = pumping_end_time_s
+            elif self.enable_gravity:
+                rear_arrival_time_s = self._gravity_corrected_arrival_time(
+                    rear_arrival_time_s,
+                    scheduled.step.fluid_name,
+                    self._displaced_fluid_name(scheduled_steps, i, initial_fluid),
+                    fluids,
+                    well_spec,
+                )
+            cement_end_time_s = rear_arrival_time_s
 
         result = CasingFlowResult(
             fronts=tuple(fronts),
             schedule_steps=schedule.steps,
             pipe_cross_section_m2=pipe_area_m2,
             shoe_md_m=shoe_depth_m,
-            pumping_end_time_s=scheduled_steps[-1].end_time_s if scheduled_steps else 0.0,
-            cement_end_time_s=cement_end_time_s if cement_end_time_s is not None else (scheduled_steps[-1].end_time_s if scheduled_steps else 0.0),
+            pumping_end_time_s=pumping_end_time_s,
+            cement_end_time_s=cement_end_time_s if cement_end_time_s is not None else pumping_end_time_s,
             shoe_timeline=self._build_shoe_timeline(
                 well_spec=well_spec,
                 fluids=fluids,
