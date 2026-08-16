@@ -1,0 +1,22 @@
+﻿well_id,component,top_md_m,bottom_md_m,outer_diameter_mm,inner_diameter_mm,weight_or_grade,quantity,spacing_m,data_type,source_description,confidence,notes
+ht1_003,surface_casing,0,1404.746,508,,P110*16.13mm,1,,field_measured,HT1-003井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 一.1.2.1,high,660.4mm钻头x1405m
+ht1_003,intermediate_casing,0,3905,365.12,,P110*13.88mm,1,,field_measured,HT1-003井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 一.1.2.1,high,457+444.5mm钻头x3905m；CBL头显示365.120mm*3905m
+ht1_003,intermediate_casing,0,5568,273.1,245.42,BG140V/TP140V/P110 *13.84mm BGT2/TPG2HP/BCSG,1,,field_measured,HT1-003井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 一.1.2.1,high,333.4mm钻头x5568m
+ht1_003,tieback_casing,0,5311.997,193.68,,回接套管,1,,field_measured,HT1-003_固井质量测井评价图_15-3500与_3500-7595_20260622_完井.pdf 图头 套管程序,high,回接193.680mm*0-5311.997m(2026-06-04回接固井)
+ht1_003,liner,5316.036,7089.576,168.28,138.9,BG140V/TP140V*14.7mm BG-FJU/TP-SFJ(M),149,,field_measured,HT1-003井油层尾管固井作业史.doc 九/套管到井xlsx,high,168.3mm上段1771.24m长，TP-SFJ扣，浮重7470KN；实际149根(168.28)+7根附件区
+ht1_003,liner,7091.016,7618,139.7,107.94,BG140V/TP140V*15.88mm BGT2/TP-G2,40,,field_measured,HT1-003井油层尾管固井作业史.doc 九/套管到井xlsx,high,139.7mm下段526.89m长，BGT2扣，浮重1930KN；含浮箍/球座/标节等附件
+ht1_003,liner_hanger,5307.539,5315.44,238,,273.1*168.3 悬挂器BG-FJU(大陆架NDPX-CY一体式),1,,field_measured,HT1-003井油层尾管固井作业史.doc 八/DSGN 十一.11.2,high,悬挂器最大外径238mm额定负荷2700KN，回接筒长1.8m；液缸剪钉7.26MPa球座剪钉20.8MPa
+ht1_003,float_collar,7605.725,,139.7,,BG140V*BGT2 强制式浮箍,1,,field_measured,HT1-003井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 六.6.1/作业史,high,浮箍1耐温200℃
+ht1_003,float_collar,7594.101,,139.7,,BG140V*BGT2 强制式浮箍,1,,field_measured,HT1-003井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 六.6.1/作业史,high,浮箍2耐温200℃
+ht1_003,float_shoe,7618,,139.7,,BG140V*BGT2 加长引鞋,1,,field_measured,HT1-003井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 六.6.1,high,耐温200℃
+ht1_003,other_liner_accessory,7514.519,,139.7,,BG140V*BGT2 球座/锁紧座,1,,field_measured,HT1-003井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 六.6.1,high,球座水眼33mm，有效下深7514.209m
+ht1_003,other_liner_accessory,7432.942,,139.7,,标节BG140V*BGT2,1,,field_measured,HT1-003井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 六.6.1/作业史,high,标节7432.94m(短套管CBL 7432.940-7434.330m)
+ht1_003,other_liner_accessory,7502.889,,139.7,,变扣TP-G2母*BGT2公,1,,field_measured,HT1-003井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 六.6.1,high,TP140V与BG140V转换
+ht1_003,other_liner_accessory,7434.327,,139.7,,变扣TP-G2公*BGT2母,1,,field_measured,HT1-003井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 六.6.1,high,
+ht1_003,other_liner_accessory,7091.016,,,,变径变扣BGT2公*BG-FJU母,1,,field_measured,HT1-003井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 六.6.1,high,168.3转139.7mm变径
+ht1_003,other_liner_accessory,7012.183,,168.28,,变扣BG-FJU公*TP-SFJ(M)母,1,,field_measured,HT1-003井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 六.6.1,high,
+ht1_003,other_liner_accessory,5316.036,,168.28,,变扣TP-SFJ(M)公*BG-FJU母,1,,field_measured,HT1-003井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 六.6.1,high,
+ht1_003,centralizer,5307,7091,241.3,168.3,整体弹性扶正器168.3*241.3,75,22.8,field_measured,HT1-003井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 六.6.2/作业史,high,间距2根/只；实际整体23-整体97(大)
+ht1_003,centralizer,7091,7618,215.9,139.7,整体弹性扶正器139.7*215.9,22,22.8,field_measured,HT1-003井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 六.6.2/作业史,high,间距2根/只；实际整体1-整体22(小)；139.7mm内径小上附件困难
+ht1_003,plug,,,,,钻杆胶塞139.7*127mm,1,,field_measured,HT1-003井油层尾管固井作业史.doc 八,high,皮碗136/136/113/90mm长360mm大陆架
+ht1_003,plug,,,,,套管胶塞168*140mm(复合胶塞),1,,field_measured,HT1-003井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 十六.16.2,high,大陆架
