@@ -35,3 +35,10 @@ wheels/
 *.swp
 *.swo
 *~
+# CBL 声幅图切片中间产物（PNG 大图，可由 PDF 重生成，不入库）
+参考文档/现场资料提取/**/cbl_pages/*.png
+参考文档/现场资料提取/**/cbl_digitization/pages/*.png
+参考文档/现场资料提取/**/cbl_pages/test_slice_top.png
+# 临时对比脚本与输出
+_tmp_*.py
+_t10t11_out/
