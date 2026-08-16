@@ -36,6 +36,7 @@ from cemdisp.data.loaders.hu102_loader import (
 from cemdisp.data.loaders.hu103_loader import (
     export_hu103_sync_card_markdown,
     load_hu103_tailpipe,
+    load_hu103_tailpipe_actual,
 )
 from cemdisp.data.loaders.hu1_loader import (
     export_hu1_sync_card_markdown,
@@ -51,9 +52,11 @@ from cemdisp.data.loaders.ht1_001_loader import (
 )
 from cemdisp.data.loaders.ht1_003_loader import (
     load_ht1_003_tailpipe,
+    load_ht1_003_tailpipe_design,
 )
 from cemdisp.data.loaders.ht1_004_loader import (
     load_ht1_004_tailpipe,
+    load_ht1_004_tailpipe_actual,
 )
 
 
@@ -83,10 +86,13 @@ __all__ = [
     "load_hu101_tailpipe",
     "load_hu102_tailpipe",
     "load_hu103_tailpipe",
+    "load_hu103_tailpipe_actual",
     "load_hu1_tailpipe",
     "load_hu2_tailpipe",
     "load_ht1_001_tailpipe",
     "load_ht1_003_tailpipe",
+    "load_ht1_003_tailpipe_design",
     "load_ht1_004_tailpipe",
+    "load_ht1_004_tailpipe_actual",
     "Ht1_004LoaderResult",
 ]

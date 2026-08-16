@@ -84,8 +84,8 @@ def _validate_field_shape(field: Array, depth: Array, azimuth: Array, field_name
 
 
 def _field_extent(depth: Array) -> tuple[float, float, float, float]:
-    """返回 imshow 使用的绘图范围，方位坐标采用宽边到窄边的归一化显示。"""
-    return (float(depth.min()), float(depth.max()), 0.0, 1.0)
+    """返回 imshow 使用的绘图范围，宽边→窄边沿横轴展开，深度沿纵轴自上而下递增（浅在上、深在下）。"""
+    return (0.0, 1.0, float(depth.max()), float(depth.min()))
 
 
 def plot_depth_time_contour(
@@ -188,7 +188,7 @@ def plot_annulus_snapshots(
     n_rows = time_rows * 2
 
     well_name = _safe_filename_component(result.well_name)
-    fig, axes = plt.subplots(n_rows, n_cols, figsize=(4.8 * n_cols, 2.9 * n_rows), squeeze=False)
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(3.5 * n_cols, 5.5 * n_rows), squeeze=False)
     cement_image = None
     spacer_image = None
     for panel_index, snapshot_index in enumerate(selected_indices):
@@ -196,20 +196,21 @@ def plot_annulus_snapshots(
         cement_ax = axes[base_row][col]
         spacer_ax = axes[base_row + time_rows][col]
         # 多流体采用上下两行对照：上排水泥、下排隔离液，避免透明叠加造成读数混淆。
-        # 求解器内部数组按“宽边(index 0)→窄边(index -1)”存储，直接显示即可。
+        # .T 将数组从 (ny×nz: 方位×深度) 转置为 (nz×ny: 深度×方位)，
+        # 配合 origin='upper' + extent y=(depth_max,depth_min) 使纵轴浅→深自上而下。
         cement_image = cement_ax.imshow(
-            snapshots[int(snapshot_index)],
+            np.flipud(snapshots[int(snapshot_index)].T),
             extent=_field_extent(depth),
-            origin="lower",
+            origin="upper",
             aspect="auto",
             cmap="viridis",
             vmin=0.0,
             vmax=1.0,
         )
         spacer_image = spacer_ax.imshow(
-            spacer_snapshots[int(snapshot_index)],
+            np.flipud(spacer_snapshots[int(snapshot_index)].T),
             extent=_field_extent(depth),
-            origin="lower",
+            origin="upper",
             aspect="auto",
             cmap="coolwarm",
             vmin=0.0,
@@ -218,8 +219,8 @@ def plot_annulus_snapshots(
         cement_ax.set_title(f"水泥 t = {times_min[int(snapshot_index)]:.1f} min")
         spacer_ax.set_title(f"隔离液 t = {times_min[int(snapshot_index)]:.1f} min")
         for ax in (cement_ax, spacer_ax):
-            ax.set_xlabel("井深 / m")
-            ax.set_ylabel("方位角位置 (宽边→窄边)")
+            ax.set_xlabel("方位角 (宽边→窄边)")
+            ax.set_ylabel("井深 / m")
 
     for empty_index in range(panel_count, time_rows * n_cols):
         base_row, col = divmod(empty_index, n_cols)
@@ -271,24 +272,24 @@ def plot_final_fields_contour(
         panels.append(("壁面泥饼", wall_field, "YlOrRd"))
 
     well_name = _safe_filename_component(result.well_name)
-    fig, axes = plt.subplots(1, len(panels), figsize=(4.8 * len(panels), 4.8), sharex=True, sharey=True)
+    fig, axes = plt.subplots(1, len(panels), figsize=(3.5 * len(panels), 6.0), sharex=True, sharey=True)
     axes_array = np.atleast_1d(axes)
 
     for ax, (title, field, colormap) in zip(axes_array, panels):
         # 多流体最终场分面显示，保持每种物理量独立色标，避免把隔离液误读为顶替效率。
         # 求解器内部数组已按宽边→窄边存储，因此这里不再做额外翻转。
         image = ax.imshow(
-            field,
+            np.flipud(field.T),
             extent=_field_extent(depth),
-            origin="lower",
+            origin="upper",
             aspect="auto",
             cmap=colormap,
             vmin=0.0,
             vmax=1.0,
         )
         ax.set_title(title, fontweight="bold", fontsize=12)
-        ax.set_xlabel("井深 / m", fontsize=11)
-        ax.set_ylabel("方位角 (宽边→窄边)", fontsize=11)
+        ax.set_xlabel("方位角 (宽边→窄边)", fontsize=11)
+        ax.set_ylabel("井深 / m", fontsize=11)
         colorbar = fig.colorbar(image, ax=ax, pad=0.02)
         colorbar.set_label(title, fontsize=10)
 

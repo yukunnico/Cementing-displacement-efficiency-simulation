@@ -19,12 +19,11 @@
 - AnnulusInletState: 环空入口边界状态
     * 包含时间和相分数，供求解器使用
 
-- pipe_exit_to_annulus_inlet(): 鞋口出流→环空入口的直接映射函数
 - build_coupled_annulus_inlet_provider(): 1D-2D耦合的边界提供器工厂函数
 
 设计原则：
 - 环空求解器可独立运行
-- 1D→2D边界桥接接口清晰
+- 1D->2D边界桥接接口清晰
 - 支持后续扩展套管内对流-弥散，而不影响环空核心
 """
 
@@ -32,7 +31,6 @@ from cemdisp.models2d.annulus_d2dga import AnnulusD2DGASolver, AnnulusSimulation
 from cemdisp.models2d.boundary_bridge import (
     AnnulusInletState,
     build_coupled_annulus_inlet_provider,
-    pipe_exit_to_annulus_inlet,
 )
 
 __all__ = [
@@ -40,5 +38,4 @@ __all__ = [
     "AnnulusInletState",
     "AnnulusSimulationResult",
     "build_coupled_annulus_inlet_provider",
-    "pipe_exit_to_annulus_inlet",
 ]

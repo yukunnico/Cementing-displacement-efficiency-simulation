@@ -150,9 +150,19 @@ class TestCasingFlowShoeTimeline(unittest.TestCase):
         self.assertEqual(at_arrival.phase_fractions, (("隔离液", 1.0),))
 
     def test_gravity_corrected_front_time_is_used_by_timeline(self) -> None:
-        """启用重力修正时，时间轴前缘事件必须与旧 fronts 的校正时间一致。"""
+        """启用重力修正时，时间轴前缘事件必须与旧 fronts 的校正时间一致。
 
-        solver = CasingFlowSolver(enable_gravity=True, settling_velocity_factor=1.0, enable_axial_dispersion=False)
+        显式走 legacy 经验乘子路径（enable_buoyancy_physics=False），
+        保持该一致性测试聚焦时间轴/前缘联动而不依赖 Atwood 公式数值；
+        物理化默认路径的行为由 test_casing_mixing_buoyancy.py 覆盖。
+        """
+
+        solver = CasingFlowSolver(
+            enable_gravity=True,
+            settling_velocity_factor=1.0,
+            enable_axial_dispersion=False,
+            enable_buoyancy_physics=False,
+        )
         result = solver.run(_well(), _fluids(), _schedule())
 
         corrected_front_time_s = result.fronts[0].time_s

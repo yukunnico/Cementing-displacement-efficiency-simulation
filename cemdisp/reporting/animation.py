@@ -14,6 +14,7 @@ import warnings
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+import numpy as np
 from matplotlib.animation import FuncAnimation
 
 from cemdisp.models2d import AnnulusSimulationResult
@@ -31,9 +32,8 @@ def animate_cement_field(
 ) -> None:
     """生成水泥与隔离液浓度场随时间演化的 GIF 或 MP4 动画。
 
-    动画采用左右双面板热力图展示每个快照时刻的水泥与隔离液浓度场：横轴为井深，
-    纵轴为归一化方位角（0 表示宽边，1 表示窄边），求解器内部数组顺序与该显示方向一致，
-    因此这里不对快照做额外翻转。
+    动画采用左右双面板热力图展示每个快照时刻的水泥与隔离液浓度场：横轴为归一化
+    方位角（0 表示宽边，1 表示窄边），纵轴为井深（浅→深自上而下）。
 
     Args:
         result: 环空二维模拟结果，需包含 cement_snapshots、snapshot_times_s 和 geom["md"]，可选包含 spacer_snapshots。
@@ -73,32 +73,32 @@ def animate_cement_field(
 
     # 井深数组来自通用几何输入，不在动画模块中硬编码任何单井深度。
     depth = result.geom["md"]
-    depth_min = float(depth[0])
-    depth_max = float(depth[-1])
+    depth_bottom = float(np.max(depth))   # 最深(鞋口)
+    depth_top = float(np.min(depth))      # 最浅
     frame_count = len(cement_snapshots)
     times_s = result.snapshot_times_s
 
-    fig, axes = plt.subplots(1, 2, figsize=(14, 5.8), sharex=True, sharey=True)
+    fig, axes = plt.subplots(1, 2, figsize=(8, 10), sharex=True, sharey=True)
     cement_ax, spacer_ax = axes
     # 多流体动画采用左右并列面板，避免透明叠加导致浓度色标难以判读。
     # cement_snapshots / spacer_snapshots 的 index 0 就是宽边，末行就是窄边，直接显示即可。
     cement_image = cement_ax.imshow(
-        cement_snapshots[0],
+        np.flipud(cement_snapshots[0].T),
         vmin=0,
         vmax=1,
         cmap="viridis",
         aspect="auto",
-        extent=(depth_min, depth_max, 0.0, 1.0),
-        origin="lower",
+        extent=(0.0, 1.0, depth_bottom, depth_top),
+        origin="upper",
     )
     spacer_image = spacer_ax.imshow(
-        spacer_snapshots[0],
+        np.flipud(spacer_snapshots[0].T),
         vmin=0,
         vmax=1,
         cmap="coolwarm",
         aspect="auto",
-        extent=(depth_min, depth_max, 0.0, 1.0),
-        origin="lower",
+        extent=(0.0, 1.0, depth_bottom, depth_top),
+        origin="upper",
     )
     cement_colorbar = fig.colorbar(cement_image, ax=cement_ax)
     cement_colorbar.set_label("水泥浓度")
@@ -106,8 +106,8 @@ def animate_cement_field(
     spacer_colorbar.set_label("隔离液浓度")
 
     for ax in axes:
-        ax.set_xlabel("井深 / m")
-        ax.set_ylabel("方位角 (宽边→窄边)")
+        ax.set_xlabel("方位角 (宽边→窄边)")
+        ax.set_ylabel("井深 / m")
     cement_ax.set_title("水泥浓度场", fontsize=13, fontweight="bold")
     spacer_ax.set_title("隔离液浓度场", fontsize=13, fontweight="bold")
     fig.suptitle("水泥-隔离液浓度场演化 — t = 0.0 min", fontsize=14, fontweight="bold")
@@ -119,8 +119,8 @@ def animate_cement_field(
         time_s = times_s[frame_index] if frame_index < len(times_s) else 0.0
         time_min = float(time_s) / 60.0
 
-        cement_image.set_data(cement_field)
-        spacer_image.set_data(spacer_field)
+        cement_image.set_data(np.flipud(cement_field.T))
+        spacer_image.set_data(np.flipud(spacer_field.T))
         fig.suptitle(f"水泥-隔离液浓度场演化 — t = {time_min:.1f} min", fontsize=14, fontweight="bold")
         print(f"正在生成动画帧 {frame_index + 1}/{frame_count}")
         return (cement_image, spacer_image)

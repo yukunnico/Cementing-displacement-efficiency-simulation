@@ -8,13 +8,13 @@ import unittest
 
 
 class TestMultiwellProvenanceRegistry(unittest.TestCase):
-    """测试六井聚合来源口径登记。"""
+    """测试八井聚合来源口径登记。"""
 
-    def test_registry_contains_all_six_wells_with_four_sections(self):
-        """聚合登记覆盖六口井，且每口井都有 fluid/geometry/program/sync 四段。"""
+    def test_registry_contains_all_eight_wells_with_four_sections(self):
+        """聚合登记覆盖八口井（含 2026-08-16 新增呼1-003/呼1-004），每口井都有 fluid/geometry/program/sync 四段。"""
         from cemdisp.data.provenance import WELL_PROVENANCE
 
-        expected_wells = {"呼101", "呼102", "呼103", "呼探1", "呼探1-002", "呼探1-001"}
+        expected_wells = {"呼101", "呼102", "呼103", "呼探1", "呼探1-002", "呼探1-001", "呼1-003", "呼1-004"}
 
         self.assertEqual(set(WELL_PROVENANCE), expected_wells)
         for well_name, provenance in WELL_PROVENANCE.items():

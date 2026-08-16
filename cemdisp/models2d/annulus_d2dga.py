@@ -142,9 +142,6 @@ class AnnulusSimulationResult:
     tail_snapshots: Tuple[Array, ...] = field(default_factory=tuple)
     spacer_snapshots: Tuple[Array, ...] = field(default_factory=tuple)
     wall_snapshots: Tuple[Array, ...] = field(default_factory=tuple)
-    # Legacy field -- always empty in the current paper-grade solver.
-    # Kept as placeholder for backward compatibility; no longer populated by run().
-    reynolds_snapshots: Tuple[Array, ...] = field(default_factory=tuple)
     snapshot_times_s: Tuple[float, ...] = field(default_factory=tuple)
     notes: Tuple[str, ...] = field(default_factory=tuple)
     lead_field: Array = field(default_factory=lambda: np.empty((0, 0), dtype=float))
