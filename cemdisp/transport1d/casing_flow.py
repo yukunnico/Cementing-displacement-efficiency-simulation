@@ -45,7 +45,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import math
 
-from cemdisp.data.fluid_spec import FluidRole, FluidSpec
+from cemdisp.data.fluid_spec import FluidRole, FluidSpec, RheologyModel
 from cemdisp.data.pumping_schedule import PumpingSchedule, PumpingScheduleStep, PumpingStageEvent
 from cemdisp.data.well_spec import WellSpec
 from cemdisp.transport1d.interface_tracking import InterfaceFront
@@ -121,6 +121,13 @@ class CasingFlowSolver:
         dispersion_alpha: float = 0.25,
         gelation_time_s: float = 600.0,
         gelation_max_factor: float = 0.95,
+        enable_buoyancy_physics: bool = True,
+        buoyancy_correction_factor: float = 1.0,
+        enable_mixing_enhancement: bool = True,
+        mixing_enhancement_factor: float = 5.0,
+        max_mixing_enhancement: float = 10.0,
+        has_plug: bool = False,
+        enable_utube: bool = False,
     ) -> None:
         """初始化求解器。
 
@@ -132,6 +139,7 @@ class CasingFlowSolver:
             g_constant: 重力加速度（m/s²），用于按现场重力条件缩放简化修正项
             settling_velocity_factor: 沉降速度系数，单位为 m/s 每 kg/m³ 密度差。
                 默认 0.0015，参考现场数据标定（Ekici et al., SPE 166112, 2013）。
+                仅在 enable_buoyancy_physics=False 的旧经验乘子路径中使用。
             enable_axial_dispersion: 是否启用管内轴向弥散；默认启用。
                 基于 Taylor-Aris 弥散理论（Taylor 1953, Aris 1956），
                 将尖锐流体前缘转换为平滑 S 形过渡带。
@@ -141,6 +149,22 @@ class CasingFlowSolver:
                 用于停泵沉降增强模型，参考 Kelessidis et al. (JPT, 2006)。
             gelation_max_factor: 凝胶强度最大抑制因子，无量纲，默认 0.95。
                 表示凝胶完全发展后对沉降的最大抑制程度（0~1）。
+            enable_buoyancy_physics: 是否启用基于 Atwood 数的物理化浮力修正（T1-11）。
+                默认启用；False 时回退到以水密度为基准的旧经验乘子（向后兼容）。
+                参考 Dai et al. (2024) Petroleum Research。
+            buoyancy_correction_factor: 浮力修正标定系数，无量纲，默认 1.0。
+                需六井数据反标定（审查修正：0.1 时修正量与旧公式几乎相同）。
+            enable_mixing_enhancement: 是否启用界面混浆增强分散（T1-10）。
+                在密度不稳定界面（重驱轻 + 高 Re）对 Taylor-Aris 分散系数
+                施加增强因子，使过渡带反映物理混浆效应。默认启用。
+            mixing_enhancement_factor: 混浆增强系数 k_mix，无量纲，默认 5.0。
+                经验值，需六井数据标定。
+            max_mixing_enhancement: 混浆增强因子上限，无量纲，默认 10.0。
+                防止过渡带不物理地过宽。
+            has_plug: 是否有胶塞（尾管固井常配胶塞）；有则胶塞刮拭阻止混浆，
+                混浆增强因子恒为 1，默认 False。
+            enable_utube: U型管/自由下落修正开关（预留接口），默认关闭。
+                当前为空实现钩子 _utube_corrected_arrival_time，未来实现（T1-12）。
         """
         if not math.isfinite(dt) or dt <= 0.0:
             raise ValueError("dt 必须为大于0的有限数值")
@@ -154,6 +178,12 @@ class CasingFlowSolver:
             raise ValueError('gelation_time_s must be a positive finite number')
         if not math.isfinite(gelation_max_factor) or not (0.0 <= gelation_max_factor <= 1.0):
             raise ValueError('gelation_max_factor must be in [0, 1]')
+        if not math.isfinite(buoyancy_correction_factor) or buoyancy_correction_factor < 0.0:
+            raise ValueError("buoyancy_correction_factor 必须为非负有限数值")
+        if not math.isfinite(mixing_enhancement_factor) or mixing_enhancement_factor < 0.0:
+            raise ValueError("mixing_enhancement_factor 必须为非负有限数值")
+        if not math.isfinite(max_mixing_enhancement) or max_mixing_enhancement < 1.0:
+            raise ValueError("max_mixing_enhancement 必须为 >=1 的有限数值")
         self.dt: float = dt
         self.enable_gravity: bool = enable_gravity
         self.g_constant: float = g_constant
@@ -162,6 +192,13 @@ class CasingFlowSolver:
         self.dispersion_alpha: float = dispersion_alpha
         self.gelation_time_s: float = gelation_time_s
         self.gelation_max_factor: float = gelation_max_factor
+        self.enable_buoyancy_physics: bool = enable_buoyancy_physics
+        self.buoyancy_correction_factor: float = buoyancy_correction_factor
+        self.enable_mixing_enhancement: bool = enable_mixing_enhancement
+        self.mixing_enhancement_factor: float = mixing_enhancement_factor
+        self.max_mixing_enhancement: float = max_mixing_enhancement
+        self.has_plug: bool = has_plug
+        self.enable_utube: bool = enable_utube
         self._scheduled_steps_by_result_id: dict[int, tuple[_ScheduledStep, ...]] = {}
         self._initial_fluid_by_result_id: dict[int, str] = {}
         self._fluids_by_result_id: dict[int, tuple[FluidSpec, ...]] = {}
@@ -184,10 +221,16 @@ class CasingFlowSolver:
         # 为每个注入步骤建立"前缘"：前缘位置由累计泵入体积推动，
         # 而不是只由该流体自身注入体积决定。
         fronts: list[InterfaceFront] = []
-        for scheduled in scheduled_steps:
+        for i, scheduled in enumerate(scheduled_steps):
             arrival_time_s = self._front_arrival_time(scheduled, scheduled_steps, pipe_volume_m3)
             if self.enable_gravity and arrival_time_s is not None:
-                arrival_time_s = self._gravity_corrected_arrival_time(arrival_time_s, scheduled.step.fluid_name, fluids, well_spec)
+                arrival_time_s = self._gravity_corrected_arrival_time(
+                    arrival_time_s,
+                    scheduled.step.fluid_name,
+                    self._displaced_fluid_name(scheduled_steps, i, initial_fluid),
+                    fluids,
+                    well_spec,
+                )
             final_distance_m = min(shoe_depth_m, scheduled.cumulative_volume_end_m3 / pipe_area_m2)
             fronts.append(
                 InterfaceFront(
@@ -200,7 +243,7 @@ class CasingFlowSolver:
         # 水泥浆停止时刻定义为"最后一段水泥浆尾缘越过鞋口"的地面累计时间。
         # 这与参考项目的环空终止口径一致：后续替浆刚到环空入口时停止二维顶替评价。
         cement_end_time_s: float | None = None
-        for scheduled in scheduled_steps:
+        for i, scheduled in enumerate(scheduled_steps):
             fluid = fluid_by_name.get(scheduled.step.fluid_name)
             if fluid is None or fluid.role not in {FluidRole.LEAD, FluidRole.INTERMEDIATE, FluidRole.TAIL}:
                 continue
@@ -210,6 +253,7 @@ class CasingFlowSolver:
                     rear_arrival_time_s = self._gravity_corrected_arrival_time(
                         rear_arrival_time_s,
                         scheduled.step.fluid_name,
+                        self._displaced_fluid_name(scheduled_steps, i, initial_fluid),
                         fluids,
                         well_spec,
                     )
@@ -343,6 +387,95 @@ class CasingFlowSolver:
         else:
             return self.dispersion_alpha * mean_velocity_m_s * pipe_radius_m
 
+    def _effective_viscosity(
+        self,
+        fluid: FluidSpec,
+        mean_velocity_m_s: float,
+        pipe_radius_m: float,
+    ) -> float:
+        """计算流体在给定剪切率下的表观黏度。
+
+        使用 Dai 2024 eq. A.11: μ_eff = τ₀/(u/D) + k·(u/D)^(n-1)，
+        剪切率取壁面剪切率近似 γ_w = 8U/(2R)。
+        牛顿流体直接返回塑性黏度；无法求值的边界（零流速/零半径）回退到塑性黏度。
+
+        Args:
+            fluid: 流体规格
+            mean_velocity_m_s: 截面平均速度 [m/s]
+            pipe_radius_m: 管内半径 [m]
+
+        Returns:
+            表观黏度 [Pa·s]，恒为正数
+        """
+        if mean_velocity_m_s < 1e-9 or pipe_radius_m < 1e-9:
+            return fluid.plastic_viscosity_pa_s or 0.01
+
+        shear_rate = 8.0 * mean_velocity_m_s / (2.0 * pipe_radius_m)  # 壁面剪切率近似
+        shear_rate = max(shear_rate, 1e-6)
+
+        if fluid.rheology_model == RheologyModel.NEWTONIAN:
+            return fluid.plastic_viscosity_pa_s or 0.01
+
+        tau_y = fluid.yield_stress_pa or 0.0
+        k_cons = fluid.consistency_k or 0.01
+        n = fluid.power_law_n if fluid.power_law_n is not None else 1.0
+
+        return tau_y / shear_rate + k_cons * shear_rate ** (n - 1.0)
+
+    def _interface_instability_factor(
+        self,
+        fluid_next: FluidSpec,
+        fluid_prev: FluidSpec,
+        pipe_radius_m: float,
+        mean_velocity_m_s: float,
+    ) -> float:
+        """界面失稳增强因子（垂直井适配）。
+
+        返回 >1 表示失稳增强分散，=1 表示稳定（仅 Taylor-Aris）。
+        受 Dai 2024 启发的垂直井适配判据。注意：Dai 2024 原判据（eq. A.10/A.14/A.15）
+        依赖 cos(β) 和 Fr，专为斜井设计；垂直井（β≈0）时 vt→0、Fr→∞，原判据不可直接用。
+        此处简化为 At>0 AND Re>100 的密度不稳定判据。
+
+        物理依据：
+        - 重驱轻（At > 0）→ Rayleigh-Taylor 型界面失稳 → 混合增强
+        - 黏度差越大 → 界面越不稳定
+        - 有胶塞时 → 胶塞刮拭阻止混合 → 增强因子=1
+
+        Args:
+            fluid_next: 后继流体（当前注入流体）
+            fluid_prev: 前置流体（被顶替流体）
+            pipe_radius_m: 管内半径 [m]
+            mean_velocity_m_s: 截面平均速度 [m/s]
+
+        Returns:
+            界面失稳增强因子 [1, max_mixing_enhancement]
+        """
+        if self.has_plug:
+            return 1.0
+
+        rho_h = max(fluid_next.density_kg_m3, fluid_prev.density_kg_m3)
+        rho_l = min(fluid_next.density_kg_m3, fluid_prev.density_kg_m3)
+        at = (rho_h - rho_l) / (rho_h + rho_l)  # Atwood number
+
+        if at < 1e-9:
+            return 1.0  # 等密度，无失稳
+
+        # 有效黏度（几何平均，Dai 2024 eq. A.12）
+        mu_next = self._effective_viscosity(fluid_next, mean_velocity_m_s, pipe_radius_m)
+        mu_prev = self._effective_viscosity(fluid_prev, mean_velocity_m_s, pipe_radius_m)
+        mu_mean = math.sqrt(max(mu_next * mu_prev, 1e-12))
+
+        # Reynolds number
+        rho_avg = (fluid_next.density_kg_m3 + fluid_prev.density_kg_m3) / 2.0
+        D = 2.0 * pipe_radius_m
+        Re = rho_avg * mean_velocity_m_s * D / max(mu_mean, 1e-12)
+
+        # 垂直井密度不稳定判据：重驱轻 + Re 足够大 → 失稳
+        if at > 0 and Re > 100.0:
+            enhancement = 1.0 + self.mixing_enhancement_factor * at * math.sqrt(Re / 100.0)
+            return min(enhancement, self.max_mixing_enhancement)
+        return 1.0
+
     def _apply_dispersion_to_timeline(
         self,
         events: list[ShoeEvent],
@@ -376,6 +509,23 @@ class CasingFlowSolver:
 
             U = event.flow_rate_m3_s / (math.pi * pipe_radius_m ** 2)
             D_eff = self._compute_dispersion_coefficient(pipe_radius_m, fluid, U)
+
+            # 找到前一个流体（在弥散系数计算前确定，供混浆增强注入使用）
+            prev_fluid = ""
+            for j in range(i - 1, -1, -1):
+                if events[j].phase_fractions:
+                    prev_fluid = events[j].phase_fractions[0][0]
+                    break
+
+            # T1-10: 混浆增强分散（仅当前流体与前置流体均已知时注入）
+            if self.enable_mixing_enhancement:
+                prev_fluid_spec = fluid_by_name.get(prev_fluid)
+                if prev_fluid_spec is not None:
+                    instability = self._interface_instability_factor(
+                        fluid, prev_fluid_spec, pipe_radius_m, U
+                    )
+                    D_eff *= instability
+
             if D_eff < 1e-12:
                 dispersed_events.append(event)
                 continue
@@ -388,12 +538,6 @@ class CasingFlowSolver:
             sigma_t = math.sqrt(2.0 * D_eff * t_travel) / max(U, 1e-9)
             sigma_t = max(sigma_t, self.dt)  # 至少一个时间步
 
-            # 找到前一个流体
-            prev_fluid = ""
-            for j in range(i - 1, -1, -1):
-                if events[j].phase_fractions:
-                    prev_fluid = events[j].phase_fractions[0][0]
-                    break
             next_fluid = fluid_name
 
             # 在 [t_arrival - σ, t_arrival + σ] 范围内生成过渡子事件
@@ -432,17 +576,30 @@ class CasingFlowSolver:
 
         pipe_volume_m3 = self._timeline_pipe_volume(well_spec, legacy_pipe_volume_m3)
         event_points: list[tuple[float, ShoeEventKind, tuple[tuple[str, float], ...] | None]] = []
-        for scheduled in scheduled_steps:
+        for i, scheduled in enumerate(scheduled_steps):
+            displaced_fluid = self._displaced_fluid_name(scheduled_steps, i, initial_fluid)
             event_points.append((scheduled.start_time_s, self._event_kind_for_step(scheduled.step), None))
             front_time_s = self._front_arrival_time(scheduled, scheduled_steps, pipe_volume_m3)
             if front_time_s is not None:
                 if self.enable_gravity:
-                    front_time_s = self._gravity_corrected_arrival_time(front_time_s, scheduled.step.fluid_name, fluids, well_spec)
+                    front_time_s = self._gravity_corrected_arrival_time(
+                        front_time_s, scheduled.step.fluid_name, displaced_fluid, fluids, well_spec
+                    )
+                # T1-12 预留：U型管/自由下落修正钩子（重力修正之后调用）
+                front_time_s = self._utube_corrected_arrival_time(
+                    front_time_s, scheduled.step.fluid_name, fluids, well_spec
+                )
                 event_points.append((front_time_s, ShoeEventKind.FRONT_ARRIVAL, ((scheduled.step.fluid_name, 1.0),)))
             rear_time_s = self._rear_arrival_time(scheduled, scheduled_steps, pipe_volume_m3)
             if rear_time_s is not None:
                 if self.enable_gravity:
-                    rear_time_s = self._gravity_corrected_arrival_time(rear_time_s, scheduled.step.fluid_name, fluids, well_spec)
+                    rear_time_s = self._gravity_corrected_arrival_time(
+                        rear_time_s, scheduled.step.fluid_name, displaced_fluid, fluids, well_spec
+                    )
+                # T1-12 预留：U型管/自由下落修正钩子（重力修正之后调用）
+                rear_time_s = self._utube_corrected_arrival_time(
+                    rear_time_s, scheduled.step.fluid_name, fluids, well_spec
+                )
                 event_points.append((rear_time_s, ShoeEventKind.REAR_EXIT, None))
         if scheduled_steps:
             event_points.append((scheduled_steps[-1].end_time_s, ShoeEventKind.END, None))
@@ -635,21 +792,88 @@ class CasingFlowSolver:
         self,
         arrival_time_s: float,
         fluid_name: str,
+        displaced_fluid_name: str,
         fluids: tuple[FluidSpec, ...],
         well_spec: WellSpec | None = None,
     ) -> float:
         """按流体密度对前缘到达时间做重力修正，支持井斜角投影和屈服应力修正。
 
-        修正流程：
-        1. 基础重力修正：基于密度差的简化沉降时间修正
+        T1-11 物理化修正流程（enable_buoyancy_physics=True，默认）：
+        1. 基础浮力修正：基于 Atwood 数（无量纲密度差，密度差基准为被顶替流体，
+           而非旧公式中以水密度为基准），参考 Dai et al. (2024) Petroleum Research；
         2. 井斜角投影修正：当 well_spec.inclination_profile 可用时，
-           用平均井斜角的余弦值投影重力分量（垂直分量 = g * cos(theta)）
-        3. 屈服应力修正：对有屈服应力的流体，修正沉降速度以反映屈服应力的抑制效应
+           用平均井斜角的余弦值投影重力分量（垂直分量 = g * cos(theta)）；
+        3. 屈服应力修正：对有屈服应力的流体，修正沉降速度以反映屈服应力的抑制效应，
+           参考 Maleki & Frigaard, JFM 846 (2018)；
+        4. 方向判断：重驱轻（ρ_fluid > ρ_displaced）→ 浮力加速 → 到达时间缩短；
+           轻驱重 → 浮力减速 → 到达时间延长。
+
+        enable_buoyancy_physics=False 时回退到旧经验乘子（_legacy_gravity_correction），
+        保持向后兼容。
 
         Literature:
+        - Dai et al., Petroleum Research (2024): Atwood 数表征界面密度差
         - Romero & Carter, SPE 55927 (1999): Gravity settling in inclined wells
         - Shah & Sutton, SPE 18036 (1990): Yield stress effects on settling
-        - Taylor, Proc. R. Soc. A 219 (1953): Laminar dispersion
+        - Maleki & Frigaard, JFM 846 (2018): 屈服应力抑制浮力效应
+
+        Args:
+            arrival_time_s: 活塞流模型计算的前缘到达时间（秒）
+            fluid_name: 流体名称（当前注入流体）
+            displaced_fluid_name: 被顶替流体名称（上一步流体，或初始管内流体）
+            fluids: 全部流体规格元组
+            well_spec: 井筒规格，用于获取井斜剖面和管内径
+
+        Returns:
+            修正后的前缘到达时间（秒），保证非负
+        """
+        if not self.enable_buoyancy_physics:
+            # 回退到旧经验乘子（向后兼容）
+            return self._legacy_gravity_correction(arrival_time_s, fluid_name, fluids, well_spec)
+
+        rho_fluid = self._get_fluid_density(fluid_name, fluids)
+        rho_displaced = self._get_fluid_density(displaced_fluid_name, fluids)
+
+        # Atwood 数（无量纲密度差）
+        at = abs(rho_fluid - rho_displaced) / (rho_fluid + rho_displaced)
+
+        # 浮力修正因子
+        gravity_scale = self.g_constant / 9.81
+        gravity_factor = self.buoyancy_correction_factor * at * gravity_scale
+
+        # 井斜角投影修正：重力沿管轴分量 = g * cos(inclination)
+        if well_spec is not None and well_spec.inclination_profile:
+            avg_inclination_rad = self._average_inclination_rad(well_spec)
+            gravity_factor *= max(math.cos(avg_inclination_rad), 0.0)
+
+        # 屈服应力修正：屈服应力会抑制浮力滑移，减小有效浮力效应
+        fluid = next((f for f in fluids if f.name == fluid_name), None)
+        if fluid is not None and fluid.yield_stress_pa is not None and fluid.yield_stress_pa > 0.0:
+            pipe_radius_m = self._effective_pipe_radius_m(well_spec)
+            delta_rho = abs(rho_fluid - rho_displaced)
+            tau_critical = delta_rho * self.g_constant * pipe_radius_m
+            if tau_critical > 1e-6:
+                yield_ratio = min(fluid.yield_stress_pa / tau_critical, 1.0)
+                gravity_factor *= (1.0 - 0.8 * yield_ratio)
+
+        # 方向判断：重驱轻 → 浮力加速；轻驱重 → 浮力减速
+        if rho_fluid > rho_displaced:
+            return max(arrival_time_s * (1.0 - gravity_factor), 0.0)
+        else:
+            return arrival_time_s * (1.0 + gravity_factor)
+
+    def _legacy_gravity_correction(
+        self,
+        arrival_time_s: float,
+        fluid_name: str,
+        fluids: tuple[FluidSpec, ...],
+        well_spec: WellSpec | None = None,
+    ) -> float:
+        """旧经验乘子重力修正（向后兼容路径）。
+
+        enable_buoyancy_physics=False 时使用：以水密度 1000 kg/m³ 为密度差基准的
+        经验乘子（settling_velocity_factor × (ρ - 1000) / 1000），保留井斜角投影
+        和屈服应力抑制逻辑。
 
         Args:
             arrival_time_s: 活塞流模型计算的前缘到达时间（秒）
@@ -660,8 +884,6 @@ class CasingFlowSolver:
         Returns:
             修正后的前缘到达时间（秒），保证非负
         """
-        from cemdisp.data.fluid_spec import RheologyModel
-
         fluid_density = self._get_fluid_density(fluid_name, fluids)
         fluid = next((f for f in fluids if f.name == fluid_name), None)
 
@@ -686,6 +908,54 @@ class CasingFlowSolver:
                 gravity_factor *= yield_suppression
 
         return max(arrival_time_s * (1.0 - gravity_factor), 0.0)
+
+    @staticmethod
+    def _displaced_fluid_name(
+        scheduled_steps: tuple[_ScheduledStep, ...],
+        current_index: int,
+        initial_fluid: str,
+    ) -> str:
+        """返回当前步骤的被顶替流体名（上一步流体，或初始泥浆）。
+
+        Args:
+            scheduled_steps: 内部施工步骤时间窗
+            current_index: 当前步骤在时间窗中的索引
+            initial_fluid: 开泵前套管内默认流体名称（初始泥浆）
+
+        Returns:
+            被顶替流体名称；首步（current_index <= 0）回退到初始泥浆。
+        """
+        if current_index <= 0:
+            return initial_fluid
+        return scheduled_steps[current_index - 1].step.fluid_name
+
+    def _utube_corrected_arrival_time(
+        self,
+        arrival_time_s: float,
+        fluid_name: str,
+        fluids: tuple[FluidSpec, ...],
+        well_spec: WellSpec | None = None,
+    ) -> float:
+        """U型管/自由下落修正钩子。当前为空实现，预留未来扩展。
+
+        未来实现方向（T1-12）：
+        1. 计算套管-环空静压平衡
+        2. 检测自由下落条件（ΔP_hydro > ΔP_friction）
+        3. 修正到达时间（加速效应）
+
+        Args:
+            arrival_time_s: 重力修正后的前缘到达时间（秒）
+            fluid_name: 流体名称
+            fluids: 全部流体规格元组
+            well_spec: 井筒规格
+
+        Returns:
+            修正后的到达时间（秒）；enable_utube=False 或未实现时原样返回
+        """
+        if not self.enable_utube:
+            return arrival_time_s
+        # 未来：填入 U 型管物理计算
+        return arrival_time_s
 
     def _average_inclination_rad(self, well_spec: WellSpec) -> float:
         """计算井段内平均井斜角（弧度）。

@@ -165,8 +165,21 @@ def plot_full_chart(seg_df, profile_df, output_path):
         
         y_positions.append(mid)
         bar_heights.append(bottom - top)
-        colors.append(quality_color_map.get(quality, '#9E9E9E'))
-        labels.append(f"{row['井段_m']} {quality}")
+        # 按模型效率值分档配色（与面板2颜色一致：绿好/黄中/红差）
+        if eff >= 80:
+            colors.append('#4CAF50')   # 绿
+        elif eff >= 50:
+            colors.append('#DAA520')   # 黄
+        else:
+            colors.append('#D32F2F')   # 红
+        # 文字按模型效率分档，不按CBL测井结果
+        if eff >= 80:
+            eff_label = '高效率'
+        elif eff >= 50:
+            eff_label = '中等效率'
+        else:
+            eff_label = '低效率'
+        labels.append(f"{row['井段_m']} {eff_label} {eff:.1f}%")
         values.append(eff)
     
     # 绘制横向条形图
@@ -190,12 +203,11 @@ def plot_full_chart(seg_df, profile_df, output_path):
     # 添加图例
     from matplotlib.patches import Patch
     legend_elements = [
-        Patch(facecolor='#4CAF50', edgecolor='black', label='良好/较好'),
-        Patch(facecolor='#DAA520', edgecolor='black', label='中等/一般'),
-        Patch(facecolor='#D32F2F', edgecolor='black', label='差/局部差'),
-        Patch(facecolor='#9E9E9E', edgecolor='black', label='未测井评价'),
+        Patch(facecolor='#4CAF50', edgecolor='black', label='高效率 (≥80%)'),
+        Patch(facecolor='#DAA520', edgecolor='black', label='中等效率 (50-80%)'),
+        Patch(facecolor='#D32F2F', edgecolor='black', label='低效率 (<50%)'),
     ]
-    ax3.legend(handles=legend_elements, loc='upper right', fontsize=9, title='固井质量')
+    ax3.legend(handles=legend_elements, loc='upper right', fontsize=9, title='模型顶替效率')
     
     # ========== 右侧：深度剖面水泥体积分数曲线 ==========
     ax4 = fig.add_subplot(gs[0, 3])

@@ -26,7 +26,7 @@ T0-7 突破时间 t_br（Zhang & Frigaard 2022, Table 3）
       t_br_hat = t_br_s · ŵ₀ / L，其中 ŵ₀ 为平均泵速 [m/s]，
       L = geom["s"][-1] − geom["s"][0] 为井段长度 [m]
 
-设计原则（与 quality_proxy.py 一致）
+设计原则
 ------------------------------------
 1. 纯后处理诊断：只消费 AnnulusSimulationResult，不 import models2d 求解逻辑。
 2. 数值安全：ε 除零保护、未突破 t_br = inf、窄四分位单行边界退化保护。

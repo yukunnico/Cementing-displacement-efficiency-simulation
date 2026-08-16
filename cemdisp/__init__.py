@@ -16,7 +16,6 @@ cemdisp - 多井通用固井顶替效率模型包
 - cemdisp.diagnostics: 诊断与指标计算
 - cemdisp.reporting: 图表与报告输出
 - cemdisp.runners: 各井段模型运行器
-- cemdisp.validation: 数值验证
 """
 
 from cemdisp.data import (
@@ -34,7 +33,6 @@ from cemdisp.models2d import (
     AnnulusD2DGASolver,
     AnnulusInletState,
     AnnulusSimulationResult,
-    pipe_exit_to_annulus_inlet,
 )
 from cemdisp.transport1d import CasingFlowResult, InterfaceFront, PipeExitState
 
@@ -54,5 +52,4 @@ __all__ = [
     "RheologyModel",
     "ValidationData",
     "WellSpec",
-    "pipe_exit_to_annulus_inlet",
 ]
