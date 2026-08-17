@@ -69,7 +69,15 @@ class DepthValuePoint:
 
 @dataclass(frozen=True)
 class EvaluationWindow:
-    """需要单独评价的井段窗口。"""
+    """需要单独评价的井段窗口。
+
+    window_type 四口径约定（核对汇总 §10.2，2026-08-17 全仓统一）：
+    - "cbl"：CBL 评价窗（cbl_pass_rate 对应的现场评价井段）；
+    - "cbl_quality" / "cbl_digitization"：CBL 分段质量段 / 数字化窗；
+    - "formation_target"：地层目标窗（现场录井解释油气/目的层，field_measured）；
+    - "model_focus"：模型关注窗（可为模型假设，勿写成现场目标）；
+    - 辅助："oil_gas_show"（油气显示）、"custom"（其他）。
+    """
 
     name: str
     top_md_m: float

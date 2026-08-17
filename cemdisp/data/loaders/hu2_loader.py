@@ -290,8 +290,12 @@ def load_hu2_tailpipe(
         evaluation_windows=(
             # CBL评价井段覆盖完整 139.7mm 完井尾管固井井段（与施工设计一致）。
             EvaluationWindow(name="CBL评价井段", top_md_m=HU2_TOP_MD_M, bottom_md_m=HU2_BOTTOM_MD_M, window_type="cbl"),
-            # 目标层段按施工记录表 R3 油气显示层 7402–7500m；LEGACY(2026-08-16 前): 7400–7500。
-            EvaluationWindow(name="目标层段（油气显示层）", top_md_m=7402.0, bottom_md_m=7500.0, window_type="target"),
+            # 目标层段按施工记录表 R3 油气显示层 7402–7500m；LEGACY(2026-08-16 前): 7400–7500、type="target"。
+            EvaluationWindow(name="目标层段（油气显示层）", top_md_m=7402.0, bottom_md_m=7500.0, window_type="formation_target"),
+            # 地层目标（target_intervals.csv，施工设计 Table0/5.1 节，field_measured）。
+            EvaluationWindow(name="目的层-K1q清水河组(地层目标)", top_md_m=5702.0, bottom_md_m=6826.9, window_type="formation_target"),
+            EvaluationWindow(name="目的层-J3k2喀拉扎组(地层目标)", top_md_m=6826.9, bottom_md_m=7554.0, window_type="formation_target"),
+            EvaluationWindow(name="高压水层(地层目标)", top_md_m=5998.0, bottom_md_m=6002.0, window_type="formation_target"),
         ),
         reference_root=resolved_reference_root,
         notes=(

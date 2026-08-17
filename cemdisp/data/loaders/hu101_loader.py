@@ -233,11 +233,17 @@ def load_hu101_tailpipe(
             )
         ),
         evaluation_windows=(
-            # CBL 评价窗 5700–7810m 为"裸眼段顶 5700 + 正式测量段底 7810"组合口径（继承 legacy）；
-            # 正式解释测量段为 5390–7810m，其中 5390–5699.8m 双层套管不评价、7810–7868m 悬空段无 CBL 数据。
-            EvaluationWindow(name="CBL评价井段", top_md_m=5700.0, bottom_md_m=7810.0, window_type="cbl"),
-            # 目标层段按"CBL评价重点-气层段"7492–7735m（target_intervals.csv，interpreted）。
-            EvaluationWindow(name="目标层段（气层段）", top_md_m=7492.0, bottom_md_m=7735.0, window_type="target"),
+            # 正式 CBL 解释测量段 5390–7810m（100312.PDF，cbl_pass_rate=0.6277 对应整测量段口径，field_measured）；
+            # 其中 5390–5699.8m 为双层套管段不评价（且在模型域水泥返高 5400m 之上），可评价段为 5699.8–7810m，
+            # 7810–7868m 悬空段（尾管鞋未测 58m）无 CBL 数据。
+            EvaluationWindow(name="CBL评价井段(单层套管可评价段)", top_md_m=5699.8, bottom_md_m=7810.0, window_type="cbl"),
+            # 初评表：7537–7674m 大面积连续差段（J3k 喀拉扎组+漏层段，interpreted）。
+            EvaluationWindow(name="CBL质量段(连续差段)", top_md_m=7537.0, bottom_md_m=7674.0, window_type="cbl_quality"),
+            # 地层目标（target_intervals.csv，井史 2011111.doc 2.2 录井解释，field_measured）。
+            EvaluationWindow(name="主要气层-K1q(地层目标)", top_md_m=7492.0, bottom_md_m=7536.0, window_type="formation_target"),
+            EvaluationWindow(name="气层段(CBL评价重点)", top_md_m=7492.0, bottom_md_m=7735.0, window_type="formation_target"),
+            EvaluationWindow(name="目的层-喀拉扎组J3k(地层目标)", top_md_m=7537.0, bottom_md_m=7868.0, window_type="formation_target"),
+            EvaluationWindow(name="水层-K1s(地层目标)", top_md_m=6152.0, bottom_md_m=6156.0, window_type="formation_target"),
         ),
         reference_root=resolved_reference_root,
         notes=(

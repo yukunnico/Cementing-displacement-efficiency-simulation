@@ -283,14 +283,17 @@ def _ht1_001_evaluation_windows() -> tuple[EvaluationWindow, ...]:
 
     return (
         EvaluationWindow(
-            name="CBL评价井段(模型假设,现场无CBL定量)",
+            name="CBL对比窗(模型假设,现场无CBL定量)",
             top_md_m=HT1_001_TOP_MD_M,
             bottom_md_m=HT1_001_BOTTOM_MD_M,
-            window_type="cbl",
+            window_type="model_focus",
         ),
         EvaluationWindow(name="K1q差气层1(录井显示)", top_md_m=7409.0, bottom_md_m=7423.0, window_type="formation_target"),
+        EvaluationWindow(name="K1q差气层2(录井显示高峰)", top_md_m=7460.0, bottom_md_m=7462.0, window_type="formation_target"),
         EvaluationWindow(name="K1q油气同层(录井显示)", top_md_m=7504.0, bottom_md_m=7566.0, window_type="formation_target"),
         EvaluationWindow(name="J3k3气层(录井显示)", top_md_m=7642.0, bottom_md_m=7661.0, window_type="formation_target"),
+        EvaluationWindow(name="K1s水层1(录井解释)", top_md_m=6060.0, bottom_md_m=6064.0, window_type="formation_target"),
+        EvaluationWindow(name="K1s水层2(录井解释)", top_md_m=6092.0, bottom_md_m=6098.0, window_type="formation_target"),
         EvaluationWindow(name="K1q+J3k2主要目的层", top_md_m=6828.0, bottom_md_m=7746.0, window_type="formation_target"),
         EvaluationWindow(name="模型关注窗(替浆/掺混分析)", top_md_m=7400.0, bottom_md_m=7500.0, window_type="model_focus"),
     )

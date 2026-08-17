@@ -266,6 +266,9 @@ def _build_well_spec(
         evaluation_windows=(
             # CBL 评价窗：电测测量段 3530–7601m（construction_events.csv；CBL/VDL 图覆盖 5630–7607m）。
             EvaluationWindow(name="CBL评价井段", top_md_m=3530.0, bottom_md_m=7601.0, window_type="cbl"),
+            # CBL 分段质量（cbl_evaluation.csv 定性 16 段中取最差两段，interpreted；完整分段见提取包 CSV）。
+            EvaluationWindow(name="CBL质量段(不合格40m)", top_md_m=7474.0, bottom_md_m=7514.0, window_type="cbl_quality"),
+            EvaluationWindow(name="CBL质量段(差)", top_md_m=7415.0, bottom_md_m=7430.0, window_type="cbl_quality"),
             # 目标窗：target_intervals.csv 明确"139.7mm尾管目标段 missing"（现场无地层目标窗），
             # 仅给出模型聚焦窗（油层尾管封固段 3523.27–7601m），勿写成现场目标。
             EvaluationWindow(name="尾管封固段(模型聚焦窗)", top_md_m=3523.27, bottom_md_m=7601.0, window_type="model_focus"),
