@@ -256,6 +256,11 @@ def load_hu103_tailpipe(
             EvaluationWindow(name="CBL评价井段(139.7mm段)", top_md_m=7338.0, bottom_md_m=7712.0, window_type="cbl"),
             EvaluationWindow(name="CBL评价井段(168.3mm段)", top_md_m=5540.0, bottom_md_m=7330.6, window_type="cbl"),
             EvaluationWindow(name="全尾管段", top_md_m=5536.662, bottom_md_m=7770.0, window_type="custom"),
+            # 地层目标（target_intervals.csv，20313.doc 井史 2.3 油气显示，design/field_measured）。
+            EvaluationWindow(name="气层-K1q(地层目标)", top_md_m=7507.0, bottom_md_m=7557.0, window_type="formation_target"),
+            EvaluationWindow(name="差气层-K1q(地层目标)", top_md_m=7476.0, bottom_md_m=7479.0, window_type="formation_target"),
+            EvaluationWindow(name="差气层-J3k(地层目标)", top_md_m=7563.0, bottom_md_m=7619.0, window_type="formation_target"),
+            EvaluationWindow(name="高压水层-K1s(地层目标)", top_md_m=6120.0, bottom_md_m=6122.0, window_type="formation_target"),
         ),
         reference_root=resolved_reference_root,
         # 复合尾管：上层 168.3mm 段字段（dual-diameter），与 liner_od_profile 共同表达复合结构

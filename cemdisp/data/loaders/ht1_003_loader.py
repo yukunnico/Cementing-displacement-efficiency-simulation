@@ -389,6 +389,11 @@ def _build_well_spec(
         ),
         evaluation_windows=(
             EvaluationWindow(name="CBL评价井段(尾管段)", top_md_m=5568.0, bottom_md_m=7618.0, window_type="cbl"),
+            # 数字化窗（cbl_pass_rate=0.787 对应段：水泥面-人工井底，interpreted，cbl_digitization.csv）；
+            # 与官方"25m 连续判据不合格"口径不同，论文引用前须裁定（见 ValidationData notes）。
+            EvaluationWindow(name="CBL数字化窗(78.7%对应)", top_md_m=5307.54, bottom_md_m=7514.21, window_type="cbl_digitization"),
+            # 地层目标（设计 二.2.3 油气显示，field_measured）。
+            EvaluationWindow(name="气层-K1q主力油层段(地层目标)", top_md_m=7418.0, bottom_md_m=7440.0, window_type="formation_target"),
             EvaluationWindow(name="目的井段(地层目标)", top_md_m=7442.0, bottom_md_m=7618.0, window_type="formation_target"),
         ),
         reference_root=resolved_reference_root,
