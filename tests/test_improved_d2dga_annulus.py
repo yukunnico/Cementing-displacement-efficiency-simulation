@@ -1109,3 +1109,13 @@ class TestYieldGateWall:
             np.zeros((ny, nz)), np.zeros((ny, nz)), np.zeros((ny, nz)), 1.15, 0.01)
         # cement_ever=0 前锋未到，不得全域冻结
         assert np.all(wall == 0.0)
+
+    def test_no_freeze_before_cement_arrives_with_yield_stress(self):
+        # 前锋未到(cement_ever=0)且无流动、泥浆有屈服(tau_y>0)时不得冻结，否则前沿无法推进
+        ny, nz = 2, 2
+        w = np.zeros((ny, nz)); b = np.full((ny, nz), 0.02)
+        mu_reg = np.full((ny, nz), 0.1); tau_y = np.full((ny, nz), 5.0)
+        cement_ever = np.zeros((ny, nz)); cement_local = np.zeros((ny, nz))
+        wall = AnnulusD2DGASolver._yield_gate_wall(
+            w, b, mu_reg, tau_y, cement_ever, cement_local, 1.15, 0.01)
+        assert np.all(wall == 0.0)

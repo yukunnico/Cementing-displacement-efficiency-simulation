@@ -520,7 +520,7 @@ class AnnulusD2DGASolver:
         b_ref = b[ref_row_safe, col]
         G = 2.0 * tau_w_ref / np.maximum(b_ref, 1e-12)
         tau_w_extrap = G[None, :] * b / 2.0
-        immobile = tau_w_extrap <= f_safety * tau_y
+        immobile = (tau_w_extrap <= f_safety * tau_y) & (cement_ever > 0.0)
         residual_wall = (cement_ever > 0.0) & (cement_local < c_min_residual)
         wall_new = np.where(immobile | residual_wall, 1.0, 0.0)
         # 整列冻结仅限水泥已到达的列（前锋未到无流动是正常状态，不得冻结，
