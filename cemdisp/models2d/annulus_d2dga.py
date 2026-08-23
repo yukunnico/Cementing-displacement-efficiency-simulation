@@ -1107,7 +1107,15 @@ class AnnulusD2DGASolver:
                 # 避免前锋到达前全局 wall=1 堵塞速度场。
                 cement_local = np.clip(lead + tail, 0.0, 1.0)
                 cement_ever = np.maximum(cement_ever, cement_local)
-                wall = np.where(cement_ever > 0, (cement_local < self.c_min).astype(float), 0.0)
+                # M3: 屈服门槛（Bararpour 2025）—— 开启时用 w/mu_reg/tau_y 重建壁面冻结层，
+                # 使壁面层在排量回升后可以解冻（c_min 判据做不到）。默认关闭，else 分支为
+                # 原始 T1-5 c_min 判据，逐位复现基线。
+                if self.enable_yield_gate:
+                    wall = self._yield_gate_wall(
+                        w, geom["effective_b"], mu, _tau_y, cement_ever, cement_local,
+                        self.yield_gate_f_safety, self.yield_gate_c_min_residual)
+                else:
+                    wall = np.where(cement_ever > 0, (cement_local < self.c_min).astype(float), 0.0)
 
             else:
                 # === 泵停阶段：冻结浓度场，仅记录指标 ===
