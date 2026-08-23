@@ -563,10 +563,13 @@ class TestStaticWallLayer:
     """T1-5: Static wall layer c_min 判据（Bararpour 2025 式 2.35-2.41）"""
 
     def test_constructor_has_cmin_default(self):
-        """c_min 参数默认值应为 0.05。"""
+        """c_min 参数默认值应为 0.05；M3 屈服门槛默认关闭且参数齐备。"""
         s = _make_solver()
         assert hasattr(s, "c_min")
         assert s.c_min == 0.05
+        assert s.enable_yield_gate is False
+        assert s.yield_gate_f_safety == 1.15
+        assert s.yield_gate_c_min_residual == 0.01
 
     def test_cmin_parameter_stored(self):
         """c_min 参数可配置。"""
@@ -1119,3 +1122,84 @@ class TestYieldGateWall:
         wall = AnnulusD2DGASolver._yield_gate_wall(
             w, b, mu_reg, tau_y, cement_ever, cement_local, 1.15, 0.01)
         assert np.all(wall == 0.0)
+
+
+class TestYieldGateIntegration:
+    """M3 屈服门槛在 run() 泵注分支的集成测试（Task 9）。
+
+    重开测试说明：真正"低排量冻结→高排量同格重启"的两段排量重开测试在玩具井上不可靠——
+    玩具井近同心（standoff 0.83），低排量下最宽边亦冻结后整列 has_flow=False，
+    _yield_gate_wall 的 col_freeze 分支使该列永久冻结；且 w 场已被冻结 wall 归零，
+    无流动参考元可外推剪切，排量回升无法重启。故采用 brief 允许的轻量断言：
+    "高排量冻结网格数 <= 低排量（同注量同井同流变）"，以证明 wall 确为 w 的函数。
+    """
+
+    def _run_gate_on(self, flow, total_t, save_interval=60):
+        from cemdisp.models2d.boundary_bridge import AnnulusInletState
+        well = _toy_well()
+        mud = FluidSpec(name="mud", role=FluidRole.MUD, density_kg_m3=1900.0,
+                        rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.053, yield_stress_pa=8.5)
+        lead = FluidSpec(name="lead", role=FluidRole.LEAD, density_kg_m3=1930.0,
+                         rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.180, yield_stress_pa=14.0)
+        fluids = (mud, lead)
+
+        def _inlet(t: float):
+            return AnnulusInletState(
+                time_s=t, flow_rate_m3_s=flow, stage_name="pump",
+                phase_fractions=(("cement", 1.0), ("lead", 1.0)),
+            )
+
+        s = AnnulusD2DGASolver(dt=4.0, nz=20, ny=8, total_t=total_t, c_min=0.05,
+                               enable_yield_gate=True, save_interval=save_interval)
+        return s, s.run(well, fluids, _inlet)
+
+    def test_gate_on_run_no_crash_binary_wall_summary(self):
+        """门开 run 不崩溃；wall 场 ∈ {0,1}；summary 仍为有效 dict。"""
+        _, res = self._run_gate_on(0.02, 40.0)
+        wall = res.wall_field
+        assert set(np.unique(wall)).issubset({0.0, 1.0})
+        assert isinstance(res.summary, dict) and len(res.summary) > 0
+
+    def test_gate_on_high_flow_freezes_less_than_low_flow(self):
+        """wall 是 w 的函数：同注量下低排量全域冻结（屈服主导 τ_w≤f·τ_y），
+        高排量存在未冻结的流动网格（剪切超过屈服门槛）。"""
+        _, res_low = self._run_gate_on(0.005, 200.0)
+        _, res_high = self._run_gate_on(0.05, 20.0)
+        cem_low = np.clip(res_low.lead_field + res_low.tail_field, 0.0, 1.0)
+        cem_high = np.clip(res_high.lead_field + res_high.tail_field, 0.0, 1.0)
+        low_cement_cells = cem_low > 0.0
+        high_cement_cells = cem_high > 0.0
+        # 低排量：凡水泥到达处全部冻结
+        assert np.all(res_low.wall_field[low_cement_cells] > 0.5)
+        # 高排量：至少存在水泥到达且未冻结的流动网格
+        assert np.any(res_high.wall_field[high_cement_cells] <= 0.5)
+        # 高排量冻结网格数 <= 低排量（同注量、同井同流变）
+        assert np.sum(res_high.wall_field > 0.5) <= np.sum(res_low.wall_field > 0.5)
+
+    def test_gate_wall_frozen_during_shutdown(self):
+        """停泵阶段 wall 保持泵注末值逐位不变（泵注分支外不重算 wall）。"""
+        from cemdisp.models2d.boundary_bridge import AnnulusInletState
+        well = _toy_well()
+        mud = FluidSpec(name="mud", role=FluidRole.MUD, density_kg_m3=1900.0,
+                        rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.053, yield_stress_pa=8.5)
+        lead = FluidSpec(name="lead", role=FluidRole.LEAD, density_kg_m3=1930.0,
+                         rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.180, yield_stress_pa=14.0)
+        fluids = (mud, lead)
+
+        def _inlet(t: float):
+            q = 0.02 if t < 20.0 else 0.0
+            return AnnulusInletState(
+                time_s=t, flow_rate_m3_s=q, stage_name="pump" if q > 0.0 else "stop",
+                phase_fractions=(("cement", 1.0), ("lead", 1.0)),
+            )
+
+        s = AnnulusD2DGASolver(dt=4.0, nz=20, ny=8, total_t=40.0, c_min=0.05,
+                               enable_yield_gate=True, save_interval=1)
+        res = s.run(well, fluids, _inlet)
+        times = np.asarray(res.snapshot_times_s)
+        walls = res.wall_snapshots
+        idx_stop = int(np.argmax(times >= 20.0))
+        assert idx_stop < len(walls), "应存在停泵后快照"
+        for j in range(idx_stop, len(walls)):
+            assert np.array_equal(walls[j], walls[idx_stop]), (
+                f"停泵期间 wall 不得变化（快照 {j} 与 {idx_stop} 不一致）")
