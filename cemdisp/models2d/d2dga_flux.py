@@ -120,9 +120,9 @@ def d2dga_dispersion_function_I3(
 def d2dga_buoyancy_flux(
     c_bar: FloatOrArray,
     m: float,
-    delta_rho: float,
+    delta_rho: FloatOrArray,
     H: FloatOrArray,
-    eta2: float,
+    eta2: FloatOrArray,
     f_phi: FloatOrArray,
     f_xi: FloatOrArray,
 ) -> tuple[FloatOrArray, FloatOrArray]:
@@ -130,10 +130,13 @@ def d2dga_buoyancy_flux(
 
     q_buoy = (Δρ H³ / (6 η2)) · I3(ḉ, m) · [-f_xi, f_phi]
 
+    delta_rho（密度差, kg/m³）与 eta2（顶替液黏度）均可为标量或数组；
+    数组时与 H/c_bar/f_phi/f_xi 按广播规则对齐（局部化 I3）。
+
     返回 (q_phi, q_xi)。
     """
     i3 = d2dga_dispersion_function_I3(c_bar, m)
-    coef = (delta_rho * np.asarray(H, dtype=float) ** 3) / (6.0 * max(eta2, 1.0e-9))
+    coef = (delta_rho * np.asarray(H, dtype=float) ** 3) / (6.0 * np.maximum(eta2, 1.0e-9))
     q_phi = coef * i3 * np.asarray(f_phi, dtype=float)
     q_xi = -coef * i3 * np.asarray(f_xi, dtype=float)
     return q_phi, q_xi

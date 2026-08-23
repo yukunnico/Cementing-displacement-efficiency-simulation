@@ -230,6 +230,7 @@ class AnnulusD2DGASolver:
         d2dga_viscosity_ratio: float = 1.0,
         enable_d2dga_auto_m: bool = True,
         enable_d2dga_i3_flux: bool = True,
+        enable_local_i3: bool = False,
         enable_true_buoyancy: bool = True,
         instability_decay_scale: float = 5.0,
         save_interval: int = 60,
@@ -267,6 +268,9 @@ class AnnulusD2DGASolver:
                 True: m = μ_displaced/μ_displacing 按浓度场每步计算（改进版）；
                 False: 退化为 d2dga_viscosity_ratio 构造常数（旧论文 R0 状态）。
             enable_d2dga_i3_flux: 是否启用 D2DGA 浮力弥散通量 I3（R2，式4.25第二项），默认 True。
+            enable_local_i3: I3 通量局部化开关，默认 False（不改变既有行为）。
+                False: eta2 用 cement 表观粘度场均值、Δρ 用全场均值（基线逐位复现）；
+                True: eta2 透传水泥相黏度场 _eta2、Δρ 用 (rho-mud_density_gcc)*1000 局部场。
             enable_true_buoyancy: 是否用真浮力体力替换 buoyancy_shape 代理（R3，式2.5b），默认 True。
                 False: 保留 buoyancy_shape 代理（旧论文 R0/R1/R2 状态）。
             instability_decay_scale: 后验失稳指数缩放，默认5.0。
@@ -327,6 +331,7 @@ class AnnulusD2DGASolver:
         self.regime_re_turb_ratio: float = regime_re_turb_ratio
         self.enable_d2dga_auto_m: bool = enable_d2dga_auto_m
         self.enable_d2dga_i3_flux: bool = enable_d2dga_i3_flux
+        self.enable_local_i3: bool = enable_local_i3
         self.enable_true_buoyancy: bool = enable_true_buoyancy
         self.open_outlet: bool = open_outlet
         self.alpha_cfl: float = alpha_cfl
@@ -1063,10 +1068,15 @@ class AnnulusD2DGASolver:
                     # 浮力向量 f（用当前井段平均井斜）
                     beta_deg_local = float(np.mean(geom["inc_deg"])) if "inc_deg" in geom else 0.0
                     f_phi_arr, f_xi_arr = self._buoyancy_force_vector(geom, beta_deg_local)
-                    # 顶替液粘度 eta2（用 cement 表观粘度的场均值近似）
-                    eta2 = float(np.mean(mu)) if np.all(np.isfinite(mu)) else 0.18
-                    # 密度差 Δρ（顶替液 - 被顶替液），kg/m³
-                    delta_rho = (rho.mean() - mud_fluid.density_kg_m3 / 1000.0) * 1000.0
+                    # 顶替液粘度 eta2 + 密度差 Δρ（顶替液 - 被顶替液），kg/m³。
+                    # 默认关（enable_local_i3=False）：全场均值，逐位复现基线；
+                    # 开启后：eta2 透传水泥相黏度场 _eta2、Δρ 用局部混合密度场，实现 I3 局部化。
+                    if self.enable_local_i3:
+                        eta2 = _eta2 if np.all(np.isfinite(_eta2)) else float(np.mean(_eta2))
+                        delta_rho = (rho - mud_density_gcc) * 1000.0
+                    else:
+                        eta2 = float(np.mean(mu)) if np.all(np.isfinite(mu)) else 0.18
+                        delta_rho = (rho.mean() - mud_density_gcc) * 1000.0
                     H_field = geom["H"]
                     m_for_flux = m_field if self.enable_d2dga_auto_m else self.d2dga_viscosity_ratio
                     q_phi, q_xi = d2dga_buoyancy_flux(

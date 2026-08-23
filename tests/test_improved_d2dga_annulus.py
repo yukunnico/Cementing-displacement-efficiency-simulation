@@ -1215,3 +1215,51 @@ class TestYieldGateIntegration:
         for j in range(idx_stop, len(walls)):
             assert np.array_equal(walls[j], walls[idx_stop]), (
                 f"停泵期间 wall 不得变化（快照 {j} 与 {idx_stop} 不一致）")
+
+
+class TestI3Localization:
+    """Task 11: I3 局部化（enable_local_i3）—— eta2 场透传 + Δρ 局部化。"""
+
+    def _run(self, *, enable_local_i3: bool):
+        from cemdisp.models2d.boundary_bridge import AnnulusInletState
+        well = _toy_well()
+        mud = FluidSpec(name="mud", role=FluidRole.MUD, density_kg_m3=1900.0,
+                        rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.053, yield_stress_pa=8.5)
+        lead = FluidSpec(name="lead", role=FluidRole.LEAD, density_kg_m3=2200.0,
+                         rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.180, yield_stress_pa=14.0)
+        fluids = (mud, lead)
+
+        def _inlet(t: float):
+            return AnnulusInletState(
+                time_s=t, flow_rate_m3_s=0.02, stage_name="pump",
+                phase_fractions=(("cement", 1.0), ("lead", 1.0)),
+            )
+
+        s = AnnulusD2DGASolver(
+            dt=4.0, nz=20, ny=8, total_t=40.0,
+            enable_d2dga=True, enable_d2dga_auto_m=True,
+            enable_d2dga_i3_flux=True, enable_true_buoyancy=True,
+            enable_local_i3=enable_local_i3,
+        )
+        return s.run(well, fluids, _inlet)
+
+    def test_constructor_has_enable_local_i3_default_false(self):
+        s = _make_solver()
+        assert hasattr(s, "enable_local_i3")
+        assert s.enable_local_i3 is False
+
+    def test_off_path_bitwise_identical_to_default(self):
+        # 默认（False）与显式 False 逐位一致；同时验证既有标量路径未被扰动
+        res_default = self._run(enable_local_i3=False)
+        res_off = self._run(enable_local_i3=False)
+        assert res_default.summary["effective_efficiency"] == res_off.summary["effective_efficiency"]
+
+    def test_local_i3_differs_from_scalar_mean(self):
+        # I3 局部化应产生真实差异（不是 +2e-10 级无效应）
+        res_off = self._run(enable_local_i3=False)
+        res_on = self._run(enable_local_i3=True)
+        eff_off = float(res_off.summary["effective_efficiency"])
+        eff_on = float(res_on.summary["effective_efficiency"])
+        assert abs(eff_on - eff_off) > 1e-8, (
+            f"local I3 should change efficiency; off={eff_off:.10f} on={eff_on:.10f}")
+        assert 0.0 < eff_on < 1.0

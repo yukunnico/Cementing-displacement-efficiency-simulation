@@ -120,6 +120,38 @@ class TestBuoyancyFlux:
                                           eta2=0.18, f_phi=f_phi, f_xi=0.0)
         assert q_phi.shape == c.shape
 
+    def test_buoyancy_flux_accepts_array_eta2(self):
+        # Task 11 回归：数组 eta2 曾触发 Python 内置 max() 的
+        # ValueError（"truth value of an array is ambiguous"）。
+        from cemdisp.models2d.d2dga_flux import d2dga_buoyancy_flux
+        c = np.full(5, 0.5)
+        H = np.full(5, 0.02)
+        eta2 = np.linspace(0.05, 0.3, 5)   # 数组，曾触发 max() ValueError
+        qp, qx = d2dga_buoyancy_flux(c, 2.0, 100.0, H, eta2, np.ones(5), np.ones(5))
+        assert qp.shape == (5,) and np.all(np.isfinite(qp))
+        assert qx.shape == (5,) and np.all(np.isfinite(qx))
+
+    def test_buoyancy_flux_array_eta2_position_dependent(self):
+        # 数组 eta2 应与标量均值输出不同 → 位置依赖生效（I3 局部化）。
+        # 注意 delta_rho 取常数：若 delta_rho 与 eta2 同步等距线性取值会保持
+        # Δρ/η2 比值恒定，导致 coef 均匀，掩盖位置依赖。
+        from cemdisp.models2d.d2dga_flux import d2dga_buoyancy_flux
+        c = np.full(5, 0.5)
+        H = np.full(5, 0.02)
+        delta_rho = 300.0
+        eta2_arr = np.linspace(0.05, 0.3, 5)
+        qp_arr, _ = d2dga_buoyancy_flux(c, 2.0, delta_rho, H, eta2_arr,
+                                        np.ones(5), np.ones(5))
+        qp_scalar, _ = d2dga_buoyancy_flux(
+            c, 2.0, delta_rho, H, float(np.mean(eta2_arr)),
+            np.ones(5), np.ones(5))
+        # 数组输出非均匀（位置相关，q 随 1/eta2 变化）
+        assert np.ptp(qp_arr) > 0.0
+        # 且与标量均值口径不同（不是 +2e-10 级的无效应）
+        assert not np.allclose(qp_arr, qp_scalar, rtol=0.0, atol=1e-8)
+        # 半定量核对：η2 最小处通量最大（q ∝ 1/η2）
+        assert qp_arr[0] > qp_arr[-1]
+
 
 class TestNoClipDefault:
     """T1-1: 去通量放大限幅 [0.5,2.0]，默认不物理裁剪（仅 c_safe 防除零）。"""
