@@ -234,6 +234,11 @@ class AnnulusD2DGASolver:
         instability_decay_scale: float = 5.0,
         save_interval: int = 60,
         yield_regularization_M: float = 100.0,
+        enable_regime_split: bool = False,
+        regime_relax_alpha: float = 0.5,
+        regime_max_iter: int = 6,
+        regime_tol_rel: float = 1e-3,
+        regime_re_turb_ratio: float = 1.8,
         open_outlet: bool = True,
         alpha_cfl: float = 0.5,
         enable_cfl_adaptive: bool = True,
@@ -263,6 +268,13 @@ class AnnulusD2DGASolver:
             instability_decay_scale: 后验失稳指数缩放，默认5.0。
             save_interval: 二维场快照保存步长，默认每60个时间步保存一次
             yield_regularization_M: Papanastasiou正则化参数，控制屈服应力在低剪切区的平滑过渡，默认100.0
+            enable_regime_split: M2 局部流态修正固定点迭代开关（Maleki & Frigaard 2017 式58-66），默认 False。
+                False: 原 b²/μ 流动度分配逐字节复现基线；True: 迭代 Re_p/阻力权重 R 修正 pref 分配。
+                黏度场保持 w_prev 一步滞后（既有约定），仅流态权重 R 参与迭代。
+            regime_relax_alpha: 固定点迭代欠松弛系数 α，默认 0.5。
+            regime_max_iter: 固定点迭代最大迭代次数，默认 6。
+            regime_tol_rel: w 相对变化收敛容差，默认 1e-3。
+            regime_re_turb_ratio: 湍流起始 Re 相对 re_crit 的倍数 re_turb = re_crit·ratio，默认 1.8。
             open_outlet: 是否开放出口边界（允许水泥浆流出到重叠段），默认True。
                 True: 开放出口，不限制体积，适用于只模拟裸眼段；
                 False: 封闭出口，按累计入环空体积限制场量，适用于模拟整个环空。
@@ -293,6 +305,11 @@ class AnnulusD2DGASolver:
         self.instability_decay_scale = instability_decay_scale
         self.save_interval: int = save_interval
         self.yield_regularization_M: float = yield_regularization_M
+        self.enable_regime_split: bool = enable_regime_split
+        self.regime_relax_alpha: float = regime_relax_alpha
+        self.regime_max_iter: int = regime_max_iter
+        self.regime_tol_rel: float = regime_tol_rel
+        self.regime_re_turb_ratio: float = regime_re_turb_ratio
         self.enable_d2dga_auto_m: bool = enable_d2dga_auto_m
         self.enable_d2dga_i3_flux: bool = enable_d2dga_i3_flux
         self.enable_true_buoyancy: bool = enable_true_buoyancy
@@ -733,8 +750,40 @@ class AnnulusD2DGASolver:
 
         # 由截面排量约束得到轴向速度 w
         dy = np.gradient(geom["y"])[:, None]
-        area_weight = np.sum(pref * b * dy * 2.0, axis=0, keepdims=True)
-        w = q_half * pref / np.maximum(area_weight, 1.0e-12)
+        if self.enable_regime_split:
+            # M2: 局部流态修正固定点迭代（Maleki & Frigaard 2017 式58-66）
+            # 浓度相关量（base/buoyancy_shape/wall/黏度/密度/b）在迭代外缓存；
+            # 黏度场保持 w_prev 一步滞后（既有约定），迭代只重算 Re_p/R/pref/area_weight/w。
+            # rho_kg_m3 与 kappa_mix(Pa·s^n)/tau_y(Pa) 同单位系，保证 Re_p/He 无量纲正确。
+            from cemdisp.models2d import regime_closure as rc
+            wall_factor = np.ones_like(base) if wall is None else (1.0 - wall)
+            he = rc.hedstrom_number(tau_y, rho_kg_m3, n_mix, kappa_mix, b)
+            re_crit = 2100.0 * (1.0 + 0.1 * he)  # 屈服推迟转捩；re_crit(He) 标定钮（provisional）
+            w_k = w_prev.copy()
+            R = np.ones_like(w_k)
+            for _ in range(self.regime_max_iter):
+                re_p = rc.metzner_reed_re(w_k, rho_kg_m3, n_mix, kappa_mix, b)
+                R_new, _ = rc.drag_weight(re_p, he, n_mix, re_crit, self.regime_re_turb_ratio)
+                pref_k = np.maximum(base * buoyancy_shape * R_new, 1.0e-8) * wall_factor
+                area_w = np.sum(pref_k * b * dy * 2.0, axis=0, keepdims=True)
+                w_raw = q_half * pref_k / np.maximum(area_w, 1.0e-12)
+                w_new = self.regime_relax_alpha * w_raw + (1.0 - self.regime_relax_alpha) * w_k
+                if (np.max(np.abs(w_new - w_k))
+                        < self.regime_tol_rel * max(np.max(np.abs(w_k)), 1e-12)):
+                    w_k = w_new
+                    R = R_new
+                    break
+                w_k = w_new
+                R = R_new
+            w = w_k
+            # 由收敛的 R 重算 area_weight，与最终 w 构成一致配对（总面积归一）
+            area_weight = np.sum(
+                np.maximum(base * buoyancy_shape * R, 1.0e-8) * wall_factor * b * dy * 2.0,
+                axis=0, keepdims=True,
+            )
+        else:
+            area_weight = np.sum(pref * b * dy * 2.0, axis=0, keepdims=True)
+            w = q_half * pref / np.maximum(area_weight, 1.0e-12)
 
         # 横向速度 v 由连续性方程求解（简化处理，论文版未显式计算 v）
         ds = geom["s"][1] - geom["s"][0]
