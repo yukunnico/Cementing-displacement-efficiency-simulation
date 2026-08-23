@@ -28,8 +28,9 @@ import numpy as np
 from numpy.typing import NDArray
 import pandas as pd
 
-from cemdisp.data.fluid_spec import FluidRole, FluidSpec
+from cemdisp.data.fluid_spec import FluidRole, FluidSpec, RheologyModel
 from cemdisp.data.well_spec import DepthValuePoint, WellSpec
+from cemdisp.diagnostics.displacement_metrics import _narrow_quarter_efficiency
 from cemdisp.models2d.boundary_bridge import AnnulusInletState
 from cemdisp.models2d.d2dga_flux import (
     d2dga_buoyancy_flux,
@@ -66,6 +67,39 @@ def _phase_volume(field: Array, geom: Dict[str, Array]) -> float:
     与真实全环空体积口径保持一致。
     """
     return 2.0 * _trapez2d(geom["b"] * np.clip(field, 0.0, 1.0), geom)
+
+
+def _evaluation_window_efficiencies(well_spec: "WellSpec", geom: Dict[str, Array], cement: Array) -> Dict[str, dict]:
+    """对每个 EvaluationWindow 做 b 加权 2D 积分，返回 {窗名: {window_type, eta_E, eta_N}}。"""
+    out: Dict[str, dict] = {}
+    md = geom["md"]            # (nz,)，md = bottom - s
+    b_full = geom["b"]         # (ny,nz)
+    s_full = geom["s"]         # (nz,)
+    for w in well_spec.evaluation_windows:
+        mask = (md >= w.top_md_m) & (md <= w.bottom_md_m)
+        if not bool(mask.any()):
+            continue
+        b_win = b_full[:, mask]
+        c_win = cement[:, mask]
+        geom_win = {**geom, "b": b_win, "s": s_full[mask]}
+        denom = _trapez2d(b_win, geom_win)
+        eta_e = float(_trapez2d(b_win * c_win, geom_win) / max(denom, 1e-12))
+        eta_n = float(_narrow_quarter_efficiency(c_win, geom_win))
+        out[w.name] = {"window_type": w.window_type, "eta_E": eta_e, "eta_N": eta_n}
+    return out
+
+
+def _low_tail_indicators(geom: Dict[str, Array], cement: Array, ny: int) -> Dict[str, float]:
+    """低尾指标：standoff<0.5 段占比 + 窄边（最后 ny//4 行）cement<0.05 域体积占比。"""
+    b_full = geom["b"]
+    so_frac = float(np.mean(geom["standoff"] < 0.5))
+    n_q = max(1, ny // 4)
+    b_q = b_full[-n_q:, :]
+    low = (cement[-n_q:, :] < 0.05).astype(float)
+    # 行切片后必须同步切 y，否则 _trapez2d 对 axis=0 的 x=geom["y"] 长度与行数不匹配
+    geom_q = {**geom, "b": b_q, "y": geom["y"][-n_q:]}
+    tail_frac = float(_trapez2d(b_q * low, geom_q) / max(_trapez2d(b_q, geom_q), 1e-12))
+    return {"standoff低于0.5段占比": so_frac, "窄边效率低于0.05域占比": tail_frac}
 
 
 def _limit_phase_volume(field: Array, geom: Dict[str, Array], target_volume_m3: float, open_outlet: bool = False) -> Array:
@@ -196,16 +230,30 @@ class AnnulusD2DGASolver:
         d2dga_viscosity_ratio: float = 1.0,
         enable_d2dga_auto_m: bool = True,
         enable_d2dga_i3_flux: bool = True,
+        enable_local_i3: bool = False,
         enable_true_buoyancy: bool = True,
         instability_decay_scale: float = 5.0,
         save_interval: int = 60,
         yield_regularization_M: float = 100.0,
+        enable_regime_split: bool = False,
+        regime_relax_alpha: float = 0.5,
+        regime_max_iter: int = 24,
+        regime_tol_rel: float = 1e-3,
+        regime_re_turb_ratio: float = 1.8,
         open_outlet: bool = True,
         alpha_cfl: float = 0.5,
         enable_cfl_adaptive: bool = True,
         cfl_number: float = 0.5,
         dt_min: float = 0.1,
         c_min: float = 0.05,
+        e_clip_max: float = 0.55,
+        enable_yield_gate: bool = False,
+        yield_gate_f_safety: float = 1.15,
+        yield_gate_c_min_residual: float = 0.01,
+        dispersion_axial: float = 0.018,
+        dispersion_azimuthal: float = 0.015,
+        dispersion_dt_ref: float = 4.0,
+        dispersion_dt_scale: float = 1.0,
     ) -> None:
         """初始化环空二维求解器参数。
 
@@ -220,11 +268,21 @@ class AnnulusD2DGASolver:
                 True: m = μ_displaced/μ_displacing 按浓度场每步计算（改进版）；
                 False: 退化为 d2dga_viscosity_ratio 构造常数（旧论文 R0 状态）。
             enable_d2dga_i3_flux: 是否启用 D2DGA 浮力弥散通量 I3（R2，式4.25第二项），默认 True。
+            enable_local_i3: I3 通量局部化开关，默认 False（不改变既有行为）。
+                False: eta2 用 cement 表观粘度场均值、Δρ 用全场均值（基线逐位复现）；
+                True: eta2 透传水泥相黏度场 _eta2、Δρ 用 (rho-mud_density_gcc)*1000 局部场。
             enable_true_buoyancy: 是否用真浮力体力替换 buoyancy_shape 代理（R3，式2.5b），默认 True。
                 False: 保留 buoyancy_shape 代理（旧论文 R0/R1/R2 状态）。
             instability_decay_scale: 后验失稳指数缩放，默认5.0。
             save_interval: 二维场快照保存步长，默认每60个时间步保存一次
             yield_regularization_M: Papanastasiou正则化参数，控制屈服应力在低剪切区的平滑过渡，默认100.0
+            enable_regime_split: M2 局部流态修正固定点迭代开关（Maleki & Frigaard 2017 式58-66），默认 False。
+                False: 原 b²/μ 流动度分配逐字节复现基线；True: 迭代 Re_p/阻力权重 R 修正 pref 分配。
+                黏度场保持 w_prev 一步滞后（既有约定），仅流态权重 R 参与迭代。
+            regime_relax_alpha: 固定点迭代欠松弛系数 α，默认 0.5。
+            regime_max_iter: 固定点迭代最大迭代次数，默认 24。
+            regime_tol_rel: w 相对变化收敛容差，默认 1e-3。
+            regime_re_turb_ratio: 湍流起始 Re 相对 re_crit 的倍数 re_turb = re_crit·ratio，默认 1.8。
             open_outlet: 是否开放出口边界（允许水泥浆流出到重叠段），默认True。
                 True: 开放出口，不限制体积，适用于只模拟裸眼段；
                 False: 封闭出口，按累计入环空体积限制场量，适用于模拟整个环空。
@@ -238,6 +296,24 @@ class AnnulusD2DGASolver:
             dt_min: 自适应时间步下限（秒），默认 0.1。防 CFL 过小步数爆炸。
             c_min: 壁面静止层浓度阈值（Bararpour 2025 式 2.35-2.41），默认 0.05。
                 局部水泥浓度 c < c_min 时该处壁面层泥浆滞留不流动（wall=1）。
+                屈服门槛关闭（enable_yield_gate=False）时作为 OFF 路径兜底。
+            e_clip_max: M4 偏心度 e 硬截断上限，默认 0.55（逐位复现基线）。
+                由 e = clip(1-standoff, 0.05, e_clip_max) 构造几何；
+                生产跑道（Task 13 重跑阶段）显式设 0.90 放宽截断。
+                体积校正（_build_geom 末尾 scale）每个 run 重算，half_volume 守恒。
+            enable_yield_gate: M3 屈服门槛开关，默认 False（不改变既有行为）。
+                True 时 pump 分支用 _yield_gate_wall 重建壁面冻结层（Task 9 接线）。
+            yield_gate_f_safety: 屈服门槛安全系数 f，默认 1.15。
+                immobile 判定：外推壁剪 τw_extrap ≤ f·τy。
+            yield_gate_c_min_residual: 残泥下限浓度，默认 0.01。
+                水泥已到（cement_ever>0）但局部浓度 < 该值 -> 视为残泥冻结。
+            dispersion_axial: D2DGA 间隙尺度弥散轴向系数（每 dt_ref 秒），默认 0.018。
+            dispersion_azimuthal: D2DGA 间隙尺度弥散方位角系数（每 dt_ref 秒），默认 0.015。
+            dispersion_dt_ref: 弥散系数的名义/参考时间步（秒），默认 4.0。
+                系数 fa44ace 引入时即 dt=4.0，故 dt_ref=4.0 使固定 dt 模式逐位复现基线。
+            dispersion_dt_scale: 弥散系数按 dt 归一开关，默认 1.0。
+                =1.0 时固定 dt 模式（dt_step==dt_ref）逐位复现基线；
+                CFL 模式下按 dt_step/dt_ref 同比缩放，使每物理秒弥散恒定。
         """
         self.dt = dt
         self.nz = nz
@@ -248,8 +324,14 @@ class AnnulusD2DGASolver:
         self.instability_decay_scale = instability_decay_scale
         self.save_interval: int = save_interval
         self.yield_regularization_M: float = yield_regularization_M
+        self.enable_regime_split: bool = enable_regime_split
+        self.regime_relax_alpha: float = regime_relax_alpha
+        self.regime_max_iter: int = regime_max_iter
+        self.regime_tol_rel: float = regime_tol_rel
+        self.regime_re_turb_ratio: float = regime_re_turb_ratio
         self.enable_d2dga_auto_m: bool = enable_d2dga_auto_m
         self.enable_d2dga_i3_flux: bool = enable_d2dga_i3_flux
+        self.enable_local_i3: bool = enable_local_i3
         self.enable_true_buoyancy: bool = enable_true_buoyancy
         self.open_outlet: bool = open_outlet
         self.alpha_cfl: float = alpha_cfl
@@ -257,6 +339,14 @@ class AnnulusD2DGASolver:
         self.cfl_number: float = cfl_number
         self.dt_min: float = dt_min
         self.c_min: float = c_min
+        self.e_clip_max: float = e_clip_max
+        self.enable_yield_gate: bool = enable_yield_gate
+        self.yield_gate_f_safety: float = yield_gate_f_safety
+        self.yield_gate_c_min_residual: float = yield_gate_c_min_residual
+        self.dispersion_axial = dispersion_axial
+        self.dispersion_azimuthal = dispersion_azimuthal
+        self.dispersion_dt_ref = dispersion_dt_ref
+        self.dispersion_dt_scale = dispersion_dt_scale
 
     def _build_geom(self, well_spec: WellSpec, mud_cake_thickness: Array | None = None) -> Dict[str, Array]:
         """根据井筒规格构建环空二维网格几何参数。
@@ -300,7 +390,7 @@ class AnnulusD2DGASolver:
         else:
             od_mm = np.full_like(md, float(well_spec.liner_od_mm or 0.0), dtype=float)
 
-        e = np.clip(1.0 - standoff, 0.05, 0.55)
+        e = np.clip(1.0 - standoff, 0.05, self.e_clip_max)
         clearance = (hole - od_mm) / 1000.0
         half_gap_mean = clearance / 2.0
         mean_radius = ((hole + od_mm) / 4.0) / 1000.0
@@ -407,6 +497,57 @@ class AnnulusD2DGASolver:
             raise ValueError(f"Unsupported rheology model: {fluid.rheology_model}")
         return np.clip(mu, 1.0e-5, 3.0)
 
+    @staticmethod
+    def _phase_power_law_params(fluid) -> tuple[float, float]:
+        """把任意流变模型映射为 (幂律指数 n, 稠度 K[Pa·s^n])，供 M2 混合 n/k 加权。
+
+        NEWTONIAN/BINGHAM -> n=1, K=plastic_viscosity_pa_s；
+        POWER_LAW/HERSCHEL_BULKLEY -> (power_law_n, consistency_k)。
+        HB 的屈服应力由 tau_y 场单独携带，不在这里折进 K。
+        """
+        if fluid is None:
+            return 1.0, 1.0e-6
+        rm = fluid.rheology_model
+        if rm == RheologyModel.POWER_LAW or rm == RheologyModel.HERSCHEL_BULKLEY:
+            return float(fluid.power_law_n), float(fluid.consistency_k)
+        return 1.0, float(fluid.plastic_viscosity_pa_s)
+
+    @staticmethod
+    def _yield_gate_wall(w, b, mu_reg, tau_y, cement_ever, cement_local,
+                         f_safety, c_min_residual):
+        """M3 可重启屈服门槛：每深度列以该列流动最快元（|w| 最大且 w>0）为参考，
+        按平行槽流 τw=G·b/2 外推各元壁面剪应力。immobile = τw_extrap ≤ f·τy；
+        OR 残泥下限(cement_ever>0 且 cement<c_min_residual)。
+
+        关键不变量：参考元（正在流动）本身永不冻结——它在定义上可流动；只有壁面
+        剪应力低于 f·τy 的更窄/更慢元才冻结。若某列完全无流动（has_flow=False），
+        且水泥已到达，则整列冻结（无法外推 G）；前锋未到列不冻结。
+        停泵期不调用（run() 泵注分支门控）。"""
+        b = np.maximum(b, 1e-12)
+        gamma = 6.0 * np.abs(w) / b               # w=0 → τw=0 即真实静止，不加 floor
+        tau_w_field = mu_reg * gamma
+        ny, nz = w.shape
+        # 每列参考元：|w| 最大且 w>0；非流动元罚为 -1
+        w_rank = np.where(w > 0.0, np.abs(w), -1.0)
+        ref_row = np.argmax(w_rank, axis=0)            # (nz,)
+        has_flow = np.any(w > 0.0, axis=0)            # (nz,)
+        col = np.arange(nz)
+        ref_row_safe = np.where(has_flow, ref_row, 0)
+        tau_w_ref = tau_w_field[ref_row_safe, col]
+        b_ref = b[ref_row_safe, col]
+        G = 2.0 * tau_w_ref / np.maximum(b_ref, 1e-12)
+        tau_w_extrap = G[None, :] * b / 2.0           # (ny,nz)
+        # 参考元掩码：正在流动的最快元永不冻结（它确实在流，τw 判据不能冻结参考元自身）
+        ref_mask = np.zeros_like(w, dtype=bool)
+        ref_mask[ref_row_safe[has_flow], col[has_flow]] = True
+        immobile = (tau_w_extrap <= f_safety * tau_y) & (~ref_mask) & (cement_ever > 0.0)
+        residual_wall = (cement_ever > 0.0) & (cement_local < c_min_residual) & (~ref_mask)
+        wall_new = np.where(immobile | residual_wall, 1.0, 0.0)
+        # 整列无流动且水泥已到 -> 整列冻结（无法定义参考 G）
+        col_freeze = ~has_flow & np.any(cement_ever > 0.0, axis=0)
+        wall_new[:, col_freeze] = 1.0
+        return wall_new.astype(float)
+
     def _smooth_dispersion(
         self,
         field: Array,
@@ -451,8 +592,8 @@ class AnnulusD2DGASolver:
         lead_fluid: FluidSpec | None,
         tail_fluid: FluidSpec | None,
         spacer_fluid: FluidSpec | None,
-    ) -> Tuple[Array, Array, Array, Array, Array, Array, Array]:
-        """计算混合物系的表观粘度、密度、钻井液分数、混合屈服应力、黏度比 m 场及相黏度场（η1=泥浆相, η2=水泥相）。
+    ) -> Tuple[Array, Array, Array, Array, Array, Array, Array, Array, Array]:
+        """计算混合物系的表观粘度、密度、钻井液分数、混合屈服应力、黏度比 m 场、相黏度场（η1=泥浆相, η2=水泥相）及混合幂律参数（n_mix, kappa_mix）。
         T1-6: flusher 仅参与体积闭合（五相），不参与 D2DGA 闭包。"""
         # 五相体积分数闭合：显式跟踪领浆、尾浆、前置/隔离液和冲洗液，钻井液由守恒关系反算。
         mud = np.clip(1.0 - lead - tail - spacer - flusher, 0.0, 1.0)
@@ -497,7 +638,16 @@ class AnnulusD2DGASolver:
         # T1-4: 返回相黏度场 η1=泥浆相, η2=水泥相（两层黏度闭包用）
         eta1 = mu_mud_field
         eta2 = mu_cement_field
-        return mu, rho, mud, tau_y, m_field, eta1, eta2
+        # Task1/M2: 混合物幂律参数（体积分数加权 n，对数加权 K），供 Metzner-Reed Re/He
+        n_mud, k_mud = self._phase_power_law_params(mud_fluid)
+        n_lead, k_lead = self._phase_power_law_params(lead_fluid)
+        n_tail, k_tail = self._phase_power_law_params(tail_fluid)
+        n_sp, k_sp = self._phase_power_law_params(spacer_fluid)
+        n_mix = mud * n_mud + lead * n_lead + tail * n_tail + spacer * n_sp
+        log_k_mix = (mud * np.log(max(k_mud, 1e-12)) + lead * np.log(max(k_lead, 1e-12))
+                     + tail * np.log(max(k_tail, 1e-12)) + spacer * np.log(max(k_sp, 1e-12)))
+        kappa_mix = np.exp(log_k_mix)
+        return mu, rho, mud, tau_y, m_field, eta1, eta2, n_mix, kappa_mix
 
     def _buoyancy_force_vector(self, geom: Dict[str, Array], beta_deg: Array | float) -> Tuple[Array, Array]:
         """计算论文式 2.5b 的浮力体力向量 f = (r_a·cosβ/F², r_a·sin(πφ)·sinβ/F²)。
@@ -548,7 +698,7 @@ class AnnulusD2DGASolver:
         tail_fluid: FluidSpec | None,
         spacer_fluid: FluidSpec | None,
         wall: Array | None = None,
-    ) -> Tuple[Array, Array, Array, Array, Array, Array, Array, Array]:
+    ) -> Tuple[Array, Array, Array, Array, Array, Array, Array, Array, Array, Array, Array, Array]:
         """计算环空速度场（论文D2DGA口径）。
 
         采用 Zhang & Frigaard (2022) 的Hele-Shaw风格速度场：
@@ -569,12 +719,16 @@ class AnnulusD2DGASolver:
             Re: 雷诺数场（仅作诊断，不参与湍流修正）
             mu_turbulent: 占位零场，保留旧结果对象兼容性
             m_field: 黏度比场 m = μ_displaced/μ_displacing（R1 auto-m）
+            tau_y: 混合屈服应力场（Task1 起随 _compute_velocity 返回，Task 8/11 消费）
+            eta2: 水泥相黏度场（两层黏度闭包用）
+            n_mix: 混合物幂律指数场（Task1 起随速度场返回，供 M2 消费）
+            kappa_mix: 混合物稠度场（Task1 起随速度场返回，供 M2 消费）
         """
         y = geom["y"]
         effective_b = geom.get("effective_b", geom["b"])
         b = effective_b
         q_half = q_m3s / 2.0
-        mu, rho, mud, tau_y, m_field, eta1, eta2 = self._compute_props(
+        mu, rho, mud, tau_y, m_field, eta1, eta2, n_mix, kappa_mix = self._compute_props(
             lead,
             tail,
             spacer,
@@ -656,8 +810,42 @@ class AnnulusD2DGASolver:
 
         # 由截面排量约束得到轴向速度 w
         dy = np.gradient(geom["y"])[:, None]
-        area_weight = np.sum(pref * b * dy * 2.0, axis=0, keepdims=True)
-        w = q_half * pref / np.maximum(area_weight, 1.0e-12)
+        if self.enable_regime_split:
+            # M2: 局部流态修正固定点迭代（Maleki & Frigaard 2017 式58-66）
+            # 浓度相关量（base/buoyancy_shape/wall/黏度/密度/b）在迭代外缓存；
+            # 黏度场保持 w_prev 一步滞后（既有约定），迭代只重算 Re_p/R/pref/area_weight/w。
+            # rho_kg_m3 与 kappa_mix(Pa·s^n)/tau_y(Pa) 同单位系，保证 Re_p/He 无量纲正确。
+            from cemdisp.models2d import regime_closure as rc
+            wall_factor = np.ones_like(base) if wall is None else (1.0 - wall)
+            he = rc.hedstrom_number(tau_y, rho_kg_m3, n_mix, kappa_mix, b)
+            re_crit = 2100.0 * (1.0 + 0.1 * he)  # 屈服推迟转捩；re_crit(He) 标定钮（provisional）
+            w_k = w_prev.copy()
+            R = np.ones_like(w_k)
+            for _ in range(self.regime_max_iter):
+                re_p = rc.metzner_reed_re(w_k, rho_kg_m3, n_mix, kappa_mix, b)
+                R_new, _ = rc.drag_weight(re_p, he, n_mix, re_crit, self.regime_re_turb_ratio)
+                pref_k = np.maximum(base * buoyancy_shape * R_new, 1.0e-8) * wall_factor
+                area_w = np.sum(pref_k * b * dy * 2.0, axis=0, keepdims=True)
+                w_raw = q_half * pref_k / np.maximum(area_w, 1.0e-12)
+                w_new = self.regime_relax_alpha * w_raw + (1.0 - self.regime_relax_alpha) * w_k
+                if (np.max(np.abs(w_new - w_k))
+                        < self.regime_tol_rel * max(np.max(np.abs(w_k)), 1e-12)):
+                    w_k = w_new
+                    R = R_new
+                    break
+                w_k = w_new
+                R = R_new
+            # 欠松弛只是求解 R 的迭代手段；报告的 w 必须是以最终 R 直接归一的结果，
+            # 使 2·Σw·b·dy = q_half 对任意迭代步数精确成立（真正的不动点），
+            # 消除欠松弛迭代返回 w_k 时 ~1.6% 的瞬态守恒误差。
+            pref_final = np.maximum(base * buoyancy_shape * R, 1.0e-8) * wall_factor
+            area_final = np.sum(pref_final * b * dy * 2.0, axis=0, keepdims=True)
+            w = q_half * pref_final / np.maximum(area_final, 1.0e-12)
+            # area_weight 与最终 w 构成一致配对（同一 area_final）
+            area_weight = area_final
+        else:
+            area_weight = np.sum(pref * b * dy * 2.0, axis=0, keepdims=True)
+            w = q_half * pref / np.maximum(area_weight, 1.0e-12)
 
         # 横向速度 v 由连续性方程求解（简化处理，论文版未显式计算 v）
         ds = geom["s"][1] - geom["s"][0]
@@ -670,7 +858,7 @@ class AnnulusD2DGASolver:
         v = bv / np.maximum(b, 1.0e-8)
 
         # 返回正则化后的黏度 mu_reg，确保下游 mobility 指标反映屈服死区效应
-        return w, v, mu_reg, rho, mud, Re, mu_turbulent, m_field
+        return w, v, mu_reg, rho, mud, Re, mu_turbulent, m_field, tau_y, eta2, n_mix, kappa_mix
 
     def _compute_cfl_dt_step(self, w: Array, v: Array, geom: Dict[str, Array], current_time_s: float) -> float:
         """根据 CFL 条件计算自适应时间步长。
@@ -702,7 +890,7 @@ class AnnulusD2DGASolver:
             dt_step = self.total_t - current_time_s
         return dt_step
 
-    def _depth_profiles(self, geom: Dict[str, Array], lead: Array, tail: Array, spacer: Array, flusher: Array, wall: Array) -> pd.DataFrame:
+    def _depth_profiles(self, geom: Dict[str, Array], lead: Array, tail: Array, spacer: Array, flusher: Array) -> pd.DataFrame:
         """计算深度方向的平均剖面数据。T1-6: 含冲洗液平均浓度。"""
         cement = np.clip(lead + tail, 0.0, 1.0)
         eff = cement
@@ -802,7 +990,7 @@ class AnnulusD2DGASolver:
 
             if pump_active:
                 # === 正常泵注阶段：仅执行论文口径核心平流 + D2DGA 通量修正 ===
-                w, v, mu, rho, mud, Re, mu_turbulent, m_field = self._compute_velocity(
+                w, v, mu, rho, mud, Re, mu_turbulent, m_field, _tau_y, _eta2, _n_mix, _kappa_mix = self._compute_velocity(
                     lead,
                     tail,
                     spacer,
@@ -857,10 +1045,22 @@ class AnnulusD2DGASolver:
                 # D2DGA间隙尺度弥散：在低浓度前锋更强，模拟间隙尺度分散效应。
                 # 数值弥散可能使显式相之和略超 1；后续两次 overfilled 修正将其压回可行域，
                 # 允许不超过 1e-12 的数值扩散容差。
-                lead = self._smooth_dispersion(lead, axial=0.018, azimuthal=0.015)
-                tail = self._smooth_dispersion(tail, axial=0.018, azimuthal=0.015)
-                spacer = self._smooth_dispersion(spacer, axial=0.012, azimuthal=0.012)
-                flusher = self._smooth_dispersion(flusher, axial=0.012, azimuthal=0.012)
+                # M1: 弥散系数按 dt 归一（恢复量纲正确性）。CFL 自适应使 dt 降到 ~0.118s，
+                # 旧硬编码是"每步固定幅值"→单位物理时间弥散放大 dt_ref/dt_step≈34 倍。
+                # _dt_norm = scale * dt_step/dt_ref：固定 dt 模式 dt_step==dt_ref 且 scale=1
+                # 时系数==基线硬编码（0.018/0.015/0.012），逐位复现；CFL 下每物理秒弥散恒定。
+                _dt_norm = self.dispersion_dt_scale * (dt_step / self.dispersion_dt_ref)
+                _ax = self.dispersion_axial * _dt_norm
+                _az = self.dispersion_azimuthal * _dt_norm
+                # spacer/flusher 基础弥散系数为 0.012/0.012（轴向/方位角同值，独立于 lead/tail）。
+                # 必须用字面量 0.012，而非 0.018*0.667（=0.012006）或 0.015*0.8：
+                # 默认(fixed dt=4, scale=1)下要求 0.012*1.0==0.012 与基线硬编码逐位复现。
+                _ax_sf = 0.012 * _dt_norm
+                _az_sf = 0.012 * _dt_norm
+                lead = self._smooth_dispersion(lead, axial=_ax, azimuthal=_az)
+                tail = self._smooth_dispersion(tail, axial=_ax, azimuthal=_az)
+                spacer = self._smooth_dispersion(spacer, axial=_ax_sf, azimuthal=_az_sf)
+                flusher = self._smooth_dispersion(flusher, axial=_ax_sf, azimuthal=_az_sf)
                 # T1-6: 弥散后再次执行五相过填修正，防止 _smooth_dispersion 数值扩散
                 # 使 lead+tail+spacer+flusher 再次超过 1，破坏体积分数闭合。
                 tracked_total = lead + tail + spacer + flusher
@@ -876,10 +1076,15 @@ class AnnulusD2DGASolver:
                     # 浮力向量 f（用当前井段平均井斜）
                     beta_deg_local = float(np.mean(geom["inc_deg"])) if "inc_deg" in geom else 0.0
                     f_phi_arr, f_xi_arr = self._buoyancy_force_vector(geom, beta_deg_local)
-                    # 顶替液粘度 eta2（用 cement 表观粘度的场均值近似）
-                    eta2 = float(np.mean(mu)) if np.all(np.isfinite(mu)) else 0.18
-                    # 密度差 Δρ（顶替液 - 被顶替液），kg/m³
-                    delta_rho = (rho.mean() - mud_fluid.density_kg_m3 / 1000.0) * 1000.0
+                    # 顶替液粘度 eta2 + 密度差 Δρ（顶替液 - 被顶替液），kg/m³。
+                    # 默认关（enable_local_i3=False）：全场均值，逐位复现基线；
+                    # 开启后：eta2 透传水泥相黏度场 _eta2、Δρ 用局部混合密度场，实现 I3 局部化。
+                    if self.enable_local_i3:
+                        eta2 = _eta2 if np.all(np.isfinite(_eta2)) else float(np.mean(_eta2))
+                        delta_rho = (rho - mud_density_gcc) * 1000.0
+                    else:
+                        eta2 = float(np.mean(mu)) if np.all(np.isfinite(mu)) else 0.18
+                        delta_rho = (rho.mean() - mud_density_gcc) * 1000.0
                     H_field = geom["H"]
                     m_for_flux = m_field if self.enable_d2dga_auto_m else self.d2dga_viscosity_ratio
                     q_phi, q_xi = d2dga_buoyancy_flux(
@@ -926,11 +1131,19 @@ class AnnulusD2DGASolver:
                 # 避免前锋到达前全局 wall=1 堵塞速度场。
                 cement_local = np.clip(lead + tail, 0.0, 1.0)
                 cement_ever = np.maximum(cement_ever, cement_local)
-                wall = np.where(cement_ever > 0, (cement_local < self.c_min).astype(float), 0.0)
+                # M3: 屈服门槛（Bararpour 2025）—— 开启时用 w/mu_reg/tau_y 重建壁面冻结层，
+                # 使壁面层在排量回升后可以解冻（c_min 判据做不到）。默认关闭，else 分支为
+                # 原始 T1-5 c_min 判据，逐位复现基线。
+                if self.enable_yield_gate:
+                    wall = self._yield_gate_wall(
+                        w, geom["effective_b"], mu, _tau_y, cement_ever, cement_local,
+                        self.yield_gate_f_safety, self.yield_gate_c_min_residual)
+                else:
+                    wall = np.where(cement_ever > 0, (cement_local < self.c_min).astype(float), 0.0)
 
             else:
                 # === 泵停阶段：冻结浓度场，仅记录指标 ===
-                w, v, mu, rho, mud, Re, mu_turbulent, m_field = self._compute_velocity(
+                w, v, mu, rho, mud, Re, mu_turbulent, m_field, _tau_y, _eta2, _n_mix, _kappa_mix = self._compute_velocity(
                     lead,
                     tail,
                     spacer,
@@ -1051,8 +1264,12 @@ class AnnulusD2DGASolver:
         # 属预期行为（数值扩散锐减的代价）；后续可加采样降频优化，非阻塞。
         metrics = pd.DataFrame(data=rows, columns=pd.Index(metric_columns))
         cement = np.clip(lead + tail, 0.0, 1.0)
-        depth_profiles = self._depth_profiles(geom, lead, tail, spacer, flusher, wall)  # T1-6
+        depth_profiles = self._depth_profiles(geom, lead, tail, spacer, flusher)  # T1-6
         final = metrics.iloc[-1]
+
+        # M0: 失稳指数去饱和——线性代理与对数代理（log10(1+proxy)）进 summary
+        _inst_lin = float(final["instability_proxy"])
+        _inst_log = float(np.log10(1.0 + _inst_lin))
 
         # Extract values into locals so both nested Chinese keys and top-level English
         # aliases use one source, avoiding drift.
@@ -1083,13 +1300,19 @@ class AnnulusD2DGASolver:
             "物理环空体积_m3": self._physical_annular_volume(well_spec),
             "最终结果": {
                 "全井段最终有效顶替效率": eff_efficiency,
+                "窄四分位效率": _narrow_quarter_efficiency(cement, geom),
                 "最终水泥浆占据率": cement_occ,
                 "最终窜槽指数": chan_idx,
                 "最终混浆指数": mix_idx,
                 "最终失稳指数": inst_idx,
+                "最终失稳指数_线性": _inst_lin,
+                "最终失稳指数_对数": _inst_log,
                 "浮力数_b": b_number,
             },
+            "评价窗效率": _evaluation_window_efficiencies(well_spec, geom, cement),
+            "低尾指标": _low_tail_indicators(geom, cement, self.ny),
             "effective_efficiency": eff_efficiency,
+            "eta_narrow": _narrow_quarter_efficiency(cement, geom),
             "channeling_index": chan_idx,
             "mixing_index": mix_idx,
             "buoyancy_number": b_number,
