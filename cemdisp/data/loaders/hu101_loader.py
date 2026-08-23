@@ -199,15 +199,52 @@ def _phase_fractions_for_fluid(
     return _phase_fractions_for_role(role)
 
 
+# 实测居中度剖面（从呼101尾管居中度检测图 Pipe Standoff 读取）。
+# 扶正器之间偏下限、扶正器处偏上限；来源与 scripts/hu101_standoff_measured_vs_assumed.py 一致。
+_MEASURED_STANDOFF_BETWEEN = (
+    (HU101_TOP_MD_M, 0.78), (5700.0, 0.72), (6000.0, 0.65), (6300.0, 0.58),
+    (6600.0, 0.52), (6900.0, 0.48), (7200.0, 0.42), (7500.0, 0.32),
+    (7700.0, 0.25), (HU101_BOTTOM_MD_M, 0.22),
+)
+_MEASURED_STANDOFF_AT = (
+    (HU101_TOP_MD_M, 0.88), (5700.0, 0.85), (6000.0, 0.80), (6300.0, 0.76),
+    (6600.0, 0.72), (6900.0, 0.70), (7200.0, 0.68), (7500.0, 0.65),
+    (7700.0, 0.62), (HU101_BOTTOM_MD_M, 0.60),
+)
+_ASSUMED_STANDOFF = (
+    (HU101_TOP_MD_M, 0.45), (6100.0, 0.38), (6796.0, 0.44),
+    (7200.0, 0.48), (7600.0, 0.42), (HU101_BOTTOM_MD_M, 0.46),
+)
+
+
+def _resolve_standoff_profile(measured_standoff):
+    """返回 (md, standoff) 点序列：None=名义剖面，'between_centralizers'/'at_centralizers'=实测。"""
+    if measured_standoff is None:
+        return _ASSUMED_STANDOFF
+    if measured_standoff == "between_centralizers":
+        return _MEASURED_STANDOFF_BETWEEN
+    if measured_standoff == "at_centralizers":
+        return _MEASURED_STANDOFF_AT
+    raise ValueError(
+        f"measured_standoff 必须为 None/between_centralizers/at_centralizers，得到 {measured_standoff!r}")
+
+
 def load_hu101_tailpipe(
     *,
     reference_root: Path | None = None,
+    measured_standoff: str | None = None,
 ) -> tuple[WellSpec, tuple[FluidSpec, ...], PumpingSchedule, ValidationData]:
-    """加载呼101尾管段标准模型输入。"""
+    """加载呼101尾管段标准模型输入。
+
+    measured_standoff: 若为 "between_centralizers" 或 "at_centralizers"，用从
+        居中度检测图读取的实测剖面（扶正器间/扶正器处）替换 model_assumption 的
+        0.38–0.48 名义剖面；None（默认）保持名义剖面。
+    """
 
     resolved_reference_root = reference_root or DEFAULT_REFERENCE_ROOT
     caliper_rows = _read_caliper_rows(DEFAULT_CALIPER_CSV)
     incl_rows = _read_inclination_rows(DEFAULT_INCLINATION_CSV)
+    standoff_points = _resolve_standoff_profile(measured_standoff)
     well_spec = WellSpec(
         well_name="呼101",
         top_md_m=HU101_TOP_MD_M,
@@ -219,19 +256,7 @@ def load_hu101_tailpipe(
         liner_id_mm=HU101_LINER_ID_MM,
         hole_diameter_profile=_depth_points(_build_hole_profile(caliper_rows)),
         inclination_profile=_depth_points(_build_inclination_profile(incl_rows)),
-        standoff_profile=_depth_points(
-            (
-                # 无实测居中度曲线；现场仅扶正器布置（132 只整体弹性扶正器，11–22m 间距），
-                # 且悬挂器坐挂失败、最终座底固井，居中度实际偏低。
-                # **model_assumption**：该 0.38–0.48 剖面为 legacy 模型名义剖面，非现场实测。
-                (HU101_TOP_MD_M, 0.45),
-                (6100.0, 0.38),
-                (6796.0, 0.44),
-                (7200.0, 0.48),
-                (7600.0, 0.42),
-                (HU101_BOTTOM_MD_M, 0.46),
-            )
-        ),
+        standoff_profile=_depth_points(standoff_points),
         evaluation_windows=(
             # 正式 CBL 解释测量段 5390–7810m（100312.PDF，cbl_pass_rate=0.6277 对应整测量段口径，field_measured）；
             # 其中 5390–5699.8m 为双层套管段不评价（且在模型域水泥返高 5400m 之上），可评价段为 5699.8–7810m，
