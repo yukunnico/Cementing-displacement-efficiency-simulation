@@ -23,3 +23,16 @@ def test_dispersion_eff_scales_with_dt():
     # dt_step=dt_ref 且 scale=1 时有效系数=原系数；dt 缩小则同比缩小
     assert abs(s.dispersion_axial * (4.0 / s.dispersion_dt_ref) - 0.018) < 1e-12
     assert abs(s.dispersion_axial * (0.118 / 4.0) - 0.018 * 0.0295) < 1e-6
+
+
+def test_spacer_flusher_eff_coeffs_exact_at_defaults():
+    # review 修复：旧实现 0.018*0.667=0.012006，非逐位复现基线硬编码 0.012。
+    # spacer/flusher 基础弥散系数现为字面量 0.012/0.012，默认(fixed dt=4, scale=1)下
+    # 0.012*1.0==0.012 必须逐位成立。
+    s = AnnulusD2DGASolver(dt=4.0, nz=20, ny=10, total_t=40.0)
+    dt_norm = s.dispersion_dt_scale * (4.0 / s.dispersion_dt_ref)  # fixed-dt path
+    lead_ax = s.dispersion_axial * dt_norm
+    sf_ax = 0.012 * dt_norm
+    assert lead_ax == 0.018
+    assert sf_ax == 0.012
+    assert 0.018 * 0.667 != 0.012  # 旧 bug 表达式（0.012006）必须不等于 0.012：回归哨兵

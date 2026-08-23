@@ -941,9 +941,11 @@ class AnnulusD2DGASolver:
                 _dt_norm = self.dispersion_dt_scale * (dt_step / self.dispersion_dt_ref)
                 _ax = self.dispersion_axial * _dt_norm
                 _az = self.dispersion_azimuthal * _dt_norm
-                # spacer/flusher 保持与 lead 的相对比 0.012/0.018=0.667、0.012/0.015=0.8
-                _ax_sf = self.dispersion_axial * 0.667 * _dt_norm
-                _az_sf = self.dispersion_azimuthal * 0.8 * _dt_norm
+                # spacer/flusher 基础弥散系数为 0.012/0.012（轴向/方位角同值，独立于 lead/tail）。
+                # 必须用字面量 0.012，而非 0.018*0.667（=0.012006）或 0.015*0.8：
+                # 默认(fixed dt=4, scale=1)下要求 0.012*1.0==0.012 与基线硬编码逐位复现。
+                _ax_sf = 0.012 * _dt_norm
+                _az_sf = 0.012 * _dt_norm
                 lead = self._smooth_dispersion(lead, axial=_ax, azimuthal=_az)
                 tail = self._smooth_dispersion(tail, axial=_ax, azimuthal=_az)
                 spacer = self._smooth_dispersion(spacer, axial=_ax_sf, azimuthal=_az_sf)
