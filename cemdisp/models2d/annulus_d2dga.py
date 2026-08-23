@@ -236,7 +236,7 @@ class AnnulusD2DGASolver:
         yield_regularization_M: float = 100.0,
         enable_regime_split: bool = False,
         regime_relax_alpha: float = 0.5,
-        regime_max_iter: int = 6,
+        regime_max_iter: int = 24,
         regime_tol_rel: float = 1e-3,
         regime_re_turb_ratio: float = 1.8,
         open_outlet: bool = True,
@@ -272,7 +272,7 @@ class AnnulusD2DGASolver:
                 False: 原 b²/μ 流动度分配逐字节复现基线；True: 迭代 Re_p/阻力权重 R 修正 pref 分配。
                 黏度场保持 w_prev 一步滞后（既有约定），仅流态权重 R 参与迭代。
             regime_relax_alpha: 固定点迭代欠松弛系数 α，默认 0.5。
-            regime_max_iter: 固定点迭代最大迭代次数，默认 6。
+            regime_max_iter: 固定点迭代最大迭代次数，默认 24。
             regime_tol_rel: w 相对变化收敛容差，默认 1e-3。
             regime_re_turb_ratio: 湍流起始 Re 相对 re_crit 的倍数 re_turb = re_crit·ratio，默认 1.8。
             open_outlet: 是否开放出口边界（允许水泥浆流出到重叠段），默认True。
@@ -775,12 +775,14 @@ class AnnulusD2DGASolver:
                     break
                 w_k = w_new
                 R = R_new
-            w = w_k
-            # 由收敛的 R 重算 area_weight，与最终 w 构成一致配对（总面积归一）
-            area_weight = np.sum(
-                np.maximum(base * buoyancy_shape * R, 1.0e-8) * wall_factor * b * dy * 2.0,
-                axis=0, keepdims=True,
-            )
+            # 欠松弛只是求解 R 的迭代手段；报告的 w 必须是以最终 R 直接归一的结果，
+            # 使 2·Σw·b·dy = q_half 对任意迭代步数精确成立（真正的不动点），
+            # 消除欠松弛迭代返回 w_k 时 ~1.6% 的瞬态守恒误差。
+            pref_final = np.maximum(base * buoyancy_shape * R, 1.0e-8) * wall_factor
+            area_final = np.sum(pref_final * b * dy * 2.0, axis=0, keepdims=True)
+            w = q_half * pref_final / np.maximum(area_final, 1.0e-12)
+            # area_weight 与最终 w 构成一致配对（同一 area_final）
+            area_weight = area_final
         else:
             area_weight = np.sum(pref * b * dy * 2.0, axis=0, keepdims=True)
             w = q_half * pref / np.maximum(area_weight, 1.0e-12)
