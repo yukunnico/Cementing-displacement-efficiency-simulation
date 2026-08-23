@@ -1122,11 +1122,12 @@ class AnnulusD2DGASolver:
         )
 
         # Tier 0 诊断聚合：纯后处理，注入 result.summary（dict 可安全追加）
+        # 诊断失败不影响主求解，但记录错误原因（不再静默吞掉），便于排查接线问题
         try:
             from cemdisp.diagnostics.tier0_diagnostics import compute_all_tier0_diagnostics
             tier0 = compute_all_tier0_diagnostics(result, fluids=fluids, well_spec=well_spec)
             result.summary["tier0_diagnostics"] = tier0.to_dict()  # type: ignore[index]
-        except Exception:
-            pass  # 诊断失败不影响主求解
+        except Exception as exc:
+            result.summary["tier0_diagnostics_error"] = f"{type(exc).__name__}: {exc}"
 
         return result
