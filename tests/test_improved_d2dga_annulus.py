@@ -37,6 +37,18 @@ class TestAutoMField:
         assert s.d2dga_viscosity_ratio == 0.8
 
 
+class TestEClipMax:
+    def test_e_clip_max_default_preserves_055_ceiling(self):
+        # M4: 默认 e_clip_max=0.55，逐位复现基线硬截断
+        s = _make_solver()
+        assert s.e_clip_max == 0.55
+
+    def test_e_clip_max_configurable(self):
+        # M4: 生产跑道可显式放宽到 0.90
+        s = _make_solver(e_clip_max=0.90)
+        assert s.e_clip_max == 0.90
+
+
 class TestMFieldFromProps:
     def test_m_field_returned_and_shape(self):
         s = _make_solver()
