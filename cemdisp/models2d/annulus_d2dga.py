@@ -240,6 +240,10 @@ class AnnulusD2DGASolver:
         cfl_number: float = 0.5,
         dt_min: float = 0.1,
         c_min: float = 0.05,
+        dispersion_axial: float = 0.018,
+        dispersion_azimuthal: float = 0.015,
+        dispersion_dt_ref: float = 4.0,
+        dispersion_dt_scale: float = 1.0,
     ) -> None:
         """初始化环空二维求解器参数。
 
@@ -272,6 +276,13 @@ class AnnulusD2DGASolver:
             dt_min: 自适应时间步下限（秒），默认 0.1。防 CFL 过小步数爆炸。
             c_min: 壁面静止层浓度阈值（Bararpour 2025 式 2.35-2.41），默认 0.05。
                 局部水泥浓度 c < c_min 时该处壁面层泥浆滞留不流动（wall=1）。
+            dispersion_axial: D2DGA 间隙尺度弥散轴向系数（每 dt_ref 秒），默认 0.018。
+            dispersion_azimuthal: D2DGA 间隙尺度弥散方位角系数（每 dt_ref 秒），默认 0.015。
+            dispersion_dt_ref: 弥散系数的名义/参考时间步（秒），默认 4.0。
+                系数 fa44ace 引入时即 dt=4.0，故 dt_ref=4.0 使固定 dt 模式逐位复现基线。
+            dispersion_dt_scale: 弥散系数按 dt 归一开关，默认 1.0。
+                =1.0 时固定 dt 模式（dt_step==dt_ref）逐位复现基线；
+                CFL 模式下按 dt_step/dt_ref 同比缩放，使每物理秒弥散恒定。
         """
         self.dt = dt
         self.nz = nz
@@ -291,6 +302,10 @@ class AnnulusD2DGASolver:
         self.cfl_number: float = cfl_number
         self.dt_min: float = dt_min
         self.c_min: float = c_min
+        self.dispersion_axial = dispersion_axial
+        self.dispersion_azimuthal = dispersion_azimuthal
+        self.dispersion_dt_ref = dispersion_dt_ref
+        self.dispersion_dt_scale = dispersion_dt_scale
 
     def _build_geom(self, well_spec: WellSpec, mud_cake_thickness: Array | None = None) -> Dict[str, Array]:
         """根据井筒规格构建环空二维网格几何参数。
@@ -919,10 +934,20 @@ class AnnulusD2DGASolver:
                 # D2DGA间隙尺度弥散：在低浓度前锋更强，模拟间隙尺度分散效应。
                 # 数值弥散可能使显式相之和略超 1；后续两次 overfilled 修正将其压回可行域，
                 # 允许不超过 1e-12 的数值扩散容差。
-                lead = self._smooth_dispersion(lead, axial=0.018, azimuthal=0.015)
-                tail = self._smooth_dispersion(tail, axial=0.018, azimuthal=0.015)
-                spacer = self._smooth_dispersion(spacer, axial=0.012, azimuthal=0.012)
-                flusher = self._smooth_dispersion(flusher, axial=0.012, azimuthal=0.012)
+                # M1: 弥散系数按 dt 归一（恢复量纲正确性）。CFL 自适应使 dt 降到 ~0.118s，
+                # 旧硬编码是"每步固定幅值"→单位物理时间弥散放大 dt_ref/dt_step≈34 倍。
+                # _dt_norm = scale * dt_step/dt_ref：固定 dt 模式 dt_step==dt_ref 且 scale=1
+                # 时系数==基线硬编码（0.018/0.015/0.012），逐位复现；CFL 下每物理秒弥散恒定。
+                _dt_norm = self.dispersion_dt_scale * (dt_step / self.dispersion_dt_ref)
+                _ax = self.dispersion_axial * _dt_norm
+                _az = self.dispersion_azimuthal * _dt_norm
+                # spacer/flusher 保持与 lead 的相对比 0.012/0.018=0.667、0.012/0.015=0.8
+                _ax_sf = self.dispersion_axial * 0.667 * _dt_norm
+                _az_sf = self.dispersion_azimuthal * 0.8 * _dt_norm
+                lead = self._smooth_dispersion(lead, axial=_ax, azimuthal=_az)
+                tail = self._smooth_dispersion(tail, axial=_ax, azimuthal=_az)
+                spacer = self._smooth_dispersion(spacer, axial=_ax_sf, azimuthal=_az_sf)
+                flusher = self._smooth_dispersion(flusher, axial=_ax_sf, azimuthal=_az_sf)
                 # T1-6: 弥散后再次执行五相过填修正，防止 _smooth_dispersion 数值扩散
                 # 使 lead+tail+spacer+flusher 再次超过 1，破坏体积分数闭合。
                 tracked_total = lead + tail + spacer + flusher
