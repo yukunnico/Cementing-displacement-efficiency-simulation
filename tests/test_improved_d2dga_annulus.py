@@ -53,8 +53,13 @@ class TestMFieldFromProps:
                               rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.180, yield_stress_pa=14.0)
         out = s._compute_props(lead, tail, spacer, np.zeros_like(lead), w_prev, geom, mud_f, None, cement_f, None)
         # 期望多返回 m_field + 相黏度场 eta1/eta2（T1-4）
-        assert len(out) == 7
-        mu, rho, mud, tau_y, m_field, eta1, eta2 = out
+        # Task1: _compute_props 扩为 9 元组（+ n_mix/kappa_mix）
+        assert len(out) == 9
+        n_mix, kappa_mix = out[7], out[8]
+        assert n_mix.shape == (ny, nz)
+        assert kappa_mix.shape == (ny, nz)
+        assert np.all(n_mix > 0.0) and np.all(kappa_mix > 0.0)
+        mu, rho, mud, tau_y, m_field, eta1, eta2, n_mix, kappa_mix = out
         assert m_field.shape == (ny, nz)
         # 水泥更粘 -> m = mu_mud/mu_cement < 1
         assert np.all(m_field < 1.0)
@@ -380,7 +385,7 @@ class TestTwoLayerViscosity:
         lead = np.zeros((ny, nz))
         tail = np.zeros((ny, nz))
         spacer = np.zeros((ny, nz))
-        _, _, _, _, _, eta1, eta2 = s._compute_props(
+        _, _, _, _, _, eta1, eta2, _, _ = s._compute_props(
             lead, tail, spacer, np.zeros_like(lead), w_prev, geom, mud_f, None, cement_f, None)
         c_bar = np.clip(lead + tail, 0.0, 1.0)
         eta_mix = self._compute_eta_mix(c_bar, eta1, eta2)
@@ -401,7 +406,7 @@ class TestTwoLayerViscosity:
         lead = np.ones((ny, nz))
         tail = np.zeros((ny, nz))
         spacer = np.zeros((ny, nz))
-        _, _, _, _, _, eta1, eta2 = s._compute_props(
+        _, _, _, _, _, eta1, eta2, _, _ = s._compute_props(
             lead, tail, spacer, np.zeros_like(lead), w_prev, geom, mud_f, lead_fluid=cement_f, tail_fluid=None, spacer_fluid=None)
         c_bar = np.clip(lead + tail, 0.0, 1.0)
         eta_mix = self._compute_eta_mix(c_bar, eta1, eta2)
@@ -422,7 +427,7 @@ class TestTwoLayerViscosity:
         lead = np.full((ny, nz), 0.5)
         tail = np.zeros((ny, nz))
         spacer = np.zeros((ny, nz))
-        _, _, _, _, _, eta1, eta2 = s._compute_props(
+        _, _, _, _, _, eta1, eta2, _, _ = s._compute_props(
             lead, tail, spacer, np.zeros_like(lead), w_prev, geom, mud_f, lead_fluid=cement_f, tail_fluid=None, spacer_fluid=None)
         c_bar = np.clip(lead + tail, 0.0, 1.0)
         eta_mix = self._compute_eta_mix(c_bar, eta1, eta2)
@@ -466,7 +471,7 @@ class TestBuoyancyForceInjection:
     def _base_and_props(self, geom, lead, tail, spacer, w_prev, mud_f, lead_f):
         """由 _compute_props 重建基础流动度 base 与混合物性场。"""
         s = AnnulusD2DGASolver(dt=4.0, nz=20, ny=10, total_t=40.0)
-        mu, rho, mud, tau_y, m_field, eta1, eta2 = s._compute_props(
+        mu, rho, mud, tau_y, m_field, eta1, eta2, _n_mix, _kappa_mix = s._compute_props(
             lead, tail, spacer, np.zeros_like(lead), w_prev, geom, mud_f, lead_f, None, None
         )
         c_bar = np.clip(lead + tail, 0.0, 1.0)
@@ -769,7 +774,7 @@ class TestFlusherField:
         flusher_f = FluidSpec(name="flusher", role=FluidRole.FLUSHER, density_kg_m3=1850.0,
                                rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.04, yield_stress_pa=3.0)
         out = s._compute_props(lead, tail, spacer, flusher, w_prev, geom, mud_f, cement_f, None, spacer_f)
-        mu, rho, mud, tau_y, m_field, eta1, eta2 = out
+        mu, rho, mud, tau_y, m_field, eta1, eta2, _, _ = out
         # 五相闭合：sum = lead + tail + spacer + flusher + mud ≈ 1
         phase_sum = lead + tail + spacer + flusher + mud
         assert np.allclose(phase_sum, 1.0, atol=1e-10), (
@@ -794,13 +799,13 @@ class TestFlusherField:
                               rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.07, yield_stress_pa=5.0)
         # 无 flusher 时：mud1 = 1 - lead - tail - spacer
         out_no_flusher = s._compute_props(lead, tail, spacer, np.zeros_like(lead), w_prev, geom, mud_f, cement_f, None, spacer_f)
-        mu1, rho1, mud1, tau_y1, m_field1, eta1_1, eta2_1 = out_no_flusher
+        mu1, rho1, mud1, tau_y1, m_field1, eta1_1, eta2_1, _, _ = out_no_flusher
         sum_no_flusher = lead + tail + spacer + mud1
         assert np.allclose(sum_no_flusher, 1.0, atol=1e-10), "四相闭合应 ≈ 1"
         # 有 flusher 时：mud2 = 1 - lead - tail - spacer - flusher
         flusher = np.full((ny, nz), 0.08)
         out_with_flusher = s._compute_props(lead, tail, spacer, flusher, w_prev, geom, mud_f, cement_f, None, spacer_f)
-        mu2, rho2, mud2, tau_y2, m_field2, eta1_2, eta2_2 = out_with_flusher
+        mu2, rho2, mud2, tau_y2, m_field2, eta1_2, eta2_2, _, _ = out_with_flusher
         sum_with_flusher = lead + tail + spacer + flusher + mud2
         assert np.allclose(sum_with_flusher, 1.0, atol=1e-10), "五相闭合应 ≈ 1"
         # 有 flusher 时 mud 应减少（约等于 flusher 分数）
@@ -1048,3 +1053,34 @@ class TestCFLAdaptive:
             assert abs(actual - exp) < 1e-12, (
                 f"时间点应={exp}，实际={actual}"
             )
+
+
+class TestComputeVelocityTuple12:
+    """Task1: _compute_velocity 扩为 12 元组（+ tau_y/eta2/n_mix/kappa_mix）。"""
+
+    def test_returns_twelve_tuple(self):
+        s = _make_solver()
+        well = _toy_well()
+        geom = s._build_geom(well)
+        ny, nz = s.ny, s.nz
+        lead = np.full((ny, nz), 0.3)
+        tail = np.zeros((ny, nz))
+        spacer = np.zeros((ny, nz))
+        flusher = np.zeros((ny, nz))
+        w_prev = np.full((ny, nz), 0.3)
+        wall = np.zeros((ny, nz))
+        mud_f = FluidSpec(name="mud", role=FluidRole.MUD, density_kg_m3=1900.0,
+                          rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.053, yield_stress_pa=8.5)
+        lead_f = FluidSpec(name="lead", role=FluidRole.LEAD, density_kg_m3=1900.0,
+                           rheology_model=RheologyModel.POWER_LAW, power_law_n=0.7, consistency_k=0.4)
+        out = s._compute_velocity(
+            lead, tail, spacer, flusher, geom,
+            q_m3s=0.01, w_prev=w_prev,
+            mud_fluid=mud_f, lead_fluid=lead_f, tail_fluid=None, spacer_fluid=None,
+            wall=wall,
+        )
+        assert len(out) == 12
+        assert out[8].shape == (ny, nz)   # tau_y
+        assert out[9].shape == (ny, nz)   # eta2
+        assert out[10].shape == (ny, nz)  # n_mix
+        assert out[11].shape == (ny, nz)  # kappa_mix

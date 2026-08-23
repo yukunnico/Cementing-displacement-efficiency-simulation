@@ -128,7 +128,7 @@ class TestYieldRegularization(unittest.TestCase):
             "effective_b": np.ones((ny, nz)) * 0.02,
         }
 
-        mu, rho, mud_frac, tau_y, m_field, eta1, eta2 = solver._compute_props(
+        mu, rho, mud_frac, tau_y, m_field, eta1, eta2, _n_mix, _kappa_mix = solver._compute_props(
             lead, tail, spacer_field, np.zeros_like(lead), w_prev, geom,
             mud, None, None, spacer,
         )
@@ -206,7 +206,7 @@ class TestNarrowSideDeadzoneEffect(unittest.TestCase):
             "s": np.linspace(0.0, 100.0, nz),
         }
 
-        w, v, mu_reg, rho, mud_frac, Re, mu_turbulent, m_field = solver._compute_velocity(
+        w, v, mu_reg, rho, mud_frac, Re, mu_turbulent, m_field, _tau_y, _eta2, _n_mix, _kappa_mix = solver._compute_velocity(
             lead_field, tail_field, spacer_field, np.zeros_like(lead_field), geom,
             q_m3s=0.01, w_prev=w_prev,
             mud_fluid=mud, lead_fluid=lead, tail_fluid=None, spacer_fluid=None,
@@ -220,8 +220,8 @@ class TestNarrowSideDeadzoneEffect(unittest.TestCase):
             f"宽边速度 ({wide_velocity:.4f}) 应显著大于窄边速度 ({narrow_velocity:.4f})",
         )
 
-    def test_compute_props_returns_seven_values(self) -> None:
-        """_compute_props 返回七元组 (mu, rho, mud, tau_y, m_field, eta1, eta2)。"""
+    def test_compute_props_returns_nine_values(self) -> None:
+        """_compute_props 返回九元组 (mu, rho, mud, tau_y, m_field, eta1, eta2, n_mix, kappa_mix)。"""
         solver = AnnulusD2DGASolver()
         mud = FluidSpec(
             name="mud",
@@ -242,12 +242,14 @@ class TestNarrowSideDeadzoneEffect(unittest.TestCase):
             lead, tail, spacer, np.zeros_like(lead), w_prev, geom,
             mud, None, None, None,
         )
-        self.assertEqual(len(result), 7)
-        mu, rho, mud_frac, tau_y, m_field, eta1, eta2 = result
+        self.assertEqual(len(result), 9)
+        mu, rho, mud_frac, tau_y, m_field, eta1, eta2, n_mix, kappa_mix = result
         self.assertEqual(mu.shape, (ny, nz))
         self.assertEqual(tau_y.shape, (ny, nz))
         self.assertEqual(eta1.shape, (ny, nz))
         self.assertEqual(eta2.shape, (ny, nz))
+        self.assertEqual(n_mix.shape, (ny, nz))
+        self.assertEqual(kappa_mix.shape, (ny, nz))
 
 
 if __name__ == "__main__":

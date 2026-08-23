@@ -28,7 +28,7 @@ import numpy as np
 from numpy.typing import NDArray
 import pandas as pd
 
-from cemdisp.data.fluid_spec import FluidRole, FluidSpec
+from cemdisp.data.fluid_spec import FluidRole, FluidSpec, RheologyModel
 from cemdisp.data.well_spec import DepthValuePoint, WellSpec
 from cemdisp.models2d.boundary_bridge import AnnulusInletState
 from cemdisp.models2d.d2dga_flux import (
@@ -407,6 +407,21 @@ class AnnulusD2DGASolver:
             raise ValueError(f"Unsupported rheology model: {fluid.rheology_model}")
         return np.clip(mu, 1.0e-5, 3.0)
 
+    @staticmethod
+    def _phase_power_law_params(fluid) -> tuple[float, float]:
+        """把任意流变模型映射为 (幂律指数 n, 稠度 K[Pa·s^n])，供 M2 混合 n/k 加权。
+
+        NEWTONIAN/BINGHAM -> n=1, K=plastic_viscosity_pa_s；
+        POWER_LAW/HERSCHEL_BULKLEY -> (power_law_n, consistency_k)。
+        HB 的屈服应力由 tau_y 场单独携带，不在这里折进 K。
+        """
+        if fluid is None:
+            return 1.0, 1.0e-6
+        rm = fluid.rheology_model
+        if rm == RheologyModel.POWER_LAW or rm == RheologyModel.HERSCHEL_BULKLEY:
+            return float(fluid.power_law_n), float(fluid.consistency_k)
+        return 1.0, float(fluid.plastic_viscosity_pa_s)
+
     def _smooth_dispersion(
         self,
         field: Array,
@@ -451,8 +466,8 @@ class AnnulusD2DGASolver:
         lead_fluid: FluidSpec | None,
         tail_fluid: FluidSpec | None,
         spacer_fluid: FluidSpec | None,
-    ) -> Tuple[Array, Array, Array, Array, Array, Array, Array]:
-        """计算混合物系的表观粘度、密度、钻井液分数、混合屈服应力、黏度比 m 场及相黏度场（η1=泥浆相, η2=水泥相）。
+    ) -> Tuple[Array, Array, Array, Array, Array, Array, Array, Array, Array]:
+        """计算混合物系的表观粘度、密度、钻井液分数、混合屈服应力、黏度比 m 场、相黏度场（η1=泥浆相, η2=水泥相）及混合幂律参数（n_mix, kappa_mix）。
         T1-6: flusher 仅参与体积闭合（五相），不参与 D2DGA 闭包。"""
         # 五相体积分数闭合：显式跟踪领浆、尾浆、前置/隔离液和冲洗液，钻井液由守恒关系反算。
         mud = np.clip(1.0 - lead - tail - spacer - flusher, 0.0, 1.0)
@@ -497,7 +512,16 @@ class AnnulusD2DGASolver:
         # T1-4: 返回相黏度场 η1=泥浆相, η2=水泥相（两层黏度闭包用）
         eta1 = mu_mud_field
         eta2 = mu_cement_field
-        return mu, rho, mud, tau_y, m_field, eta1, eta2
+        # Task1/M2: 混合物幂律参数（体积分数加权 n，对数加权 K），供 Metzner-Reed Re/He
+        n_mud, k_mud = self._phase_power_law_params(mud_fluid)
+        n_lead, k_lead = self._phase_power_law_params(lead_fluid)
+        n_tail, k_tail = self._phase_power_law_params(tail_fluid)
+        n_sp, k_sp = self._phase_power_law_params(spacer_fluid)
+        n_mix = mud * n_mud + lead * n_lead + tail * n_tail + spacer * n_sp
+        log_k_mix = (mud * np.log(max(k_mud, 1e-12)) + lead * np.log(max(k_lead, 1e-12))
+                     + tail * np.log(max(k_tail, 1e-12)) + spacer * np.log(max(k_sp, 1e-12)))
+        kappa_mix = np.exp(log_k_mix)
+        return mu, rho, mud, tau_y, m_field, eta1, eta2, n_mix, kappa_mix
 
     def _buoyancy_force_vector(self, geom: Dict[str, Array], beta_deg: Array | float) -> Tuple[Array, Array]:
         """计算论文式 2.5b 的浮力体力向量 f = (r_a·cosβ/F², r_a·sin(πφ)·sinβ/F²)。
@@ -548,7 +572,7 @@ class AnnulusD2DGASolver:
         tail_fluid: FluidSpec | None,
         spacer_fluid: FluidSpec | None,
         wall: Array | None = None,
-    ) -> Tuple[Array, Array, Array, Array, Array, Array, Array, Array]:
+    ) -> Tuple[Array, Array, Array, Array, Array, Array, Array, Array, Array, Array, Array, Array]:
         """计算环空速度场（论文D2DGA口径）。
 
         采用 Zhang & Frigaard (2022) 的Hele-Shaw风格速度场：
@@ -569,12 +593,16 @@ class AnnulusD2DGASolver:
             Re: 雷诺数场（仅作诊断，不参与湍流修正）
             mu_turbulent: 占位零场，保留旧结果对象兼容性
             m_field: 黏度比场 m = μ_displaced/μ_displacing（R1 auto-m）
+            tau_y: 混合屈服应力场（Task1 起随 _compute_velocity 返回，Task 8/11 消费）
+            eta2: 水泥相黏度场（两层黏度闭包用）
+            n_mix: 混合物幂律指数场（Task1 起随速度场返回，供 M2 消费）
+            kappa_mix: 混合物稠度场（Task1 起随速度场返回，供 M2 消费）
         """
         y = geom["y"]
         effective_b = geom.get("effective_b", geom["b"])
         b = effective_b
         q_half = q_m3s / 2.0
-        mu, rho, mud, tau_y, m_field, eta1, eta2 = self._compute_props(
+        mu, rho, mud, tau_y, m_field, eta1, eta2, n_mix, kappa_mix = self._compute_props(
             lead,
             tail,
             spacer,
@@ -670,7 +698,7 @@ class AnnulusD2DGASolver:
         v = bv / np.maximum(b, 1.0e-8)
 
         # 返回正则化后的黏度 mu_reg，确保下游 mobility 指标反映屈服死区效应
-        return w, v, mu_reg, rho, mud, Re, mu_turbulent, m_field
+        return w, v, mu_reg, rho, mud, Re, mu_turbulent, m_field, tau_y, eta2, n_mix, kappa_mix
 
     def _compute_cfl_dt_step(self, w: Array, v: Array, geom: Dict[str, Array], current_time_s: float) -> float:
         """根据 CFL 条件计算自适应时间步长。
@@ -802,7 +830,7 @@ class AnnulusD2DGASolver:
 
             if pump_active:
                 # === 正常泵注阶段：仅执行论文口径核心平流 + D2DGA 通量修正 ===
-                w, v, mu, rho, mud, Re, mu_turbulent, m_field = self._compute_velocity(
+                w, v, mu, rho, mud, Re, mu_turbulent, m_field, _tau_y, _eta2, _n_mix, _kappa_mix = self._compute_velocity(
                     lead,
                     tail,
                     spacer,
@@ -930,7 +958,7 @@ class AnnulusD2DGASolver:
 
             else:
                 # === 泵停阶段：冻结浓度场，仅记录指标 ===
-                w, v, mu, rho, mud, Re, mu_turbulent, m_field = self._compute_velocity(
+                w, v, mu, rho, mud, Re, mu_turbulent, m_field, _tau_y, _eta2, _n_mix, _kappa_mix = self._compute_velocity(
                     lead,
                     tail,
                     spacer,
