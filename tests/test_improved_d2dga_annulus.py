@@ -1117,6 +1117,21 @@ class TestYieldGateWall:
         # 第1/3列无流动参考元 -> 整列冻结
         assert wall[0, 0] == 1.0 and wall[0, 2] == 1.0
 
+    def test_higher_shear_mobilizes_more_cells(self):
+        """同一列：w 整体放大（更高排量）→ 壁面剪应力升高 → 冻结元减少。"""
+        ny, nz = 4, 2
+        cement_ever = np.ones((ny, nz)); cement_local = np.full((ny, nz), 0.9)
+        b = np.array([[0.04, 0.04], [0.03, 0.03], [0.02, 0.02], [0.012, 0.012]])
+        mu_reg = np.full((ny, nz), 0.1); tau_y = np.full((ny, nz), 5.0)
+        w_lo = np.array([[0.05, 0.05], [0.04, 0.04], [0.03, 0.03], [0.0, 0.0]])
+        w_hi = w_lo * 5.0
+        wall_lo = AnnulusD2DGASolver._yield_gate_wall(w_lo, b, mu_reg, tau_y, cement_ever, cement_local, 1.15, 0.01)
+        wall_hi = AnnulusD2DGASolver._yield_gate_wall(w_hi, b, mu_reg, tau_y, cement_ever, cement_local, 1.15, 0.01)
+        # 两种都至少保留流动参考元（row0）不冻结
+        assert wall_lo[0, 0] == 0.0 and wall_hi[0, 0] == 0.0
+        # 高排量冻结元数 <= 低排量
+        assert int(wall_hi.sum()) <= int(wall_lo.sum())
+
     def test_residual_wall_keeps_front_gate(self):
         ny, nz = 2, 2
         wall = AnnulusD2DGASolver._yield_gate_wall(
@@ -1172,21 +1187,16 @@ class TestYieldGateIntegration:
         assert set(np.unique(wall)).issubset({0.0, 1.0})
         assert isinstance(res.summary, dict) and len(res.summary) > 0
 
-    def test_gate_on_high_flow_freezes_less_than_low_flow(self):
-        """wall 是 w 的函数：同注量下低排量全域冻结（屈服主导 τ_w≤f·τ_y），
-        高排量存在未冻结的流动网格（剪切超过屈服门槛）。"""
-        _, res_low = self._run_gate_on(0.005, 200.0)
-        _, res_high = self._run_gate_on(0.05, 20.0)
-        cem_low = np.clip(res_low.lead_field + res_low.tail_field, 0.0, 1.0)
-        cem_high = np.clip(res_high.lead_field + res_high.tail_field, 0.0, 1.0)
-        low_cement_cells = cem_low > 0.0
-        high_cement_cells = cem_high > 0.0
-        # 低排量：凡水泥到达处全部冻结
-        assert np.all(res_low.wall_field[low_cement_cells] > 0.5)
-        # 高排量：至少存在水泥到达且未冻结的流动网格
-        assert np.any(res_high.wall_field[high_cement_cells] <= 0.5)
-        # 高排量冻结网格数 <= 低排量（同注量、同井同流变）
-        assert np.sum(res_high.wall_field > 0.5) <= np.sum(res_low.wall_field > 0.5)
+    def test_gate_on_keeps_flow_channel(self):
+        """开启屈服门槛后，每列流动最快的参考元永不冻结——即使低排量、泥浆有屈服，
+        也至少保留一条流动通道（wall=0），不会重演 c_min 全域冻结堵死前沿。"""
+        _, res = self._run_gate_on(0.005, 80.0)
+        cem = np.clip(res.lead_field + res.tail_field, 0.0, 1.0)
+        cement_cells = cem > 0.0
+        # 水泥到达处存在未冻结的流动网格（每列参考元）
+        assert np.any(res.wall_field[cement_cells] <= 0.5)
+        # wall 只含 0/1（布尔判据）
+        assert set(np.unique(res.wall_field)).issubset({0.0, 1.0})
 
     def test_gate_wall_frozen_during_shutdown(self):
         """停泵阶段 wall 保持泵注末值逐位不变（泵注分支外不重算 wall）。"""
