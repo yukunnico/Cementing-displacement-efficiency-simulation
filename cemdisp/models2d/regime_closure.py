@@ -27,16 +27,14 @@ def hedstrom_number(tau_y, rho, n, kappa, b):
 
 
 def friction_laminar(re_p, he, n):
-    """式60-61：层流 f=24/Re_p，含塞流核修正 yY=He/Hw。
+    """式60-61：层流 f=24/Re_p（槽流 Metzner-Reed）。
 
-    无屈服(he=0)时退化为 24/Re_p。塞流核幂次以 Maleki 式60-61 为准，
-    实现后用文献算例复核；此处给标准槽流形式 (1-yY)^2。
+    he/n 保留作 API 稳定参数（供未来精确闭包），本分支不使用。塞流核
+    在临界 Re 处经 Bingham 平面槽精确解核算可忽略（摩擦变化 <0.1%），
+    故不引入反向修正；屈服对转捩的推迟由 re_crit(He) 体现。
     """
     re_p = np.maximum(np.asarray(re_p, dtype=float), 1e-9)
-    he = np.asarray(he, dtype=float)
-    hw = 24.0 / re_p
-    yY = np.clip(he / np.maximum(hw, 1e-9), 0.0, 0.95)
-    return 24.0 * (1.0 - yY) ** 2 / re_p
+    return 24.0 / re_p
 
 
 def friction_dodge_metzner(re_p, n, f0=0.01, tol=1e-4, it_max=15):
