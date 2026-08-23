@@ -515,27 +515,35 @@ class AnnulusD2DGASolver:
     @staticmethod
     def _yield_gate_wall(w, b, mu_reg, tau_y, cement_ever, cement_local,
                          f_safety, c_min_residual):
-        """M3 可重启屈服门槛：每深度列以流动最宽元为参考外推壁剪，
-        immobile = τw_extrap ≤ f·τy；OR 残泥下限(cement_ever>0 且 cement<c_min_residual)。
-        全列无流动 -> 整列冻结。停泵期不调用（run() 泵注分支门控）。"""
+        """M3 可重启屈服门槛：每深度列以该列流动最快元（|w| 最大且 w>0）为参考，
+        按平行槽流 τw=G·b/2 外推各元壁面剪应力。immobile = τw_extrap ≤ f·τy；
+        OR 残泥下限(cement_ever>0 且 cement<c_min_residual)。
+
+        关键不变量：参考元（正在流动）本身永不冻结——它在定义上可流动；只有壁面
+        剪应力低于 f·τy 的更窄/更慢元才冻结。若某列完全无流动（has_flow=False），
+        且水泥已到达，则整列冻结（无法外推 G）；前锋未到列不冻结。
+        停泵期不调用（run() 泵注分支门控）。"""
         b = np.maximum(b, 1e-12)
-        gamma = np.maximum(6.0 * np.abs(w) / b, 1e-6)
+        gamma = 6.0 * np.abs(w) / b               # w=0 → τw=0 即真实静止，不加 floor
         tau_w_field = mu_reg * gamma
+        ny, nz = w.shape
         # 每列参考元：|w| 最大且 w>0；非流动元罚为 -1
         w_rank = np.where(w > 0.0, np.abs(w), -1.0)
         ref_row = np.argmax(w_rank, axis=0)            # (nz,)
         has_flow = np.any(w > 0.0, axis=0)            # (nz,)
-        col = np.arange(w.shape[1])
+        col = np.arange(nz)
         ref_row_safe = np.where(has_flow, ref_row, 0)
         tau_w_ref = tau_w_field[ref_row_safe, col]
         b_ref = b[ref_row_safe, col]
         G = 2.0 * tau_w_ref / np.maximum(b_ref, 1e-12)
-        tau_w_extrap = G[None, :] * b / 2.0
-        immobile = (tau_w_extrap <= f_safety * tau_y) & (cement_ever > 0.0)
-        residual_wall = (cement_ever > 0.0) & (cement_local < c_min_residual)
+        tau_w_extrap = G[None, :] * b / 2.0           # (ny,nz)
+        # 参考元掩码：正在流动的最快元永不冻结（它确实在流，τw 判据不能冻结参考元自身）
+        ref_mask = np.zeros_like(w, dtype=bool)
+        ref_mask[ref_row_safe[has_flow], col[has_flow]] = True
+        immobile = (tau_w_extrap <= f_safety * tau_y) & (~ref_mask) & (cement_ever > 0.0)
+        residual_wall = (cement_ever > 0.0) & (cement_local < c_min_residual) & (~ref_mask)
         wall_new = np.where(immobile | residual_wall, 1.0, 0.0)
-        # 整列冻结仅限水泥已到达的列（前锋未到无流动是正常状态，不得冻结，
-        # 否则 pre-cement 全域 wall=1 堵死，门不可重启）
+        # 整列无流动且水泥已到 -> 整列冻结（无法定义参考 G）
         col_freeze = ~has_flow & np.any(cement_ever > 0.0, axis=0)
         wall_new[:, col_freeze] = 1.0
         return wall_new.astype(float)
