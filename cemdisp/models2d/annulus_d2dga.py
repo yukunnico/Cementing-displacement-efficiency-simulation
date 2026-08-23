@@ -245,6 +245,7 @@ class AnnulusD2DGASolver:
         cfl_number: float = 0.5,
         dt_min: float = 0.1,
         c_min: float = 0.05,
+        e_clip_max: float = 0.55,
         enable_yield_gate: bool = False,
         yield_gate_f_safety: float = 1.15,
         yield_gate_c_min_residual: float = 0.01,
@@ -292,6 +293,10 @@ class AnnulusD2DGASolver:
             c_min: 壁面静止层浓度阈值（Bararpour 2025 式 2.35-2.41），默认 0.05。
                 局部水泥浓度 c < c_min 时该处壁面层泥浆滞留不流动（wall=1）。
                 屈服门槛关闭（enable_yield_gate=False）时作为 OFF 路径兜底。
+            e_clip_max: M4 偏心度 e 硬截断上限，默认 0.55（逐位复现基线）。
+                由 e = clip(1-standoff, 0.05, e_clip_max) 构造几何；
+                生产跑道（Task 13 重跑阶段）显式设 0.90 放宽截断。
+                体积校正（_build_geom 末尾 scale）每个 run 重算，half_volume 守恒。
             enable_yield_gate: M3 屈服门槛开关，默认 False（不改变既有行为）。
                 True 时 pump 分支用 _yield_gate_wall 重建壁面冻结层（Task 9 接线）。
             yield_gate_f_safety: 屈服门槛安全系数 f，默认 1.15。
@@ -329,6 +334,7 @@ class AnnulusD2DGASolver:
         self.cfl_number: float = cfl_number
         self.dt_min: float = dt_min
         self.c_min: float = c_min
+        self.e_clip_max: float = e_clip_max
         self.enable_yield_gate: bool = enable_yield_gate
         self.yield_gate_f_safety: float = yield_gate_f_safety
         self.yield_gate_c_min_residual: float = yield_gate_c_min_residual
@@ -379,7 +385,7 @@ class AnnulusD2DGASolver:
         else:
             od_mm = np.full_like(md, float(well_spec.liner_od_mm or 0.0), dtype=float)
 
-        e = np.clip(1.0 - standoff, 0.05, 0.55)
+        e = np.clip(1.0 - standoff, 0.05, self.e_clip_max)
         clearance = (hole - od_mm) / 1000.0
         half_gap_mean = clearance / 2.0
         mean_radius = ((hole + od_mm) / 4.0) / 1000.0
