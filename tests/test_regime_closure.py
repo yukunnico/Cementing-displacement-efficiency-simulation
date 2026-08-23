@@ -56,7 +56,7 @@ class TestRegimeSplitSolver:
         s = _regime_solver()
         assert s.enable_regime_split is False
         assert s.regime_relax_alpha == 0.5
-        assert s.regime_max_iter == 6
+        assert s.regime_max_iter == 24
         assert s.regime_tol_rel == 1e-3
         assert s.regime_re_turb_ratio == 1.8
 
@@ -75,8 +75,8 @@ class TestRegimeSplitSolver:
         assert np.all(w_on[:, s_off.nz // 2:] > 0)
 
     def test_off_equals_on_in_laminar_limit_defaults_no_crash(self):
-        """门开默认参数（max_iter=6, tol=1e-3）在层流极限不崩，结果有限且物理合理。
-        注：欠松弛(α=0.5)下 6 次迭代从 w_prev 起步未必收敛到 1e-9（见收敛版测试），
+        """门开默认参数（max_iter=24, tol=1e-3）在层流极限不崩，结果有限且物理合理。
+        注：欠松弛(α=0.5)下 24 次迭代从 w_prev 起步未必收敛到 1e-9（见收敛版测试），
         此处仅验证默认参数路径可运行、守恒仍由面积归一保证。"""
         s_on = _regime_solver(enable_regime_split=True)
         w_on = _call_velocity(s_on, q_m3s=1e-4, wall=None)
@@ -110,6 +110,21 @@ class TestRegimeSplitSolver:
         w_off = _call_velocity(s_off, q_m3s=q, w_prev_val=2.0, wall=None)
         w_on = _call_velocity(s_on, q_m3s=q, w_prev_val=2.0, wall=None)
         assert not np.allclose(w_on, w_off, rtol=1e-3)
+
+    def test_default_params_conserves_total_flow(self):
+        """门开默认参数（max_iter=24, tol=1e-3, α=0.5）命中过渡/湍流 Re：逐列精确守恒。
+        性质由 fix #1 保证——迭代只收敛 R，最终 w 以该 R 直接归一（2·Σw·b·dy == q_half），
+        对任意迭代步数成立；旧 w_k（欠松弛阻尼迭代量）返回方式在默认 24 步下仍有
+        相对 ~1e-3 量级（实测 8.7e-4）的瞬态守恒误差，此测试会将其钉死。"""
+        s_on = _regime_solver(enable_regime_split=True)  # 全默认：max_iter=24, tol=1e-3, alpha=0.5
+        assert s_on.regime_max_iter == 24
+        q = 0.05
+        w = _call_velocity(s_on, q_m3s=q, w_prev_val=2.0, wall=None, bingham=False)
+        geom = s_on._build_geom(_regime_well())
+        b = geom["effective_b"]
+        dy = np.gradient(geom["y"])[:, None]
+        flow_per_col = 2.0 * np.sum(w * b * dy, axis=0)
+        np.testing.assert_allclose(flow_per_col, q / 2.0, rtol=1e-9)  # q_half
 
 
 def test_metzner_reed_re_shape_and_positive():
