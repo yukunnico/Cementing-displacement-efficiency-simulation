@@ -30,6 +30,7 @@ import pandas as pd
 
 from cemdisp.data.fluid_spec import FluidRole, FluidSpec, RheologyModel
 from cemdisp.data.well_spec import DepthValuePoint, WellSpec
+from cemdisp.diagnostics.displacement_metrics import _narrow_quarter_efficiency
 from cemdisp.models2d.boundary_bridge import AnnulusInletState
 from cemdisp.models2d.d2dga_flux import (
     d2dga_buoyancy_flux,
@@ -1111,6 +1112,7 @@ class AnnulusD2DGASolver:
             "物理环空体积_m3": self._physical_annular_volume(well_spec),
             "最终结果": {
                 "全井段最终有效顶替效率": eff_efficiency,
+                "窄四分位效率": _narrow_quarter_efficiency(cement, geom),
                 "最终水泥浆占据率": cement_occ,
                 "最终窜槽指数": chan_idx,
                 "最终混浆指数": mix_idx,
@@ -1118,6 +1120,7 @@ class AnnulusD2DGASolver:
                 "浮力数_b": b_number,
             },
             "effective_efficiency": eff_efficiency,
+            "eta_narrow": _narrow_quarter_efficiency(cement, geom),
             "channeling_index": chan_idx,
             "mixing_index": mix_idx,
             "buoyancy_number": b_number,
