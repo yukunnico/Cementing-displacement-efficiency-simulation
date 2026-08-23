@@ -1084,3 +1084,28 @@ class TestComputeVelocityTuple12:
         assert out[9].shape == (ny, nz)   # eta2
         assert out[10].shape == (ny, nz)  # n_mix
         assert out[11].shape == (ny, nz)  # kappa_mix
+
+
+class TestYieldGateWall:
+    def test_reference_row_pick_avoids_frozen_wide_side(self):
+        ny, nz = 4, 3
+        w = np.array([[0.0, 0.8, 0.0],   # 宽边 row0：第1列冻结、第2列流、第3列冻结
+                      [0.0, 0.5, 0.0],
+                      [0.0, 0.2, 0.0],
+                      [0.0, 0.0, 0.0]])  # 窄边全冻
+        b = np.full((ny, nz), 0.02); mu_reg = np.full((ny, nz), 0.1)
+        tau_y = np.full((ny, nz), 5.0)
+        cement_ever = np.ones((ny, nz)); cement_local = np.full((ny, nz), 0.9)
+        wall = AnnulusD2DGASolver._yield_gate_wall(
+            w, b, mu_reg, tau_y, cement_ever, cement_local, 1.15, 0.01)
+        assert wall.shape == (ny, nz)
+        # 第1/3列无流动参考元 -> 整列冻结
+        assert wall[0, 0] == 1.0 and wall[0, 2] == 1.0
+
+    def test_residual_wall_keeps_front_gate(self):
+        ny, nz = 2, 2
+        wall = AnnulusD2DGASolver._yield_gate_wall(
+            np.zeros((ny, nz)), np.full((ny, nz), 0.02), np.full((ny, nz), 0.1),
+            np.zeros((ny, nz)), np.zeros((ny, nz)), np.zeros((ny, nz)), 1.15, 0.01)
+        # cement_ever=0 前锋未到，不得全域冻结
+        assert np.all(wall == 0.0)

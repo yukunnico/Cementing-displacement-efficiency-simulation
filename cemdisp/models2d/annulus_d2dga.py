@@ -245,6 +245,9 @@ class AnnulusD2DGASolver:
         cfl_number: float = 0.5,
         dt_min: float = 0.1,
         c_min: float = 0.05,
+        enable_yield_gate: bool = False,
+        yield_gate_f_safety: float = 1.15,
+        yield_gate_c_min_residual: float = 0.01,
         dispersion_axial: float = 0.018,
         dispersion_azimuthal: float = 0.015,
         dispersion_dt_ref: float = 4.0,
@@ -288,6 +291,13 @@ class AnnulusD2DGASolver:
             dt_min: 自适应时间步下限（秒），默认 0.1。防 CFL 过小步数爆炸。
             c_min: 壁面静止层浓度阈值（Bararpour 2025 式 2.35-2.41），默认 0.05。
                 局部水泥浓度 c < c_min 时该处壁面层泥浆滞留不流动（wall=1）。
+                屈服门槛关闭（enable_yield_gate=False）时作为 OFF 路径兜底。
+            enable_yield_gate: M3 屈服门槛开关，默认 False（不改变既有行为）。
+                True 时 pump 分支用 _yield_gate_wall 重建壁面冻结层（Task 9 接线）。
+            yield_gate_f_safety: 屈服门槛安全系数 f，默认 1.15。
+                immobile 判定：外推壁剪 τw_extrap ≤ f·τy。
+            yield_gate_c_min_residual: 残泥下限浓度，默认 0.01。
+                水泥已到（cement_ever>0）但局部浓度 < 该值 -> 视为残泥冻结。
             dispersion_axial: D2DGA 间隙尺度弥散轴向系数（每 dt_ref 秒），默认 0.018。
             dispersion_azimuthal: D2DGA 间隙尺度弥散方位角系数（每 dt_ref 秒），默认 0.015。
             dispersion_dt_ref: 弥散系数的名义/参考时间步（秒），默认 4.0。
@@ -319,6 +329,9 @@ class AnnulusD2DGASolver:
         self.cfl_number: float = cfl_number
         self.dt_min: float = dt_min
         self.c_min: float = c_min
+        self.enable_yield_gate: bool = enable_yield_gate
+        self.yield_gate_f_safety: float = yield_gate_f_safety
+        self.yield_gate_c_min_residual: float = yield_gate_c_min_residual
         self.dispersion_axial = dispersion_axial
         self.dispersion_azimuthal = dispersion_azimuthal
         self.dispersion_dt_ref = dispersion_dt_ref
@@ -487,6 +500,34 @@ class AnnulusD2DGASolver:
         if rm == RheologyModel.POWER_LAW or rm == RheologyModel.HERSCHEL_BULKLEY:
             return float(fluid.power_law_n), float(fluid.consistency_k)
         return 1.0, float(fluid.plastic_viscosity_pa_s)
+
+    @staticmethod
+    def _yield_gate_wall(w, b, mu_reg, tau_y, cement_ever, cement_local,
+                         f_safety, c_min_residual):
+        """M3 可重启屈服门槛：每深度列以流动最宽元为参考外推壁剪，
+        immobile = τw_extrap ≤ f·τy；OR 残泥下限(cement_ever>0 且 cement<c_min_residual)。
+        全列无流动 -> 整列冻结。停泵期不调用（run() 泵注分支门控）。"""
+        b = np.maximum(b, 1e-12)
+        gamma = np.maximum(6.0 * np.abs(w) / b, 1e-6)
+        tau_w_field = mu_reg * gamma
+        # 每列参考元：|w| 最大且 w>0；非流动元罚为 -1
+        w_rank = np.where(w > 0.0, np.abs(w), -1.0)
+        ref_row = np.argmax(w_rank, axis=0)            # (nz,)
+        has_flow = np.any(w > 0.0, axis=0)            # (nz,)
+        col = np.arange(w.shape[1])
+        ref_row_safe = np.where(has_flow, ref_row, 0)
+        tau_w_ref = tau_w_field[ref_row_safe, col]
+        b_ref = b[ref_row_safe, col]
+        G = 2.0 * tau_w_ref / np.maximum(b_ref, 1e-12)
+        tau_w_extrap = G[None, :] * b / 2.0
+        immobile = tau_w_extrap <= f_safety * tau_y
+        residual_wall = (cement_ever > 0.0) & (cement_local < c_min_residual)
+        wall_new = np.where(immobile | residual_wall, 1.0, 0.0)
+        # 整列冻结仅限水泥已到达的列（前锋未到无流动是正常状态，不得冻结，
+        # 否则 pre-cement 全域 wall=1 堵死，门不可重启）
+        col_freeze = ~has_flow & np.any(cement_ever > 0.0, axis=0)
+        wall_new[:, col_freeze] = 1.0
+        return wall_new.astype(float)
 
     def _smooth_dispersion(
         self,
