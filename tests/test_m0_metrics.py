@@ -58,3 +58,37 @@ def test_eta_narrow_in_summary_and_in_range():
     # dm 层按设计 round(eta_narrow, 6)（displacement_metrics.py），
     # 故 summary 全精度值与 dm 值允许 6 位小数舍入误差（< 5e-7）。
     assert abs(fr["窄四分位效率"] - dm.eta_narrow) < 1e-5
+
+
+def test_instability_index_linear_and_log():
+    res = _run_minimal()
+    fr = res.summary["最终结果"]
+    assert "最终失稳指数_线性" in fr and "最终失稳指数_对数" in fr
+    proxy = float(res.metrics["instability_proxy"].iloc[-1])
+    assert abs(fr["最终失稳指数_线性"] - proxy) < 1e-9
+    assert abs(fr["最终失稳指数_对数"] - np.log10(1.0 + proxy)) < 1e-9
+
+
+def test_evaluation_window_efficiencies():
+    res = _run_minimal()
+    we = res.summary["评价窗效率"]
+    assert {"cbl窗", "model窗"} <= set(we.keys())
+    for name, d in we.items():
+        assert d["window_type"] in ("cbl", "model_focus")
+        assert 0.0 <= d["eta_E"] <= 1.0
+        assert 0.0 <= d["eta_N"] <= 1.0
+
+
+def test_low_tail_indicators():
+    res = _run_minimal()
+    lt = res.summary["低尾指标"]
+    assert 0.0 <= lt["standoff低于0.5段占比"] <= 1.0
+    assert 0.0 <= lt["窄边效率低于0.05域占比"] <= 1.0
+
+
+def test_m0_does_not_change_existing_keys():
+    res = _run_minimal()
+    fr = res.summary["最终结果"]
+    for k in ["全井段最终有效顶替效率", "最终水泥浆占据率", "最终窜槽指数", "最终混浆指数", "最终失稳指数"]:
+        assert k in fr
+    assert "effective_efficiency" in res.summary

@@ -69,6 +69,39 @@ def _phase_volume(field: Array, geom: Dict[str, Array]) -> float:
     return 2.0 * _trapez2d(geom["b"] * np.clip(field, 0.0, 1.0), geom)
 
 
+def _evaluation_window_efficiencies(well_spec: "WellSpec", geom: Dict[str, Array], cement: Array) -> Dict[str, dict]:
+    """对每个 EvaluationWindow 做 b 加权 2D 积分，返回 {窗名: {window_type, eta_E, eta_N}}。"""
+    out: Dict[str, dict] = {}
+    md = geom["md"]            # (nz,)，md = bottom - s
+    b_full = geom["b"]         # (ny,nz)
+    s_full = geom["s"]         # (nz,)
+    for w in well_spec.evaluation_windows:
+        mask = (md >= w.top_md_m) & (md <= w.bottom_md_m)
+        if not bool(mask.any()):
+            continue
+        b_win = b_full[:, mask]
+        c_win = cement[:, mask]
+        geom_win = {**geom, "b": b_win, "s": s_full[mask]}
+        denom = _trapez2d(b_win, geom_win)
+        eta_e = float(_trapez2d(b_win * c_win, geom_win) / max(denom, 1e-12))
+        eta_n = float(_narrow_quarter_efficiency(c_win, geom_win))
+        out[w.name] = {"window_type": w.window_type, "eta_E": eta_e, "eta_N": eta_n}
+    return out
+
+
+def _low_tail_indicators(geom: Dict[str, Array], cement: Array, ny: int) -> Dict[str, float]:
+    """低尾指标：standoff<0.5 段占比 + 窄边（最后 ny//4 行）cement<0.05 域体积占比。"""
+    b_full = geom["b"]
+    so_frac = float(np.mean(geom["standoff"] < 0.5))
+    n_q = max(1, ny // 4)
+    b_q = b_full[-n_q:, :]
+    low = (cement[-n_q:, :] < 0.05).astype(float)
+    # 行切片后必须同步切 y，否则 _trapez2d 对 axis=0 的 x=geom["y"] 长度与行数不匹配
+    geom_q = {**geom, "b": b_q, "y": geom["y"][-n_q:]}
+    tail_frac = float(_trapez2d(b_q * low, geom_q) / max(_trapez2d(b_q, geom_q), 1e-12))
+    return {"standoff低于0.5段占比": so_frac, "窄边效率低于0.05域占比": tail_frac}
+
+
 def _limit_phase_volume(field: Array, geom: Dict[str, Array], target_volume_m3: float, open_outlet: bool = False) -> Array:
     """按累计入环空体积限制场量，避免数值扩散凭空放大相体积。
 
@@ -731,7 +764,7 @@ class AnnulusD2DGASolver:
             dt_step = self.total_t - current_time_s
         return dt_step
 
-    def _depth_profiles(self, geom: Dict[str, Array], lead: Array, tail: Array, spacer: Array, flusher: Array, wall: Array) -> pd.DataFrame:
+    def _depth_profiles(self, geom: Dict[str, Array], lead: Array, tail: Array, spacer: Array, flusher: Array) -> pd.DataFrame:
         """计算深度方向的平均剖面数据。T1-6: 含冲洗液平均浓度。"""
         cement = np.clip(lead + tail, 0.0, 1.0)
         eff = cement
@@ -1080,8 +1113,12 @@ class AnnulusD2DGASolver:
         # 属预期行为（数值扩散锐减的代价）；后续可加采样降频优化，非阻塞。
         metrics = pd.DataFrame(data=rows, columns=pd.Index(metric_columns))
         cement = np.clip(lead + tail, 0.0, 1.0)
-        depth_profiles = self._depth_profiles(geom, lead, tail, spacer, flusher, wall)  # T1-6
+        depth_profiles = self._depth_profiles(geom, lead, tail, spacer, flusher)  # T1-6
         final = metrics.iloc[-1]
+
+        # M0: 失稳指数去饱和——线性代理与对数代理（log10(1+proxy)）进 summary
+        _inst_lin = float(final["instability_proxy"])
+        _inst_log = float(np.log10(1.0 + _inst_lin))
 
         # Extract values into locals so both nested Chinese keys and top-level English
         # aliases use one source, avoiding drift.
@@ -1117,8 +1154,12 @@ class AnnulusD2DGASolver:
                 "最终窜槽指数": chan_idx,
                 "最终混浆指数": mix_idx,
                 "最终失稳指数": inst_idx,
+                "最终失稳指数_线性": _inst_lin,
+                "最终失稳指数_对数": _inst_log,
                 "浮力数_b": b_number,
             },
+            "评价窗效率": _evaluation_window_efficiencies(well_spec, geom, cement),
+            "低尾指标": _low_tail_indicators(geom, cement, self.ny),
             "effective_efficiency": eff_efficiency,
             "eta_narrow": _narrow_quarter_efficiency(cement, geom),
             "channeling_index": chan_idx,
