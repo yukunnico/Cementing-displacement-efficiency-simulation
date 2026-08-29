@@ -272,7 +272,7 @@ cemdisp/
 
 | 函数 | 返回类型 | 说明 |
 |------|----------|------|
-| `load_hu101_tailpipe(reference_root=None)` | `Tuple[WellSpec, Tuple[FluidSpec, ...], PumpingSchedule, ValidationData]` | 返回呼101尾管段的完整四元组输入数据 |
+| `load_hu101_tailpipe(*, reference_root=None, measured_standoff=None)` | `Tuple[WellSpec, Tuple[FluidSpec, ...], PumpingSchedule, ValidationData]` | 返回呼101尾管段的完整四元组输入数据；`measured_standoff` 可选 `None`/`"between_centralizers"`/`"at_centralizers"`（2026-08-22 新增，分别对应名义居中度剖面/扶正器间实测剖面/扶正器处实测剖面） |
 
 **硬编码数据清单**（仅存于此文件）：
 - 井号："呼101"
@@ -441,9 +441,6 @@ cemdisp/
 | `stage` | 当前施工阶段名称 |
 | `bulk_cement_fill` | 水泥浆占据率 |
 | `effective_efficiency` | 全井段有效顶替效率 |
-| `target_interval_efficiency` | 目标层段有效顶替效率 |
-| `cbl_eval_interval_efficiency` | CBL评价井段有效顶替效率 |
-| `cbl_quality_proxy` | 质量响应效率代理值 |
 | `front_wide_m` | 宽边水泥浆前沿位置 |
 | `front_narrow_m` | 窄边水泥浆前沿位置 |
 | `front_mid_m` | 中线水泥浆前沿位置 |
@@ -787,9 +784,8 @@ cemdisp/
 - **参数**：`AnnulusSimulationResult`, 可选的输出目录路径
 - **输出文件**：`{井号}_最终结果对比.png`
 - **内容**：单面板柱状图
-  - 四根柱：全井段有效顶替效率、CBL评价井段有效顶替效率、目标层段有效顶替效率、水泥浆占据率
-  - 若结果包含 `cbl_quality_proxy` 列，附加第五根柱：质量响应效率
-- **脚注**：明确标注"质量响应效率≠有效顶替效率"
+  - 两根柱：全井段有效顶替效率、水泥浆占据率
+- **说明**：所有指标均基于全井段计算，不区分 CBL 评价段或目标层段（2026-07-29 validation 链路删除后口径）
 
 ---
 
