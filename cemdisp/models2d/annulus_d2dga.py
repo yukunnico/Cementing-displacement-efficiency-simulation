@@ -22,7 +22,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable, Dict, Tuple
+from typing import TYPE_CHECKING, Callable, Dict, Tuple
 
 import numpy as np
 from numpy.typing import NDArray
@@ -38,6 +38,9 @@ from cemdisp.models2d.d2dga_flux import (
     d2dga_dispersion_I2,
     d2dga_flux_amplification,
 )
+
+if TYPE_CHECKING:  # 仅类型注解，运行时不引入 data.pumping_schedule 依赖
+    from cemdisp.data.pumping_schedule import PumpingSchedule
 
 
 Array = NDArray[np.float64]
@@ -928,8 +931,20 @@ class AnnulusD2DGASolver:
         well_spec: WellSpec,
         fluids: Tuple[FluidSpec, ...],
         inlet_state_provider: Callable[[float], AnnulusInletState],
+        schedule: "PumpingSchedule | None" = None,
     ) -> AnnulusSimulationResult:
-        """运行论文口径的环空二维顶替求解。"""
+        """运行论文口径的环空二维顶替求解。
+
+        Args:
+            well_spec: 井身结构。
+            fluids: 流体序列（mud/lead/tail/spacer/flusher 等）。
+            inlet_state_provider: 环空入口边界状态提供器（1D-2D 耦合时由
+                ``build_coupled_annulus_inlet_provider`` 构造）。
+            schedule: 泵注程序（可选，默认 None）。仅用于末尾 Tier0 诊断聚合：
+                提供后 T0-6 停泵有限时间衰减诊断（shutdown_decay）可用；
+                为 None 时诊断层优雅降级（记 notes "未提供 schedule"），
+                不影响求解结果与既有调用方（向后兼容）。
+        """
 
         mud_fluid, lead_fluid, tail_fluid, spacer_fluid, flusher_fluid = self._pick_fluids(fluids)
         geom = self._build_geom(well_spec)
@@ -1351,7 +1366,9 @@ class AnnulusD2DGASolver:
         # 诊断失败不影响主求解，但记录错误原因（不再静默吞掉），便于排查接线问题
         try:
             from cemdisp.diagnostics.tier0_diagnostics import compute_all_tier0_diagnostics
-            tier0 = compute_all_tier0_diagnostics(result, fluids=fluids, well_spec=well_spec)
+            tier0 = compute_all_tier0_diagnostics(
+                result, fluids=fluids, well_spec=well_spec, schedule=schedule
+            )
             result.summary["tier0_diagnostics"] = tier0.to_dict()  # type: ignore[index]
         except Exception as exc:
             result.summary["tier0_diagnostics_error"] = f"{type(exc).__name__}: {exc}"

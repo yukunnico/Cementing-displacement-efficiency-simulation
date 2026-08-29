@@ -104,7 +104,8 @@ def run_and_export(
         total_t=total_t,
         nz=250,
     )
-    result = solver.run(well_spec, fluids, inlet_provider)
+    # 传入泵注程序：使末尾 Tier0 诊断聚合的 T0-6 停泵衰减诊断可用
+    result = solver.run(well_spec, fluids, inlet_provider, schedule=schedule)
 
     metrics_path = output_dir / f"呼101尾管_{mode_title}_时间序列结果.csv"
     profiles_path = output_dir / f"呼101尾管_{mode_title}_深度剖面.csv"
