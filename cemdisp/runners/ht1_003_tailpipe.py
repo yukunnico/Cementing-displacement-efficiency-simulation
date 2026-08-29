@@ -70,7 +70,8 @@ def run_and_export(
     # 当替浆液第一次到达鞋口时，代表整段水泥浆已全部进入环空，
     # 环空顶替计算到此结束，不再继续让替浆液入环空稀释既有水泥场。
     solver = AnnulusD2DGASolver(total_t=total_t_s, nz=250)
-    result = solver.run(well_spec, fluids, inlet_provider)
+    # 传入泵注程序：使末尾 Tier0 诊断聚合的 T0-6 停泵衰减诊断可用
+    result = solver.run(well_spec, fluids, inlet_provider, schedule=schedule)
 
     # 导出CSV
     metrics_path = output_dir / f"呼1-003_{mode_title}_时间序列结果.csv"

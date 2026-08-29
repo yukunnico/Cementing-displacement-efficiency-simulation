@@ -83,7 +83,8 @@ def run_and_export(
     # 呼探1-002严格现场模式下，二维求解时长由 1D 套管内前沿追踪确定：
     # 当替浆液第一次到达鞋口时，水泥浆柱已全部进入环空，随后不再让替浆液继续稀释水泥场。
     solver = AnnulusD2DGASolver(total_t=total_t_s, nz=250)
-    result = solver.run(well_spec, fluids, inlet_provider)
+    # 传入泵注程序：使末尾 Tier0 诊断聚合的 T0-6 停泵衰减诊断可用
+    result = solver.run(well_spec, fluids, inlet_provider, schedule=schedule)
 
     # 导出时间序列与深度剖面 CSV；列名由求解器保持中文口径。
     metrics_path = output_dir / f"呼探1-002尾管_{mode_title}_时间序列结果.csv"
