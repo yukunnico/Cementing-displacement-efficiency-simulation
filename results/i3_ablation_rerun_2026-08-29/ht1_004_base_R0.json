@@ -1,0 +1,16 @@
+{
+  "run_id": "ht1_004_base_R0",
+  "ablation_level": "R0",
+  "eccentricity": 0.17,
+  "nz": 500,
+  "dt": 4.0,
+  "enable_d2dga_auto_m": false,
+  "enable_d2dga_i3_flux": false,
+  "enable_true_buoyancy": false,
+  "effective_efficiency": 0.48195601340898914,
+  "cement_occupation": 0.48195601340898914,
+  "channeling_index": 0.006012024048093708,
+  "mixing_index": 0.023118997500817987,
+  "instability_index": 0.005144917287177919,
+  "buoyancy_number": 17.59642905964601
+}
