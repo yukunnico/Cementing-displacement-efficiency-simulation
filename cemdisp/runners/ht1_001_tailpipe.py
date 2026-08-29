@@ -8,6 +8,8 @@
 
 输出目录：results/呼探1-001尾管_1D2D耦合模型/
 输出文件：CSV(时间序列/深度剖面) + JSON(摘要) + Markdown(摘要) + PNG(静态图) + NPZ(2D场数据) + GIF(动画)
+
+⚠️ 口径声明：本 runner 为基线口径（默认参数）；论文/正式 8 井数字见 scripts/rerun_all_wells_corrected.py（修正后配置）。
 """
 
 from __future__ import annotations

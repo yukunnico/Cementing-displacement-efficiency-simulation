@@ -6,6 +6,8 @@
 2. 1D-2D耦合：套管内前沿追踪 → 鞋口出流 → 环空入口
 
 输出目录：results/呼101尾管_初版模型/ 和 results/呼101尾管_1D2D耦合模型/
+
+⚠️ 口径声明：本 runner 为基线口径（默认参数，两个入口均适用）；论文/正式 8 井数字见 scripts/rerun_all_wells_corrected.py（修正后配置）。
 """
 
 from __future__ import annotations
