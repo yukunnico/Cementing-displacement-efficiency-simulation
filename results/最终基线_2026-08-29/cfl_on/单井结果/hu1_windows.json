@@ -1,0 +1,54 @@
+{
+  "well": "hu1",
+  "well_name_cn": "呼探1",
+  "eta_E": 0.5580578260045682,
+  "eta_N": 0.19599399178848695,
+  "model_domain_md": [
+    3523.27,
+    7601.0
+  ],
+  "windows": {
+    "CBL评价井段": {
+      "window_type": "cbl",
+      "eta_E": 0.5467043688668641,
+      "eta_N": 0.16979635455228598,
+      "top_md_m": 3531.0,
+      "bottom_md_m": 7481.22
+    },
+    "CBL质量段(不合格40m)": {
+      "window_type": "cbl_quality",
+      "eta_E": 0.9999048442927169,
+      "eta_N": 0.9994559087182817,
+      "top_md_m": 7474.0,
+      "bottom_md_m": 7514.0
+    },
+    "CBL质量段(差)": {
+      "window_type": "cbl_quality",
+      "eta_E": 0.0,
+      "eta_N": 0.9980396806814638,
+      "top_md_m": 7415.0,
+      "bottom_md_m": 7430.0
+    },
+    "尾管封固段(模型聚焦窗)": {
+      "window_type": "model_focus",
+      "eta_E": 0.558057826004568,
+      "eta_N": 0.19599399178848703,
+      "top_md_m": 3523.27,
+      "bottom_md_m": 7601.0
+    }
+  },
+  "matches_baseline": true,
+  "baseline_eta_E": 0.5580578260045682,
+  "config": {
+    "corrected": true,
+    "cfl_mode": "on",
+    "nz": 250,
+    "dispersion_dt_scale": 1.0,
+    "enable_yield_gate": true,
+    "enable_regime_split": true,
+    "enable_local_i3": true,
+    "e_clip_max": 0.9
+  },
+  "git_commit": "d3c4dd406b05e81a5758bbe0c15b13e26e1cff44",
+  "elapsed_s": 298.9
+}

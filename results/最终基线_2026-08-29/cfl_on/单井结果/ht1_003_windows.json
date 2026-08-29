@@ -1,0 +1,54 @@
+{
+  "well": "ht1_003",
+  "well_name_cn": "呼1-003",
+  "eta_E": 0.6557578211612777,
+  "eta_N": 0.5589559934816166,
+  "model_domain_md": [
+    5307.539,
+    7618.0
+  ],
+  "windows": {
+    "CBL评价井段(尾管段)": {
+      "window_type": "cbl",
+      "eta_E": 0.7156982174832773,
+      "eta_N": 0.6313656020856476,
+      "top_md_m": 5568.0,
+      "bottom_md_m": 7618.0
+    },
+    "CBL数字化窗(78.7%对应)": {
+      "window_type": "cbl_digitization",
+      "eta_E": 0.6612382572813333,
+      "eta_N": 0.5488977394630036,
+      "top_md_m": 5307.54,
+      "bottom_md_m": 7514.21
+    },
+    "气层-K1q主力油层段(地层目标)": {
+      "window_type": "formation_target",
+      "eta_E": 0.9999992830901583,
+      "eta_N": 0.9999999999899026,
+      "top_md_m": 7418.0,
+      "bottom_md_m": 7440.0
+    },
+    "目的井段(地层目标)": {
+      "window_type": "formation_target",
+      "eta_E": 0.722855544711573,
+      "eta_N": 0.8702302666471822,
+      "top_md_m": 7442.0,
+      "bottom_md_m": 7618.0
+    }
+  },
+  "matches_baseline": true,
+  "baseline_eta_E": 0.6557578211612777,
+  "config": {
+    "corrected": true,
+    "cfl_mode": "on",
+    "nz": 250,
+    "dispersion_dt_scale": 1.0,
+    "enable_yield_gate": true,
+    "enable_regime_split": true,
+    "enable_local_i3": true,
+    "e_clip_max": 0.9
+  },
+  "git_commit": "d3c4dd406b05e81a5758bbe0c15b13e26e1cff44",
+  "elapsed_s": 552.3
+}
