@@ -1,0 +1,68 @@
+{
+  "well": "hu101",
+  "well_name_cn": "呼101",
+  "eta_E": 0.3696417693306981,
+  "eta_N": 0.01322796572259419,
+  "model_domain_md": [
+    5400.0,
+    7868.0
+  ],
+  "windows": {
+    "CBL评价井段(单层套管可评价段)": {
+      "window_type": "cbl",
+      "eta_E": 0.39062849208660133,
+      "eta_N": 0.005802046611392031,
+      "top_md_m": 5699.8,
+      "bottom_md_m": 7810.0
+    },
+    "CBL质量段(连续差段)": {
+      "window_type": "cbl_quality",
+      "eta_E": 0.14921251392320528,
+      "eta_N": 0.006949030161235782,
+      "top_md_m": 7537.0,
+      "bottom_md_m": 7674.0
+    },
+    "主要气层-K1q(地层目标)": {
+      "window_type": "formation_target",
+      "eta_E": 0.18902292138714777,
+      "eta_N": 0.0033147990625514577,
+      "top_md_m": 7492.0,
+      "bottom_md_m": 7536.0
+    },
+    "气层段(CBL评价重点)": {
+      "window_type": "formation_target",
+      "eta_E": 0.15080167824803897,
+      "eta_N": 0.00843938011275024,
+      "top_md_m": 7492.0,
+      "bottom_md_m": 7735.0
+    },
+    "目的层-喀拉扎组J3k(地层目标)": {
+      "window_type": "formation_target",
+      "eta_E": 0.14629770249158103,
+      "eta_N": 0.10581485185484621,
+      "top_md_m": 7537.0,
+      "bottom_md_m": 7868.0
+    },
+    "水层-K1s(地层目标)": {
+      "window_type": "formation_target",
+      "eta_E": 0.0,
+      "eta_N": 9.5235920650871e-07,
+      "top_md_m": 6152.0,
+      "bottom_md_m": 6156.0
+    }
+  },
+  "matches_baseline": true,
+  "baseline_eta_E": 0.36964176933069803,
+  "config": {
+    "corrected": true,
+    "cfl_mode": "on",
+    "nz": 250,
+    "dispersion_dt_scale": 1.0,
+    "enable_yield_gate": true,
+    "enable_regime_split": true,
+    "enable_local_i3": true,
+    "e_clip_max": 0.9
+  },
+  "git_commit": "d3c4dd406b05e81a5758bbe0c15b13e26e1cff44",
+  "elapsed_s": 234.8
+}
