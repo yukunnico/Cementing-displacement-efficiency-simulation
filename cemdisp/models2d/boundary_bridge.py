@@ -22,7 +22,9 @@
 - 水泥前缘尚未到达鞋口前，环空入口看到的是被推出套管的初始钻井液；
 - 水泥前缘到达鞋口后，环空入口才切换为水泥相；
 - 因此效率偏低时应优先检查环空二维求解总时长是否足够，
-  而不是提前把地面注入的水泥直接施加到环空入口。
+  而不是提前把地面注入的水泥直接施加到环空入口；
+- 流动阶段鞋口出流取自鞋口时间线（含轴向弥散/混浆增强生成的多相过渡带），
+  停泵阶段回退停泵沉降增强查询。
 
 设计原则：
 - 环空2D求解器不感知1D层实现细节
@@ -173,26 +175,26 @@ def build_coupled_annulus_inlet_provider(
     # 旧方式：arg1=casing_result, arg2=casing_solver
     casing_result = arg1
     casing_solver = arg2
-    role_by_name: dict[str, FluidRole] = {fluid.name: fluid.role for fluid in fluids}
-
-    def _legacy_phase_fractions_for_fluid(fluid_name: str) -> tuple[tuple[str, float], ...]:
-        role = role_by_name.get(fluid_name, FluidRole.MUD)
-        if split_cement_phases and role in {FluidRole.LEAD, FluidRole.INTERMEDIATE}:
-            return (("lead", 1.0),)
-        if split_cement_phases and role == FluidRole.TAIL:
-            return (("tail", 1.0),)
-        if role in {FluidRole.LEAD, FluidRole.INTERMEDIATE, FluidRole.TAIL}:
-            return (("cement", 1.0),)
-        if role == FluidRole.FLUSHER:
-            return (("flusher", 1.0),)
-        if role in {FluidRole.WASH, FluidRole.SPACER}:
-            return (("spacer", 1.0),)
-        return (("mud", 1.0),)
 
     def _legacy_provider(time_s: float) -> AnnulusInletState:
-        pipe_exit_state = casing_solver.pipe_exit_state_at(casing_result, time_s)
-        # 使用多相映射支持管内轴向弥散后的多相共存状态
-        mapped_fractions = _phase_fractions_from_state(pipe_exit_state, fluids, split_cement_phases=split_cement_phases)
+        # 优先查询鞋口时间线：轴向弥散（T1-8）与界面混浆增强（T1-10）
+        # 生成的多相过渡带由此进入环空入口边界。
+        pipe_exit_state = casing_result.shoe_timeline.at(time_s)
+        if pipe_exit_state.flow_rate_m3_s < 1.0e-9:
+            # 停泵期间时间线只含体积追踪相态，无停泵沉降修正；
+            # 回退到 pipe_exit_state_at 的停泵沉降增强查询，保持历史口径。
+            pipe_exit_state = casing_solver.pipe_exit_state_at(casing_result, time_s)
+        else:
+            # 时间线返回最近过去事件快照，改写为查询时刻，保持字段语义一致。
+            pipe_exit_state = PipeExitState(
+                time_s=time_s,
+                flow_rate_m3_s=pipe_exit_state.flow_rate_m3_s,
+                stage_name=pipe_exit_state.stage_name,
+                phase_fractions=pipe_exit_state.phase_fractions,
+            )
+        mapped_fractions = _phase_fractions_from_state(
+            pipe_exit_state, fluids, split_cement_phases=split_cement_phases
+        )
         mapped_pipe_exit = PipeExitState(
             time_s=pipe_exit_state.time_s,
             flow_rate_m3_s=pipe_exit_state.flow_rate_m3_s,

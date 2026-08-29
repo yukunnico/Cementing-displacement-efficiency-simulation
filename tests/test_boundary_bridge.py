@@ -8,17 +8,21 @@
 
 import unittest
 
-from cemdisp.data.fluid_spec import FluidRole, FluidSpec
+from cemdisp.data.fluid_spec import FluidRole, FluidSpec, RheologyModel
 from cemdisp.data.provenance import (
     FluidProvenance,
     SectionProvenance,
     WellProvenance,
 )
+from cemdisp.data.pumping_schedule import PumpingSchedule, PumpingScheduleStep, PumpingStageEvent
+from cemdisp.data.well_spec import DepthValuePoint, EvaluationWindow, WellSpec
 from cemdisp.models2d.boundary_bridge import (
     AnnulusInletState,
     build_coupled_annulus_inlet_provider,
     build_sync_card,
+    _phase_fractions_from_state,
 )
+from cemdisp.transport1d.casing_flow import CasingFlowSolver
 from cemdisp.transport1d.shoe_timeline import ShoeEvent, ShoeEventKind, ShoeTimeline
 
 
@@ -329,6 +333,150 @@ class TestFlusherPhaseMapping(unittest.TestCase):
         )
         state = provider(0.0)
         self.assertEqual(state.phase_fractions, (("flusher", 1.0),))
+
+
+class TestLegacyProviderTimeline(unittest.TestCase):
+    """测试旧分支（casing_result + casing_solver）改走鞋口时间线后的行为。
+
+    覆盖三类口径：
+    - 弥散开启（默认）：轴向弥散/混浆增强的多相过渡带进入环空入口；
+    - 弥散关闭：保持传统体积追踪的单相口径；
+    - 停泵时段：回退停泵沉降增强查询（单相、零排量）。
+    """
+
+    def _make_well_spec(self) -> WellSpec:
+        """最小单一直径井筒规格。"""
+
+        return WellSpec(
+            well_name="测试井",
+            top_md_m=1.0,
+            bottom_md_m=1000.0,
+            shoe_md_m=1000.0,
+            hole_diameter_profile=(DepthValuePoint(1.0, 216.0), DepthValuePoint(1000.0, 216.0)),
+            inclination_profile=(DepthValuePoint(1.0, 0.0), DepthValuePoint(1000.0, 0.0)),
+            standoff_profile=(DepthValuePoint(1.0, 0.8), DepthValuePoint(1000.0, 0.8)),
+            liner_od_mm=139.7,
+            liner_id_mm=124.3,
+            evaluation_windows=(EvaluationWindow("target", 1.0, 1000.0),),
+        )
+
+    def _make_fluids(self) -> tuple[FluidSpec, ...]:
+        """两种密度不同的流体：泥浆（原地流体）与水泥（注入流体）。"""
+
+        return (
+            FluidSpec(
+                name="泥浆",
+                role=FluidRole.MUD,
+                density_kg_m3=1200.0,
+                rheology_model=RheologyModel.NEWTONIAN,
+                plastic_viscosity_pa_s=0.01,
+            ),
+            FluidSpec(
+                name="水泥",
+                role=FluidRole.LEAD,
+                density_kg_m3=1900.0,
+                rheology_model=RheologyModel.NEWTONIAN,
+                plastic_viscosity_pa_s=0.3,
+            ),
+        )
+
+    def _make_schedule(self) -> PumpingSchedule:
+        """注入 20 m³ 水泥、速率 2 m³/min，保证前缘到达鞋口。"""
+
+        return PumpingSchedule(steps=(
+            PumpingScheduleStep(
+                step_name="注水泥",
+                fluid_name="水泥",
+                volume_m3=20.0,
+                rate_m3_min=2.0,
+                event_tag=PumpingStageEvent.INJECT_CEMENT,
+            ),
+        ))
+
+    def _make_shutdown_schedule(self) -> PumpingSchedule:
+        """显式时间：注水泥 600s 后停泵 400s（含 rate=0 步骤）。"""
+
+        return PumpingSchedule(steps=(
+            PumpingScheduleStep(
+                step_name="注水泥",
+                fluid_name="水泥",
+                volume_m3=20.0,
+                rate_m3_min=2.0,
+                start_time_s=0.0,
+                end_time_s=600.0,
+                event_tag=PumpingStageEvent.INJECT_CEMENT,
+            ),
+            PumpingScheduleStep(
+                step_name="停泵候凝",
+                fluid_name="水泥",
+                volume_m3=0.0,
+                rate_m3_min=0.0,
+                start_time_s=600.0,
+                end_time_s=1000.0,
+                event_tag=PumpingStageEvent.SHUTDOWN,
+            ),
+        ))
+
+    def test_legacy_provider_exposes_dispersion_transition(self) -> None:
+        """弥散开启时，旧分支在前缘到达时刻返回多相过渡带。"""
+
+        solver = CasingFlowSolver()  # 弥散默认开启
+        fluids = self._make_fluids()
+        result = solver.run(self._make_well_spec(), fluids, self._make_schedule())
+        provider = build_coupled_annulus_inlet_provider(result, solver, fluids)
+
+        # 水泥前缘到达鞋口时刻（重力修正后）
+        arrival = next(f.time_s for f in result.fronts if f.fluid_name == "水泥")
+
+        # 到达时刻附近应出现多相过渡带（弥散/混浆增强产物）
+        for t in (arrival, arrival + 100.0, arrival + 200.0):
+            state = provider(t)
+            self.assertGreater(state.flow_rate_m3_s, 0.0, f"t={t} 应处于流动阶段")
+            self.assertGreater(len(state.phase_fractions), 1, f"t={t} 弥散过渡带应为多相")
+            mapped = dict(state.phase_fractions)
+            self.assertTrue(
+                any(0.0 < frac < 1.0 for frac in mapped.values()),
+                f"t={t} 应存在中间浓度相",
+            )
+            self.assertAlmostEqual(sum(mapped.values()), 1.0, places=6, msg=f"t={t} 分数之和应为 1")
+
+        # 前缘尚未到达前仍为纯泥浆单相
+        early = provider(arrival / 2.0)
+        self.assertEqual(early.phase_fractions, (("mud", 1.0),))
+
+    def test_legacy_provider_single_phase_without_dispersion(self) -> None:
+        """弥散关闭时旧分支保持单相体积追踪口径（每状态仅一项且分数为 1.0）。"""
+
+        solver = CasingFlowSolver(enable_gravity=True, enable_axial_dispersion=False)
+        fluids = self._make_fluids()
+        result = solver.run(self._make_well_spec(), fluids, self._make_schedule())
+        provider = build_coupled_annulus_inlet_provider(result, solver, fluids)
+
+        arrival = next(f.time_s for f in result.fronts if f.fluid_name == "水泥")
+        sample_times = (50.0, 200.0, arrival, arrival + 100.0, 550.0)
+        for t in sample_times:
+            state = provider(t)
+            self.assertGreater(state.flow_rate_m3_s, 0.0, f"t={t} 应处于流动阶段")
+            self.assertEqual(len(state.phase_fractions), 1, f"t={t} 弥散关闭应恒单相")
+            self.assertAlmostEqual(state.phase_fractions[0][1], 1.0, places=6, msg=f"t={t} 单相分数应为 1.0")
+
+    def test_legacy_provider_falls_back_to_settled_path_during_shutdown(self) -> None:
+        """停泵时段旧分支回退停泵沉降增强查询（单相、零排量），与 pipe_exit_state_at 一致。"""
+
+        solver = CasingFlowSolver(enable_gravity=True, enable_axial_dispersion=False)
+        fluids = self._make_fluids()
+        result = solver.run(self._make_well_spec(), fluids, self._make_shutdown_schedule())
+        provider = build_coupled_annulus_inlet_provider(result, solver, fluids)
+
+        for t in (650.0, 800.0, 950.0):
+            state = provider(t)
+            expected = solver.pipe_exit_state_at(result, t)
+            self.assertEqual(state.flow_rate_m3_s, 0.0, f"t={t} 停泵期排量应为 0")
+            self.assertEqual(len(state.phase_fractions), 1, f"t={t} 停泵回退路径应恒单相")
+            self.assertAlmostEqual(state.phase_fractions[0][1], 1.0, places=6, msg=f"t={t} 单相分数应为 1.0")
+            # 与 pipe_exit_state_at 的停泵沉降增强口径一致（流体名经环空相映射后）
+            self.assertEqual(state.phase_fractions, _phase_fractions_from_state(expected, fluids))
+            self.assertAlmostEqual(state.flow_rate_m3_s, expected.flow_rate_m3_s, places=9)
 
 
 if __name__ == "__main__":

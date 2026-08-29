@@ -3,6 +3,13 @@
 本脚本比较两种配置的模拟结果：
 - 旧模型：无重力修正、无轴向弥散（enable_gravity=False, enable_axial_dispersion=False）
 - 新模型：启用重力修正和轴向弥散（enable_gravity=True, enable_axial_dispersion=True）
+
+差异来源口径（2026-08-22 弥散/混浆接线生产后）：
+- 水泥到达时间差异只由重力修正驱动——轴向弥散仅作用于鞋口出流时间线的
+  过渡带，不改变前缘/尾缘到达时刻；
+- 顶替效率差异是重力修正（经 cement_end_time_s 改变环空求解时长）与轴向
+  弥散（经多相过渡带改变环空入口浓度边界）的叠加效应，单一效率差无法
+  归因单一机制；需归因时请分组消融（仅重力 / 仅弥散）。
 """
 
 from cemdisp.data.loaders import load_hu101_tailpipe
@@ -82,16 +89,18 @@ print(f"  新模型: {new_arrival:.1f} s")
 print(f"  差异: {time_diff:+.1f} s ({time_diff/60:+.1f} min)")
 
 print("\n物理解释:")
+print("  水泥到达时间差异只反映重力修正（弥散不改到达时刻）：")
 if time_diff > 0:
-    print("  - 水泥到达时间延迟，可能由重力沉降导致密度大的水泥浆加速前缘推进后又被弥散效应平滑")
+    print("  - 到达时间延迟：轻驱重浮力减速或停泵段影响")
 elif time_diff < 0:
-    print("  - 水泥到达时间提前，重力沉降效应使高密度水泥浆在管内加速下沉")
+    print("  - 到达时间提前：重驱轻浮力加速（Atwood 数正修正）")
 else:
-    print("  - 水泥到达时间相同，重力和弥散效应相互抵消")
+    print("  - 到达时间相同：重力修正被屈服应力抑制或等密度")
 
-if diff > 0:
-    print("  - 新模型效率更高，弥散效应减少了尖锐前缘的窜槽风险")
-elif diff < 0:
-    print("  - 新模型效率降低，重力沉降导致水泥浆分布不均")
+if abs(diff) > 0:
+    print("  效率差异是两机制叠加，无法从单一数字归因：")
+    print("  - 重力修正：改变 cement_end_time_s -> 环空求解时长")
+    print("  - 轴向弥散：鞋口多相过渡带 -> 环空入口浓度边界被平滑")
+    print("  如需分机制归因，请跑分组消融（仅重力 / 仅弥散）")
 else:
     print("  - 新旧模型效率相同")

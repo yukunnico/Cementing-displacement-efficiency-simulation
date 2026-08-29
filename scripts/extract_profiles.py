@@ -1,5 +1,12 @@
 """
 快速提取窄边水泥浓度剖面和鞋口出流时序（Step 3.3 & 3.4）
+
+baseline / improved 两组的边界口径（2026-08-22 弥散接线生产后）：
+- baseline：屈服正则 M=0、轴向弥散关。弥散关闭时鞋口边界与体积追踪
+  单相口径等价（shoe_timeline 与 pipe_exit_state_at 一致）；
+- improved：屈服正则 M=100、轴向弥散开。鞋口边界为多相过渡带
+  （Taylor-Aris 弥散 + 界面混浆增强），环空入口浓度边界被平滑。
+两组差异同时含 M 与弥散两因素，归因单一机制需分组消融。
 """
 from __future__ import annotations
 

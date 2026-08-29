@@ -488,9 +488,9 @@ cemdisp/
 #### `build_coupled_annulus_inlet_provider(arg1, arg2, fluids, *, split_cement_phases=False)`
 
 - **功能**：构建1D-2D耦合的环空入口边界提供器
-- **支持两种调用方式**：
-  1. **新方式**（推荐）：`build_coupled_annulus_inlet_provider(shoe_timeline, provenance, fluids)` — 传入 ShoeTimeline 和 WellProvenance，直接使用时间轴查询
-  2. **旧方式**：`build_coupled_annulus_inlet_provider(casing_result, casing_solver, fluids)` — 传入 CasingFlowResult 和 CasingFlowSolver，通过 pipe_exit_state_at 查询
+- **支持两种调用方式**（2026-08-22 接线后两种口径在流动阶段等价，均走鞋口时间线查询，含轴向弥散/混浆增强的多相过渡带）：
+  1. **新方式**：`build_coupled_annulus_inlet_provider(shoe_timeline, provenance, fluids)` - 传入 ShoeTimeline 和 WellProvenance，直接使用时间轴查询
+  2. **旧方式**（生产 runner 在用）：`build_coupled_annulus_inlet_provider(casing_result, casing_solver, fluids)` - 传入 CasingFlowResult 和 CasingFlowSolver；流动阶段查 shoe_timeline（弥散/混浆生效），停泵阶段回退 pipe_exit_state_at 的停泵沉降增强查询
 - **返回**：`Callable[[float], AnnulusInletState]`
 - **说明**：将套管鞋口出流状态转换为环空入口，自动将流体名称映射为环空相（cement/spacer/mud）。支持多相共存（轴向弥散后的过渡态），支持分离领浆/尾浆相（split_cement_phases=True）。
 
