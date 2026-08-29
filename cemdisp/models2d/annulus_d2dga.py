@@ -818,7 +818,10 @@ class AnnulusD2DGASolver:
             from cemdisp.models2d import regime_closure as rc
             wall_factor = np.ones_like(base) if wall is None else (1.0 - wall)
             he = rc.hedstrom_number(tau_y, rho_kg_m3, n_mix, kappa_mix, b)
-            re_crit = 2100.0 * (1.0 + 0.1 * he)  # 屈服推迟转捩；re_crit(He) 标定钮（provisional）
+            # ⚠️ 未标定（临时公式）：re_crit = 2100(1+0.1·He) 为 provisional 标定钮（屈服推迟转捩）。
+            # 启用 enable_regime_split 前须三重回归锚定（Walton&Bittleston / Z22 Table3 / Foolad 定性）。
+            # 对现 8 井中性（Bingham 泥浆 He 高 → 全层流 R=1，此式不影响基线结果）。
+            re_crit = 2100.0 * (1.0 + 0.1 * he)
             w_k = w_prev.copy()
             R = np.ones_like(w_k)
             for _ in range(self.regime_max_iter):
