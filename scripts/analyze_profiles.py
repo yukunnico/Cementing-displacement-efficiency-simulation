@@ -42,7 +42,10 @@ def analyze_well(well_key: str):
         ax.plot(profile["narrow_eff"], depth, label="窄边有效效率", linewidth=2, linestyle="--")
         ax.set_xlabel("浓度 / 效率")
         ax.set_ylabel("井深 (m)")
-        ax.set_title(f"{well_key.upper()} {label}\nCBL效率={result['cbl_eval_eff']:.4f}")
+        # 口径说明：validation 链路删除（2026-07-29）后已无 CBL 评价段列，改用全井段口径。
+        # 注意：历史 JSON 产物（results/p3_p4_integration/*_profiles.json）仍为旧键
+        # cbl_eval_eff（CBL 评价段口径），需重跑 extract_profiles.py 才能配对新键 effective_eff。
+        ax.set_title(f"{well_key.upper()} {label}\n全井段有效效率={result['effective_eff']:.4f}")
         ax.invert_yaxis()
         ax.legend(fontsize=8)
         ax.grid(True, alpha=0.3)
