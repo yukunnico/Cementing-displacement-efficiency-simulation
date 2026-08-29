@@ -883,6 +883,23 @@ cemdisp/
 
 #### `export_reference_figure_set(result, well_spec, output_dir)`
 
-- **参数**：`AnnulusSimulationResult`, `WellSpec`, 可选的输出目录路径
+- **参数**：`AnnulusSimulationResult`, `WellSpec`, 可选的输出目录 `results/` 目录路径
 - **返回**：`dict[str, Figure]` — 文件名到Figure对象的映射
 - **功能**：一键导出上述全部参考图件，返回所有生成的Figure对象字典
+
+---
+
+## 7. scripts/ 分析脚本状态（D2 stale 脚本清理落盘，2026-08-29）
+
+P0 计划 Task D2 对引用已删 metrics 列（`cbl_eval_interval_efficiency` / `target_interval_efficiency`，2026-07-29 validation 链路删除时移除）的 stale 脚本逐个处理的结果落盘。规则：**能替换为现存列则修复；依赖已删 validation 链路则 DEPRECATED 不删文件**。论文/正式 8 井数字官方入口为 `scripts/rerun_all_wells_corrected.py`（A2 裁定口径 (b)）。
+
+| 脚本 | 状态 | 说明 |
+|------|------|------|
+| `scripts/extract_profiles.py` | **已修复** | 输出键 `cbl_eval_eff`（已删列）→ `effective_eff`（现存列 `effective_efficiency`，全井段口径）。历史 JSON 产物 `results/p3_p4_integration/*_profiles.json` 仍为旧键，需重跑 extract 后 analyze 才能配对 |
+| `scripts/analyze_profiles.py` | **已修复** | 唯一下游消费者同步新键 `result['effective_eff']`，图题 "CBL效率=" → "全井段有效效率="，并注明历史 JSON 旧键需重跑 extract 配对 |
+| `scripts/plot_patent_figures.py` | **已修复** | fig10 删除 `target_interval_efficiency` 死列曲线（现存 metrics 仅全井段口径，无对应替换列），其余 11 张图不受影响 |
+| `scripts/p3_p4_integration.py` | **DEPRECATED** | 7 处引用已删列 `cbl_eval_interval_efficiency`（运行即 KeyError）；M/alpha 标定语义整体锚定 CBL 评价段，换全井均值会误导（模型 vs CBL"全井均值 vs 评价段"口径错配）。替代：`scripts/cbl_window_comparison.py`（B1 新建）/ `scripts/rerun_all_wells_corrected.py` |
+| `scripts/run_calibrated_all_wells.py` | **DEPRECATED** | 经 `from scripts.p3_p4_integration import run_single_config` 依赖同已删列；标定参数 M=500/alpha=0.05 来自已废弃旧参数扫描。替代指向同上 |
+| `scripts/rerun_all_wells_corrected.py` | **官方入口** | 论文/正式 8 井数字采用口径（corrected 配置，CORRECTED_KW 单一来源），输出 汇总.csv + adopted_config.json（solver 开关快照 + git_commit + 生成时间） |
+
+> 未列入本表的 scripts/ 其余脚本不在 D2 清理范围；`ht1_004_ablation.py`（runners 下消融脚本）不在"8 个 runner"口径范围。
