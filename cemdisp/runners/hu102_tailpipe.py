@@ -6,6 +6,8 @@
 
 输出目录：results/呼102尾管_1D2D耦合模型/
 输出文件：CSV(时间序列/深度剖面) + JSON(摘要) + Markdown(摘要) + PNG(静态图) + NPZ(2D场数据) + GIF(动画)
+
+⚠️ 口径声明：本 runner 为基线口径（默认参数）；论文/正式 8 井数字见 scripts/rerun_all_wells_corrected.py（修正后配置）。
 """
 
 from __future__ import annotations
@@ -280,7 +282,10 @@ def run_hu102_tailpipe_initial() -> None:
     # 套管内同样启用重力项，使鞋口边界能反映停泵后的密度分异趋势。
     casing_solver = CasingFlowSolver(enable_gravity=True)
     casing_result = casing_solver.run(well_spec, fluids, schedule)
-    coupled_provider = build_coupled_annulus_inlet_provider(casing_result, casing_solver, fluids)
+    # split_cement_phases=True 与其余 7 井口径一致（领浆/中间浆并入前导水泥相，尾浆单独成相）。
+    coupled_provider = build_coupled_annulus_inlet_provider(
+        casing_result, casing_solver, fluids, split_cement_phases=True
+    )
     annulus_stop_time_value_s = annulus_stop_time_s(casing_result=casing_result, fluids=fluids)
     _export_casing_flow_timing(
         output_dir=output_dir,
