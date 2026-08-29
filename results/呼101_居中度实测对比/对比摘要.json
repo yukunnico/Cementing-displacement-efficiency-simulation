@@ -1,0 +1,63 @@
+{
+  "description": "呼101井居中度实测值 vs 模型假设值 敏感性对比",
+  "model_domain_m": [
+    5400.0,
+    7868.0
+  ],
+  "nz": 250,
+  "mode": "1D-2D coupled with gravity",
+  "baseline_profile_note": "与 hu101_loader.py legacy 假设 0.38-0.48 完全一致",
+  "measured_source_note": "从呼101井尾管居中度检测图读取（Pipe Standoff %）",
+  "cases": [
+    {
+      "case": "模型假设(legacy)",
+      "effective_efficiency": 0.4441889999847934,
+      "cement_occupation": 0.4441889999847934,
+      "channeling_index": 0.9317269076301447,
+      "mixing_index": 0.5927627451625657,
+      "instability_index": 0.9986737355028991,
+      "eta_narrow": 0.08997215727468288,
+      "elapsed_s": 63.7,
+      "mean_standoff": 0.4294,
+      "case_id": "baseline_assumed"
+    },
+    {
+      "case": "实测-扶正器之间",
+      "effective_efficiency": 0.4379233876877308,
+      "cement_occupation": 0.4379233876877308,
+      "channeling_index": 0.9919678714855419,
+      "mixing_index": 0.5757110526769662,
+      "instability_index": 0.9996657764322746,
+      "eta_narrow": 0.05672452381529752,
+      "elapsed_s": 64.3,
+      "mean_standoff": 0.5155,
+      "case_id": "measured_between_cent"
+    },
+    {
+      "case": "实测-扶正器处",
+      "effective_efficiency": 0.5041221729224986,
+      "cement_occupation": 0.5041221729224986,
+      "channeling_index": 0.7389558232928732,
+      "mixing_index": 0.46382844754934327,
+      "instability_index": 0.9333003221715913,
+      "eta_narrow": 0.18034082390361328,
+      "elapsed_s": 61.4,
+      "mean_standoff": 0.7342,
+      "case_id": "measured_at_cent"
+    }
+  ],
+  "delta_between_vs_assumed": {
+    "effective_efficiency": -0.006266,
+    "cement_occupation": -0.006266,
+    "channeling_index": 0.060241,
+    "mixing_index": -0.017052,
+    "instability_index": 0.000992
+  },
+  "delta_at_vs_assumed": {
+    "effective_efficiency": 0.059933,
+    "cement_occupation": 0.059933,
+    "channeling_index": -0.192771,
+    "mixing_index": -0.128934,
+    "instability_index": -0.065373
+  }
+}

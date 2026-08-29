@@ -25,7 +25,7 @@
 
 模型假设：
 - 套管内流体以施工程序给定排量注入
-- 流体前缘按体积推进法追踪，首版不考虑管内扩散
+- 流体前缘按体积推进法追踪；轴向弥散（Taylor-Aris 型）作用于鞋口出流时间线的过渡带生成
 - 鞋口深度为从地面到鞋口的总测深
 - 前缘到达鞋口后，对应流体从鞋口进入环空
 
@@ -89,7 +89,7 @@ class CasingFlowSolver:
 
     模型假设：
     - 套管内流体以施工程序给定排量注入；
-    - 流体前缘按体积推进法追踪，首版不考虑管内扩散；
+    - 流体前缘按体积推进法追踪；轴向弥散（Taylor-Aris 型）作用于鞋口出流时间线的过渡带生成；
     - 鞋口深度为从地面到鞋口的总测深；
     - 前缘到达鞋口后，对应流体从鞋口进入环空。
 
@@ -127,7 +127,6 @@ class CasingFlowSolver:
         mixing_enhancement_factor: float = 5.0,
         max_mixing_enhancement: float = 10.0,
         has_plug: bool = False,
-        enable_utube: bool = False,
     ) -> None:
         """初始化求解器。
 
@@ -163,8 +162,6 @@ class CasingFlowSolver:
                 防止过渡带不物理地过宽。
             has_plug: 是否有胶塞（尾管固井常配胶塞）；有则胶塞刮拭阻止混浆，
                 混浆增强因子恒为 1，默认 False。
-            enable_utube: U型管/自由下落修正开关（预留接口），默认关闭。
-                当前为空实现钩子 _utube_corrected_arrival_time，未来实现（T1-12）。
         """
         if not math.isfinite(dt) or dt <= 0.0:
             raise ValueError("dt 必须为大于0的有限数值")
@@ -198,7 +195,6 @@ class CasingFlowSolver:
         self.mixing_enhancement_factor: float = mixing_enhancement_factor
         self.max_mixing_enhancement: float = max_mixing_enhancement
         self.has_plug: bool = has_plug
-        self.enable_utube: bool = enable_utube
         self._scheduled_steps_by_result_id: dict[int, tuple[_ScheduledStep, ...]] = {}
         self._initial_fluid_by_result_id: dict[int, str] = {}
         self._fluids_by_result_id: dict[int, tuple[FluidSpec, ...]] = {}
@@ -286,7 +282,7 @@ class CasingFlowSolver:
                 legacy_pipe_volume_m3=pipe_volume_m3,
             ),
             notes=(
-                "套管内采用理想界面前缘追踪，未加入管内扩散。",
+                "套管内采用体积推进前沿追踪；鞋口出流时间线含轴向弥散过渡带（enable_axial_dispersion 可关）。",
                 f"初始管内流体按 {initial_fluid} 处理。",
             ),
         )
@@ -336,10 +332,18 @@ class CasingFlowSolver:
         fluid: FluidSpec,
         mean_velocity_m_s: float,
     ) -> float:
-        """管内层流轴向弥散系数（Taylor-Aris + 屈服应力修正）。
+        """管内轴向弥散系数（Taylor-Aris 系列 + 对流尺度上限截断）。
 
         T1-8: Newtonian → Taylor-Aris; Power-law → Batot et al. (2016) 式(28);
         Bingham → Fan & Wang (1966); HB → 等效 Bingham 近似。
+
+        Taylor-Aris 系列是层流“截面扩散混合充分发展”后的渐近结果，适用条件
+        为行程 L >> U·R²/d_mol（~10^6 m 量级）；固井套管行程（10^3 m 量级、
+        Pe~10^8）远未进入该区，直接使用会得到 D_eff~10^5 m²/s、过渡带宽度
+        覆盖整个施工时间窗（2026-08-22 接线生产后实测暴露，hu101 效率崩塌
+        至 3%）。因此以对流尺度混合上限 dispersion_alpha·U·R（湍流弥散文献
+        量级 D_t≈0.04~0.12·U·R）截断：高 Pe（固井实际）下由上限支配，
+        低 Pe（公式自洽区）下保持 Taylor-Aris 原值。
 
         Args:
             pipe_radius_m: 套管内半径 [m]
@@ -359,15 +363,17 @@ class CasingFlowSolver:
         R = pipe_radius_m
         d_mol = 1.0e-9  # 分子扩散系数 [m²/s]
         Pe = 2.0 * U * R / d_mol  # Péclet 数
+        # 对流尺度混合上限：高 Pe 下 Taylor-Aris 渐近值不可用，以经验上限截断
+        d_cap = self.dispersion_alpha * U * R
 
         if fluid.rheology_model == RheologyModel.NEWTONIAN:
-            return d_mol * Pe**2 / 192.0
+            return min(d_mol * Pe**2 / 192.0, d_cap)
 
         elif fluid.rheology_model == RheologyModel.POWER_LAW:
             n = fluid.power_law_n if fluid.power_law_n is not None else 1.0
             # Batot et al. (2016) 式(28)
             factor = 24.0 * n**2 / ((3.0 * n + 1.0) * (5.0 * n + 1.0))
-            return d_mol * Pe**2 / 192.0 * factor
+            return min(d_mol * Pe**2 / 192.0 * factor, d_cap)
 
         elif fluid.rheology_model in (RheologyModel.BINGHAM, RheologyModel.HERSCHEL_BULKLEY):
             # T1-8: Fan & Wang (1966) Bingham Taylor 弥散
@@ -384,7 +390,7 @@ class CasingFlowSolver:
             xi0 = min(xi0, 0.999)
 
             if xi0 < 1e-9:
-                return d_mol * Pe**2 / 192.0
+                return min(d_mol * Pe**2 / 192.0, d_cap)
 
             # Fan & Wang (1966) k(ξ₀) 多项式
             xi = xi0; xi2 = xi**2; xi4 = xi2**2; xi8 = xi4**2
@@ -394,10 +400,10 @@ class CasingFlowSolver:
             den = 2.0 * (3.0 + 2.0*xi + xi2) * (1.0 - xi)**4
             k = max(num / max(den, 1e-12), 0.0)
 
-            return d_mol * Pe**2 / 48.0 * k
+            return min(d_mol * Pe**2 / 48.0 * k, d_cap)
 
         else:
-            return self.dispersion_alpha * mean_velocity_m_s * pipe_radius_m
+            return d_cap
 
     def _effective_viscosity(
         self,
@@ -522,12 +528,20 @@ class CasingFlowSolver:
             U = event.flow_rate_m3_s / (math.pi * pipe_radius_m ** 2)
             D_eff = self._compute_dispersion_coefficient(pipe_radius_m, fluid, U)
 
-            # 找到前一个流体（在弥散系数计算前确定，供混浆增强注入使用）
+            # 找到前一个流体（在弥散系数计算前确定，供混浆增强注入使用）。
+            # 跳过同名事件：同一流体分多段注入时，相邻事件可能同名
+            # （如“尾浆 RATE_SWITCH + 尾浆 FRONT_ARRIVAL”），此时不存在
+            # 异物界面，弥散过渡带无意义（2026-08-22 接线后实测暴露自弥散 bug）。
             prev_fluid = ""
             for j in range(i - 1, -1, -1):
-                if events[j].phase_fractions:
+                if events[j].phase_fractions and events[j].phase_fractions[0][0] != fluid_name:
                     prev_fluid = events[j].phase_fractions[0][0]
                     break
+            if not prev_fluid:
+                # 前方找不到异名流体（前缘到达前鞋口已在流出同名流体）：
+                # 无界面可言，保留原阶跃事件
+                dispersed_events.append(event)
+                continue
 
             # T1-10: 混浆增强分散（仅当前流体与前置流体均已知时注入）
             if self.enable_mixing_enhancement:
@@ -548,6 +562,8 @@ class CasingFlowSolver:
             # t_travel = pipe_volume / Q ≈ shoe_md_m / U
             t_travel = well_spec.shoe_md_m / max(U, 1e-9)
             sigma_t = math.sqrt(2.0 * D_eff * t_travel) / max(U, 1e-9)
+            # 防御上限：过渡带宽度不超过行程时间的一半，防止参数极端时盖满时间窗
+            sigma_t = min(sigma_t, 0.5 * t_travel)
             sigma_t = max(sigma_t, self.dt)  # 至少一个时间步
 
             next_fluid = fluid_name
@@ -555,7 +571,8 @@ class CasingFlowSolver:
             # 在 [t_arrival - σ, t_arrival + σ] 范围内生成过渡子事件
             n_sub = 5  # 每个过渡带的子事件数
             for k in range(n_sub):
-                t_sub = t_arrival + sigma_t * (2.0 * k / (n_sub - 1) - 1.0)  # [-σ, +σ]
+                # 过渡带覆盖 [t_arrival-σ, t_arrival+σ]，但不早于开泵时刻
+                t_sub = max(t_arrival + sigma_t * (2.0 * k / (n_sub - 1) - 1.0), 0.0)
                 frac = 0.5 * (1.0 + math.erf(k / (n_sub - 1.0) * 2.0 - 1.0))  # erf 过渡
 
                 dispersed_events.append(ShoeEvent(
@@ -597,10 +614,6 @@ class CasingFlowSolver:
                     front_time_s = self._gravity_corrected_arrival_time(
                         front_time_s, scheduled.step.fluid_name, displaced_fluid, fluids, well_spec
                     )
-                # T1-12 预留：U型管/自由下落修正钩子（重力修正之后调用）
-                front_time_s = self._utube_corrected_arrival_time(
-                    front_time_s, scheduled.step.fluid_name, fluids, well_spec
-                )
                 event_points.append((front_time_s, ShoeEventKind.FRONT_ARRIVAL, ((scheduled.step.fluid_name, 1.0),)))
             rear_time_s = self._rear_arrival_time(scheduled, scheduled_steps, pipe_volume_m3)
             if rear_time_s is not None:
@@ -608,10 +621,6 @@ class CasingFlowSolver:
                     rear_time_s = self._gravity_corrected_arrival_time(
                         rear_time_s, scheduled.step.fluid_name, displaced_fluid, fluids, well_spec
                     )
-                # T1-12 预留：U型管/自由下落修正钩子（重力修正之后调用）
-                rear_time_s = self._utube_corrected_arrival_time(
-                    rear_time_s, scheduled.step.fluid_name, fluids, well_spec
-                )
                 event_points.append((rear_time_s, ShoeEventKind.REAR_EXIT, None))
         if scheduled_steps:
             event_points.append((scheduled_steps[-1].end_time_s, ShoeEventKind.END, None))
@@ -941,34 +950,6 @@ class CasingFlowSolver:
             return initial_fluid
         return scheduled_steps[current_index - 1].step.fluid_name
 
-    def _utube_corrected_arrival_time(
-        self,
-        arrival_time_s: float,
-        fluid_name: str,
-        fluids: tuple[FluidSpec, ...],
-        well_spec: WellSpec | None = None,
-    ) -> float:
-        """U型管/自由下落修正钩子。当前为空实现，预留未来扩展。
-
-        未来实现方向（T1-12）：
-        1. 计算套管-环空静压平衡
-        2. 检测自由下落条件（ΔP_hydro > ΔP_friction）
-        3. 修正到达时间（加速效应）
-
-        Args:
-            arrival_time_s: 重力修正后的前缘到达时间（秒）
-            fluid_name: 流体名称
-            fluids: 全部流体规格元组
-            well_spec: 井筒规格
-
-        Returns:
-            修正后的到达时间（秒）；enable_utube=False 或未实现时原样返回
-        """
-        if not self.enable_utube:
-            return arrival_time_s
-        # 未来：填入 U 型管物理计算
-        return arrival_time_s
-
     def _average_inclination_rad(self, well_spec: WellSpec) -> float:
         """计算井段内平均井斜角（弧度）。
 
@@ -1019,34 +1000,6 @@ class CasingFlowSolver:
         if well_spec is not None and well_spec.liner_id_mm is not None:
             return well_spec.liner_id_mm / 2000.0
         return 0.05
-
-    def _settled_exit_fluid_name(
-        self,
-        *,
-        result: CasingFlowResult,
-        scheduled_steps: tuple[_ScheduledStep, ...],
-        time_s: float,
-        cumulative_at_time: float,
-        pipe_volume_m3: float,
-        default_fluid_name: str,
-    ) -> str:
-        """停泵期间按密度差估算沉降后鞋口流体。"""
-
-        fluids = self._fluids_by_result_id.get(id(result), ())
-        initial_fluid = self._initial_fluid_by_result_id.get(id(result), default_fluid_name)
-        current_density = self._get_fluid_density(default_fluid_name, fluids)
-        initial_density = self._get_fluid_density(initial_fluid, fluids)
-        # 停泵期间，排量为零，体积推进停止；密度差会让重流体下沉、轻流体上浮。
-        # v_settle = k * Δρ，其中 k 为经验沉降速度系数，Δρ 为当前流体与初始管内流体密度差。
-        delta_rho = current_density - initial_density
-        v_settle_m_s = self.settling_velocity_factor * delta_rho
-        shutdown_duration_s = self._shutdown_duration_at(scheduled_steps, time_s)
-        # 将沉降距离折算成等效体积位移，仅用于查询鞋口相态，不改写原体积追踪前缘。
-        settled_volume_m3 = cumulative_at_time + v_settle_m_s * shutdown_duration_s * result.pipe_cross_section_m2
-        if settled_volume_m3 < pipe_volume_m3:
-            return initial_fluid
-        delayed_volume_m3 = max(settled_volume_m3 - pipe_volume_m3, 0.0)
-        return self._fluid_by_injected_volume(scheduled_steps, delayed_volume_m3)
 
     def _settled_exit_fluid_name_enhanced(
         self,

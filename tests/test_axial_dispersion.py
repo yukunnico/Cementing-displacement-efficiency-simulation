@@ -39,12 +39,17 @@ class TestDispersionCoefficient(unittest.TestCase):
             plastic_viscosity_pa_s=0.001,
         )
         R = 0.05
-        U = 1.0
 
-        D_eff = solver._compute_dispersion_coefficient(R, fluid, U)
+        # 低速（Pe 极小）处于 Taylor-Aris 公式自洽区：U²R²/(48·D_mol)
+        U_low = 1.0e-8
+        D_eff = solver._compute_dispersion_coefficient(R, fluid, U_low)
+        expected = (U_low ** 2) * (R ** 2) / (48.0 * 1.0e-9)
+        self.assertAlmostEqual(D_eff, expected, places=15)
 
-        expected = (U ** 2) * (R ** 2) / (48.0 * 1.0e-9)
-        self.assertAlmostEqual(D_eff, expected, places=3)
+        # 固井流速（Pe~10^8）：Taylor 渐近值不可用，截断到对流尺度上限 α·U·R
+        U_high = 1.0
+        D_eff = solver._compute_dispersion_coefficient(R, fluid, U_high)
+        self.assertAlmostEqual(D_eff, 0.2 * U_high * R, places=12)
 
     def test_power_law_shear_thinning_reduces_dispersion(self) -> None:
         """幂律 n<1（剪切稀化）→ 速度剖面变平 → 弥散减小（Batot 2016）。"""
@@ -58,7 +63,9 @@ class TestDispersionCoefficient(unittest.TestCase):
             rheology_model=RheologyModel.POWER_LAW, power_law_n=1.0, consistency_k=0.5,
         )
         R = 0.05
-        U = 1.0
+        # 低速构造 Taylor-Aris 公式自洽区（固井流速下两分支同被对流上限截断，
+        # 无法区分 Batot 流变因子）
+        U = 1.0e-8
         D_eff_05 = solver._compute_dispersion_coefficient(R, fluid_n05, U)
         D_eff_10 = solver._compute_dispersion_coefficient(R, fluid_n10, U)
         # n=0.5 速度剖面更扁平 → 弥散更小
@@ -89,14 +96,15 @@ class TestDispersionCoefficient(unittest.TestCase):
             yield_stress_pa=0.0,  # 零屈服 → 牛顿极限
         )
         R = 0.05
-        U = 1.0
+        # 低速区验证 τ_y=0 的牛顿退化（未被对流上限截断）
+        U = 1.0e-8
 
         D_eff = solver._compute_dispersion_coefficient(R, fluid, U)
         expected = (U ** 2) * (R ** 2) / (48.0 * 1.0e-9)
-        self.assertAlmostEqual(D_eff, expected, places=3)
+        self.assertAlmostEqual(D_eff, expected, places=15)
 
     def test_bingham_yield_stress_reduces_dispersion(self) -> None:
-        """屈服应力增大 → 柱塞增大 → 弥散减小。"""
+        """Bingham 屈服抑制弥散：低速区 Fan & Wang 可测，固井流速被上限截断。"""
         solver = self._make_solver()
         def _make_bingham(tau_y: float) -> FluidSpec:
             return FluidSpec(
@@ -105,11 +113,17 @@ class TestDispersionCoefficient(unittest.TestCase):
                 plastic_viscosity_pa_s=0.05, yield_stress_pa=tau_y,
             )
         R = 0.05
-        U = 1.0
-        D_low = solver._compute_dispersion_coefficient(R, _make_bingham(1.0), U)
-        D_high = solver._compute_dispersion_coefficient(R, _make_bingham(20.0), U)
-        self.assertLess(D_high, D_low)  # 更大的屈服应力 → 更大塞流 → 更小弥散
+        # 低速构造 Fan & Wang 公式自洽区：屈服应力存在时塞流增大、弥散减小
+        # （τ_y=1 vs 0 相差约 4 个数量级；τ_y=1 vs 20 因 ξ₀ 饱和 0.999 不可区分）
+        U = 1.0e-8
+        D_newtonian = solver._compute_dispersion_coefficient(R, _make_bingham(0.0), U)
+        D_yield = solver._compute_dispersion_coefficient(R, _make_bingham(1.0), U)
+        self.assertLess(D_yield, D_newtonian)  # 屈服应力存在 -> 塞流增大 -> 弥散减小
 
+        # 固井流速下屈服梯度不可测：均被对流尺度上限截断到 α·U·R
+        D_cap_newtonian = solver._compute_dispersion_coefficient(R, _make_bingham(0.0), 1.0)
+        D_cap_yield = solver._compute_dispersion_coefficient(R, _make_bingham(20.0), 1.0)
+        self.assertAlmostEqual(D_cap_newtonian, D_cap_yield, places=12)
 
 class TestDispersionTimeline(unittest.TestCase):
     """测试弥散后时间线生成。"""

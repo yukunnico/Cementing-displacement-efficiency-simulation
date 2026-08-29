@@ -13,7 +13,6 @@ T1-10 混浆段增强分散 + T1-11 浮力滑移物理化 单元测试。
 - T1-10：重驱轻+高Re → 增强因子>1
 - T1-10：has_plug=True → 增强因子=1
 - T1-10：enable_mixing_enhancement=False → 不增强
-- U型管：enable_utube=False → 不影响结果
 - 辅助方法 _displaced_fluid_name 与被顶替流体接线
 """
 
@@ -296,41 +295,6 @@ class TestMixingEnhancement(unittest.TestCase):
         self.assertAlmostEqual(solver._effective_viscosity(hb, U, R), expected, places=9)
 
 
-class TestUtubeHook(unittest.TestCase):
-    """U型管预留接口测试。"""
-
-    def test_disabled_hook_returns_unchanged(self) -> None:
-        """enable_utube=False：钩子原样返回，不影响结果。"""
-
-        solver = CasingFlowSolver(enable_utube=False)
-        fluids = _fluids()
-        self.assertEqual(solver._utube_corrected_arrival_time(123.45, "尾浆", fluids), 123.45)
-
-    def test_enabled_hook_is_identity_for_now(self) -> None:
-        """enable_utube=True：当前空实现同样原样返回（预留，未来填物理计算）。"""
-
-        solver = CasingFlowSolver(enable_utube=True)
-        fluids = _fluids()
-        self.assertEqual(solver._utube_corrected_arrival_time(123.45, "尾浆", fluids), 123.45)
-
-    def test_utube_flag_does_not_change_run_results(self) -> None:
-        """enable_utube=True/False 对 run() 结果完全无影响（空实现钩子）。"""
-
-        fluids = _fluids()
-        well = _simple_well()
-        schedule = PumpingSchedule(
-            steps=(
-                PumpingScheduleStep(step_name="注隔离液", fluid_name="隔离液", volume_m3=1.0, rate_m3_min=1.0, event_tag=PumpingStageEvent.INJECT_SPACER),
-                PumpingScheduleStep(step_name="注尾浆", fluid_name="尾浆", volume_m3=1.0, rate_m3_min=1.0, event_tag=PumpingStageEvent.INJECT_CEMENT),
-            )
-        )
-        r_off = CasingFlowSolver(enable_utube=False).run(well, fluids, schedule)
-        r_on = CasingFlowSolver(enable_utube=True).run(well, fluids, schedule)
-
-        self.assertEqual([f.time_s for f in r_off.fronts], [f.time_s for f in r_on.fronts])
-        self.assertEqual([e.time_s for e in r_off.shoe_timeline.events], [e.time_s for e in r_on.shoe_timeline.events])
-
-
 class TestRunIntegration(unittest.TestCase):
     """run() 调用点接线集成验证。"""
 
@@ -372,7 +336,6 @@ class TestRunIntegration(unittest.TestCase):
         self.assertEqual(solver.mixing_enhancement_factor, 5.0)
         self.assertEqual(solver.max_mixing_enhancement, 10.0)
         self.assertFalse(solver.has_plug)
-        self.assertFalse(solver.enable_utube)
 
     def test_parameter_validation(self) -> None:
         """非法参数应拒绝。"""
