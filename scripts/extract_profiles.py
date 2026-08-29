@@ -69,7 +69,8 @@ def extract_profiles(well_key: str):
         results[label] = {
             "profile": profile,
             "shoe_events": shoe_events,
-            "cbl_eval_eff": float(result.metrics.iloc[-1]["cbl_eval_interval_efficiency"]),
+            # 2026-07-29 validation 链路删除后改用现存列 effective_efficiency（全井段口径）。
+            "effective_eff": float(result.metrics.iloc[-1]["effective_efficiency"]),
         }
 
     # 保存

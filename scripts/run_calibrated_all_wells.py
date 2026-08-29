@@ -1,3 +1,7 @@
+# DEPRECATED: 依赖 scripts/p3_p4_integration 的已删 metrics 列 cbl_eval_interval_efficiency
+# （validation/ 于 2026-07-29 删除，运行即 KeyError），且标定参数 M=500/alpha=0.05 来自
+# 已废弃的旧参数扫描。参见 scripts/cbl_window_comparison.py（B1 新建）
+# 或 scripts/rerun_all_wells_corrected.py（论文/正式 8 井官方口径）替代方案。
 """
 用标定参数运行所有井（Step 4.4）
 """

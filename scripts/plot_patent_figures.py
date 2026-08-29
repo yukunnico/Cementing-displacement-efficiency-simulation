@@ -762,9 +762,9 @@ def fig10_diagnostics_timeseries(result=None):
     if result is not None:
         m = result.metrics
         t = m["time_min"]
-        # (a) 效率曲线
+        # (a) 效率曲线（target_interval_efficiency 列已随 2026-07-29 validation 链路删除，
+        #     现存 metrics 仅全井段口径，不再绘制目标层段曲线）
         axes[0].plot(t, m["effective_efficiency"], lw=2, label="全井段效率")
-        axes[0].plot(t, m["target_interval_efficiency"], lw=2, label="目标层段效率")
         axes[0].plot(t, m["bulk_cement_fill"], "--", lw=1.8, label="占据率")
         # (b) 三指数
         axes[1].plot(t, m["channeling_index"], lw=2, label="窜槽指数")
