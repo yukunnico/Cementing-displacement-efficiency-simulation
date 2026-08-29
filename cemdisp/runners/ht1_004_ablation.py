@@ -1,13 +1,15 @@
 """HT1-004 R0->R3 改进 D2DGA 四级消融运行器。
 
 R0: enable_d2dga_auto_m=False, enable_d2dga_i3_flux=False, enable_true_buoyancy=False
-R1: +auto-m
-R2: +I3 flux
-R3: +true buoyancy
+R1: +auto-m（局部黏度比 m 场）
+R2: +I3 浮力弥散通量（Zhang 2022 式 4.25 第二项；T1-3b 已实现物理系数直驱）
+R3: +true buoyancy（真浮力体力替换 buoyancy_shape 代理，T1-3b 已实现）
 每级产出 AnnulusSimulationResult + 摘要，供论文图6-9。
 
-注意：当前只有 enable_d2dga_auto_m 开关存在（Task 2）。i3_flux 和 true_buoyancy
-开关由 Task 4/5 添加后会接入此运行器；在此之前 R2/R3 行为与 R1 相同。
+run_one_level 另支持透传求解器修正配置开关（I3 局部化 enable_local_i3、
+M1 弥散 dt 归一 dispersion_dt_scale、M2 流态修正 enable_regime_split、
+M3 屈服门槛 enable_yield_gate、M4 e 截断 e_clip_max），默认值与求解器
+默认一致，不改变基线消融行为（R0→R3 逐位复现历史口径）。
 """
 from __future__ import annotations
 
@@ -102,6 +104,12 @@ def run_one_level(
     run_id: str | None = None,
     eccentricity: float = 0.17,
     enable_cfl_adaptive: bool = False,
+    # ---- 以下透传 AnnulusD2DGASolver 修正配置开关（默认=求解器默认，不改基线） ----
+    enable_local_i3: bool = False,
+    e_clip_max: float = 0.55,
+    enable_yield_gate: bool = False,
+    enable_regime_split: bool = False,
+    dispersion_dt_scale: float = 1.0,
 ) -> AnnulusSimulationResult:
     """Run a single ablation level, returning the full simulation result.
 
@@ -132,6 +140,18 @@ def run_one_level(
     enable_cfl_adaptive : bool
         是否启用全局 CFL 自适应时间步，默认 False 保 ablation 基线复现。
         True 则重跑（dt 动态调整，CFL<1）。
+    enable_local_i3 : bool
+        I3 通量局部化开关，默认 False（基线全场均值口径）。
+        True 时 eta2/Δρ 用局部场（透传水泥相黏度场与局部密度差）。
+    e_clip_max : float
+        M4 偏心度 e 硬截断上限，默认 0.55（逐位复现基线）；
+        生产跑道显式设 0.90 放宽截断。
+    enable_yield_gate : bool
+        M3 屈服门槛开关，默认 False。
+    enable_regime_split : bool
+        M2 局部流态修正固定点迭代开关，默认 False。
+    dispersion_dt_scale : float
+        M1 弥散系数按 dt 归一开关，默认 1.0（固定 dt 模式逐位复现基线）。
     """
     loaded_well, fluids, schedule, _ = load_ht1_004_tailpipe()
     well_spec = well_spec_override if well_spec_override is not None else loaded_well
@@ -149,7 +169,7 @@ def run_one_level(
     if total_t is None:
         total_t = annulus_stop_time_s(casing_result=casing_result, fluids=fluids)
 
-    # 2D D2DGA solver — only pass the switches that exist on the constructor
+    # 2D D2DGA solver — R0-R3 开关 + 修正配置开关一并透传
     solver = AnnulusD2DGASolver(
         dt=dt,
         nz=nz,
@@ -161,9 +181,15 @@ def run_one_level(
         enable_true_buoyancy=level.enable_true_buoyancy,
         enable_cfl_adaptive=enable_cfl_adaptive,
         open_outlet=True,
+        enable_local_i3=enable_local_i3,
+        e_clip_max=e_clip_max,
+        enable_yield_gate=enable_yield_gate,
+        enable_regime_split=enable_regime_split,
+        dispersion_dt_scale=dispersion_dt_scale,
     )
 
-    result = solver.run(well_spec, fluids, provider)
+    # 传入泵注程序：使末尾 Tier0 诊断聚合的 T0-6 停泵衰减诊断可用
+    result = solver.run(well_spec, fluids, provider, schedule=schedule)
 
     if output_dir is not None:
         _dump_summary(
@@ -184,6 +210,7 @@ def run_full_ablation(
     run_id_prefix: str = "ht1_004_ablation",
     eccentricity: float = 0.17,
     enable_cfl_adaptive: bool = False,
+    solver_kwargs: dict | None = None,
 ) -> Dict[str, AnnulusSimulationResult]:
     """Run all ablation levels, returning {level_name: result}.
 
@@ -195,6 +222,9 @@ def run_full_ablation(
     ----------
     enable_cfl_adaptive : bool
         是否启用全局 CFL 自适应时间步，默认 False 保 ablation 基线复现。
+    solver_kwargs : dict | None
+        额外透传给 run_one_level 的求解器修正配置开关（如
+        ``{"enable_local_i3": True}``），默认 None 不透传。
     """
     if levels is None:
         levels = ABLATION_LEVELS
@@ -205,6 +235,7 @@ def run_full_ablation(
             lv, nz=nz, dt=dt, total_t=total_t, output_dir=output_dir,
             run_id=run_id, eccentricity=eccentricity,
             enable_cfl_adaptive=enable_cfl_adaptive,
+            **(solver_kwargs or {}),
         )
     return results
 
