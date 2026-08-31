@@ -1,0 +1,12 @@
+{
+  "well": "hu1",
+  "dispersion_dt_scale": 0.5,
+  "yield_gate_f_safety": 1.15,
+  "eta_E": 0.5438001774204223,
+  "eta_N": 0.1540398337459171,
+  "mixing": 0.2795310666625587,
+  "channeling": 0.8674698795178596,
+  "cement_occ": 0.5438001774204223,
+  "wall_frac": 0.3298,
+  "elapsed_s": 298.5
+}

@@ -193,8 +193,12 @@ def read_cbl_rows(well_id: str) -> list[dict]:
 
     返回行字段：top_md_m / bottom_md_m / pass_rate(数字或 None) / quality_text /
     include_in_validation / data_type。well_id 目录不存在或无 csv 返回 []。
+
+    well_id→数据目录前缀映射：hu2（呼探1-002）的 CBL 数据按 0708 归属核定
+    存放在 ht1_002_呼探1-002/，默认 glob 前缀不一致会全标不可比（2026-08-31 修复）。
     """
-    dirs = sorted(FIELD_DIR.glob(f"{well_id}_*"))
+    prefix = {"hu2": "ht1_002"}.get(well_id, well_id)
+    dirs = sorted(FIELD_DIR.glob(f"{prefix}_*"))
     if not dirs:
         return []
     path = dirs[0] / "cbl_evaluation.csv"
