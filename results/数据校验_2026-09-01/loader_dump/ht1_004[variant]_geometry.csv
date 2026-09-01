@@ -1,0 +1,35 @@
+﻿key,value
+well_name,呼1-004井（HT1-004）
+top_md_m,5243.21
+bottom_md_m,7660
+shoe_md_m,7660
+hanger_md_m,5243.21
+casing_id_mm,245.37
+liner_od_mm,139.7
+liner_id_mm,107.94
+is_dual_diameter,True
+upper_section_bottom_md_m,7376.66
+upper_liner_od_mm,168.3
+upper_liner_id_mm,138.9
+liner_wall_thickness_mm,15.88
+shoe_lag_volume_m3,99.3642
+hole_profile_n,72
+hole_profile_min_mm,216
+hole_profile_max_mm,251.21
+hole_profile_mean_mm,241.86
+hole_profile_depth_range,5243.207–7660.0
+inclination_profile_n,70
+inclination_max_deg,8.35
+standoff_profile_n,4
+standoff_min,0.83
+standoff_max,0.83
+standoff_mean,0.83
+pipe_id_profile_n,8
+cbl_pass_rate,—
+note_0,呼1-004井（HT1-004）168.3+139.7mm双径尾管控压固井，井深7660m。
+note_1,井径/井斜剖面来自现场提取包 caliper_profile.csv / inclination_profile.csv（设计一.1.4.2/1.4.1）。
+note_2,悬挂器取喇叭口 5243.207m（本体下深 5251.11m；CBL 头 5245.010-5251.110m，差 1.8m 已注明）；变径取 7376.656m（变径变扣 7378.051m 双口径）。
+note_3,pipe_id_profile按4段管柱内径：129.9/107.7/138.9/107.94mm；上段壁厚 14.7mm（LEGACY 误用 15.88）。
+note_4,默认输入为'优化参数化'：流体流变（领浆PV170/YP13、尾浆180/14等）与替浆排量（1.15-0.75、末段9.4补足）来自优化参数.docx（2026-06-11），非现场实测；密度与泵注体积为现场值。
+note_5,居中度采用设计文档6.3节模拟值(平均83%)固定剖面（model_assumption）。
+note_6,2026-08-29 校准补记：鞋口滞后三口径 99.36（名义内径算至 7660）≈ 作业史 99.31 vs 设计/碰压口径 97.1（149.2 段实测 12.9 L/m、算至球座 7560.286、含压塞 2），loader 取管柱 ID 累加值；替浆介质密度双口径 1.90（设计/总结）vs 1.91（记录表）；'灰量 161t'为图头浆体质量（领 100+尾 61）非干灰（干灰 72.7t）；技套 273.05（图头/名义）vs 273.1 双口径；MATLAB 基础参数代码.docx 的 168.3-2×15.88 为上游错误源，勿回滚 2026-08-16 壁厚修正。

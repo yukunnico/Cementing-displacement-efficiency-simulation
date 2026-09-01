@@ -1,0 +1,8 @@
+﻿kind,name,top_md_m,bottom_md_m,extra
+evaluation_window,CBL评价井段(单层套管可评价段),5699.8,7810.0,cbl
+evaluation_window,CBL质量段(连续差段),7537.0,7674.0,cbl_quality
+evaluation_window,主要气层-K1q(地层目标),7492.0,7536.0,formation_target
+evaluation_window,气层段(CBL评价重点),7492.0,7735.0,formation_target
+evaluation_window,目的层-喀拉扎组J3k(地层目标),7537.0,7868.0,formation_target
+evaluation_window,水层-K1s(地层目标),6152.0,6156.0,formation_target
+validation,cbl_pass_rate,,,0.6277

@@ -12,6 +12,15 @@
 - 悬挂器 5469.711 -> 5460.159m（施工设计 simulation_top/liner_hanger_md）；
 - 井径剖面由合成（上段等效 222.3mm）切换为现场提取包 69 点实测 caliper_profile.csv
   （上段 5670–7441 实测均值 247.7mm，环空体积较旧等效提高约 9%）；
+
+2026-08-29 校准更新（0708 原件三方核对：重新提取校准_2026-08-29/ht1_001_校准核对.md §8）：
+- 悬挂器改回实测 5469.711m（0708 三源：作业史"设计返高:5469.711m"+套管数据表三方核对版逐根累计闭合）；
+  2026-08-16 的"5469.711→5460.159"修正方向反转登记——5460.159 为施工设计施工前预估（差 9.552m）；
+  重叠段随之缩短为 200.289m（5469.711–5670m）；
+- 鞋口滞后体积重估：83.2m³（52+26.0+5.2，无 0708 依据）→ 94.5m³（施工设计 6.4.1 分段内容积链
+  45.8+17.4+26.0+4.3，理论总量含后置液；小结 5.3 全管内容积 95m³ 作上界；实际泵入 93.7m³ 含压塞/纯替浆 91.7m³ 各口径注记）；
+- n/K 备注澄清：docx 复检报告与 PDF 委托检测报告（W301-2025045）为两份独立报告（非 OCR 口径差异），loader 取 docx 口径；
+- 20512/20514 补规格：365.13mm（二开）浮箍浮鞋出厂检验报告，非尾管段附件、非 CBL。
 - 井斜剖面由合成 2.0–7.8° 切换为 69 点实测 inclination_profile.csv（0.15–1.60°，
   最大 1.7665°@7665m，近似直井）——旧井斜量级错误，直接影响模型重力项；
 - 下段尾管内径 108.04 -> 107.94mm（139.7−2×15.88）；
@@ -49,22 +58,28 @@ DEFAULT_INCLINATION_CSV = DEFAULT_REFERENCE_ROOT / "inclination_profile.csv"
 # 呼探1-001井段几何参数，来源：参考文档/现场资料提取/ht1_001_呼探1-001/（well_geometry.csv / casing_liner_string.csv）。
 HT1_001_WELL_NAME = "呼探1-001井（HT1-001）"
 HT1_001_DRILLED_DEPTH_MD_M = 7746.0  # 实际完钻井深/尾管鞋深度（施工小结 section 9）。
-# LEGACY(2026-08-16 前): HT1_001_HANGER_MD_M=5469.711（提取包中无出处）。
-HT1_001_HANGER_MD_M = 5460.159  # 尾管悬挂器/喇叭口（施工设计 section 4.2/6.1，liner_hanger_md）。
+# 2026-08-29 复核改回实测 5469.711m：0708 三源（作业史"设计返高:5469.711m"+套管数据表三方核对版
+# 逐根累计闭合，套长 2276.289m）为实际下入口径。
+# LEGACY(2026-08-29 前): 5460.159（施工设计 section 4.2/6.1 liner_hanger_md，施工前预估，差 9.552m；
+# 2026-08-16 曾按该口径修正，方向已反转）。
+HT1_001_HANGER_MD_M = 5469.711  # 尾管悬挂器/回接筒顶（实测口径）。
 HT1_001_TOP_MD_M = HT1_001_HANGER_MD_M  # 模型剖面从悬挂器开始，兼容双径尾管等效处理。
 HT1_001_UPPER_SECTION_BOTTOM_MD_M = 7174.938  # 168.3mm 上段尾管底界/变径位置（现场变扣 7174.941m，差 0.003m）。
 HT1_001_BOTTOM_MD_M = HT1_001_DRILLED_DEPTH_MD_M  # 下段 139.7mm 尾管鞋。
 HT1_001_SHOE_MD_M = HT1_001_DRILLED_DEPTH_MD_M
-# casing_id_mm 字段沿 hu102 口径存 273.1mm 技套 OD（well_geometry casing_273_od）；
-# 技套真实 ID=245.42mm（273.1−2×13.84，well_geometry casing_273_id）；命名语义统一见核对报告 §5-5。
-HT1_001_CASING_ID_MM = 273.1
-HT1_001_CASING_ID_TRUE_MM = 245.42  # 273.1mm 技套内径，供重叠段等效井径使用。
+# 2026-08-29 语义统一：casing_id_mm 按 PACKAGE_REFERENCE 文档语义存"外层套管内径"——
+# 273.1mm 技套真实 ID=245.42mm（273.1−2×13.84，well_geometry casing_273_id）；OD 273.1 存档于 CASING_OD_MM。
+# 字段不被求解器消费（环空几何由 hole_diameter_profile/重叠段等效井径表达），纯元数据口径。
+# LEGACY(2026-08-29 前): 本字段存 OD 273.1（沿旧 hu102 口径，命名历史遗留）。
+HT1_001_CASING_ID_MM = 245.42
+HT1_001_CASING_OD_MM = 273.1  # 273.1mm 技术套管外径（OD 公称，存档）。
+HT1_001_CASING_ID_TRUE_MM = 245.42  # 273.1mm 技套内径（与 CASING_ID_MM 同口径，供重叠段等效井径使用）。
 HT1_001_UPPER_HOLE_NOMINAL_DIAMETER_MM = 241.3  # 上段井眼名义尺寸/钻头（5670–7441m）。
 # LEGACY(2026-08-16 前): HT1_001_LOWER_HOLE_DIAMETER_MM=229.46 为 7441–7746 设计平均；
 # 实测 caliper_profile.csv 该段均值 230.65mm，现由实测剖面直接表达，常量仅存档。
 HT1_001_LOWER_HOLE_DIAMETER_MM = 229.46
 HT1_001_BIT_DIAMETER_LOWER_MM = 215.9  # 下段钻头尺寸（7441–7746m 名义 215.9mm）。
-HT1_001_UPPER_LINER_OD_MM = 168.3  # 上段 168.3mm 尾管外径（5460.159–7174.941m）。
+HT1_001_UPPER_LINER_OD_MM = 168.3  # 上段 168.3mm 尾管外径（5469.711–7174.941m）。
 HT1_001_LOWER_LINER_OD_MM = 139.7  # 下段 139.7mm 尾管外径，作为通用求解器参考外径。
 HT1_001_LOWER_LINER_WALL_THICKNESS_MM = 15.88  # 139.7mm 管壁厚（施工设计/套管数据表）。
 # LEGACY(2026-08-16 前): HT1_001_LOWER_LINER_ID_MM=108.04（数据包给定口径）；
@@ -78,7 +93,7 @@ HT1_001_LOWER_CENTRALIZER_COUNT = 24  # 139.7mm 下段整体式扶正器数量�
 HT1_001_UPPER_CENTRALIZER_COUNT = 77  # 168.3mm 上段整体式扶正器数量。
 HT1_001_CENTRALIZER_COUNT = HT1_001_LOWER_CENTRALIZER_COUNT + HT1_001_UPPER_CENTRALIZER_COUNT
 
-# 重叠段 5460.159–5670m：168.3mm 尾管在 273.1mm 技套内（双层套管段），无裸眼井径测点，
+# 重叠段 5469.711–5670m（200.289m）：168.3mm 尾管在 273.1mm 技套内（双层套管段），无裸眼井径测点，
 # 等效井径取技套 ID 245.42mm（model_assumption，非实测）。
 HT1_001_OVERLAP_EQUIVALENT_HOLE_DIAMETER_MM = HT1_001_CASING_ID_TRUE_MM
 # 顶段井斜代理：取 5660m 首测点值 0.32°（重叠段无连续测斜，近似直井）。
@@ -113,20 +128,12 @@ def _pipe_volume_m3(length_m: float, inner_diameter_mm: float) -> float:
     return math.pi * radius_m**2 * length_m
 
 
-# 鞋口滞后体积估算：地面至悬挂器沿用同上部套管代理，尾管段使用 HT1-001 明确双径内径。
-# 该体积只用于 field_order_realistic 边界的到鞋延迟，不代表真实单一管柱内径。
-HT1_001_SURFACE_TO_HANGER_EFFECTIVE_ID_MM = math.sqrt(4.0 * 52.0 / (math.pi * 7868.0)) * 1000.0
-HT1_001_SHOE_LAG_VOLUME_M3 = (
-    _pipe_volume_m3(HT1_001_HANGER_MD_M, HT1_001_SURFACE_TO_HANGER_EFFECTIVE_ID_MM)
-    + _pipe_volume_m3(
-        HT1_001_UPPER_SECTION_BOTTOM_MD_M - HT1_001_HANGER_MD_M,
-        HT1_001_UPPER_LINER_ID_MM,
-    )
-    + _pipe_volume_m3(
-        HT1_001_BOTTOM_MD_M - HT1_001_UPPER_SECTION_BOTTOM_MD_M,
-        HT1_001_LOWER_LINER_ID_MM,
-    )
-)
+# 鞋口滞后体积锚点（2026-08-29 重估）：施工设计 6.4.1 分段内容积链 149.2 钻杆 45.8 + 127 钻杆 17.4
+# + 168.3 段 26.0 + 139.7 段（阻位以上）4.3 ≈ 理论总量 94.5m³（含后置液）；
+# 小结 5.3 全管内容积 95m³ 作上界；实际泵入替浆段 93.7m³（含压塞液 2）、纯替浆 91.7m³，各口径见 notes。
+# LEGACY(2026-08-29 前): 83.2m³（52+26.0+5.2，52 系 52/π/7868 反推等效内径口径，无 0708 依据）。
+HT1_001_SURFACE_TO_HANGER_EFFECTIVE_ID_MM = math.sqrt(4.0 * 52.0 / (math.pi * 7868.0)) * 1000.0  # LEGACY(2026-08-29 前) 派生代理，已不参与鞋口滞后计算
+HT1_001_SHOE_LAG_VOLUME_M3 = 94.5  # 设计 6.4.1 理论总量（含后置液），见上注释与 notes。
 HT1_001_LINER_ID_MM = HT1_001_LOWER_LINER_ID_MM
 
 # ---- 数据标签（核对口径 2026-08-16；对齐 00_执行记录/现场提取数据_vs_cemdisp_loader核对汇总 §10.1）----
@@ -134,19 +141,23 @@ HT1_001_LINER_ID_MM = HT1_001_LOWER_LINER_ID_MM
 # loader_legacy=2026-08-16 前 loader 遗留值。标签仅作元数据登记，不影响数值。
 HT1_001_DATA_LABELS: dict[str, str] = {
     "几何-完钻/鞋深": "field_measured（施工小结实际下深 7746m）",
-    "几何-悬挂器": "field_measured（施工设计 simulation_top/liner_hanger_md=5460.159m）",
+    "几何-悬挂器": "field_measured（0708 实测 5469.711m：作业史'设计返高:5469.711m'+套管数据表三方核对版逐根累计闭合；"
+                 "LEGACY(2026-08-29 前) 5460.159 系施工设计施工前预估，差 9.552m）",
     "几何-变径(168.3→139.7)": "field_measured（施工设计变扣 7174.941m；loader 取 7174.938m，差 0.003m）",
-    "几何-casing_id_mm": "field_measured（273.1mm 技套 OD，well_geometry casing_273_od；字段名沿 hu102 口径存 OD，真实 ID=245.42mm）",
+    "几何-casing_id_mm": "field_measured（2026-08-29 语义统一：存 273.1mm 技套真实内径 245.42mm；"
+                 "OD 273.1 为 well_geometry casing_273_od；字段不被求解器消费，纯元数据）",
     "几何-上段井径剖面": "field_measured（69 点电测 caliper_profile.csv，5670–7441 均值 247.7mm）",
     "几何-下段井径剖面": "field_measured（69 点电测，7441–7746 均值 230.65mm）；设计平均 229.46mm 仅存档(loader_legacy)",
-    "几何-重叠段(5460.159–5670)": "model_assumption（168.3mm 尾管在 273.1mm 技套内，按技套 ID 245.42mm 等效，非裸眼实测）",
+    "几何-重叠段(5469.711–5670,200.289m)": "model_assumption（168.3mm 尾管在 273.1mm 技套内，按技套 ID 245.42mm 等效，非裸眼实测）",
     "几何-下段尾管ID": "field_measured/interpreted（139.7−2×15.88=107.94mm）；LOADER_LEGACY 旧值 108.04（数据包口径）",
     "几何-上段尾管ID": "field_measured/interpreted（取 138.9mm；现场壁厚标注 14.27 与 ID 138.76 内部不一致）",
     "几何-井斜剖面": "field_measured（69 点电测，0.15–1.60°，最大 1.7665°@7665；近似直井）；LEGACY 合成 2.0–7.8° 废止",
     "几何-居中度 standoff": "model_assumption（设计模拟 80.4% 无实测，按均一 0.804）",
     "泵注程序": "field_measured（施工小结 12 步逐项精确匹配 pumping_schedule.csv，含替浆拆分口径）",
     "流变-钻井液": "field_measured（化验六速 PV51/YP6 @65C）",
-    "流变-水泥浆 n/K": "field_measured（fluid_properties.csv 口径；PDF OCR 另值 0.825/0.842、0.816/0.512、0.807/0.527 为来源口径差异）",
+    "流变-水泥浆 n/K": "field_measured（docx 复检报告口径，128→93℃降温流变：0.811/0.876、0.871/0.504、0.886/0.453）；"
+                 "PDF《钻井流体分析实验中心》委托检测报告（W301-2025045，89℃幂律：0.825/0.842、0.816/0.512、0.807/0.527）"
+                 "为另一份独立报告（2026-08-29 澄清：两份独立报告，非 OCR/来源口径差异）；loader 取 docx 口径",
     "流变-平衡液": "proxy（密度 field_measured；无实测流变，PV0.030/YP3.0 为代理）",
     "CBL 定量": "缺失（施工小结仅定性\"合格\"；油层尾管报告.pdf 为化验报告非 CBL；窗为 model_assumption）",
     "目标层段": "field_measured（录井解释显示层 target_intervals.csv）+ model_focus（7400–7500 模型关注窗）",
@@ -363,14 +374,19 @@ def load_ht1_001_tailpipe(
         reference_root=resolved_reference_root,
         notes=(
             "呼探1-001井（HT1-001）不是呼探1井，本加载器使用 HT1-001 专属井眼、流体和施工程序参数。",
-            "2026-08-16 核对修正：悬挂器 5469.711→5460.159m；井径/井斜切换为现场提取包 69 点实测剖面（caliper_profile.csv / inclination_profile.csv）。",
-            "井径：上段 5670–7441 实测均值 247.7mm（名义 241.3）、下段 7441–7746 实测均值 230.65mm（名义 215.9）；旧上段等效 222.3mm 废除（环空体积低估约 9%）。",
+            "2026-08-29 复核：悬挂器改回实测 5469.711m（0708 三源；2026-08-16 曾按施工设计施工前预估改 5460.159m，方向反转登记）；"
+            "井径/井斜为现场提取包 69 点实测剖面（caliper_profile.csv / inclination_profile.csv）。",
+            "井径：上段 5670–7441 实测均值 247.7mm（名义 241.3）、下段 7441–7746 实测均值 230.65mm（名义 215.9）；旧上段等效 222.3mm 废除（环空体积低估约 9%）；"
+            "小结 1.4.2 官方 1m 曲线统计值 247.83/229.46 与 CSV 30m 抽样 247.69/230.65 之差为统计口径，非数据错误（2026-08-29 补记）。",
             "井斜：实测近似直井 0.15–1.60°（最大 1.7665°@7665m），替换旧合成 2.0–7.8°（量级错误，原沿用呼探1井代理，直接影响重力项）。",
-            "重叠段 5460.159–5670m 为 168.3mm 尾管在 273.1mm 技套内的双层套管段，无裸眼电测点，按技套 ID 245.42mm 等效（model_assumption）。",
+            "重叠段 5469.711–5670m（200.289m）为 168.3mm 尾管在 273.1mm 技套内的双层套管段，无裸眼电测点，按技套 ID 245.42mm 等效（model_assumption）。",
             "下段尾管内径 107.94mm（139.7−2×15.88）；上段尾管内径 138.9mm（现场壁厚标注 14.27mm 与 ID 138.76mm 内部不一致，保留口径见核对报告 §4.1）。",
-            f"鞋口滞后体积估算为 {HT1_001_SHOE_LAG_VOLUME_M3:.2f}m³，WellSpec.liner_id_mm 使用下段内径 {HT1_001_LINER_ID_MM:.2f}mm；该类等效/鞋口延迟口径为 model_assumption。",
+            f"鞋口滞后体积 {HT1_001_SHOE_LAG_VOLUME_M3:.1f}m³：按施工设计 6.4.1 分段内容积链（45.8+17.4+26.0+4.3≈94.5，理论总量含后置液）；"
+            f"小结 5.3 全管内容积 95m³ 作上界、实际泵入替浆段 93.7m³（含压塞液 2）/纯替浆 91.7m³ 各口径并存；"
+            f"LEGACY(2026-08-29 前): 83.2m³（52+26.0+5.2）无 0708 依据。WellSpec.liner_id_mm 使用下段内径 {HT1_001_LINER_ID_MM:.2f}mm。",
             "居中度无实测，按设计模拟 80.4%（施工设计 section 6.3）取均一 standoff=0.804（model_assumption）。",
-            "CBL 定量数据确认完全缺失：施工小结仅定性\"合格\"；油层尾管报告.pdf 为水泥浆化验报告（非 CBL）；20512/20514 图片为浮箍浮鞋出厂检验报告、20511 为浅层测井。CBL 评价窗为模型假设，勿写成现场窗。",
+            "CBL 定量数据确认完全缺失：施工小结仅定性\"合格\"；油层尾管报告.pdf 为水泥浆化验报告（非 CBL）；"
+            "20512/20514 为 365.13mm（二开）浮箍浮鞋出厂检验报告，非尾管段附件、非 CBL；20511 为浅层测井。CBL 评价窗为模型假设，勿写成现场窗。",
             "验证窗口分口径：cbl（模型假设）/ formation_target（录井显示层，field_measured）/ model_focus（7400–7500 模型关注窗）；油气显示 K1q 7409–7423/7460–7462/7504–7566、J3k3 气层 7642–7661、主要目的层 K1q+J3k2 6828–7746。",
             "数据标签口径见模块常量 HT1_001_DATA_LABELS（field_measured / interpreted / model_assumption / loader_legacy）。",
         ),
@@ -421,7 +437,8 @@ def load_ht1_001_tailpipe(
         job_report_path=resolved_reference_root / "construction_events.csv",
         notes=(
             "呼探1-001加载器把现场提取包参数固化为模块常量（2026-08-16 起参考根目录指向 参考文档/现场资料提取/ht1_001_呼探1-001）。",
-            "CBL 定量数据确认完全缺失：施工小结仅定性\"合格\"；油层尾管报告.pdf 为水泥浆化验报告（非 CBL）；20512/20514 图片为浮箍浮鞋出厂检测报告、20511 为浅层测井（1103–3940m 非尾管段）。",
+            "CBL 定量数据确认完全缺失：施工小结仅定性\"合格\"；油层尾管报告.pdf 为水泥浆化验报告（非 CBL）；"
+            "20512/20514 为 365.13mm（二开）浮箍浮鞋出厂检验报告，非尾管段附件、非 CBL；20511 为浅层测井（1103–3940m 非尾管段）。",
             "cbl_pass_rate 保持 None（现场无数值）；评价窗为模型假设（model_assumption），待外部获取独立 CBL/VDL 报告后可升级。",
             "泵注（12 步）与流体密度/流变（钻井液 PV51/YP6、隔离液 n0.545/K1.338、领浆 n0.811/K0.876、中间浆 n0.871/K0.504、尾浆 n0.886/K0.453）已与现场提取包 100% 吻合（field_measured）。",
         ),

@@ -16,15 +16,16 @@
 - 复合尾管: 上段 168.30mm OD / 138.90mm ID（5546.022–7330.694m），下段 139.70mm OD / 107.94mm ID（7330.694–7768.51m）
 - 井眼尺寸: 260.0mm(5750–7382 扩眼段) / 241.3mm(7382–7563) / 215.9mm(7563–7770)，井径/井斜用实测分段曲线
 - 钻井液（环空初始液）: 密度1.98g/cm³, Bingham PV=54mPa·s, YP=10Pa（现场 65C, 20313.doc 1.3.1）
-- 设计版（load_hu103_tailpipe 默认）: 平衡液28 + 隔离液17.5×2 + 领浆22 + 中间浆36 + 尾浆26 + 压塞液7 + 替浆84.2（20313.doc 5.2.4）
-- 实际版（load_hu103_tailpipe_actual）: 平衡液48 + 隔离液35 + 水泥浆(三凝,分相按设计) + 替浆90.9，全程 0.6m³/min（20314.doc 施工记录表）
+- 设计版（load_hu103_tailpipe 默认）: 平衡液28 + 隔离液17.5×2 + 领浆22 + 中间浆35 + 尾浆26 + 压塞液7 + 替浆83.2（20313.doc 5.2.4；2026-08-29 校准）
+- 实际版（load_hu103_tailpipe_actual）: 平衡液48 + 隔离液35 + 水泥浆(三凝,分相按设计) + 压塞液3.0(ρ2.20) + 替浆90.9，全程 0.6m³/min（20314.doc 施工记录表）
 - CBL: 139.7mm 段 7338–7712m 合格率 12.06%（结构化 cbl_pass_rate=0.1206）
 
 现场资料来源（2026-08 更新，现场提取包 hu103_呼103/）：
 - 井身结构/悬挂器/尾管尺寸：20313.doc（施工设计）、20315.doc（施工总结）、20318.doc（作业史）
 - 井径/井斜：20313.doc §1.5.1/1.5.2 电测分段数据（5755–7770m）
 - 泵注设计版：20313.doc 5.2.4；实际版：20314.doc 施工记录表
-- 水泥浆流变：203111.docx 实验报告（领浆 n=0.82/K=0.67、中间浆 n=0.76/K=1.11、尾浆 n=0.76/K=1.14）
+- 水泥浆流变：203111.docx 实验报告（领浆 n=0.82/K=0.67、中间浆 n=0.76/K=1.11、尾浆 n=0.76/K=1.14）；
+  隔离液流变实测（203111 表7，140↘93℃）：n=0.54/K=2.12（2026-08-29 校准，旧 Bingham 代理 PV35/YP8 废弃）
 - CBL：100516.pdf 139.7mm 段 7338.0–7712.0m 合格率 12.06%（结构化 cbl_pass_rate=0.1206）
 
 legacy 边界模式选项：
@@ -79,15 +80,15 @@ HU103_BALANCE_VOLUME_M3 = 28.0              # 平衡液(轻泥浆)设计 28m³�
 HU103_SPACER1_VOLUME_M3 = 17.5              # 驱油隔离液1 设计 17.5m³，ρ2.00（500m）
 HU103_SPACER2_VOLUME_M3 = 17.5              # 驱油隔离液2 设计 17.5m³，ρ1.95（500m）
 HU103_LEAD_VOLUME_M3 = 22.0                 # 领浆设计 22m³（封固 5350–6000m）
-HU103_INTERMEDIATE_VOLUME_M3 = 36.0         # 中间浆设计 36m³（封固 6000–7000m）；LEGACY 代理: 10
+HU103_INTERMEDIATE_VOLUME_M3 = 35.0         # 中间浆设计 35m³（封固 6000–7000m；0708 多数口径 4 处：7.1.1 用量表总量 83=22+35+26、7.2 流程、实际 35）；LEGACY(2026-08-29 前): 36（浆柱表孤值）；LEGACY 代理: 10
 HU103_TAIL_VOLUME_M3 = 26.0                 # 尾浆设计 26m³（封固 7000–7770m）；LEGACY 代理: 19（采用值对照表记 19.0，与设计 26 存在口径差异，见 notes）
 HU103_PLUG_VOLUME_M3 = 7.0                  # 压塞液设计 7m³，ρ2.10（管内占高 582m）
 HU103_DISP_MUD1_VOLUME_M3 = 23.0            # 替钻井液 23m³（管内占高 1520m）
 HU103_DISP_MIDDLE_VOLUME_M3 = 15.0          # 替中置液 15m³，ρ1.95（占高 1600m）
-HU103_DISP_MUD2_VOLUME_M3 = 46.2            # 替钻井液 46.2m³（设计 1.8–0.8 变排量段）
+HU103_DISP_MUD2_VOLUME_M3 = 45.2  # 替钻井液 45.2m³（设计 1.8–0.8 变排量段）；LEGACY(2026-08-29 前): 46.2（排量表笔误）；20313 七.1.4 总量 90.2 自洽（23+15+45.2+压塞7=90.2）。
 HU103_DISPLACEMENT_VOLUME_M3 = (
     HU103_DISP_MUD1_VOLUME_M3 + HU103_DISP_MIDDLE_VOLUME_M3 + HU103_DISP_MUD2_VOLUME_M3
-)  # 设计替浆总量 84.2m³（20313.doc 摘要另记 90.2m³，差异可能含压塞液口径）
+)  # 设计替浆总量 83.2m³（23+15+45.2；+压塞液7=90.2 与 20313 七.1.4 自洽）；LEGACY(2026-08-29 前): 84.2（46.2 排量表笔误）。
 
 # 呼103施工参数 —— 实际版（20314.doc 施工记录表；环空憋堵迫使降排量）
 HU103_ACTUAL_RATE_M3_MIN = 0.6              # 实际全程排量 0.6m³/min（设计 1.8 的 1/3）
@@ -108,8 +109,12 @@ HU103_BALANCE_YP_PA = 1.5                    # 平衡液 YP=1.5Pa（现场实际
 HU103_SPACER1_DENSITY_KG_M3 = 2000.0         # 驱油隔离液1 设计密度 2.00（20313.doc 7.1.2）
 HU103_SPACER2_DENSITY_KG_M3 = 1950.0         # 驱油隔离液2 设计密度 1.95
 HU103_SPACER_ACTUAL_DENSITY_KG_M3 = 1920.0   # 实际隔离液密度 1.92（20314.doc）
-HU103_SPACER_PV_PA_S = 0.035                 # 隔离液塑性粘度代理（无实测）
-HU103_SPACER_YP_PA = 8.0                     # 隔离液屈服值代理（无实测）
+# 隔离液流变（2026-08-29 校准）：203111 表7 实测（140↘93℃），六速 128/74/54/33/6/5 → POWER_LAW n=0.54/K=2.12。
+# LEGACY(2026-08-29 前): Bingham 代理 PV35/YP8（无实测）。
+HU103_SPACER_POWER_LAW_N = 0.54              # 隔离液流性指数 n（203111 表7 实测）
+HU103_SPACER_CONSISTENCY_K = 2.12            # 隔离液稠度系数 K Pa·s^n（同上）
+HU103_SPACER_PV_PA_S = 0.035                 # LEGACY(2026-08-29 前) 隔离液塑性粘度代理（无实测），已由幂律实测替换
+HU103_SPACER_YP_PA = 8.0                     # LEGACY(2026-08-29 前) 隔离液屈服值代理（无实测），已由幂律实测替换
 # LEGACY(2026-08 前): FLUSH(冲洗液) ρ1.02、SPACER ρ1.80 等代理已按现场设计/实际密度重建。
 HU103_FLUSH_DENSITY_KG_M3 = 1020.0           # LEGACY 冲洗液密度（现场设计无独立冲洗液段，保留常量）
 HU103_FLUSH_PV_PA_S = 0.025
@@ -128,7 +133,7 @@ HU103_TAIL_K_PA_S_N = 1.14                   # 尾浆幂律稠度系数
 
 # 呼103流变参数 — 压塞液/替浆液（2026-08 按现场密度重建；流变复用钻井液 proxy）
 HU103_PLUG_DENSITY_KG_M3 = 2100.0            # 压塞液密度 2.10（设计 20313.doc 7.1.3）；LEGACY: 1500
-HU103_MIDDLE_FLUID_DENSITY_KG_M3 = 1950.0    # 中置液密度 1.95（设计 7.1.3）
+HU103_MIDDLE_FLUID_DENSITY_KG_M3 = 1950.0    # 中置液密度 1.95（设计 7.1.3）；0708 分歧 1.95（5.2.4 表）/2.0（7.1.3/9.2/203111 表3 三处）；实际 1.90（20315），2026-08-29 校准扩注
 HU103_DISPLACEMENT_DENSITY_KG_M3 = 1980.0    # 替浆钻井液密度 1.98（设计/实际均为钻井液）；LEGACY: 1500
 HU103_DISPLACEMENT_PV_PA_S = 0.054           # 替浆液塑性粘度代理，与固井时钻井液一致
 HU103_DISPLACEMENT_YP_PA = 10.0              # 替浆液屈服值代理，与钻井液一致（YP=10）
@@ -274,6 +279,8 @@ def load_hu103_tailpipe(
             "井径/井斜用现场实测分段曲线（20313.doc 1.5.1/1.5.2）；5536.662–5755m 重叠段无实测，取首测点等效外推。",
             "居中度仅设计模拟值 77.8%（20313.doc 6.3），无实测，模型按 proxy 处理。",
             "复合尾管由 dual-diameter 上层字段 + liner_od_profile 表达；LEGACY(2026-08 前) 为 139.7mm 单外径代理模型。",
+            "2026-08-29 校准补记：168.3mm 段实际下深 5545.972–7330.604m（20318，与设计口径 5546.022–7330.694m 并存）；"
+            "回接筒 5536.662–5539.762m（OD 226/ID 202）。",
         ),
     )
 
@@ -300,25 +307,25 @@ def load_hu103_tailpipe(
             name="隔离液1",
             role=FluidRole.SPACER,
             density_kg_m3=HU103_SPACER1_DENSITY_KG_M3,
-            rheology_model=RheologyModel.BINGHAM,
-            plastic_viscosity_pa_s=HU103_SPACER_PV_PA_S,
-            yield_stress_pa=HU103_SPACER_YP_PA,
+            rheology_model=RheologyModel.POWER_LAW,
+            power_law_n=HU103_SPACER_POWER_LAW_N,
+            consistency_k=HU103_SPACER_CONSISTENCY_K,
         ),
         FluidSpec(
             name="隔离液2",
             role=FluidRole.SPACER,
             density_kg_m3=HU103_SPACER2_DENSITY_KG_M3,
-            rheology_model=RheologyModel.BINGHAM,
-            plastic_viscosity_pa_s=HU103_SPACER_PV_PA_S,
-            yield_stress_pa=HU103_SPACER_YP_PA,
+            rheology_model=RheologyModel.POWER_LAW,
+            power_law_n=HU103_SPACER_POWER_LAW_N,
+            consistency_k=HU103_SPACER_CONSISTENCY_K,
         ),
         FluidSpec(
             name="隔离液(实际)",
             role=FluidRole.SPACER,
             density_kg_m3=HU103_SPACER_ACTUAL_DENSITY_KG_M3,
-            rheology_model=RheologyModel.BINGHAM,
-            plastic_viscosity_pa_s=HU103_SPACER_PV_PA_S,
-            yield_stress_pa=HU103_SPACER_YP_PA,
+            rheology_model=RheologyModel.POWER_LAW,
+            power_law_n=HU103_SPACER_POWER_LAW_N,
+            consistency_k=HU103_SPACER_CONSISTENCY_K,
         ),
         FluidSpec(
             name="领浆",
@@ -406,14 +413,14 @@ def load_hu103_tailpipe(
                 fluid_name="中间浆",
                 volume_m3=HU103_INTERMEDIATE_VOLUME_M3,
                 rate_m3_min=HU103_DESIGN_RATE_CEMENT_M3_MIN,
-                remarks="设计: 中间浆36m³，ρ2.05，封固6000-7000m。",
+                remarks="设计: 中间浆35m³，ρ2.05，封固6000-7000m（2026-08-29 校准，0708 多数口径 35；LEGACY 36 系浆柱表孤值）。",
             ),
             PumpingScheduleStep(
                 step_name="注入尾浆",
                 fluid_name="尾浆",
                 volume_m3=HU103_TAIL_VOLUME_M3,
                 rate_m3_min=HU103_DESIGN_RATE_CEMENT_M3_MIN,
-                remarks="设计: 尾浆26m³，ρ2.05，封固7000-7770m；采用值对照表记19.0(含下塞1.18m³)，口径差异见notes。",
+                remarks="设计: 尾浆26m³，ρ2.05，封固7000-7770m；旧记'尾浆 19.0（含下塞 1.18）'系 legacy 残留、0708 无出处（实际尾浆 26、下塞 0.67，2026-08-29 校准）。",
             ),
             PumpingScheduleStep(
                 step_name="注入压塞液",
@@ -447,8 +454,9 @@ def load_hu103_tailpipe(
         notes=(
             "设计版泵注程序（20313.doc 5.2.4）：平衡液→隔离液1→隔离液2→领浆→中间浆→尾浆→压塞液→替钻井液→替中置液→替钻井液。",
             "设计排量 1.6(前置)/1.8(水泥及替浆)m³/min；实际施工因环空憋堵降至 0.6m³/min，见 load_hu103_tailpipe_actual。",
-            "尾浆设计 26m³；采用值对照表记 tail=19.0（含下塞1.18m³），与设计口径存在差异，此处按设计 26 建模并保留说明。",
-            "设计替浆总量 84.2m³（23+15+46.2）；20313.doc 摘要另记替浆 90.2m³，口径差异（可能含压塞液）保留说明。",
+            "尾浆设计 26m³；旧注'采用值对照表记 tail=19.0（含下塞1.18m³）'系 legacy 残留、0708 无出处（实际尾浆 26、下塞 0.67，2026-08-29 校准标注）。",
+            "设计替浆总量 83.2m³（23+15+45.2；+压塞液7=90.2 与 20313 七.1.4 总量 90.2 自洽）；LEGACY(2026-08-29 前): 84.2（46.2 排量表笔误）。",
+            "中间浆设计 35m³（0708 多数口径 4 处：7.1.1 用量表总量 83=22+35+26、7.2 流程、实际 35）；LEGACY(2026-08-29 前): 36 系浆柱表孤值。",
             "LEGACY(2026-08 前): 平衡液18/冲洗液14/隔离液18/领浆91/中间浆10/尾浆19/压塞液5/替浆110 代理程序已重建。",
         ),
     )
@@ -464,7 +472,8 @@ def _hu103_validation_data(reference_root: Path) -> ValidationData:
         cbl_pass_rate=0.1206,
         notes=(
             "139.7mm 尾管段（7338.0–7712.0m）CBL 合格率 12.06%（100516.pdf），不合格；结构化 cbl_pass_rate=0.1206。",
-            "不得混用 168.3mm 段 0.04%（100515.pdf）或整段加权综合 6.05%（采用值对照表口径）。",
+            "不得混用 168.3mm 段 0.04%（100515.pdf）；旧注'整段加权综合 6.05%'系简单平均误标，"
+            "正确长度加权综合为 2.12%（(0.04×1790.6+12.06×374)/2164.6，2026-08-29 校准）。",
             "cbl_summary_path 指向参考文档/呼103下的 CBL PDF；若原始文件名不同，后续仅需更新路径。",
             "2026-08 已按现场提取包重建几何/剖面/泵注/非水泥浆流体；水泥浆流变沿用实验报告（203111.docx）。",
         ),
@@ -480,8 +489,8 @@ def load_hu103_tailpipe_actual(
 
     与设计版（load_hu103_tailpipe）的差异仅在 PumpingSchedule：
     - 实际全程排量 0.6m³/min（环空憋堵迫使降排量，约为设计 1.8m³/min 的 1/3）；
-    - 实际平衡液 48m³、隔离液 35m³、替浆 90.9m³；
-    - 实际水泥浆为"三凝"体系且未记录分相体积，分相 22/36/26 保守沿用设计版。
+    - 实际平衡液 48m³、隔离液 35m³、压塞液 3.0m³（ρ2.20）、替浆 90.9m³；
+    - 实际水泥浆为"三凝"体系且未记录分相体积，分相 22/35/26 保守沿用设计版。
 
     Returns:
         井筒参数（同设计版）、流体参数（同设计版）、实际施工泵注程序、校验资料。
@@ -532,6 +541,13 @@ def load_hu103_tailpipe_actual(
                 remarks="实际尾浆分相 26m³ 沿用设计版（三凝未分相记录）。",
             ),
             PumpingScheduleStep(
+                step_name="注入压塞液(实际)",
+                fluid_name="压塞液",
+                volume_m3=3.0,
+                rate_m3_min=HU103_ACTUAL_RATE_M3_MIN,
+                remarks="实际: 压塞液 3.0m³@0.6，平均密度 2.20（20315'压塞3.0m3 平均密度2.20'；20314，2026-08-29 校准补入）。",
+            ),
+            PumpingScheduleStep(
                 step_name="替浆(实际)",
                 fluid_name="替浆液",
                 volume_m3=HU103_ACTUAL_DISPLACEMENT_VOLUME_M3,
@@ -540,9 +556,11 @@ def load_hu103_tailpipe_actual(
             ),
         ),
         notes=(
-            "实际版泵注程序（20314.doc 施工记录表）：平衡液48 + 隔离液35 + 水泥浆(三凝) + 替浆90.9，全程 0.6m³/min。",
+            "实际版泵注程序（20314.doc 施工记录表）：平衡液48 + 隔离液35 + 水泥浆(三凝) + 压塞液3.0(ρ2.20) + 替浆90.9，全程 0.6m³/min。",
             "实际排量仅为设计 1.8m³/min 的 1/3，直接原因是下尾管后环空憋堵（20315.doc（三）井循环过程）。",
-            "实际水泥浆为三凝体系且未记录分相体积，分相 22/36/26 保守沿用设计版，未编造。",
+            "实际水泥浆为三凝体系且未记录分相体积，分相 22/35/26 保守沿用设计版，未编造。",
+            "压塞液实际 3.0m³@0.6、平均密度 2.20（20315/20314，2026-08-29 校准补入）。",
+            "环空初始液保持 1.98（设计口径）；实际固井前 2.02/PV40/YP7（20314），若按实际口径可换（2026-08-29 注记）。",
             "候凝：环空加压 5.3MPa 候凝 48h；碰压后放回水断流（20314.doc）。",
         ),
     )

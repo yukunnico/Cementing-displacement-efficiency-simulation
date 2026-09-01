@@ -1,5 +1,5 @@
 ﻿well_id,item,value,unit,top_md_m,bottom_md_m,data_type,source_file,source_location,confidence,notes
-ht1_001,liner_hanger_md,5460.159,m,,,design,施工设计,section 4.2/6.1,high,悬挂器送入工具顶深;喇叭口位置5460.159m
+ht1_001,liner_hanger_md,5460.159,m,,,design,施工设计,section 4.2/6.1,high,悬挂器送入工具顶深;喇叭口位置5460.159m;0708另证实测口径5469.711m(作业史设计返高+三方核对版回接筒顶;较设计深9.552m;2026-08-29核对建议loader改用实测值)
 ht1_001,liner_top_md,5460.159,m,,,design,施工设计,section 6.1/4.2,high,尾管顶深=悬挂器位置
 ht1_001,liner_bottom_md,7746.0,m,,,measured,施工小结,section 9,high,实际下深7746m
 ht1_001,liner_shoe_md,7746.0,m,,,design,施工设计,section 6.1,high,加长引鞋底深=尾管底深
@@ -9,7 +9,7 @@ ht1_001,simulation_top_md,5460.159,m,,,design,施工设计,section 4.2,high,建�
 ht1_001,simulation_bottom_md,7746.0,m,,,design,施工设计,section 4.2,high,建议到井底=尾管鞋
 ht1_001,liner_outer_diameter_168,168.3,mm,5460.159,7174.941,design,施工设计,section 6.1/6.4.1,high,上部复合尾管168.3mm段
 ht1_001,liner_outer_diameter_139,139.7,mm,7174.941,7746.0,design,施工设计,section 6.1/6.4.1,high,下部复合尾管139.7mm段
-ht1_001,liner_inner_diameter_168,138.76,mm,,,calculated,施工设计,section 6.4.1,high,168.3-2*14.27=139.76mm;壁厚14.27mm(D=168.3-2*14.27)
+ht1_001,liner_inner_diameter_168,138.9,mm,,,calculated,施工小结/施工设计/套管数据表,section 1.2.1/6.1/6.4.1,high,168.3-2*14.7=138.9mm;壁厚终裁14.7mm(小结1.2.1+设计6.1管串+6.4.1计算链55.68kg/m与15.15L/m自证14.7+三方核对版139.7表内嵌168.3段155行实测14.7+作业史;6.4.1壁厚列14.27为笔误;168.3sheet全15.11无下深为孤证未采)
 ht1_001,liner_inner_diameter_139,107.94,mm,,,calculated,施工设计,section 6.4.1,high,139.7-2*15.88=107.94mm;壁厚15.88mm
 ht1_001,borehole_nominal_diameter_upper,241.3,mm,5670.0,7441.0,design,施工设计,section 1.2.1,high,上部裸眼钻头尺寸241.3mm
 ht1_001,borehole_nominal_diameter_lower,215.9,mm,7441.0,7746.0,design,施工设计,section 1.2.1,high,下部裸眼钻头尺寸215.9mm

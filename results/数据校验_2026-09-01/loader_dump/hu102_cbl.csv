@@ -1,0 +1,8 @@
+﻿kind,name,top_md_m,bottom_md_m,extra
+evaluation_window,CBL评价井段,6840.0,7665.0,cbl
+evaluation_window,CBL质量段一(胶结差/不合格),7405.0,7480.0,cbl_quality
+evaluation_window,CBL质量段二(胶结差/不合格),7502.0,7540.0,cbl_quality
+evaluation_window,J3k目的层(地层目标),7422.0,7640.0,formation_target
+evaluation_window,标节1,7432.914,7434.268,oil_gas_show
+evaluation_window,标节2,7638.05,7639.403,oil_gas_show
+validation,cbl_pass_rate,,,0.6665

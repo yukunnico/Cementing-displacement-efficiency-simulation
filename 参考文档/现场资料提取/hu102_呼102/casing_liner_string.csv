@@ -1,6 +1,7 @@
 well_id,component,top_md_m,bottom_md_m,od_mm,id_mm,grade,connection,wall_mm,quantity,cumulative_length_m,manufacturer,spacing_m,data_type,source_file,confidence,notes
-hu102,float_shoe,7735,7735,139.7,108.1,TP140V,TP-G2,15.8,1,0.961,大陆架,,measured,20211.doc,high,浮鞋
+hu102,float_shoe,7734.039,7735,139.7,108.1,TP140V,TP-G2,15.8,1,0.961,大陆架,,measured,20211.doc,high,浮鞋(2026-08-29校准: 顶深=底深7735-长0.961; 20212.doc单根明细)
 hu102,liner_pipe,7734.039,7722.899,139.7,108.1,TP140V,TP-G2,15.8,1,11.14,天钢,,measured,20211.doc,high,套管第1根(底部)
+hu102,liner_pipe,7722.899,7711.648,139.7,108.1,TP140V,TP-G2,15.8,1,11.251,天钢,,measured,20212.doc,high,"套管第2根(2026-08-29校准补: 20212.doc单根明细2号管11.251m, 原CSV漏记)"
 hu102,float_collar_1,7711.648,7711.313,139.7,108.1,TP140V,TP-G2,15.8,1,0.335,大陆架,,measured,20211.doc,high,浮箍#1
 hu102,liner_pipe,7711.313,7688.649,139.7,108.1,TP140V,TP-G2,15.8,1,22.664,天钢,,measured,20211.doc,high,第3根
 hu102,float_collar_2,7688.649,7688.314,139.7,108.1,TP140V,TP-G2,15.8,1,0.335,大陆架,,measured,20211.doc,high,浮箍#2
@@ -21,4 +22,4 @@ hu102,cross_over_2,5101.247,5100.154,,,,DSTJ50xFHDS550,,1,0.93,,,measured,20211.
 hu102,drill_collar,5100.154,0,149.2,,V150,FHDS550,9.65,532,5101.251,,,measured,20211.doc,high,钻铤(含钻余-1.097)
 hu102,centralizer,6820,7350,,,弹性扶正器,整体式,190.5,23,,,22,design,20211.doc,high,"整体弹性扶正器,外径190.5mm,间距22m"
 hu102,centralizer,7350,7560,,,弹性扶正器,整体式,190.5,19,,,11,design,20211.doc,high,"整体弹性扶正器,间距19m"
-hu102,centralizer,7560,7735,,,弹性扶正器,整体式,190.5,8,,,8,design,20211.doc,high,"密集布置(8m间距),共55个扶正器"
+hu102,centralizer,7560,7735,,,弹性扶正器,整体式,190.5,8,,,22,design,20211.doc,high,"7560-7735段间距22m(2026-08-29校准: 原件Table7间距列=22, 原CSV误记8); 全井共50只(23+19+8), 原CSV误记55"

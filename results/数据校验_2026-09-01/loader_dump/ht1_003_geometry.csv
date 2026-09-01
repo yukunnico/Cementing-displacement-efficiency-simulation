@@ -1,0 +1,37 @@
+﻿key,value
+well_name,呼1-003井（HT1-003）
+top_md_m,5307.54
+bottom_md_m,7618
+shoe_md_m,7618
+hanger_md_m,5307.54
+casing_id_mm,245.37
+liner_od_mm,139.7
+liner_id_mm,107.94
+is_dual_diameter,False
+upper_section_bottom_md_m,—
+upper_liner_od_mm,—
+upper_liner_id_mm,—
+liner_wall_thickness_mm,—
+shoe_lag_volume_m3,91.9
+hole_profile_n,69
+hole_profile_min_mm,216.42
+hole_profile_max_mm,254.11
+hole_profile_mean_mm,240.39
+hole_profile_depth_range,5307.539–7618.0
+inclination_profile_n,68
+inclination_max_deg,4.11737
+standoff_profile_n,9
+standoff_min,0.83
+standoff_max,0.83
+standoff_mean,0.83
+pipe_id_profile_n,8
+cbl_pass_rate,—
+note_0,呼1-003井（HT1-003）为168.3mm+139.7mm双径复合尾管控压固井，井深7618m。
+note_1,井径/井斜剖面使用现场提取包 caliper_profile.csv（设计一.1.4.2 电测井径 66 点）与 inclination_profile.csv（设计一.1.4.1 井斜 67 点）。
+note_2,liner_od_profile 按深度分段：5307-7089m=168.3mm，7089-7618m=139.7mm；pipe_id_profile 按4段管柱内径：129.9/107.7/138.9/107.94mm。
+note_3,悬挂器取喇叭口 5307.539m（本体 5315.439m、CBL 头 5307.540-5315.440m）；变径 7089.576m（变径变扣 7091.016m）。
+note_4,鞋口滞后体积 91.9m³（2026-08-29 校准：设计七.1.4 顶替量计算表 42.9+18.1+27+3.9；胶塞试通过 61m³ 实测验证；数采计量 91.009m³ 与理论差 1%）；LEGACY(2026-08-29 前): 4 段管柱 ID 累加 ≈93.95m³（149.2 段体积口径 12.91 L/m 折算 vs 水力 ID 129.9 双口径并存）；更早 LEGACY 7868 常数 bug 已于 2026-08-16 修复。
+note_5,压塞液密度保留 1.95（设计 7.2 口径）；记录表'后置液 密度1.02 基液'为另一口径（数采密度计 0.998-1.000 存疑），需甲方确认（2026-08-29 注记）。
+note_6,2026-08-29 校准补记：井径均值 CSV 重算 247.00/220.27 vs 设计自称 247.3/218.9 为统计口径差；大肚子 5573-5577 平均 370.84/最大 387.43（0.5m 曲线极值，30m 表未含）；悬挂器本体最小内径 138.22（5307.539-5316.036 段容差 0.05m³ 可忽略）。
+note_7,流体流变改用化验报告幂律实测（领/尾浆/隔离液/钻井液），先导浆/压塞/保护/基液为设计值。
+note_8,居中度取设计模拟值 0.83（设计 6.3，裸眼段无连续实测；model_assumption）。

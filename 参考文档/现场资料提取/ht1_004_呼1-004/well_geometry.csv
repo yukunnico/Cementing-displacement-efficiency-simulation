@@ -27,3 +27,6 @@ ht1_004,float_shoe_to_seat,99.71,m,,,field_measured,HT1-004井168.3+139.7mm油�
 ht1_004,avg_caliper_upper,244,mm,5578,7521,field_measured,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 一.1.4.3,high,平均井径5578-7521m 244mm，扩大率1.1%
 ht1_004,avg_caliper_lower,222,mm,7521,7660,field_measured,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 一.1.4.3,high,平均井径7521-7660m 222mm，扩大率2.8%
 ht1_004,sim_cement_fill_rate,99.3,%,5241,7660,interpreted,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 八.2.2 备注,medium,斯伦贝谢软件单级固井模拟：5241-7660m水泥充填率99.3%；附加井段5241-4941m水泥含量55%；尾浆混窜至6200m
+ht1_004,max_caliper,309,mm,5579,5579,field_measured,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 一.1.4.3,high,最大井径309mm@5579m（241.3mm井眼）；2026-08-29复核自caliper_profile.csv移出（1.4.3汇总统计不作为剖面测点）
+ht1_004,min_caliper,214.9,mm,7521,7660,field_measured,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 一.1.4.3,high,最小井径214.9mm（215.9mm井眼段）；2026-08-29复核自caliper_profile.csv移出
+ht1_004,belly_hole_caliper,305,mm,5578,5582,field_measured,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 一.1.4.3,high,大肚子井段5578-5582m平均305mm；同段1.4.2电测表均值为250.82mm（两口径并存，1.4.3为井身质量口径）

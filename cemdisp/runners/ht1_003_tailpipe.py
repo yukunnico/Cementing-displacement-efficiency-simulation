@@ -159,6 +159,11 @@ def annulus_stop_time_s(
     当替浆液（水泥浆之后的首个非水泥流体）到达鞋口时停止，
     此时水泥浆已完全进入环空，继续泵入会稀释既有水泥场。
     """
+    # F2 修复（2026-09-01）：优先取 cement_end_time_s——尾缘≡后继流体前缘（同一体积
+    # 坐标、同一物理界面），重力修正已按同一参数对修正同刻，即"尾浆全部进入环空"的
+    # 时刻（≡ 现场碰压断面）。下方前缘扫描仅作为 cement_end 缺失时的回退。
+    if casing_result.cement_end_time_s is not None:
+        return float(casing_result.cement_end_time_s)
     cement_roles = {FluidRole.LEAD, FluidRole.INTERMEDIATE, FluidRole.TAIL}
     fluid_by_name = {f.name: f for f in fluids}
     # 按到达时间升序排序后再扫描，对个别井的乱序 fronts 自防御：

@@ -1,0 +1,6 @@
+﻿kind,name,top_md_m,bottom_md_m,extra
+evaluation_window,CBL评价井段,3531.0,7481.22,cbl
+evaluation_window,CBL质量段(不合格40m),7474.0,7514.0,cbl_quality
+evaluation_window,CBL质量段(差),7415.0,7430.0,cbl_quality
+evaluation_window,尾管封固段(模型聚焦窗),3523.27,7601.0,model_focus
+validation,cbl_pass_rate,,,—

@@ -6,7 +6,7 @@ ht1_004,3,pump_spacer1,spacer,低失水驱油隔离液1,16,1.0,25,60,1.95,,field
 ht1_004,4,pump_spacer2,spacer,低失水驱油隔离液2,10,1.0,60,73,1.75,,field_measured,HT1-004井168.3+139.7mm油层尾管固井总结.doc/施工记录表,high,19:13注完；泵压18-19MPa
 ht1_004,5,pump_lead,lead_cement,领浆,48,1.2,73,140,1.93,,field_measured,HT1-004井168.3+139.7mm油层尾管固井总结.doc/施工记录表,high,20:20注完；泵压21-22MPa；灰量约128t；作业史记20:10注领浆排量1.2泵压13-12.2MPa；封固4941-6600m
 ht1_004,6,pump_tail,tail_cement,尾浆,28,1.0,140,170,1.90,,field_measured,HT1-004井168.3+139.7mm油层尾管固井总结.doc/施工记录表,high,20:50注完；泵压22MPa(记录表)；作业史记21:00注尾浆排量1.2泵压12.7MPa；封固6600-7660m
-ht1_004,7,displace,displacement,替浆(压塞液2+钻井液29+保护液14+基液1+钻井液51.1),97.1,1.4-0.8,170,260,1.90,bump_pressure_9-15MPa,field_measured,HT1-004井168.3+139.7mm油层尾管固井总结.doc/施工记录表/作业史,high,22:20替完；排量1.4-0.8m3/min泵压16-19-9MPa；碰压9-15MPa放回水600L断流；替浆介质钻井液1.90g/cm3塑粘50mPa.s(记录表)；作业史详细时序见7a-7e行(21:50-23:15)
+ht1_004,7,displace,displacement,替浆(压塞液2+钻井液29+保护液14+基液1+钻井液51.1),97.1,1.4-0.8,170,260,1.90,bump_pressure_9-15MPa,field_measured,HT1-004井168.3+139.7mm油层尾管固井总结.doc/施工记录表/作业史,high,22:20替完；排量1.4-0.8m3/min泵压16-19-9MPa；碰压9-15MPa放回水600L断流；替浆介质钻井液记录表原文1.91g/cm3塑粘50mPa.s(设计/总结口径1.90，2026-08-29复核修正引文)；作业史详细时序见7a-7e行(21:50-23:15)
 ht1_004,7a,displace_seq1,displacement,压塞液(作业史),2,1.2,,,1.70,,field_measured,HT1-004井油层尾管固井作业史.doc 八 施工过程,high,21:50注压塞液2m3排量1.2泵压13MPa(作业史详细时序)
 ht1_004,7b,displace_seq2,displacement,钻井液(作业史),29,1.5,,,1.90,,field_measured,HT1-004井油层尾管固井作业史.doc 八 施工过程,high,22:00顶替泥浆29m3排量1.5泵压16MPa
 ht1_004,7c,displace_seq3,displacement,保护液/中置液(作业史),14,1.5,,,1.90,,field_measured,HT1-004井油层尾管固井作业史.doc 八 施工过程,high,22:30替注保护液14m3排量1.5泵压16MPa

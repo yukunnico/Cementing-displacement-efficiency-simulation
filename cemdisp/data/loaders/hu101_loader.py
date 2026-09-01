@@ -15,7 +15,21 @@
 - cbl_pass_rate=0.6277 结构化进 ValidationData（参照 hu102=0.6665 / hu103=0.1206 写法），
   注明正式解释测量段 5390–7810m 口径；CBL 评价窗保持 legacy 的 5700–7810m（裸眼段顶+测量段底组合）。
 - 中置液排量 1.2 → 1.5 m³/min（现场 pumping_schedule，field_measured）。
-- casing_id_mm 命名语义问题（实存 OD 273.1）仅保留/强化注释，不改名（全仓统一需动 API，超出本任务）。
+- casing_id_mm 命名语义问题（实存 OD）仅保留/强化注释，不改名（全仓统一需动 API，超出本任务）。
+
+2026-08-29 校准更新（0708 原件三方核对：重新提取校准_2026-08-29/hu101_校准核对.md §8）：
+- 技套等效外径 273.10 → 273.05mm（0708 实际施工记录 20133/20134.doc+100312 图头；273.1 为 10033 钻井设计公称）；
+- 井径/井斜剖面 108 点 → 109 点（5700–7868m，2011116.xls Sheet2 电子版重建，2011113.doc 逐点互证）；
+  井斜最大 8.19° 在 7440m（旧注 7420m 有误）；
+- 泵注：隔离液/领浆/尾浆排量 1.2→1.0（现场简述时序值；设计 1.2）；中置液 1.5→1.0（现场名保护液，
+  1.5 无现场依据）；替浆现场为井浆 63.4m³@1.0-0.55 连续降排量，40+23.4 为模型分段代理
+  （旧注"CSV 记替浆 52m³ 待人工复核"已复核：52 为设计值，2011114 浆柱）；
+- 领浆 n/K 0.719/0.815 → 0.844/0.381、尾浆 0.722/0.684 → 0.830/0.352（主检 2011122.pdf W301-22094，89℃；
+  旧复检值 2011121.doc 93℃ 为另一份独立报告，LEGACY 保留；建议论文引用前做双口径敏感性重算）；
+- 平衡液流变 proxy（0.030/3.0）→ 0708 设计六速口径 PV41/YP9.2（2011111 §1.4.2，60℃ 六速 100/59/43/26/6/5）；
+- 鞋口滞后 52m³ 标 missing（0708 七份文本未找到出处，2026-08-29 查证）；liner_id 91.73 反推依赖它，
+  91.73/52 为 legacy 等效口径——0708 分段真实内径链（149.2 钻杆 ID129.9 0–5397.21 + 168.3 ID138.9 +
+  139.7 ID111.16/108.1）管内容积≈102.6m³，与理论碰压 102.2m³（2011114）呼应。
 """
 
 from __future__ import annotations
@@ -40,8 +54,9 @@ from cemdisp.transport1d.casing_flow import CasingFlowSolver
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_REFERENCE_ROOT = PROJECT_ROOT / "参考文档" / "呼101"
-# 现场提取包井径/井斜 CSV：固井作业史 2011113.doc 电测数据（108 点，20m 间隔，field_measured）。
-# LEGACY(2026-08-16 前): 合成剖面（上段等效 242.84 + 下段 215.9 常量；井斜 0.6→1.9°）。
+# 现场提取包井径/井斜 CSV：固井作业史 2011113.doc 电测数据（109 点，5700–7868m，
+# 2011116.xls Sheet2 电子版重建，2011113.doc 逐点互证，field_measured）。
+# LEGACY(2026-08-29 前): 108 点（20m 间隔）；LEGACY(2026-08-16 前): 合成剖面（上段等效 242.84 + 下段 215.9 常量；井斜 0.6→1.9°）。
 DEFAULT_CALIPER_CSV = PROJECT_ROOT / "参考文档" / "现场资料提取" / "hu101_呼101" / "caliper_profile.csv"
 DEFAULT_INCLINATION_CSV = PROJECT_ROOT / "参考文档" / "现场资料提取" / "hu101_呼101" / "inclination_profile.csv"
 
@@ -50,16 +65,22 @@ HU101_TOP_MD_M = 5400.0  # 模型段顶：水泥返高 5400m 口径（高于尾�
 HU101_BOTTOM_MD_M = 7868.0  # 完钻/尾管鞋深度（浮鞋下深，field_measured）。
 HU101_SHOE_MD_M = 7868.0
 HU101_HANGER_MD_M = 5407.46  # 悬挂器本体下深（field_measured）；悬挂器跨度 5402.85–5407.46m。
-# 字段名 casing_id_mm 实际上存 273.1mm 技术套管"外径"（well_geometry；技套鞋 5699.8m）。
-# 命名语义历史遗留（全仓 hu101/hu102/hu103/ht1_003 均同），统一改名需动 API，超本任务范围，仅注明不改名。
-HU101_TECH_CASING_EQUIV_ID_MM = 273.10  # 273.1mm 技术套管外径（OD，非 ID）。
+# 2026-08-29 语义统一：casing_id_mm 按 PACKAGE_REFERENCE 文档语义存"外层套管内径"——
+# 273.05mm 技套真实 ID=245.37mm（壁厚 13.84；0708 实际施工记录 20133/20134.doc+100312 图头；
+# 273.05 为 OD 公称，见 HU101_TECH_CASING_OD_MM；10033 设计写 273.1）。技套鞋 5699.8m。
+# 该字段不被求解器消费（环空几何由 hole_diameter_profile 表达），纯元数据口径。
+# LEGACY(2026-08-29 前): 本字段存 OD 273.10（10033 设计公称口径，命名历史遗留）。
+HU101_TECH_CASING_OD_MM = 273.05  # 273.05mm 技术套管外径（OD 公称；20133/20134.doc 实际施工记录）。
+HU101_TECH_CASING_EQUIV_ID_MM = 245.37  # 273.05mm 技术套管真实内径（casing_id_mm 语义统一后口径）。
 HU101_UPPER_SECTION_BOTTOM_MD_M = 6796.0  # 168.3mm 段底（变径变扣 6796.329m，差 0.329m 取整）；LEGACY 同。
 HU101_UPPER_ACTUAL_HOLE_DIAMETER_MM = 260.35  # 上段实际井径（设计口径；实测 5700–6796 段均值 259.46）。
 HU101_UPPER_ACTUAL_LINER_OD_MM = 168.30  # 上段尾管外径（5402.885–6796.136m，field_measured）。
 HU101_LOWER_HOLE_DIAMETER_MM = 215.90  # 下段井眼名义/实测井径（139.7mm 段，7048–7868 段均值 216.24）。
 HU101_LOWER_LINER_OD_MM = 139.70  # 下段尾管外径（6796.329–7868m，field_measured）。
 HU101_LINER_WALL_THICKNESS_MM = 15.80  # 139.7mm 段厚壁段壁厚（ID 108.1）；上部薄壁段 14.27mm（ID 111.16）存在。
-HU101_SHOE_LAG_VOLUME_M3 = 52.0  # 鞋口滞后体积 52m³（现场记录，model_assumption 口径）。
+# 鞋口滞后体积 52m³：0708 七份文本未找到出处（missing，2026-08-29 查证）；liner_id 91.73 反推依赖它。
+# LEGACY(2026-08-29 前) 注记"现场记录，model_assumption 口径"——实为无出处，值保留不改。
+HU101_SHOE_LAG_VOLUME_M3 = 52.0
 
 
 def _equivalent_hole_diameter_mm(actual_hole_mm: float, actual_od_mm: float, reference_od_mm: float) -> float:
@@ -77,6 +98,9 @@ HU101_UPPER_HOLE_DIAMETER_MM = _equivalent_hole_diameter_mm(
 # HU101_LINER_ID_MM：由 52m³ 鞋口滞后体积 / 7868m 反推的等效内径（约 91.73mm）。
 # **model_assumption**：非实测单一内径——139.7mm 段真实内径为厚壁 108.1mm / 薄壁 111.16mm，
 # 该等效值仅服务 1D 到鞋时间口径（管内容积），论文不可写成现场内径。
+# 2026-08-29 校准对比：0708 分段真实内径链（149.2 钻杆 ID129.9 0–5397.21 + 168.3 ID138.9 +
+# 139.7 ID111.16/108.1）管内容积≈102.6m³，与理论碰压 102.2m³（2011114）呼应；
+# 91.73/52 为 legacy 等效口径（鞋口滞后 52 无 0708 出处，missing）。
 HU101_LINER_ID_MM = math.sqrt(4.0 * HU101_SHOE_LAG_VOLUME_M3 / (math.pi * HU101_SHOE_MD_M)) * 1000.0
 
 # 呼101现场施工与流体参数（2026-08-16 按提取包 fluid_properties.csv/pumping_schedule.csv 核对，
@@ -90,14 +114,24 @@ HU101_LEAD_DENSITY_KG_M3 = 2100.0  # 领浆 ρ2.10（field_measured，化验）�
 HU101_TAIL_DENSITY_KG_M3 = 1900.0  # 尾浆 ρ1.90（field_measured，化验）。
 HU101_MUD_PV_PA_S = 0.058  # 钻井液 65℃ PV=58mPa·s（field_measured）。
 HU101_MUD_YP_PA = 9.2  # 钻井液 65℃ YP=9.2 Pa（field_measured，化验；施工前洗井 YP=5 为施工前口径）。
-HU101_BALANCE_PV_PA_S = 0.030  # 平衡液缺流变实测，代理 PV（proxy）。
-HU101_BALANCE_YP_PA = 3.0  # 平衡液缺流变实测，代理 YP（proxy）。
+# 平衡液流变（2026-08-29 校准）：0708 设计六速 2011111 §1.4.2（60℃ 六速 100/59/43/26/6/5）→ PV41/YP9.2。
+# LEGACY(2026-08-29 前): 0.030/3.0（proxy 代理）。
+HU101_BALANCE_PV_PA_S = 0.041  # 平衡液 PV=41mPa·s（0708 设计六速口径，2011111 §1.4.2）。
+HU101_BALANCE_YP_PA = 9.2  # 平衡液 YP=9.2Pa（同上）。
 HU101_SPACER_PV_PA_S = 0.030  # 驱油隔离液塑粘 30mPa·s（field_measured）；YP=5 为代理（proxy）。
 HU101_SPACER_YP_PA = 5.0
-HU101_LEAD_POWER_LAW_N = 0.719  # 领浆 n（field_measured，化验 93℃）。
-HU101_LEAD_CONSISTENCY_K = 0.815  # 领浆 K Pa·s^n（field_measured）。
-HU101_TAIL_POWER_LAW_N = 0.722  # 尾浆 n（field_measured，化验 93℃）。
-HU101_TAIL_CONSISTENCY_K = 0.684  # 尾浆 K Pa·s^n（field_measured）。
+# 领/尾浆流变（2026-08-29 校准）：主检报告 2011122.pdf（W301-22094，89℃）实测幂律；
+# 另一份独立复检报告 2011121.doc（93℃）记 0.719/0.815、0.722/0.684，为双报告并存，LEGACY 保留。
+# 建议论文引用前做双口径敏感性重算。
+HU101_LEAD_POWER_LAW_N = 0.844  # 领浆 n（主检 2011122.pdf W301-22094，89℃）；LEGACY(2026-08-29 前): 0.719（2011121.doc 93℃ 复检）。
+HU101_LEAD_CONSISTENCY_K = 0.381  # 领浆 K Pa·s^n（同上）；LEGACY(2026-08-29 前): 0.815。
+HU101_TAIL_POWER_LAW_N = 0.830  # 尾浆 n（主检 2011122.pdf W301-22094，89℃）；LEGACY(2026-08-29 前): 0.722。
+HU101_TAIL_CONSISTENCY_K = 0.352  # 尾浆 K Pa·s^n（同上）；LEGACY(2026-08-29 前): 0.684。
+# 复检口径常量（2011121.doc 固井公司化验中心，93℃）：供 rheology_source="recheck" 双口径敏感性使用。
+HU101_LEAD_RECHECK_POWER_LAW_N = 0.719
+HU101_LEAD_RECHECK_CONSISTENCY_K = 0.815
+HU101_TAIL_RECHECK_POWER_LAW_N = 0.722
+HU101_TAIL_RECHECK_CONSISTENCY_K = 0.684
 
 
 def _depth_points(values: tuple[tuple[float, float], ...]) -> tuple[DepthValuePoint, ...]:
@@ -233,14 +267,24 @@ def load_hu101_tailpipe(
     *,
     reference_root: Path | None = None,
     measured_standoff: str | None = None,
+    rheology_source: str = "primary",
 ) -> tuple[WellSpec, tuple[FluidSpec, ...], PumpingSchedule, ValidationData]:
     """加载呼101尾管段标准模型输入。
 
     measured_standoff: 若为 "between_centralizers" 或 "at_centralizers"，用从
         居中度检测图读取的实测剖面（扶正器间/扶正器处）替换 model_assumption 的
         0.38–0.48 名义剖面；None（默认）保持名义剖面。
+    rheology_source: "primary"（默认）=主检报告 2011122.pdf（W301-22094，89℃）领/尾浆幂律；
+        "recheck"=复检报告 2011121.doc（93℃）口径，供双化验口径敏感性重算。
     """
 
+    if rheology_source not in ("primary", "recheck"):
+        raise ValueError(
+            f"rheology_source 必须为 'primary'/'recheck'，得到 {rheology_source!r}")
+    lead_n = HU101_LEAD_POWER_LAW_N if rheology_source == "primary" else HU101_LEAD_RECHECK_POWER_LAW_N
+    lead_k = HU101_LEAD_CONSISTENCY_K if rheology_source == "primary" else HU101_LEAD_RECHECK_CONSISTENCY_K
+    tail_n = HU101_TAIL_POWER_LAW_N if rheology_source == "primary" else HU101_TAIL_RECHECK_POWER_LAW_N
+    tail_k = HU101_TAIL_CONSISTENCY_K if rheology_source == "primary" else HU101_TAIL_RECHECK_CONSISTENCY_K
     resolved_reference_root = reference_root or DEFAULT_REFERENCE_ROOT
     caliper_rows = _read_caliper_rows(DEFAULT_CALIPER_CSV)
     incl_rows = _read_inclination_rows(DEFAULT_INCLINATION_CSV)
@@ -275,12 +319,19 @@ def load_hu101_tailpipe(
             "呼101上部168.3mm+下部139.7mm复合尾管（变径变扣 6796.329m）；求解器为单一 139.7mm 外径几何，"
             "上部实测井径按保面积转换为等效（model_assumption），下部直接使用实测值。",
             "liner_id_mm 使用 52m³ 鞋口滞后反推的等效内径（约 91.73mm），**model_assumption**：非实测单一内径（"
-            "139.7mm 段厚壁 ID 108.1 / 薄壁 ID 111.16），仅服务 1D 到鞋时间口径，论文不可写成现场内径。",
-            "井径/井斜剖面为现场提取包实测（108 点，20m 间隔，field_measured）：井径 204–265mm，"
-            "井斜 0.19–8.19°（均值 2.81°，7420m 处最大 8.19°）；5400–5720m 技套内重叠段取首测点外推。",
+            "139.7mm 段厚壁 ID 108.1 / 薄壁 ID 111.16），仅服务 1D 到鞋时间口径，论文不可写成现场内径；"
+            "0708 分段真实内径链（149.2 钻杆 ID129.9 0–5397.21 + 168.3 ID138.9 + 139.7 ID111.16/108.1）"
+            "管内容积≈102.6m³，与理论碰压 102.2m³（2011114）呼应；91.73/52 为 legacy 等效口径"
+            "（鞋口滞后 52m³ 于 0708 七份文本未找到出处，missing，2026-08-29 查证）。",
+            "井径/井斜剖面为现场提取包实测（109 点，5700–7868m，2011116.xls Sheet2 电子版重建，"
+            "2011113.doc 逐点互证，field_measured）：井径 204–265mm，"
+            "井斜 0.19–8.19°（均值 2.81°，7440m 处最大 8.19°）；5400–5720m 技套内重叠段取首测点外推。",
+            "层位/井况补记（2026-08-29 校准，不改 EvaluationWindow）：实测水泥面 5402.85m（100312 图头）、"
+            "人工井底 7809.4m、目的井段 6153–7741m。",
             "居中度 standoff（0.38–0.48）为 **model_assumption**：现场仅扶正器布置（132 只，11–22m 间距）"
             "无实测居中度，且悬挂器坐挂失败、座底固井，实际居中度更低。",
-            "casing_id_mm 实存 273.1mm 技术套管外径（命名语义历史遗留，全仓未统一；本任务不改名）。",
+            "casing_id_mm 已按 2026-08-29 语义统一存 273.05mm 技术套管真实内径 245.37（OD 273.05 见 "
+            "HU101_TECH_CASING_OD_MM；0708 实际施工记录 20133/20134.doc+100312 图头；字段不被求解器消费）。",
             "回接段（0–5399.78m，193.7mm 套管）数据明确排除：模型域 5400–7868m 不含回接段，防资料混入。",
         ),
     )
@@ -289,8 +340,8 @@ def load_hu101_tailpipe(
         FluidSpec("钻井液", FluidRole.MUD, HU101_MUD_DENSITY_KG_M3, RheologyModel.BINGHAM, HU101_MUD_PV_PA_S, HU101_MUD_YP_PA),
         FluidSpec("平衡液", FluidRole.WASH, HU101_BALANCE_DENSITY_KG_M3, RheologyModel.BINGHAM, HU101_BALANCE_PV_PA_S, HU101_BALANCE_YP_PA),
         FluidSpec("驱油隔离液", FluidRole.SPACER, HU101_SPACER_DENSITY_KG_M3, RheologyModel.BINGHAM, HU101_SPACER_PV_PA_S, HU101_SPACER_YP_PA),
-        FluidSpec("领浆", FluidRole.LEAD, HU101_LEAD_DENSITY_KG_M3, RheologyModel.POWER_LAW, power_law_n=HU101_LEAD_POWER_LAW_N, consistency_k=HU101_LEAD_CONSISTENCY_K),
-        FluidSpec("尾浆", FluidRole.TAIL, HU101_TAIL_DENSITY_KG_M3, RheologyModel.POWER_LAW, power_law_n=HU101_TAIL_POWER_LAW_N, consistency_k=HU101_TAIL_CONSISTENCY_K),
+        FluidSpec("领浆", FluidRole.LEAD, HU101_LEAD_DENSITY_KG_M3, RheologyModel.POWER_LAW, power_law_n=lead_n, consistency_k=lead_k),
+        FluidSpec("尾浆", FluidRole.TAIL, HU101_TAIL_DENSITY_KG_M3, RheologyModel.POWER_LAW, power_law_n=tail_n, consistency_k=tail_k),
         FluidSpec("轻泥浆", FluidRole.DISPLACEMENT, HU101_MUD_DENSITY_KG_M3, RheologyModel.BINGHAM, HU101_MUD_PV_PA_S, HU101_MUD_YP_PA),
         FluidSpec("中置液", FluidRole.DISPLACEMENT, HU101_MUD_DENSITY_KG_M3, RheologyModel.BINGHAM, HU101_MUD_PV_PA_S, HU101_MUD_YP_PA),
         FluidSpec("井浆", FluidRole.DISPLACEMENT, HU101_MUD_DENSITY_KG_M3, RheologyModel.BINGHAM, HU101_MUD_PV_PA_S, HU101_MUD_YP_PA),
@@ -299,19 +350,20 @@ def load_hu101_tailpipe(
     schedule = PumpingSchedule(
         steps=(
             PumpingScheduleStep("注平衡液", "平衡液", 25.0, 1.2, remarks="呼101现场抽取：25m³@1.2，ρ1.85（field_measured）。"),
-            PumpingScheduleStep("注驱油隔离液", "驱油隔离液", 25.0, 1.2, remarks="呼101现场抽取：25m³@1.2，ρ2.00（field_measured）。"),
-            PumpingScheduleStep("注领浆", "领浆", HU101_LEAD_VOLUME_M3, 1.2, remarks="呼101现场抽取：47m³@1.2，ρ2.10，实际灰量 121t（field_measured）。"),
-            PumpingScheduleStep("注尾浆", "尾浆", HU101_TAIL_VOLUME_M3, 1.2, remarks="呼101现场抽取：23m³@1.2，ρ1.90（field_measured）。"),
+            PumpingScheduleStep("注驱油隔离液", "驱油隔离液", 25.0, 1.0, remarks="呼101现场抽取：25m³@1.0，ρ2.00（field_measured）；现场简述时序值，设计 1.2（2026-08-29 校准）。"),
+            PumpingScheduleStep("注领浆", "领浆", HU101_LEAD_VOLUME_M3, 1.0, remarks="呼101现场抽取：47m³@1.0，ρ2.10，实际灰量 121t（field_measured）；现场简述时序值，设计 1.2（2026-08-29 校准）。"),
+            PumpingScheduleStep("注尾浆", "尾浆", HU101_TAIL_VOLUME_M3, 1.0, remarks="呼101现场抽取：23m³@1.0，ρ1.90（field_measured）；现场简述时序值，设计 1.2（2026-08-29 校准）。"),
             PumpingScheduleStep("注后置液(管内)", "井浆", 2.0, 0.6, remarks="中置液/压塞液 2m³@0.6，仅作为管内压塞/占位流体（field_measured）。"),
             PumpingScheduleStep("注轻泥浆", "轻泥浆", 26.0, 1.5, remarks="按现场轻泥浆 26m³@1.5，ρ1.85（field_measured）。"),
-            PumpingScheduleStep("注中置液", "中置液", 10.0, 1.5, remarks="中置液 10m³@1.5，ρ2.00（现场 pumping_schedule，field_measured）；LEGACY(2026-08-16 前): 1.2。"),
-            PumpingScheduleStep("井浆快替", "井浆", 40.0, 1.0, remarks="设计表 40m³@1.0（现场替浆排量 1.5→0.55 变排量，模型按分段代理）。"),
-            PumpingScheduleStep("井浆慢替", "井浆", 23.4, 0.55, remarks="补足现场总替量 101.4m³；理论碰压量 102.2m³，CSV 记替浆 52m³（口径差异见 notes）。"),
+            PumpingScheduleStep("注中置液", "中置液", 10.0, 1.0, remarks="中置液 10m³@1.0（现场名保护液，排量 1.0；1.5 无现场依据，2026-08-29 校准）；LEGACY(2026-08-29 前): 1.5；LEGACY(2026-08-16 前): 1.2。"),
+            PumpingScheduleStep("井浆快替", "井浆", 40.0, 1.0, remarks="现场为井浆 63.4m³@1.0-0.55 连续降排量，40+23.4 为模型分段代理（本段 40m³@1.0）；旧注'CSV 记替浆 52m³ 待人工复核'已复核：52 为设计值（2011114 浆柱）。"),
+            PumpingScheduleStep("井浆慢替", "井浆", 23.4, 0.55, remarks="现场为井浆 63.4m³@1.0-0.55 连续降排量，40+23.4 为模型分段代理（本段 23.4m³@0.55，补足总替量 101.4m³）。"),
         ),
         notes=(
             "现场顺序：平衡液→驱油隔离液→领浆→尾浆→后置液(2m³)→轻泥浆→中置液→替浆（快/慢）。",
             "替浆合计 101.4m³（快替 40 + 慢替 23.4），与理论碰压量 102.2m³ 一致（差 0.8m³ 含压塞口径差异）；"
-            "提取包 pumping_schedule 记'替浆钻井液 52m³ @1.5-0.55'与 109min 时长不符、字段疑似不完整，未直接采用，待人工复核。",
+            "现场实际为井浆 63.4m³@1.0-0.55 连续降排量，40/23.4 为模型分段代理；"
+            "旧注'提取包 pumping_schedule 记替浆 52m³ 待人工复核'已复核：52 为设计值（2011114 浆柱，2026-08-29 校准）。",
             "循环排混浆 85m³@2.4 与碰压/候凝为非顶替主输入步骤，不进入模型泵注序列。",
         ),
     )

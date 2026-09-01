@@ -6,7 +6,7 @@ ht1_003,liner_top_md,5316.036,m,,,field_measured,HT1-003井油层尾管固井作
 ht1_003,liner_shoe_md,7618,m,,,field_measured,HT1-003井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 六.6.1,high,加长引鞋下深7618m
 ht1_003,openhole_top_md,5568,m,5568,7618,field_measured,HT1-003井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 一.1.2.1,high,273.1mm技套鞋5568m，裸眼自5568m
 ht1_003,openhole_bottom_md,7618,m,5568,7618,field_measured,HT1-003井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 一.1.1,high,完钻井深
-ht1_003,casing_inner_diameter,245.42,mm,0,5568,interpreted,HT1-003井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 五.5.1,high,273.1mm技套内径=273.1-2*13.84=245.42mm
+ht1_003,casing_inner_diameter,245.37,mm,0,5568,interpreted,HT1-003井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 五.5.1；HT1-003_固井质量测井评价图 图头 技术套管273.050mm,high,"设计5.1原文""三开套管内径245.37mm""；CBL图头技套外径273.050mm-2*13.84=245.37mm 双源一致；名义273.1-2*13.84=245.42mm为算术值(2026-08-29校准修正)"
 ht1_003,casing_outer_diameter,273.1,mm,0,5568,field_measured,HT1-003井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 一.1.2.1,high,技术套管外径
 ht1_003,liner_inner_diameter,138.9,mm,5316.036,7091.016,field_measured,HT1-003井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 六.6.1/作业史,high,168.3mm段内径=168.3-2*14.7=138.9mm
 ht1_003,liner_inner_diameter,107.94,mm,7091.016,7618,field_measured,HT1-003井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 六.6.1/作业史,high,139.7mm段内径=139.7-2*15.88=107.94mm

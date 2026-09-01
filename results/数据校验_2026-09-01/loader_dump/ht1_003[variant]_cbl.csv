@@ -1,0 +1,6 @@
+﻿kind,name,top_md_m,bottom_md_m,extra
+evaluation_window,CBL评价井段(尾管段),5568.0,7618.0,cbl
+evaluation_window,CBL数字化窗(78.7%对应),5307.54,7514.21,cbl_digitization
+evaluation_window,气层-K1q主力油层段(地层目标),7418.0,7440.0,formation_target
+evaluation_window,目的井段(地层目标),7442.0,7618.0,formation_target
+validation,cbl_pass_rate,,,0.787

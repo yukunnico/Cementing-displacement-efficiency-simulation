@@ -1,0 +1,36 @@
+﻿key,value
+well_name,呼探1-002井（HT1-002）
+top_md_m,5292.5
+bottom_md_m,7554
+shoe_md_m,7554
+hanger_md_m,5292.5
+casing_id_mm,193.7
+liner_od_mm,139.7
+liner_id_mm,107.94
+is_dual_diameter,False
+upper_section_bottom_md_m,—
+upper_liner_od_mm,—
+upper_liner_id_mm,—
+liner_wall_thickness_mm,—
+shoe_lag_volume_m3,—
+hole_profile_n,65
+hole_profile_min_mm,190.5
+hole_profile_max_mm,230
+hole_profile_mean_mm,194.69
+hole_profile_depth_range,5292.5–7554.0
+inclination_profile_n,65
+inclination_max_deg,3.5
+standoff_profile_n,8
+standoff_min,0.76
+standoff_max,0.78
+standoff_mean,0.778
+pipe_id_profile_n,0
+cbl_pass_rate,—
+note_0,呼探1-002目标段为单一 139.7mm 完井尾管，不采用呼探1双径尾管等效几何。
+note_1,井径/井斜剖面改用现场提取包实测（各 64 点，30m 间隔，field_measured）；5292.5–5631m 为 219.1mm 技套内重叠段，取技套内径 193.7mm 等效（model_assumption）。
+note_2,大肚子 1（5631–5940m，设计平均 206.65）与大肚子 2（7355–7360m，设计平均 226.59）均来自施工设计 1.4.2 节（设计口径，model_assumption）；30m 采样 CSV 无法复现大肚子 2（7355–7360 无测点）。
+note_3,居中度按设计值 78%（斯伦贝谢模拟，无实测）构造剖面，model_assumption。
+note_4,鞋口滞后体积 81.1m³（2026-08-29 校准）：按实际流动路径径链组件累计（149.2 钻杆 ID129.9 0–3489 + 114.3 钻杆 ID97.18 3489–5292.5 + 尾管薄壁 ID111.16 5308.564–7052.256 + 厚壁 ID107.94 7052.256–7554）；三锚点并列：设计 ECD 模拟 77 / 实际替浆 79 / 组件累计 81.1；LEGACY(2026-08-29 前): ≈177.65m³（技尾 193.7 全井段代理），2.2 倍失真已修正。
+note_5,先导浆（平衡液）密度维持设计 1.85 建模，proxy 流变维持；批混实测密度 1.87（数采平台 1.868–1.872）vs 设计 1.85 双口径并存（2026-08-29 校准注记）。
+note_6,喀拉扎组窗底界 7554（封固段）vs 7559（地层）口径差；扶正器间距设计 22m vs 记录表 44/55m 两口径；喇叭口设计 5292.5 vs 实际 5293.18-5297.23；泥浆 Bingham(58/8.5) vs 化验 HB(0.689/0.557) 口径选择维持（2026-08-29 校准注记）。
+note_7,CBL评价井段为 5292.5–7554m 完整尾管段；质量标签仅为'合格'弱监督代理（现场无数值 CBL 合格率），不等同顶替效率真值。

@@ -90,16 +90,18 @@ def _pipe_volume_m3(length_m: float, inner_diameter_mm: float) -> float:
     return math.pi * radius_m**2 * length_m
 
 
-# 鞋口滞后体积估算：地面至悬挂器按 219.1mm 技术套管内径代理（193.7），尾管段按 107.94mm 实际内径累加。
+# 鞋口滞后体积（2026-08-29 校准）：按实际流动路径径链组件累计 ≈81.1m³——
+# 149.2 钻杆 ID129.9（0–3489）+ 114.3 钻杆 ID97.18（3489–5292.5）
+# + 尾管薄壁 ID111.16（5308.564–7052.256）+ 厚壁 ID107.94（7052.256–7554）。
+# 三锚点并列：设计 ECD 模拟 77 / 实际替浆 79 / 组件累计 81.1。
 # 该体积只用于 field_order_realistic 边界的到鞋延迟，不代表环空求解器几何直径。
-# 尾管段 5308.568–7052.26m 实为 14.27mm 薄壁段（ID 111.16），此处按厚壁段 ID 107.94 统一估算（简化，model_assumption）。
-HU2_SURFACE_TO_HANGER_EFFECTIVE_ID_MM = HU2_CASING_ID_MM
-HU2_SHOE_LAG_VOLUME_M3 = _pipe_volume_m3(
-    HU2_HANGER_MD_M,
-    HU2_SURFACE_TO_HANGER_EFFECTIVE_ID_MM,
-) + _pipe_volume_m3(
-    HU2_SHOE_MD_M - HU2_HANGER_MD_M,
-    HU2_LINER_ID_ACTUAL_MM,
+# LEGACY(2026-08-29 前): ≈177.65m³（按技尾 193.7 全井段代理），2.2 倍失真已修正。
+HU2_SURFACE_TO_HANGER_EFFECTIVE_ID_MM = HU2_CASING_ID_MM  # LEGACY(2026-08-29 前) 派生代理，已不参与鞋口滞后计算
+HU2_SHOE_LAG_VOLUME_M3 = (
+    _pipe_volume_m3(3489.0, 129.9)
+    + _pipe_volume_m3(HU2_HANGER_MD_M - 3489.0, 97.18)
+    + _pipe_volume_m3(7052.256 - 5308.564, 111.16)
+    + _pipe_volume_m3(HU2_SHOE_MD_M - 7052.256, HU2_LINER_ID_ACTUAL_MM)
 )
 HU2_LINER_ID_MM = HU2_LINER_ID_ACTUAL_MM
 
@@ -121,8 +123,12 @@ HU2_DISPLACEMENT_PV_PA_S = 0.058  # 替浆液按同密度钻井液流变处理�
 HU2_DISPLACEMENT_YP_PA = 8.5  # 替浆液 YP=8.5Pa（与钻井液一致，field_measured）。
 HU2_BALANCE_PV_PA_S = 0.030  # 平衡液缺流变实测，使用代理 PV（proxy）。
 HU2_BALANCE_YP_PA = 3.0  # 平衡液缺流变实测，使用代理 YP（proxy）。
-HU2_SPACER_PV_PA_S = 0.030  # 隔离液塑粘 30mPa·s（field_measured，化验 Table7）。
-HU2_SPACER_YP_PA = 8.0  # 隔离液 YP=8Pa（field_measured，化验）；LEGACY(2026-08-16 前): 5.0
+# 隔离液流变（2026-08-29 校准）：化验实测 → POWER_LAW n=0.545/K=1.338；
+# YP8 无 0708 直接出处，旧 Bingham 30/8 口径 LEGACY 保留。
+HU2_SPACER_POWER_LAW_N = 0.545  # 隔离液流性指数 n（化验实测，2026-08-29 校准）
+HU2_SPACER_CONSISTENCY_K = 1.338  # 隔离液稠度系数 K Pa·s^n（化验实测，2026-08-29 校准）
+HU2_SPACER_PV_PA_S = 0.030  # LEGACY(2026-08-29 前) 隔离液塑粘（化验 Table7 口径），已由幂律实测替换
+HU2_SPACER_YP_PA = 8.0  # LEGACY(2026-08-29 前) 隔离液 YP（无 0708 直接出处）；LEGACY(2026-08-16 前): 5.0
 HU2_LEAD_POWER_LAW_N = 0.811  # 领浆 n（field_measured，化验 133℃）。
 HU2_LEAD_CONSISTENCY_K = 0.876  # 领浆 K Pa·s^n（field_measured）。
 HU2_INTERMEDIATE_POWER_LAW_N = 0.871  # 中间浆 n（field_measured）。
@@ -303,7 +309,15 @@ def load_hu2_tailpipe(
             "井径/井斜剖面改用现场提取包实测（各 64 点，30m 间隔，field_measured）；5292.5–5631m 为 219.1mm 技套内重叠段，取技套内径 193.7mm 等效（model_assumption）。",
             "大肚子 1（5631–5940m，设计平均 206.65）与大肚子 2（7355–7360m，设计平均 226.59）均来自施工设计 1.4.2 节（设计口径，model_assumption）；30m 采样 CSV 无法复现大肚子 2（7355–7360 无测点）。",
             "居中度按设计值 78%（斯伦贝谢模拟，无实测）构造剖面，model_assumption。",
-            f"鞋口滞后体积估算为 {HU2_SHOE_LAG_VOLUME_M3:.2f}m³：地面至悬挂器按 193.7mm（219.1 技套内径）代理内径，尾管段按 {HU2_LINER_ID_ACTUAL_MM:.2f}mm 内径。",
+            f"鞋口滞后体积 {HU2_SHOE_LAG_VOLUME_M3:.1f}m³（2026-08-29 校准）：按实际流动路径径链组件累计"
+            f"（149.2 钻杆 ID129.9 0–3489 + 114.3 钻杆 ID97.18 3489–5292.5 + 尾管薄壁 ID111.16 5308.564–7052.256"
+            f" + 厚壁 ID107.94 7052.256–7554）；三锚点并列：设计 ECD 模拟 77 / 实际替浆 79 / 组件累计 81.1；"
+            f"LEGACY(2026-08-29 前): ≈177.65m³（技尾 193.7 全井段代理），2.2 倍失真已修正。",
+            "先导浆（平衡液）密度维持设计 1.85 建模，proxy 流变维持；批混实测密度 1.87（数采平台 1.868–1.872）"
+            "vs 设计 1.85 双口径并存（2026-08-29 校准注记）。",
+            "喀拉扎组窗底界 7554（封固段）vs 7559（地层）口径差；扶正器间距设计 22m vs 记录表 44/55m 两口径；"
+            "喇叭口设计 5292.5 vs 实际 5293.18-5297.23；泥浆 Bingham(58/8.5) vs 化验 HB(0.689/0.557) 口径选择维持"
+            "（2026-08-29 校准注记）。",
             "CBL评价井段为 5292.5–7554m 完整尾管段；质量标签仅为'合格'弱监督代理（现场无数值 CBL 合格率），不等同顶替效率真值。",
         ),
     )
@@ -313,7 +327,7 @@ def load_hu2_tailpipe(
         FluidSpec("钻井液", FluidRole.MUD, HU2_MUD_DENSITY_KG_M3, RheologyModel.BINGHAM, HU2_MUD_PV_PA_S, HU2_MUD_YP_PA),
         FluidSpec("替浆液", FluidRole.DISPLACEMENT, HU2_DISPLACEMENT_DENSITY_KG_M3, RheologyModel.BINGHAM, HU2_DISPLACEMENT_PV_PA_S, HU2_DISPLACEMENT_YP_PA),
         FluidSpec("平衡液", FluidRole.WASH, HU2_BALANCE_DENSITY_KG_M3, RheologyModel.BINGHAM, HU2_BALANCE_PV_PA_S, HU2_BALANCE_YP_PA),
-        FluidSpec("隔离液", FluidRole.SPACER, HU2_SPACER_DENSITY_KG_M3, RheologyModel.BINGHAM, HU2_SPACER_PV_PA_S, HU2_SPACER_YP_PA),
+        FluidSpec("隔离液", FluidRole.SPACER, HU2_SPACER_DENSITY_KG_M3, RheologyModel.POWER_LAW, power_law_n=HU2_SPACER_POWER_LAW_N, consistency_k=HU2_SPACER_CONSISTENCY_K),
         FluidSpec("领浆", FluidRole.LEAD, HU2_LEAD_DENSITY_KG_M3, RheologyModel.POWER_LAW, power_law_n=HU2_LEAD_POWER_LAW_N, consistency_k=HU2_LEAD_CONSISTENCY_K),
         FluidSpec("中间浆", FluidRole.INTERMEDIATE, HU2_INTERMEDIATE_DENSITY_KG_M3, RheologyModel.POWER_LAW, power_law_n=HU2_INTERMEDIATE_POWER_LAW_N, consistency_k=HU2_INTERMEDIATE_CONSISTENCY_K),
         FluidSpec("尾浆", FluidRole.TAIL, HU2_TAIL_DENSITY_KG_M3, RheologyModel.POWER_LAW, power_law_n=HU2_TAIL_POWER_LAW_N, consistency_k=HU2_TAIL_CONSISTENCY_K),

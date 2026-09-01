@@ -1,0 +1,32 @@
+﻿key,value
+well_name,呼102
+top_md_m,6823.1
+bottom_md_m,7735
+shoe_md_m,7735
+hanger_md_m,6823.1
+casing_id_mm,193.7
+liner_od_mm,139.7
+liner_id_mm,108.1
+is_dual_diameter,False
+upper_section_bottom_md_m,—
+upper_liner_od_mm,—
+upper_liner_id_mm,—
+liner_wall_thickness_mm,15.8
+shoe_lag_volume_m3,—
+hole_profile_n,63
+hole_profile_min_mm,184.85
+hole_profile_max_mm,200.58
+hole_profile_mean_mm,191.02
+hole_profile_depth_range,6823.1–7735.0
+inclination_profile_n,63
+inclination_max_deg,11.49
+standoff_profile_n,63
+standoff_min,0.450171
+standoff_max,0.6088
+standoff_mean,0.491
+pipe_id_profile_n,0
+cbl_pass_rate,—
+note_0,仅对应呼102井 139.70mm 尾管段固井，不含回接固井与其他套管段。
+note_1,7120–7735m 井径/井斜为 62 点现场实测（20211.doc §1.6，10m 间隔，184.85–200.58mm，2026-08-29 校准）；6823.10–7119.80m 双层套管段按双层段环空外筒内径 193.7mm 处理（几何推导，非实测；LEGACY(2026-08-29 前): 215.9 等效值）。
+note_2,标节1/2（原文'标节'，7432.914–7434.268/7638.05–7639.403m）与 CBL 图头'短套管下深'另一对并存待考（2026-08-29 校准注记）。
+note_3,最大井斜 11.49°：现场摘要一处记@7450m（20211.doc 井径表）、一处记@7490m（测斜表），两处并存、峰值一致，模型按逐点实测剖面取值。
