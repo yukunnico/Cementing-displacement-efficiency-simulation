@@ -1,0 +1,35 @@
+﻿key,value
+well_name,呼101
+top_md_m,5400
+bottom_md_m,7868
+shoe_md_m,7868
+hanger_md_m,5407.46
+casing_id_mm,245.37
+liner_od_mm,139.7
+liner_id_mm,91.7328
+is_dual_diameter,False
+upper_section_bottom_md_m,—
+upper_liner_od_mm,—
+upper_liner_id_mm,—
+liner_wall_thickness_mm,—
+shoe_lag_volume_m3,—
+hole_profile_n,110
+hole_profile_min_mm,203.91
+hole_profile_max_mm,258.2
+hole_profile_mean_mm,229.84
+hole_profile_depth_range,5400.0–7868.0
+inclination_profile_n,110
+inclination_max_deg,8.19
+standoff_profile_n,6
+standoff_min,0.38
+standoff_max,0.48
+standoff_mean,0.438
+pipe_id_profile_n,0
+cbl_pass_rate,—
+note_0,呼101上部168.3mm+下部139.7mm复合尾管（变径变扣 6796.329m）；求解器为单一 139.7mm 外径几何，上部实测井径按保面积转换为等效（model_assumption），下部直接使用实测值。
+note_1,liner_id_mm 使用 52m³ 鞋口滞后反推的等效内径（约 91.73mm），**model_assumption**：非实测单一内径（139.7mm 段厚壁 ID 108.1 / 薄壁 ID 111.16），仅服务 1D 到鞋时间口径，论文不可写成现场内径；0708 分段真实内径链（149.2 钻杆 ID129.9 0–5397.21 + 168.3 ID138.9 + 139.7 ID111.16/108.1）管内容积≈102.6m³，与理论碰压 102.2m³（2011114）呼应；91.73/52 为 legacy 等效口径（鞋口滞后 52m³ 于 0708 七份文本未找到出处，missing，2026-08-29 查证）。
+note_2,井径/井斜剖面为现场提取包实测（109 点，5700–7868m，2011116.xls Sheet2 电子版重建，2011113.doc 逐点互证，field_measured）：井径 204–265mm，井斜 0.19–8.19°（均值 2.81°，7440m 处最大 8.19°）；5400–5720m 技套内重叠段取首测点外推。
+note_3,层位/井况补记（2026-08-29 校准，不改 EvaluationWindow）：实测水泥面 5402.85m（100312 图头）、人工井底 7809.4m、目的井段 6153–7741m。
+note_4,居中度 standoff（0.38–0.48）为 **model_assumption**：现场仅扶正器布置（132 只，11–22m 间距）无实测居中度，且悬挂器坐挂失败、座底固井，实际居中度更低。
+note_5,casing_id_mm 已按 2026-08-29 语义统一存 273.05mm 技术套管真实内径 245.37（OD 273.05 见 HU101_TECH_CASING_OD_MM；0708 实际施工记录 20133/20134.doc+100312 图头；字段不被求解器消费）。
+note_6,回接段（0–5399.78m，193.7mm 套管）数据明确排除：模型域 5400–7868m 不含回接段，防资料混入。

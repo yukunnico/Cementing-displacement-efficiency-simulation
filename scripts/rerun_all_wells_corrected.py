@@ -49,6 +49,10 @@ def _total_t(schedule):
     return sum(0. if s.rate_m3_min<=0 else s.volume_m3/s.rate_m3_min*60. for s in schedule.steps)
 
 def _stop_t(cr, fluids):
+    # F2 修复（2026-09-01）：优先取 cement_end_time_s（尾缘≡后继流体前缘，同刻修正），
+    # 即"尾浆全部进入环空"时刻；前缘扫描仅作回退。
+    if cr.cement_end_time_s is not None:
+        return float(cr.cement_end_time_s)
     roles={FluidRole.LEAD,FluidRole.INTERMEDIATE,FluidRole.TAIL}; by={f.name:f for f in fluids}
     fs=sorted(cr.fronts,key=lambda f:f.time_s)
     last=next((f.time_s for f in fs if by.get(f.fluid_name) and by[f.fluid_name].role in roles),None)
@@ -64,7 +68,7 @@ def run_one(label, loader, *, corrected, cfl_on=True):
     well,fluids,schedule,_=loader()
     cr=CasingFlowSolver(enable_gravity=True).run(well,fluids,schedule)
     inlet=build_coupled_annulus_inlet_provider(cr,CasingFlowSolver(enable_gravity=True),fluids,split_cement_phases=True)
-    tt=min(_total_t(schedule)+1200.,_stop_t(cr,fluids)+600.)
+    tt=min(_total_t(schedule)+1200.,_stop_t(cr,fluids))  # F2 修复(2026-09-01)：停于尾浆全部入库，去掉+600s尾窗（实测压低η_E −1.9~−7.1pp）
     kw=dict(total_t=tt,nz=NZ,enable_cfl_adaptive=cfl_on)
     if corrected:
         kw.update(**CORRECTED_KW)

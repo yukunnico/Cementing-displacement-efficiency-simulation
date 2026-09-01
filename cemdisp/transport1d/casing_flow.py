@@ -244,28 +244,46 @@ class CasingFlowSolver:
                 )
             )
 
-        # 水泥浆停止时刻定义为"最后一段水泥浆尾缘越过鞋口"的地面累计时间。
-        # 这与参考项目的环空终止口径一致：后续替浆刚到环空入口时停止二维顶替评价。
-        # 关键约束：水泥结束时刻不得早于任一水泥浆前缘到达时刻。
+        # 水泥浆停止时刻定义为"最后一段水泥浆尾缘越过鞋口"的地面累计时间，
+        # 即"尾浆全部进入环空"的时刻（≡ 现场碰压断面）。
+        # F2 修复（2026-09-01）：尾缘界面 = 后继流体（pusher）的前缘，是同一物理界面。
+        # 重力修正按"推挤者 vs 尾浆"配对——与 _front_arrival_time 对该后继步的调用
+        # 参数完全一致（fluid=后继流体, displaced=尾浆）——保证同一物理界面同刻；
+        # 旧代码错配为 steps[i-1]（上一步流体），同一界面两套修正，且逐界面独立
+        # 乘法修正可重排界面次序，使停止时刻早于尾浆尾缘入库（截流末段水泥）。
+        # 关键约束（落实）：水泥结束时刻不得早于任一水泥浆前缘到达时刻。
         cement_end_time_s: float | None = None
+        max_cement_front_time_s: float | None = None
         for i, scheduled in enumerate(scheduled_steps):
             fluid = fluid_by_name.get(scheduled.step.fluid_name)
             if fluid is None or fluid.role not in {FluidRole.LEAD, FluidRole.INTERMEDIATE, FluidRole.TAIL}:
                 continue
+            if max_cement_front_time_s is None or fronts[i].time_s > max_cement_front_time_s:
+                max_cement_front_time_s = fronts[i].time_s
             rear_arrival_time_s = self._rear_arrival_time(scheduled, scheduled_steps, pipe_volume_m3)
             if rear_arrival_time_s is None:
                 # 尾缘在泵注结束前未越过鞋口（目标累计体积超过总泵入体积）：
                 # 以泵注结束时刻为上界标记，保证不早于水泥前缘到达时刻。
                 rear_arrival_time_s = pumping_end_time_s
             elif self.enable_gravity:
-                rear_arrival_time_s = self._gravity_corrected_arrival_time(
-                    rear_arrival_time_s,
-                    scheduled.step.fluid_name,
-                    self._displaced_fluid_name(scheduled_steps, i, initial_fluid),
-                    fluids,
-                    well_spec,
-                )
+                next_scheduled = scheduled_steps[i + 1] if i + 1 < len(scheduled_steps) else None
+                if next_scheduled is not None:
+                    # 尾缘 ≡ 后继流体前缘（同一体积坐标），配对与 front-of-(i+1) 完全一致
+                    rear_arrival_time_s = self._gravity_corrected_arrival_time(
+                        rear_arrival_time_s,
+                        next_scheduled.step.fluid_name,
+                        scheduled.step.fluid_name,
+                        fluids,
+                        well_spec,
+                    )
+            if rear_arrival_time_s > pumping_end_time_s:
+                # 泵停（碰压）后无顶替驱动：重力修正外推的延迟不得超过泵注结束时刻
+                # （碰压后界面停滞，"尾浆全部入库"最晚记到泵注结束）。
+                rear_arrival_time_s = pumping_end_time_s
             cement_end_time_s = rear_arrival_time_s
+        if cement_end_time_s is not None and max_cement_front_time_s is not None:
+            # 同一物理界面两时刻必须同刻；此约束只上抬不下压，纯安全约束
+            cement_end_time_s = max(cement_end_time_s, max_cement_front_time_s)
 
         result = CasingFlowResult(
             fronts=tuple(fronts),

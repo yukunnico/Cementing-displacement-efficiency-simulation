@@ -15,10 +15,10 @@ ht1_002,tieback_sleeve,5289.417,5292.517,183,168,,1,,field_measured,施工设计
 ht1_002,centralizer,5297,5640,216,,整体式弹扶/外径216mm,3,1根/只,field_measured,施工设计 Table31,施工设计 6.2节,high,悬挂器附近-5640m; 每根1个
 ht1_002,centralizer,5331,5640,216,,整体式弹扶/外径216mm,8,3根/只,field_measured,施工设计 Table31,施工设计 6.2节,high,5331-5640m段
 ht1_002,centralizer,5640,7554,190.5,,整体弹扶正器/外径190.5mm,84,2根/只,field_measured,施工设计 Table31,施工设计 6.2节,high,5640-7554m段; 目的层间隔44m; 非目的层间隔55m
-ht1_002,drill_pipe,0,3489,149.2,130.9,V150/9.65mm,,,field_measured,施工设计 Table36,施工设计 7.1.4节,high,送入钻杆149.2mm*3489m
+ht1_002,drill_pipe,0,3489,149.2,129.9,V150/9.65mm,,,field_measured,施工设计 Table36,施工设计 7.1.4节,high,送入钻杆149.2mm*3489m
 ht1_002,drill_pipe,3489,5292.5,114.3,97.2,DS40/8.56mm,,,field_measured,施工设计 Table36,施工设计 7.1.4节,high,送入钻杆114.3mm*1803.5m
 ht1_002,tieback_stinger,5290.08,5290.08,139.7,,BG135V-S13Cr/15.88mm,1,,field_measured,回接套管数据表,回接套管数据表,high,大陆架插入头
-ht1_002,tieback_liner,0,3700,193.7,,BG140V,N,,field_measured,回接施工设计/技术总结,回接施工设计,medium,193.7mm上部套管段
+ht1_002,tieback_liner,0,3700,193.7,163.48,BG140V,N,,field_measured,回接施工设计/技术总结,回接施工设计,medium,193.7mm上部套管段
 ht1_002,tieback_liner,3700,5290.08,168.3,138.9,BG140V/14.7mm,N,,field_measured,回接套管数据表,回接套管数据表,high,168.3mm下部套管段; 内径=168.3-2*14.7=138.9mm
 ht1_002,tieback_float_collar,5234.289,5234.549,168.3,,BG135V-S13Cr,1,,field_measured,回接作业史 Table7,回接作业史 Table7,high,大陆架节流浮箍
 ht1_002,tieback_centralizer,0,5290,241.3,,整体式弹性扶正器,76,4-5根/只,field_measured,回接施工设计 Table7/技术总结,回接施工设计 5节/技术总结,high,0-1500m每5根1个; 1500-3680m每4根1个

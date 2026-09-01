@@ -1,0 +1,6 @@
+﻿kind,name,top_md_m,bottom_md_m,extra
+evaluation_window,CBL评价井段(尾管段),5245.0,7581.0,cbl
+evaluation_window,目的井段1(地层目标),7495.0,7526.0,formation_target
+evaluation_window,目的井段2(地层目标),7531.0,7550.0,formation_target
+evaluation_window,油气水层段(红线),7482.0,7560.0,oil_gas_show
+validation,cbl_pass_rate,,,0.003

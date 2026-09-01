@@ -1,0 +1,11 @@
+﻿index,step_name,fluid_name,role,volume_m3,rate_m3_min,duration_min,start_min,end_min,cum_volume_m3,explicit_time,remarks
+0,注入平衡液,平衡液,wash,20.0,0.8,25,0,25,20.0,False,先导浆 20m³@0.8m³/min，角色 WASH（field_measured）。
+1,注入隔离液,隔离液,spacer,15.0,0.8,18.75,25,43.75,35.0,False,驱油隔离液 15m³@0.8m³/min，密度 2.05g/cm³（提取包 field_measured；旧记'实际 2.10'为历史口径）。
+2,注入领浆,领浆,lead,12.0,0.8,15,43.75,58.75,47.0,False,领浆 12m³@0.8m³/min，ρ2.10（field_measured）。
+3,注入中间浆,中间浆,intermediate,14.0,0.8,17.5,58.75,76.25,61.0,False,中间浆 14m³@0.8m³/min，ρ1.95，角色 INTERMEDIATE（field_measured）。
+4,注入尾浆,尾浆,tail,12.0,0.8,15,76.25,91.25,73.0,False,尾浆 12m³@0.8m³/min，ρ1.95（field_measured）。
+5,注入压塞液（管内）,压塞液,other,5.0,0.8,6.25,91.25,97.5,78.0,False,压塞液 5m³@0.8m³/min（现场 Table37），仅作为管内占位（field_measured）。
+6,替浆泥浆(快),井浆,displacement,12.0,0.8,15,97.5,112.5,90.0,False,替浆-1 钻井液 12m³@0.8m³/min，角色 DISPLACEMENT（field_measured）。
+7,替浆中置液,中置液,displacement,15.0,0.8,18.75,112.5,131.25,105.0,False,注中置液 15m³@0.8m³/min，ρ1.90（field_measured）。
+8,井浆快替,井浆,displacement,30.0,0.8,37.5,131.25,168.75,135.0,False,重泥浆 47m³ 中快替 30m³@0.8m³/min（现场 15@0.8+5@0.5 合并，模型代理）。
+9,井浆慢替,井浆,displacement,17.0,0.3,56.6667,168.75,225.417,152.0,False,重泥浆 47m³ 中慢替 17m³@0.3m³/min（现场 18@0.3+9@0.4 合并，模型代理）。

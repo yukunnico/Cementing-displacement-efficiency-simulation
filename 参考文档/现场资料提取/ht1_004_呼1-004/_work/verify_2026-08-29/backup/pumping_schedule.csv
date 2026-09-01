@@ -1,0 +1,38 @@
+﻿well_id,step_index,stage_name,fluid_role,fluid_name,volume_m3,rate_m3_min,start_time_min,end_time_min,density_g_cm3,event_tag,data_type,source_description,confidence,notes
+ht1_004,0,initial_condition,mud,油基钻井液(井内),,,0,0,1.90,,field_measured,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 七.7.2 三.3.3/固井总结,high,固井前钻井液密度1.90g/cm3(设计/总结)；洗井结束前1.91g/cm3粘度62s屈服10Pa(施工记录表)；井下原钻井液多段密度1.88-2.07
+ht1_004,1,flush_pipe,shutdown,冲洗管线试压,,,0,5,,pressure_test_30MPa,field_measured,HT1-004井168.3+139.7mm油层尾管固井总结.doc 施工流程/作业史,high,2026-06-14 18:00-18:05冲洗管线试压30MPa
+ht1_004,2,pump_lead_spacer_pre,wash,先导浆(低密前置液),25,1.2,5,25,1.75,,field_measured,HT1-004井168.3+139.7mm油层尾管固井总结.doc/施工记录表,high,18:25注完；泵压21-24.6MPa；作业史施工过程记18:35注先导浆25m3排量1.5泵压18MPa
+ht1_004,3,pump_spacer1,spacer,低失水驱油隔离液1,16,1.0,25,60,1.95,,field_measured,HT1-004井168.3+139.7mm油层尾管固井总结.doc/施工记录表,high,19:00注完；泵压19MPa；作业史记19:35注隔离液26m3(16+10合并)排量1.2泵压13.1-12.1MPa
+ht1_004,4,pump_spacer2,spacer,低失水驱油隔离液2,10,1.0,60,73,1.75,,field_measured,HT1-004井168.3+139.7mm油层尾管固井总结.doc/施工记录表,high,19:13注完；泵压18-19MPa
+ht1_004,5,pump_lead,lead_cement,领浆,48,1.2,73,140,1.93,,field_measured,HT1-004井168.3+139.7mm油层尾管固井总结.doc/施工记录表,high,20:20注完；泵压21-22MPa；灰量约128t；作业史记20:10注领浆排量1.2泵压13-12.2MPa；封固4941-6600m
+ht1_004,6,pump_tail,tail_cement,尾浆,28,1.0,140,170,1.90,,field_measured,HT1-004井168.3+139.7mm油层尾管固井总结.doc/施工记录表,high,20:50注完；泵压22MPa(记录表)；作业史记21:00注尾浆排量1.2泵压12.7MPa；封固6600-7660m
+ht1_004,7,displace,displacement,替浆(压塞液2+钻井液29+保护液14+基液1+钻井液51.1),97.1,1.4-0.8,170,260,1.90,bump_pressure_9-15MPa,field_measured,HT1-004井168.3+139.7mm油层尾管固井总结.doc/施工记录表/作业史,high,22:20替完；排量1.4-0.8m3/min泵压16-19-9MPa；碰压9-15MPa放回水600L断流；替浆介质钻井液1.90g/cm3塑粘50mPa.s(记录表)；作业史详细时序见7a-7e行(21:50-23:15)
+ht1_004,7a,displace_seq1,displacement,压塞液(作业史),2,1.2,,,1.70,,field_measured,HT1-004井油层尾管固井作业史.doc 八 施工过程,high,21:50注压塞液2m3排量1.2泵压13MPa(作业史详细时序)
+ht1_004,7b,displace_seq2,displacement,钻井液(作业史),29,1.5,,,1.90,,field_measured,HT1-004井油层尾管固井作业史.doc 八 施工过程,high,22:00顶替泥浆29m3排量1.5泵压16MPa
+ht1_004,7c,displace_seq3,displacement,保护液/中置液(作业史),14,1.5,,,1.90,,field_measured,HT1-004井油层尾管固井作业史.doc 八 施工过程,high,22:30替注保护液14m3排量1.5泵压16MPa
+ht1_004,7d,displace_seq4,displacement,井浆(作业史),30,1.2-1.0,,,1.90,,field_measured,HT1-004井油层尾管固井作业史.doc 八 施工过程,high,22:35顶替井浆30m3排量1.2-1泵压16MPa；大小胶塞复合16-18-16MPa(理论替浆63m3时复合)
+ht1_004,7e,displace_seq5,displacement,井浆末段(作业史),22,1.0-0.8-0.6,,,1.90,,field_measured,HT1-004井油层尾管固井作业史.doc 八 施工过程,high,23:15替井浆22m3排量1-0.8-0.6泵压11-9MPa；替浆到量碰压压力9↑15MPa
+ht1_004,8,pull_center_tube,plug,拆水泥头拔中心杆,,,230,,,bump_pressure_10MPa,field_measured,HT1-004井168.3+139.7mm油层尾管固井总结.doc/作业史,high,22:40(总结)/23:45(作业史)拆水泥头憋压10MPa拔出中心杆；作业史：环空憋压3.5MPa上提2.8m压力10↓5MPa循环10min压力14MPa再上提2.5m
+ht1_004,9,circulate_excess,displacement,大排量循环排混浆,200,2.4,390,470,1.90,circulate_excess_mud,field_measured,HT1-004井168.3+139.7mm油层尾管固井总结.doc/作业史,high,0:30循环排混浆排量2.4m3/min压力22MPa控压2MPa；水泥浆返出8方密度1.9-1.91；设计循环190-200m3/80-90min
+ht1_004,10,shut_in,shutdown,候凝,,,,,,shut_in_72h,field_measured,HT1-004井168.3+139.7mm尾管固井施工记录表.doc/固井总结,high,2026-06-14 22:20起候凝72h；管内不憋压；环空井口加压12.3MPa加压54h憋压候凝；待领浆:隔离液2=8:2顶部强度3.5MPa以上开井
+ht1_004,11,pump_ball_seat,plug,投球坐挂,,,0,0,,bump_pressure_15.4MPa,field_measured,HT1-004井168.3+139.7mm油层尾管固井总结.doc/作业史 八,high,2026-06-14 9:23投Φ40硫化铜球9:33开泵排量0.8泵压11-12MPa控压2.5；10:01送球28min球到位憋压15.4MPa稳压2min下放8m悬重265↓125t坐挂成功；继续憋压19.5MPa球座憋通
+ht1_004,100,design_pump_lead_spacer_pre,wash,先导浆(设计),25,1.4,,,1.75,,design_value,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 七.7.2,high,泥浆泵泵送；泵压15-16.7MPa；控压至1.94g/cm3=0MPa
+ht1_004,101,design_pump_spacer1,spacer,低失水驱油隔离液1(设计),16,1.2,,,1.95,,design_value,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 七.7.2,high,泵压14MPa；批混车配完毕泵车泵送
+ht1_004,102,design_pump_spacer2,spacer,低失水驱油隔离液2(设计),10,1.2,,,1.75,,design_value,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 七.7.2,high,泵压13.3-14.3MPa
+ht1_004,103,design_pump_lead,lead_cement,领浆(设计),48,1.2,,,1.93,,design_value,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 七.7.2,high,泵压16-16.7MPa 45min；双机泵配入过渡罐泵车泵送
+ht1_004,104,design_pump_tail,tail_cement,尾浆(设计),28,1.2,,,1.90,,design_value,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 七.7.2,high,泵压16.5-14MPa 25min；累计70min；控压0-0.7MPa
+ht1_004,105,design_release_plug,plug,释放胶塞(设计),,,10,,,,design_value,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 七.7.2,high,累计80min停泵控压3.5MPa
+ht1_004,106,design_disp1,displacement,压塞液(设计),2,1.2,,,1.70,,design_value,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 七.7.2,high,泵压13MPa 2min；批混车混配泵车泵入；控压0.8-0MPa
+ht1_004,107,design_disp2,displacement,钻井液(设计),29,1.5,,,1.90,,design_value,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 七.7.2,high,泵压16MPa 20min；固井计量罐
+ht1_004,108,design_disp3,displacement,保护液(设计),14,1.4,,,1.90,,design_value,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 七.7.2,high,泵压14-15MPa 10min；批混车混配
+ht1_004,109,design_disp4,displacement,基液(设计),1,1.4,,,1.02,,design_value,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 七.7.2,high,泵压15-16MPa 1min；批混车配入
+ht1_004,110,design_disp5,displacement,钻井液(设计),14,1.2,,,1.90,,design_value,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 七.7.2,high,泵压13-14MPa 12min；固井计量罐
+ht1_004,111,design_disp6,displacement,钻井液(设计),10,1.0,,,1.90,,design_value,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 七.7.2,high,泵压11-12MPa 10min
+ht1_004,112,design_disp7,displacement,钻井液(设计),10,0.9,,,1.90,,design_value,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 七.7.2,high,泵压10MPa 12min
+ht1_004,113,design_disp8,displacement,钻井液(设计),10,0.8,,,1.90,,design_value,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 七.7.2,high,泵压9MPa 12min
+ht1_004,114,design_disp9,displacement,钻井液(设计),7.1,0.7,,,1.90,,design_value,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 七.7.2,high,泵压8MPa 11min；理论替浆总量(含后置液)97.1m3
+ht1_004,115,design_bump_backpressure,plug,碰压后加回压(设计),,,5,,3.9-6.6,bump_pressure_3.9-6.6MPa,design_value,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 七.7.2,high,碰压后立即加回压3.9-6.6MPa
+ht1_004,116,design_circulate,displacement,循环排混浆(设计),200,2.4,80,,1.90,circulate_excess_mud,design_value,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 七.7.2,high,拆水泥头接顶驱开泵冲回接筒30min；循环排混浆200m3排量2.4泵压1.1-0MPa 80min；控压1.1-0MPa
+ht1_004,117,design_tail_lost_backpressure,shutdown,尾浆失重加回压(设计),,,,,6-6.8,shut_in_backpressure,design_value,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 七.7.2,high,混浆排放结束后尾浆失重加回压6-6.8MPa(14.4.2预案6-6.5MPa)
+ht1_004,118,design_lead_lost_backpressure,shutdown,领浆失重加回压(设计),,,,,11.5,shut_in_backpressure,design_value,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 七.7.2,high,领浆失重加回压11.5MPa憋压候凝(14.4.2预案11.4MPa)
+ht1_004,119,design_shut_in,shutdown,候凝(设计),,,,,,shut_in_72h,design_value,HT1-004井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 七.7.2,high,候凝72h进行下步作业；候凝至领浆与隔离液2的8:2混浆同步养护起强度

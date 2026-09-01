@@ -1,0 +1,12 @@
+﻿name,role,density_kg_m3,rheology_model,pv_pa_s,yp_pa,power_law_n,consistency_k_pa_sn
+钻井液,mud,1950.0,power_law,,,0.631,0.751
+平衡液,wash,1750.0,bingham,0.055,9.2,,
+隔离液1,spacer,2050.0,power_law,,,0.668,1.245
+隔离液2,spacer,1950.0,power_law,,,0.668,1.245
+领浆,lead,2050.0,power_law,,,0.597,1.622
+尾浆,tail,1950.0,power_law,,,0.585,1.673
+压塞液,other,1950.0,bingham,0.03,8.0,,
+保护液,displacement,1950.0,bingham,0.03,8.2,,
+基液,displacement,1020.0,bingham,0.03,8.0,,
+替钻井液,displacement,1950.0,bingham,0.062,10.0,,
+井浆,displacement,1950.0,bingham,0.03,9.3,,

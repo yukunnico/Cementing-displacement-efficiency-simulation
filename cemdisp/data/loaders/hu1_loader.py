@@ -22,21 +22,42 @@
 - 井段范围: 3523.27m（悬挂器设计位置/尾管顶） - 7601.00m（完钻/浮鞋）
 - 悬挂器: 设计 3523.27m / 实际 3532.21m（双口径，模型取设计值）
 - 单一直径 139.7mm 尾管（无 168.3mm 段）：
-  上部薄壁段 12.09mm（3523-5300m，ID 115.52）+ 下部厚壁段 14.27mm（5300-7601m，ID 111.16）
+  上部薄壁段 12.09mm（顶 3535.96/3530，底 5742.19m，ID 115.52）+ 下部厚壁段 14.27mm（5742.19-7600.50m，ID 111.16）
+  （2026-08-29 校准：壁厚分界 5300→5742.19 实际图头口径；LEGACY 5300 系提取时误用封固边界；设计口径 5700 注记）
 - 五开钻头 190.5mm；裸眼井径 96 点现场实测（5694-7601m，均值 194.33mm，最大 233.34@5780m）
 - 井斜 90 点现场实测（5694-7601m，3.04°→15.09°，均值 7.34°）
 - 泵注重建（204151.doc 施工总结）：冲洗液15 + 加重隔离液15 + 领浆24 + 尾浆36 +
   后置液2 + 替浆87（管串36 + 环空49），全程排量 0.65→0.36 m³/min
-- 流变标注：钻井液 PV/YP 为现场实测（204111.doc）；水泥浆 n/K 无实测记录，
-  以同区块同密度体系实验值作 proxy；前置液/后置液/替浆液流变亦为 proxy
-- 居中度：现场无实测（扶正器 136 只、间距约 33m），standoff 为 model_assumption
-- CBL：仅定性分段（3 张 CBL/VDL 图，7474-7514m 不合格 40m，整体"合格"），
-  无数值合格率 → cbl_pass_rate=None，不编造
+- 流变标注：钻井液 PV/YP 为现场实测（2026-08-29 校准改 204121 洗井结束前实测 PV76/YP8，旧 204111 设计口径 66/10 为 LEGACY）；
+  水泥浆 n/K 为 204131 检测报告实测（93℃，2020-10-24 签发，2026-08-29 校准）；隔离液为 204131 实测幂律；
+  平衡液(先导泥浆) WASH 流变复用施工泥浆实测 PV76/YP8；后置液/替浆液流变仍为 proxy
+- 居中度：现场无实测（扶正器 136 只、三段间距 33/22/44m：66+63+8 只，7400-7601 无扶正器），standoff 为 model_assumption
+- CBL：三图 100611/100612/100613 为 2020-11-04 同次测井三页（测量段 3531-7481.22m，人工井底 7481.22m，
+  预计/实际返高 3531m，总评合格）；100615 补 RCB/RCD 官方分段（3540-3630.8 水泥胶结差、3875-4500 充填好为主）；
+  "7474-7514m 不合格 40m"系 minimax 判读待人工复核；无数值合格率 → cbl_pass_rate=None，不编造
+
+2026-08-29 校准更新（0708 原件三方核对：重新提取校准_2026-08-29/hu1_校准核对.md §8，15 项）：
+- 219.1mm 技术尾管 ID 190.5→193.70（100614 图头+204251 双证）；技套 273.1→273.05、ID 245.42→245.37（名义修正）；
+- 壁厚分界 5300→5742.19（实际图头口径；设计 5700 注记；5300 系提取时误用封固边界）；
+- 钻井液 2120→2080（204121 施工前由 2.12 降至 2.08）、PV 0.066→0.076/YP 10→8.0（204121 洗井结束前实测）；
+- 领浆 n/K 0.737/0.947→0.732/0.933、尾浆 0.886/0.453→0.666/0.906（均 204131 检测报告实测 93℃，2020-10-24 签发）；
+- 隔离液 PV35/YP8 proxy→POWER_LAW n=0.649/K=0.585（204131 实测）；"冲洗液"更名"平衡液(先导泥浆)"
+  （抗污染油基泥浆型），WASH 流变复用施工泥浆实测 PV0.076/YP8；"加重隔离液"更名"驱油隔离液"；
+- 管内 1D 径链补 149.2 送入钻杆段 0-3523m（ID 129.93，内容积≈46.68m³，204111 §6.1.3+管串表），
+  1D 管内容积≈87.8m³（46.68+尾管 41.13），与实际替浆 87m³ 自洽；
+- 尾浆步骤实为"中间浆 14m³+尾浆 22m³"（同 1.90，设计分段 5300-6100/6100-7601）；
+- 后置液排量 0.5→0.8（204121"注后置液 排量0.8"）；240min 为固井后洗井（2.4m³/min）非替浆/候凝，
+  候凝=环空控压 3.2-11MPa 30h；
+- CBL 窗 3530-7601→3531-7481.22（图头测量段；7481.22-7600.5 井底段无 CBL 覆盖）；
+- 扶正器 136 只三段间距 33/22/44m（66+63+8），7400-7601 无扶正器；
+- 补记：204251 实际中间尾管顶 3633.403、204121"固井井段 3531-7601"、图头薄壁顶 3535.96、
+  "悬挂器 5300/回接筒顶 5231"系 204151 笔误（五重证据裁定）、设计留下塞 150m（204111 §4.2.9）。
 """
 
 from __future__ import annotations
 
 import csv
+import math
 from pathlib import Path
 
 from cemdisp.data.fluid_spec import FluidRole, FluidSpec, RheologyModel
@@ -71,19 +92,24 @@ HU1_SHOE_MD_M = HU1_DRILLED_DEPTH_MD_M  # 浮鞋 7601m（casing_liner_string；1
 # 模型取设计值作剖面顶，实际值在 notes 双口径标注。
 HU1_HANGER_MD_M = 3523.27
 HU1_TOP_MD_M = HU1_HANGER_MD_M
-# 上层套管结构（等效井径用）：三开 273.1mm 技套 OD，壁厚 13.84 → ID 245.42；
-# 四开 219.1mm 技术尾管 ID 190.5（well_geometry casing_id_mm=190.5），其鞋 5693.89m。
-# casing_id_mm 字段语义在本仓库为上层套管"外径"（同上 hu102/hu103/ht1_003，命名历史遗留）。
-HU1_CASING_ID_MM = 273.1                # 三开技术套管外径（名义）
-HU1_SURFACE_CASING_ID_MM = 245.42       # 273.1mm 技套内径 = 273.1 - 2×13.84
-HU1_INTERMEDIATE_LINER_TOP_MD_M = 3623.27  # 四开 219.1mm 技术尾管顶
-HU1_INTERMEDIATE_LINER_ID_MM = 190.5    # 219.1mm 技术尾管内径（= 五开钻头尺寸）
+# 上层套管结构（等效井径用）：三开 273.05mm 技套 OD，壁厚 13.84 → ID 245.37；
+# 四开 219.1mm 技术尾管 ID 193.7（100614 图头+204251 双证；设计/钻头口径 190.5 为 LEGACY），其鞋 5693.89m。
+# 2026-08-29 语义统一：casing_id_mm 按 PACKAGE_REFERENCE 文档语义存"外层套管内径"=三开技套真实内径
+# 245.37（273.05 OD 壁厚 13.84；字段不被求解器消费，纯元数据；OD 273.05 存档于注释）。
+# LEGACY(2026-08-29 前): 273.1/245.42/190.5（设计/名义口径，0708 无图头依据）；本字段曾存 OD 273.05。
+HU1_CASING_ID_MM = 245.37               # 三开技术套管真实内径（语义统一后口径）
+HU1_SURFACE_CASING_ID_MM = 245.37       # 273.05mm 技套内径 = 273.05 - 2×13.84（= HU1_CASING_ID_MM）
+HU1_INTERMEDIATE_LINER_TOP_MD_M = 3623.27  # 四开 219.1mm 技术尾管顶（设计；204251 实际 3633.403 见 notes）
+HU1_INTERMEDIATE_LINER_ID_MM = 193.70   # 219.1mm 技术尾管内径（100614 图头+204251 双证）；LEGACY(2026-08-29 前): 190.5
 HU1_OPEN_HOLE_TOP_MD_M = 5694.1         # 裸眼段顶（219.1 尾管鞋 5693.89m；井径首测点 5694.1m）
-# 单一直径 139.7mm 尾管：上部薄壁段 12.09mm（3523–5300m）/ 下部厚壁段 14.27mm（5300–7601m）
-# （204111.doc 套管规格；casing_liner_string 尾部套管 12.09/14.27 两段）。
+# 单一直径 139.7mm 尾管：上部薄壁段 12.09mm（顶 3535.96/3530，底 5742.19m，ID 115.52）/
+# 下部厚壁段 14.27mm（5742.19–7600.50m，ID 111.16）。
+# 2026-08-29 校准：壁厚分界 5300→5742.19（实际图头口径；设计口径 5700 注记）；
+# LEGACY(2026-08-29 前): 分界 5300 无 0708 依据，系提取时误用封固边界。
 HU1_LINER_OD_MM = 139.7
-HU1_LINER_WALL_THICKNESS_MM = 14.27     # 厚壁段壁厚（下段；作参考口径）
-HU1_UPPER_LINER_WALL_THICKNESS_MM = 12.09  # 薄壁段壁厚（上段 3523–5300m）
+HU1_LINER_WALL_BOUNDARY_MD_M = 5742.19  # 薄壁/厚壁分界（实际图头口径；设计 5700；LEGACY(2026-08-29 前): 5300）
+HU1_LINER_WALL_THICKNESS_MM = 14.27     # 厚壁段壁厚（下段 5742.19–7600.50m；作参考口径）
+HU1_UPPER_LINER_WALL_THICKNESS_MM = 12.09  # 薄壁段壁厚（上段顶 3535.96/3530，底 5742.19m）
 HU1_LOWER_LINER_ID_MM = HU1_LINER_OD_MM - 2.0 * HU1_LINER_WALL_THICKNESS_MM   # 111.16
 HU1_UPPER_LINER_ID_MM = HU1_LINER_OD_MM - 2.0 * HU1_UPPER_LINER_WALL_THICKNESS_MM  # 115.52
 # liner_id 单值口径：取厚壁段 ID 111.16（与 hu102/hu103 一致的简化）。
@@ -91,32 +117,34 @@ HU1_UPPER_LINER_ID_MM = HU1_LINER_OD_MM - 2.0 * HU1_UPPER_LINER_WALL_THICKNESS_M
 # 按 204111.doc 壁厚计算口径 111.16 采用（厚壁段）。
 HU1_LINER_ID_MM = HU1_LOWER_LINER_ID_MM
 HU1_BIT_DIAMETER_MM = 190.5             # 五开钻头尺寸（裸眼名义井径）
-HU1_CENTRALIZER_COUNT = 136             # 现场整体弹性扶正器数量（extraction_notes，间距约 33m）
+HU1_CENTRALIZER_COUNT = 136             # 现场整体弹性扶正器数量（三段间距 33/22/44m：66+63+8 只；7400-7601 无扶正器）
 
 # ===========================================================================
 # 呼探1流体参数（单位密度 kg/m³；来源 204111.doc 固井设计 / 204151.doc 施工总结）
 # 密度全为 field_measured；流变标注见各常量注释。
 # ===========================================================================
-HU1_MUD_DENSITY_KG_M3 = 2120.0          # 固井前钻井液（油基）2.12（204111.doc，field_measured）
-HU1_MUD_PV_PA_S = 0.066                 # 塑性粘度 66mPa·s（204111.doc，field_measured）
-HU1_MUD_YP_PA = 10.0                    # 动切力 10Pa（204111.doc，field_measured）
-HU1_WASH_DENSITY_KG_M3 = 2000.0         # 冲洗型隔离液（冲洗液）2.00（204151.doc，field_measured）
-HU1_SPACER_DENSITY_KG_M3 = 2050.0       # 加重隔离液 2.05（204151.doc，field_measured）
-# 冲洗液/加重隔离液流变：现场无实测六速数据 → proxy（沿用同区块呼102 隔离液代理 PV35/YP8）。
-HU1_WASH_PV_PA_S = 0.035                # proxy（无实测）
-HU1_WASH_YP_PA = 8.0                    # proxy（无实测）
-HU1_SPACER_PV_PA_S = 0.035              # proxy（无实测）
-HU1_SPACER_YP_PA = 8.0                  # proxy（无实测）
+HU1_MUD_DENSITY_KG_M3 = 2080.0          # 施工实测 2.08（204121"施工前由 2.12 降至 2.08"）；LEGACY: 2120（下套管灌浆/设计口径注记）
+HU1_MUD_PV_PA_S = 0.076                 # 塑性粘度 76mPa·s（204121 洗井结束前实测，六速 152/86/62/36/6/5）；LEGACY(2026-08-29 前): 0.066
+HU1_MUD_YP_PA = 8.0                     # 动切力 8Pa（204121 洗井结束前实测）；LEGACY(2026-08-29 前): 10.0
+HU1_WASH_DENSITY_KG_M3 = 2000.0         # 平衡液(先导泥浆，旧名冲洗液) 2.00（204151.doc，field_measured；抗污染油基泥浆型）
+HU1_SPACER_DENSITY_KG_M3 = 2050.0       # 驱油隔离液（旧名加重隔离液）2.05（204151.doc，field_measured）
+# 平衡液(先导泥浆) WASH 流变（2026-08-29 校准）：复用施工泥浆实测 PV0.076/YP8（204121）。
+# 驱油隔离液流变（2026-08-29 校准）：POWER_LAW n=0.649/K=0.585（204131 实测）。
+# LEGACY(2026-08-29 前): Bingham proxy PV35/YP8（沿用同区块呼102 隔离液代理）。
+HU1_WASH_PV_PA_S = 0.076                # 复用施工泥浆实测（204121）；LEGACY(2026-08-29 前): 0.035 proxy
+HU1_WASH_YP_PA = 8.0                    # 复用施工泥浆实测（204121）
+HU1_SPACER_PV_PA_S = 0.035              # LEGACY(2026-08-29 前) proxy，已由 204131 幂律实测替换
+HU1_SPACER_YP_PA = 8.0                  # LEGACY(2026-08-29 前) proxy，已由 204131 幂律实测替换
+HU1_SPACER_POWER_LAW_N = 0.649          # 驱油隔离液流性指数 n（204131 实测）
+HU1_SPACER_CONSISTENCY_K = 0.585        # 驱油隔离液稠度系数 K Pa·s^n（204131 实测）
 HU1_LEAD_DENSITY_KG_M3 = 2100.0         # 领浆 2.10（204151.doc/204111.doc，field_measured；3523–5300m 段）
 HU1_TAIL_DENSITY_KG_M3 = 1900.0         # 尾浆 1.90（204151.doc/204111.doc，field_measured；5300–7601m 段）
-# 领/尾浆流变：20441.doc 稠化/强度/污染实验完整，但无六速幂律 n/K 实测记录
-# （rheometer_readings 均为污染/稠化实验，无 n/K）→ proxy（同区块同密度体系实验值）：
-#   领浆 ρ2.10 → 呼102 领浆化验 n=0.737/K=0.947（20234.doc，同 G 级 D 系列高密度体系）；
-#   尾浆 ρ1.90 → 呼1-001 尾浆化验 n=0.886/K=0.453（fluid_properties，同密度 1.90）。
-HU1_LEAD_POWER_LAW_N = 0.737            # proxy（呼102 领浆化验值，无呼探1 实测）
-HU1_LEAD_CONSISTENCY_K = 0.947          # proxy（同上）
-HU1_TAIL_POWER_LAW_N = 0.886            # proxy（呼1-001 尾浆化验值，同密度）
-HU1_TAIL_CONSISTENCY_K = 0.453          # proxy（同上）
+# 领/尾浆流变（2026-08-29 校准）：204131 检测报告实测（93℃，2020-10-24 签发）；
+# LEGACY(2026-08-29 前): proxy 呼102 领浆 0.737/0.947（20234.doc）/呼1-001 尾浆 0.886/0.453。
+HU1_LEAD_POWER_LAW_N = 0.732            # 领浆 n（204131 实测）；LEGACY(2026-08-29 前): 0.737 proxy
+HU1_LEAD_CONSISTENCY_K = 0.933          # 领浆 K Pa·s^n（204131 实测）；LEGACY(2026-08-29 前): 0.947 proxy
+HU1_TAIL_POWER_LAW_N = 0.666            # 尾浆 n（204131 实测）；LEGACY(2026-08-29 前): 0.886 proxy
+HU1_TAIL_CONSISTENCY_K = 0.906          # 尾浆 K Pa·s^n（204131 实测）；LEGACY(2026-08-29 前): 0.453 proxy
 HU1_PLUG_DENSITY_KG_M3 = 2050.0         # 后置液 2.05（204151.doc 后置液 2m³，field_measured）
 # 后置液流变：无实测 → proxy（复用隔离液 PV35/YP8）。
 HU1_PLUG_PV_PA_S = 0.035                # proxy（无实测）
@@ -139,13 +167,51 @@ HU1_PLUG_VOLUME_M3 = 2.0                # 后置液 2m³（替浆段首段，ρ2
 HU1_DISPLACEMENT1_VOLUME_M3 = 36.0      # 替浆液1（管串）36m³（ρ1.95）
 HU1_DISPLACEMENT2_VOLUME_M3 = 49.0      # 替浆液2（环空）49m³（ρ2.08）
 HU1_DISPLACEMENT_TOTAL_VOLUME_M3 = 87.0  # 替浆总量 87m³ = 2 + 36 + 49（现场口径）
-# 排量（204151.doc）：前置/水泥 0.65；替浆段 0.65→0.5→0.36→0.42 递减（240min）。
-HU1_FRONT_RATE_M3_MIN = 0.65            # 冲洗液/隔离液/领浆/尾浆排量
-HU1_PLUG_RATE_M3_MIN = 0.5              # 后置液排量（替浆段内代表性值）
+# 排量（204151.doc）：前置/水泥 0.65；替浆段 0.65→0.5→0.36→0.42 递减。
+HU1_FRONT_RATE_M3_MIN = 0.65            # 驱油隔离液/领浆/尾浆排量
+HU1_PLUG_RATE_M3_MIN = 0.8              # 后置液排量 0.8（204121"注后置液 排量0.8"）；LEGACY(2026-08-29 前): 0.5
 HU1_DISPLACEMENT1_RATE_M3_MIN = 0.5     # 替浆液1（管串）代表性排量
 HU1_DISPLACEMENT2_RATE_M3_MIN = 0.36    # 替浆液2（环空）代表性排量（末段 0.42 为碰压前）
 
-# 替浆时间校验：2/0.5 + 36/0.5 + 49/0.36 = 4 + 72 + 136 ≈ 212min，与现场 240min 同量级（现场含降排量/停泵）。
+# 时间口径（2026-08-29 校准）：模型替浆段合计 ≈212min（2/0.8 + 36/0.5 + 49/0.36）；
+# 现场 240min 为固井后洗井（2.4m³/min），非替浆/候凝时长；候凝 = 环空控压 3.2–11MPa 候凝 30h（204121/204151）。
+
+# ===========================================================================
+# 管内 1D 径链与鞋口滞后（2026-08-29 校准，204111 §6.1.3+管串表）：
+# 149.2mm 送入钻杆 0–3523m（ID 129.93，内容积≈46.68m³）+ 139.7mm 尾管薄壁段（ID 115.52）
+# + 厚壁段（ID 111.16）；1D 管内容积≈87.8m³（46.68+尾管 41.13），与实际替浆 87m³ 自洽。
+# ===========================================================================
+HU1_PIPE_DP_ID_MM = 129.93  # 149.2mm 送入钻杆内径（204111 §6.1.3 口径）
+
+
+def _pipe_volume_m3(length_m: float, inner_diameter_mm: float) -> float:
+    """按内径和长度估算管内容积（m³），用于鞋口滞后体积计算。"""
+    radius_m = inner_diameter_mm / 1000.0 / 2.0
+    return math.pi * radius_m**2 * length_m
+
+
+HU1_SHOE_LAG_VOLUME_M3 = (
+    _pipe_volume_m3(HU1_HANGER_MD_M, HU1_PIPE_DP_ID_MM)
+    + _pipe_volume_m3(HU1_LINER_WALL_BOUNDARY_MD_M - HU1_HANGER_MD_M, HU1_UPPER_LINER_ID_MM)
+    + _pipe_volume_m3(HU1_SHOE_MD_M - HU1_LINER_WALL_BOUNDARY_MD_M, HU1_LOWER_LINER_ID_MM)
+)
+
+
+def _build_pipe_id_profile() -> tuple[tuple[float, float], ...]:
+    """构建管柱内径剖面（深度, ID mm）——1D 前沿追踪用（2026-08-29 补 149.2 送入钻杆段）。
+
+    段1: 0–3523.27m        → 129.93mm（149.2mm 送入钻杆）
+    段2: 3523.27–5742.19m  → 115.52mm（139.7mm 尾管薄壁段）
+    段3: 5742.19–7601m     → 111.16mm（139.7mm 尾管厚壁段）
+    """
+    return (
+        (0.001, HU1_PIPE_DP_ID_MM),
+        (HU1_HANGER_MD_M, HU1_PIPE_DP_ID_MM),
+        (HU1_HANGER_MD_M + 0.001, HU1_UPPER_LINER_ID_MM),
+        (HU1_LINER_WALL_BOUNDARY_MD_M, HU1_UPPER_LINER_ID_MM),
+        (HU1_LINER_WALL_BOUNDARY_MD_M + 0.001, HU1_LOWER_LINER_ID_MM),
+        (HU1_SHOE_MD_M, HU1_LOWER_LINER_ID_MM),
+    )
 
 
 def _read_caliper_rows(caliper_csv_path: Path) -> tuple[tuple[float, float], ...]:
@@ -192,7 +258,7 @@ def _build_hole_profile(caliper_rows: tuple[tuple[float, float], ...]) -> tuple[
     """构建井径剖面。
 
     3523.27–5694m 段为上层套管柱内重叠段（139.7mm 尾管在套管内），无裸眼井径测点，
-    按上层套管内径等效（273.1mm 技套段 ID 245.42 → 219.1mm 尾管段 ID 190.5）；
+    按上层套管内径等效（273.05mm 技套段 ID 245.37 → 219.1mm 尾管段 ID 193.7；2026-08-29 校准）；
     5694–7601m 段为裸眼，96 点现场实测。
     """
     points: list[tuple[float, float]] = [
@@ -230,7 +296,8 @@ def _build_standoff_profile() -> tuple[DepthValuePoint, ...]:
     """构建居中度(standoff)剖面 —— model_assumption 均一值。
 
     现场无居中度实测（centralization_profile.csv data_type=missing；扶正器 136 只、
-    间距约 33m 为 extraction_notes 记录）。取均一 0.65（保守代理，标注 model_assumption）；
+    三段间距 33/22/44m（66+63+8 只），7400-7601 无扶正器——2026-08-29 校准注记）。
+    取均一 0.65（保守代理，标注 model_assumption）；
     参照邻井 hu102（0.65–0.70）、呼1-003（0.83 设计值）量级。
     """
     return _depth_points(
@@ -260,12 +327,14 @@ def _build_well_spec(
         liner_od_mm=HU1_LINER_OD_MM,
         liner_id_mm=HU1_LINER_ID_MM,
         liner_wall_thickness_mm=HU1_LINER_WALL_THICKNESS_MM,
+        shoe_lag_volume_m3=HU1_SHOE_LAG_VOLUME_M3,
+        pipe_id_profile=_depth_points(_build_pipe_id_profile()),
         hole_diameter_profile=_build_hole_profile(caliper_rows),
         inclination_profile=_build_inclination_profile(incl_rows),
         standoff_profile=_build_standoff_profile(),
         evaluation_windows=(
-            # CBL 评价窗：电测测量段 3530–7601m（construction_events.csv；CBL/VDL 图覆盖 5630–7607m）。
-            EvaluationWindow(name="CBL评价井段", top_md_m=3530.0, bottom_md_m=7601.0, window_type="cbl"),
+            # CBL 评价窗（2026-08-29 校准）：图头测量段 3531–7481.22m；7481.22–7600.5 井底段无 CBL 覆盖（注记）。
+            EvaluationWindow(name="CBL评价井段", top_md_m=3531.0, bottom_md_m=7481.22, window_type="cbl"),
             # CBL 分段质量（cbl_evaluation.csv 定性 16 段中取最差两段，interpreted；完整分段见提取包 CSV）。
             EvaluationWindow(name="CBL质量段(不合格40m)", top_md_m=7474.0, bottom_md_m=7514.0, window_type="cbl_quality"),
             EvaluationWindow(name="CBL质量段(差)", top_md_m=7415.0, bottom_md_m=7430.0, window_type="cbl_quality"),
@@ -275,28 +344,36 @@ def _build_well_spec(
         ),
         reference_root=resolved_reference_root,
         notes=(
-            "呼探1井（hu1）为单 139.7mm 油层尾管固井，无 168.3mm 段：上部薄壁段 12.09mm（3523–5300m，ID 115.52）/ "
-            "下部厚壁段 14.27mm（5300–7601m，ID 111.16），liner_id_mm 取厚壁段 111.16 单值口径。",
-            "悬挂器设计 3523.27m / 实际 3532.21m（双口径，模型取设计值作剖面顶）；尾管下深 7600.50m。",
-            "井径剖面：3523–5694m 上层套管柱重叠段按等效内径（273.1 技套 ID 245.42 → 219.1 尾管 ID 190.5），"
+            "呼探1井（hu1）为单 139.7mm 油层尾管固井，无 168.3mm 段：上部薄壁段 12.09mm（顶 3535.96/3530，"
+            "底 5742.19m，ID 115.52）/ 下部厚壁段 14.27mm（5742.19–7600.50m，ID 111.16），"
+            "liner_id_mm 取厚壁段 111.16 单值口径；壁厚分界 5742.19 为实际图头口径（设计 5700；"
+            "LEGACY(2026-08-29 前) 5300 系提取时误用封固边界）。",
+            "悬挂器设计 3523.27m / 实际 3532.21m（双口径，模型取设计值作剖面顶）；204121 记'固井井段 3531-7601'；"
+            "204151 记'悬挂器 5300/回接筒顶 5231'系笔误（五重证据裁定，2026-08-29 校准）。",
+            "中间尾管顶（219.1mm 技术尾管顶）设计 3623.27m（模型采用）；204251 实际 3633.403m（2026-08-29 补记）。",
+            "井径剖面：3523–5694m 上层套管柱重叠段按等效内径（273.05 技套 ID 245.37 → 219.1 尾管 ID 193.7），"
             "5694–7601m 为 96 点现场实测（均值 194.33mm，最大 233.34@5780m，最小 185.27@7540m，field_measured）。",
             "井斜剖面：5694–7601m 为 90 点现场实测（3.04°→15.09°，均值 7.34°）；3523–5694m 无连续测斜，"
             "以 5694m 首测点 3.04° 近似（model_assumption）。",
-            "居中度 standoff 无现场实测（扶正器 136 只、间距约 33m 为 extraction_notes 记录；"
+            "居中度 standoff 无现场实测（扶正器 136 只、三段间距 33/22/44m：66+63+8 只，7400-7601 无扶正器；"
             "centralization_profile.csv 标 missing），取均一 0.65，model_assumption。",
+            "管内 1D 径链（pipe_id_profile，2026-08-29 校准）：149.2mm 送入钻杆 0–3523m（ID 129.93，内容积≈46.68m³，"
+            "204111 §6.1.3+管串表）+ 尾管薄壁段 ID 115.52 + 厚壁段 ID 111.16；1D 管内容积≈87.8m³（46.68+尾管 41.13），"
+            "与实际替浆 87m³ 自洽。",
+            "设计留下塞 150m（204111 §4.2.9，2026-08-29 补记）。",
             "井号身份注记：呼探1 与 呼探1-001（HT1-001）是否同井存疑，待现场裁定；"
             "本 loader 按 hu1_呼探1 提取包独立建井，与 ht1_001_loader 分列。",
-            "CBL 评价窗 3530–7601m 为电测测量段（construction_events.csv）；target_intervals.csv 明确"
+            "CBL 评价窗 3531–7481.22m 为图头测量段（7481.22–7600.5 井底段无 CBL 覆盖）；target_intervals.csv 明确"
             "139.7mm 尾管目标段缺失，目标窗仅为模型聚焦窗（model_focus）。",
         ),
     )
 
 
 def _build_fluids() -> tuple[FluidSpec, ...]:
-    """呼探1 流体清单（2026-08-16 重建）。
+    """呼探1 流体清单（2026-08-16 重建；2026-08-29 校准更新流变与名称）。
 
-    流变标注：钻井液 PV/YP 为现场实测；领/尾浆 n/K 为同区块同密度体系 proxy；
-    冲洗液/隔离液/后置液/替浆液流变为 proxy（现场均无六速实测）。
+    流变标注：钻井液 PV/YP 为 204121 施工实测；领/尾浆与隔离液 n/K 为 204131 实测；
+    平衡液(先导泥浆) WASH 复用施工泥浆实测；后置液/替浆液流变为 proxy（无实测）。
     """
     return (
         FluidSpec(
@@ -308,7 +385,7 @@ def _build_fluids() -> tuple[FluidSpec, ...]:
             yield_stress_pa=HU1_MUD_YP_PA,
         ),
         FluidSpec(
-            name="冲洗液",
+            name="平衡液(先导泥浆)",  # 旧名"冲洗液"（204151 冲洗型隔离液）；抗污染油基泥浆型，2026-08-29 更名
             role=FluidRole.WASH,
             density_kg_m3=HU1_WASH_DENSITY_KG_M3,
             rheology_model=RheologyModel.BINGHAM,
@@ -316,12 +393,12 @@ def _build_fluids() -> tuple[FluidSpec, ...]:
             yield_stress_pa=HU1_WASH_YP_PA,
         ),
         FluidSpec(
-            name="加重隔离液",
+            name="驱油隔离液",  # 旧名"加重隔离液"，2026-08-29 更名
             role=FluidRole.SPACER,
             density_kg_m3=HU1_SPACER_DENSITY_KG_M3,
-            rheology_model=RheologyModel.BINGHAM,
-            plastic_viscosity_pa_s=HU1_SPACER_PV_PA_S,
-            yield_stress_pa=HU1_SPACER_YP_PA,
+            rheology_model=RheologyModel.POWER_LAW,
+            power_law_n=HU1_SPACER_POWER_LAW_N,
+            consistency_k=HU1_SPACER_CONSISTENCY_K,
         ),
         FluidSpec(
             name="领浆",
@@ -367,26 +444,26 @@ def _build_fluids() -> tuple[FluidSpec, ...]:
 
 
 def _build_schedule() -> PumpingSchedule:
-    """呼探1 现场施工泵注程序（2026-08-16 重建，来源 204151.doc 施工总结）。
+    """呼探1 现场施工泵注程序（2026-08-16 重建，来源 204151.doc 施工总结；2026-08-29 校准更新）。
 
-    施工顺序：冲洗液15 → 加重隔离液15 → 领浆24 → 尾浆36 → 后置液2（替浆首段）→
+    施工顺序：平衡液(先导泥浆)15 → 驱油隔离液15 → 领浆24 → 中间浆14+尾浆22 → 后置液2（替浆首段）→
     替浆液1（管串）36 → 替浆液2（环空）49；替浆总量 87m³。
     """
     return PumpingSchedule(
         steps=(
             PumpingScheduleStep(
-                step_name="注入冲洗液",
-                fluid_name="冲洗液",
+                step_name="注入平衡液(先导泥浆)",
+                fluid_name="平衡液(先导泥浆)",
                 volume_m3=HU1_WASH_VOLUME_M3,
                 rate_m3_min=HU1_FRONT_RATE_M3_MIN,
-                remarks="现场 204151.doc: 冲洗型隔离液 15m³，密度2.00g/cm³，排量0.65m³/min，泵压6.8-7.6MPa。",
+                remarks="现场 204151.doc: 平衡液(先导泥浆，旧名冲洗液/冲洗型隔离液) 15m³，密度2.00g/cm³，排量0.65m³/min，泵压6.8-7.6MPa。",
             ),
             PumpingScheduleStep(
-                step_name="注入加重隔离液",
-                fluid_name="加重隔离液",
+                step_name="注入驱油隔离液",
+                fluid_name="驱油隔离液",
                 volume_m3=HU1_SPACER_VOLUME_M3,
                 rate_m3_min=HU1_FRONT_RATE_M3_MIN,
-                remarks="现场 204151.doc: 加重隔离液 15m³，密度2.05g/cm³，排量0.65m³/min，泵压6.5-8.0MPa。",
+                remarks="现场 204151.doc: 驱油隔离液（旧名加重隔离液）15m³，密度2.05g/cm³，排量0.65m³/min，泵压6.5-8.0MPa。",
             ),
             PumpingScheduleStep(
                 step_name="注入领浆",
@@ -400,14 +477,14 @@ def _build_schedule() -> PumpingSchedule:
                 fluid_name="尾浆",
                 volume_m3=HU1_TAIL_VOLUME_M3,
                 rate_m3_min=HU1_FRONT_RATE_M3_MIN,
-                remarks="现场 204151.doc: 尾浆 36m³（14+22），密度1.90g/cm³，排量0.65m³/min，泵压9-13MPa，封固5300-7601m。",
+                remarks="现场 204151.doc: 中间浆 14m³+尾浆 22m³（同 1.90g/cm³，设计分段 5300-6100/6100-7601），合计36m³，排量0.65m³/min，泵压9-13MPa（2026-08-29 校准备注）。",
             ),
             PumpingScheduleStep(
                 step_name="注入后置液（替浆首段）",
                 fluid_name="后置液",
                 volume_m3=HU1_PLUG_VOLUME_M3,
                 rate_m3_min=HU1_PLUG_RATE_M3_MIN,
-                remarks="现场 204151.doc: 后置液 2m³，密度2.05g/cm³（含于替浆87m³，管内占位，碰压前段）。",
+                remarks="现场 204121: 后置液 2m³@0.8（'注后置液 排量0.8'），密度2.05g/cm³（含于替浆87m³，管内占位，碰压前段）。",
             ),
             PumpingScheduleStep(
                 step_name="替浆液1（管串）",
@@ -425,13 +502,15 @@ def _build_schedule() -> PumpingSchedule:
             ),
         ),
         notes=(
-            "现场施工顺序（204151.doc 2020-10-25）：冲洗液→加重隔离液→领浆→尾浆→投钻杆胶塞→替浆87m³"
+            "现场施工顺序（204151.doc 2020-10-25）：平衡液(先导泥浆)→驱油隔离液→领浆→中间浆+尾浆→投钻杆胶塞→替浆87m³"
             "（后置2 + 管串36 + 环空49）。",
-            "替浆总量 87m³ 为现场口径（pumping_schedule.csv）；排量全程 0.65→0.5→0.36→0.42 m³/min 递减"
-            "（约 240min），替浆液1/2 排量取代表性值。",
+            "替浆总量 87m³ 为现场口径（pumping_schedule.csv）；排量全程 0.65→0.5→0.36→0.42 m³/min 递减，"
+            "模型替浆段合计 ≈212min，替浆液1/2 排量取代表性值。",
+            "时间口径（2026-08-29 校准）：现场 240min 为固井后洗井（2.4m³/min），非替浆/候凝时长；"
+            "候凝 = 环空控压 3.2–11MPa 候凝 30h（204121/204151）。",
             "2026-08-16 重建：旧 HT1-001 误复制泵注（平衡液40/隔离液20/领浆20.6/中间浆28.7/尾浆22.1/替浆93.7）全部废弃。",
-            "管内容积口径：尾管单值 ID 111.16mm 估算；提取包缺悬挂器以上钻杆尺寸，未分段 shoe_lag_volume，"
-            "1D 到鞋时间按 liner_id_mm 单值口径近似（与 hu102 一致）。",
+            "管内容积口径（2026-08-29 校准）：按 pipe_id_profile 分段（149.2 送入钻杆 ID 129.93 + 尾管薄壁/厚壁段），"
+            "shoe_lag_volume_m3 ≈88m³（≈87.8 口径，46.68+尾管 41.13），与实际替浆 87m³ 自洽。",
         ),
     )
 
@@ -468,12 +547,15 @@ def load_hu1_tailpipe(
         cbl_pass_rate=None,
         job_report_path=resolved_reference_root / "提取数据" / "呼探1井_固井顶替模型数据包.json",
         notes=(
-            "CBL 仅定性（3 张 CBL/VDL 图，cbl_evaluation.csv）：100611.jpg 7210-7560m 良好 + 7415-7430m 差；"
-            "100612.jpg 7333-7607m 中 7474-7514m（40m）不合格、7514-7586m 中等；100613.jpg 5630-7425m 90% 以上优良。"
-            "整体'合格'（完井报告 10068.doc）。现场无数值合格率，cbl_pass_rate=None，不编造。",
-            "CBL 电测测量段 3530-7601m（construction_events.csv）；目标层段 target_intervals.csv 标 missing。",
-            "2026-08-16 重建：几何/泵注/流体全部取自 hu1_呼探1 提取包；密度 field_measured、"
-            "水泥浆 n/K 与前置液/替浆液流变为 proxy（现场无六速实测）。",
+            "CBL 图头硬信息（2026-08-29 校准整段重写）：100611/100612/100613 三图为 2020-11-04 同次测井三页"
+            "（测量段 3531–7481.22m，人工井底 7481.22m，预计/实际返高 3531m，总评合格）；"
+            "旧注按 cbl_evaluation.csv 分图拼接（7210-7560/7333-7607/5630-7425 等逐段描述）废止。",
+            "RCB/RCD 官方分段（100615）：3540–3630.8m 水泥胶结差、3875–4500m 充填好为主（2026-08-29 补记）。",
+            "'7474-7514m（40m）不合格'系 minimax 判读，待人工复核；现场无数值合格率，cbl_pass_rate=None，不编造。",
+            "CBL 评价窗 3531–7481.22m 为图头测量段；目标层段 target_intervals.csv 标 missing。",
+            "2026-08-16 重建几何/泵注/流体全部取自 hu1_呼探1 提取包；密度 field_measured；"
+            "2026-08-29 校准：钻井液 PV/YP、水泥浆 n/K、隔离液流变改为 204121/204131 实测，"
+            "后置液/替浆液流变仍为 proxy。",
         ),
     )
     return well_spec, fluids, schedule, validation_data

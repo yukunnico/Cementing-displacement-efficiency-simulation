@@ -1,0 +1,38 @@
+﻿key,value
+well_name,呼探1井
+top_md_m,3523.27
+bottom_md_m,7601
+shoe_md_m,7601
+hanger_md_m,3523.27
+casing_id_mm,245.37
+liner_od_mm,139.7
+liner_id_mm,111.16
+is_dual_diameter,False
+upper_section_bottom_md_m,—
+upper_liner_od_mm,—
+upper_liner_id_mm,—
+liner_wall_thickness_mm,14.27
+shoe_lag_volume_m3,88.0108
+hole_profile_n,101
+hole_profile_min_mm,185.27
+hole_profile_max_mm,245.37
+hole_profile_mean_mm,195.29
+hole_profile_depth_range,3523.27–7601.0
+inclination_profile_n,92
+inclination_max_deg,15.09
+standoff_profile_n,2
+standoff_min,0.65
+standoff_max,0.65
+standoff_mean,0.65
+pipe_id_profile_n,6
+cbl_pass_rate,—
+note_0,呼探1井（hu1）为单 139.7mm 油层尾管固井，无 168.3mm 段：上部薄壁段 12.09mm（顶 3535.96/3530，底 5742.19m，ID 115.52）/ 下部厚壁段 14.27mm（5742.19–7600.50m，ID 111.16），liner_id_mm 取厚壁段 111.16 单值口径；壁厚分界 5742.19 为实际图头口径（设计 5700；LEGACY(2026-08-29 前) 5300 系提取时误用封固边界）。
+note_1,悬挂器设计 3523.27m / 实际 3532.21m（双口径，模型取设计值作剖面顶）；204121 记'固井井段 3531-7601'；204151 记'悬挂器 5300/回接筒顶 5231'系笔误（五重证据裁定，2026-08-29 校准）。
+note_2,中间尾管顶（219.1mm 技术尾管顶）设计 3623.27m（模型采用）；204251 实际 3633.403m（2026-08-29 补记）。
+note_3,井径剖面：3523–5694m 上层套管柱重叠段按等效内径（273.05 技套 ID 245.37 → 219.1 尾管 ID 193.7），5694–7601m 为 96 点现场实测（均值 194.33mm，最大 233.34@5780m，最小 185.27@7540m，field_measured）。
+note_4,井斜剖面：5694–7601m 为 90 点现场实测（3.04°→15.09°，均值 7.34°）；3523–5694m 无连续测斜，以 5694m 首测点 3.04° 近似（model_assumption）。
+note_5,居中度 standoff 无现场实测（扶正器 136 只、三段间距 33/22/44m：66+63+8 只，7400-7601 无扶正器；centralization_profile.csv 标 missing），取均一 0.65，model_assumption。
+note_6,管内 1D 径链（pipe_id_profile，2026-08-29 校准）：149.2mm 送入钻杆 0–3523m（ID 129.93，内容积≈46.68m³，204111 §6.1.3+管串表）+ 尾管薄壁段 ID 115.52 + 厚壁段 ID 111.16；1D 管内容积≈87.8m³（46.68+尾管 41.13），与实际替浆 87m³ 自洽。
+note_7,设计留下塞 150m（204111 §4.2.9，2026-08-29 补记）。
+note_8,井号身份注记：呼探1 与 呼探1-001（HT1-001）是否同井存疑，待现场裁定；本 loader 按 hu1_呼探1 提取包独立建井，与 ht1_001_loader 分列。
+note_9,CBL 评价窗 3531–7481.22m 为图头测量段（7481.22–7600.5 井底段无 CBL 覆盖）；target_intervals.csv 明确139.7mm 尾管目标段缺失，目标窗仅为模型聚焦窗（model_focus）。

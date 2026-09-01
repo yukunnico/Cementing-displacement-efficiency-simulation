@@ -1,8 +1,0 @@
-[project]
-name = "hu101-1d2d-paper-d2dga"
-version = "0.1.0"
-dependencies = ["numpy", "pandas", "matplotlib"]
-
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["cemdisp*"]

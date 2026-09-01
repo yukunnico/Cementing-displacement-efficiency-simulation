@@ -1,7 +1,7 @@
 ﻿well_id,component,top_md_m,bottom_md_m,outer_diameter_mm,inner_diameter_mm,weight_or_grade,quantity,spacing_m,data_type,source_description,confidence,notes
 ht1_003,surface_casing,0,1404.746,508,,P110*16.13mm,1,,field_measured,HT1-003井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 一.1.2.1,high,660.4mm钻头x1405m
-ht1_003,intermediate_casing,0,3905,365.12,,P110*13.88mm,1,,field_measured,HT1-003井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 一.1.2.1,high,457+444.5mm钻头x3905m；CBL头显示365.120mm*3905m
-ht1_003,intermediate_casing,0,5568,273.1,245.42,BG140V/TP140V/P110 *13.84mm BGT2/TPG2HP/BCSG,1,,field_measured,HT1-003井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 一.1.2.1,high,333.4mm钻头x5568m
+ht1_003,intermediate_casing,0,3905,365.12,,P110*13.88mm,1,,field_measured,HT1-003井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 一.1.2.1,high,"457+444.5mm钻头x3905m；CBL头显示365.120mm*3905m；设计一.1.2.1规格写365.13(0.01舍入差)；作业史/施工记录表写""365.1套管*4300m""与设计/CBL图头3905矛盾,判定3905为准(2026-08-29校准注记)"
+ht1_003,intermediate_casing,0,5568,273.1,245.37,BG140V/TP140V/P110 *13.84mm BGT2/TPG2HP/BCSG,1,,field_measured,HT1-003井168.3+139.7mm油层尾管控压固井施工设计 (已审批).doc 一.1.2.1,high,"333.4mm钻头x5568m；内径245.37=设计5.1原文+CBL图头273.050-2*13.84(2026-08-29校准修正,原245.42为名义273.1算术值)"
 ht1_003,tieback_casing,0,5311.997,193.68,,回接套管,1,,field_measured,HT1-003_固井质量测井评价图_15-3500与_3500-7595_20260622_完井.pdf 图头 套管程序,high,回接193.680mm*0-5311.997m(2026-06-04回接固井)
 ht1_003,liner,5316.036,7089.576,168.28,138.9,BG140V/TP140V*14.7mm BG-FJU/TP-SFJ(M),149,,field_measured,HT1-003井油层尾管固井作业史.doc 九/套管到井xlsx,high,168.3mm上段1771.24m长，TP-SFJ扣，浮重7470KN；实际149根(168.28)+7根附件区
 ht1_003,liner,7091.016,7618,139.7,107.94,BG140V/TP140V*15.88mm BGT2/TP-G2,40,,field_measured,HT1-003井油层尾管固井作业史.doc 九/套管到井xlsx,high,139.7mm下段526.89m长，BGT2扣，浮重1930KN；含浮箍/球座/标节等附件

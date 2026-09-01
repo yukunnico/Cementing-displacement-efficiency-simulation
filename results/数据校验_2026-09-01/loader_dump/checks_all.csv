@@ -1,0 +1,948 @@
+﻿well,category,item,loader_value,csv_value,status,note
+hu101,fluid,displacement/轻泥浆[第1对1/4] 密度kg/m3,1960,1960,✓,
+hu101,fluid,displacement/轻泥浆[第1对1/4] PV Pa·s,0.058,0.058,✓,
+hu101,fluid,displacement/轻泥浆[第1对1/4] YP Pa,9.2,9.2,✓,
+hu101,fluid,displacement/中置液[第2对2/4] 密度kg/m3,1960,1850,✗,CSV g/cm3×1000；容差10kg/m3
+hu101,fluid,displacement/中置液[第2对2/4] PV Pa·s,0.058,—,-,
+hu101,fluid,displacement/中置液[第2对2/4] YP Pa,9.2,—,-,
+hu101,fluid,displacement/井浆[第3对3/4] 密度kg/m3,1960,2000,✗,CSV g/cm3×1000；容差10kg/m3
+hu101,fluid,displacement/井浆[第3对3/4] PV Pa·s,0.058,0.03,✗,CSV mPa·s/1000；容差2%
+hu101,fluid,displacement/井浆[第3对3/4] YP Pa,9.2,—,-,
+hu101,fluid,role=lead[第1对1/2] 密度kg/m3,2100,2100,✓,
+hu101,fluid,role=lead[第1对1/2] n,0.844,0.719,✗,容差2%
+hu101,fluid,role=lead[第1对1/2] K Pa·s^n,0.381,0.815,✗,容差3%
+hu101,fluid,role=lead[第1对1/2] 流变模型,power_law,power_law,✓,
+hu101,fluid,role=mud[第1对1/4] 密度kg/m3,1960,1960,✓,
+hu101,fluid,role=mud[第1对1/4] PV Pa·s,0.058,0.058,✓,
+hu101,fluid,role=mud[第1对1/4] YP Pa,9.2,9.2,✓,
+hu101,fluid,role=spacer[第1对1/2] 密度kg/m3,2000,2000,✓,
+hu101,fluid,role=spacer[第1对1/2] PV Pa·s,0.03,0.03,✓,
+hu101,fluid,role=spacer[第1对1/2] YP Pa,5,—,-,
+hu101,fluid,role=tail[第1对1/2] 密度kg/m3,1900,1900,✓,
+hu101,fluid,role=tail[第1对1/2] n,0.83,0.722,✗,容差2%
+hu101,fluid,role=tail[第1对1/2] K Pa·s^n,0.352,0.684,✗,容差3%
+hu101,fluid,role=tail[第1对1/2] 流变模型,power_law,power_law,✓,
+hu101,fluid,role=wash[第1对1/2] 密度kg/m3,1850,1850,✓,
+hu101,fluid,role=wash[第1对1/2] PV Pa·s,0.041,—,-,
+hu101,fluid,role=wash[第1对1/2] YP Pa,9.2,—,-,
+hu101,schedule,role=displacement[1] 体积m3(注后置液(管内)),2,26,✗,容差0.2m³/1%
+hu101,schedule,role=displacement[1] 排量m3/min,0.6,1.5,✗,容差2%
+hu101,schedule,role=displacement[1] 开始min(推算vs现场),115.8,119,⚠,loader时间为体积/排量推算；容差3min
+hu101,schedule,role=displacement[1] 结束min(推算vs现场),119.2,137,⚠,容差3min
+hu101,schedule,role=displacement[2] 体积m3(注轻泥浆),26,10,✗,容差0.2m³/1%
+hu101,schedule,role=displacement[2] 排量m3/min,1.5,1,✗,容差2%
+hu101,schedule,role=displacement[2] 开始min(推算vs现场),119.2,137,⚠,loader时间为体积/排量推算；容差3min
+hu101,schedule,role=displacement[2] 结束min(推算vs现场),136.5,147,⚠,容差3min
+hu101,schedule,role=displacement[3] 体积m3(注中置液),10,63.4,✗,容差0.2m³/1%
+hu101,schedule,role=displacement[3] 排量m3/min,1,—,-,
+hu101,schedule,role=displacement[3] 开始min(推算vs现场),136.5,147,⚠,loader时间为体积/排量推算；容差3min
+hu101,schedule,role=displacement[3] 结束min(推算vs现场),146.5,217,⚠,容差3min
+hu101,schedule,role=displacement[4] 体积m3(井浆快替),40,85,✗,容差0.2m³/1%
+hu101,schedule,role=displacement[4] 排量m3/min,1,2.4,✗,容差2%
+hu101,schedule,role=displacement[4] 开始min(推算vs现场),146.5,162,⚠,loader时间为体积/排量推算；容差3min
+hu101,schedule,role=displacement[4] 结束min(推算vs现场),186.5,200,⚠,容差3min
+hu101,schedule,role=displacement[5] 体积m3(井浆慢替),23.4,85,✗,容差0.2m³/1%
+hu101,schedule,role=displacement[5] 排量m3/min,0.55,2.4,✗,容差2%
+hu101,schedule,role=displacement[5] 开始min(推算vs现场),186.5,162,⚠,loader时间为体积/排量推算；容差3min
+hu101,schedule,role=displacement[5] 结束min(推算vs现场),229,200,⚠,容差3min
+hu101,schedule,role=lead[1] 体积m3(注领浆),47,47,✓,
+hu101,schedule,role=lead[1] 排量m3/min,1,1,✓,
+hu101,schedule,role=lead[1] 开始min(推算vs现场),45.8,46,✓,
+hu101,schedule,role=lead[1] 结束min(推算vs现场),92.8,93,✓,
+hu101,schedule,role=spacer[1] 体积m3(注驱油隔离液),25,25,✓,
+hu101,schedule,role=spacer[1] 排量m3/min,1,1.2,✗,容差2%
+hu101,schedule,role=spacer[1] 开始min(推算vs现场),20.8,0,⚠,loader时间为体积/排量推算；容差3min
+hu101,schedule,role=spacer[1] 结束min(推算vs现场),45.8,21,⚠,容差3min
+hu101,schedule,role=tail[1] 体积m3(注尾浆),23,23,✓,
+hu101,schedule,role=tail[1] 排量m3/min,1,1,✓,
+hu101,schedule,role=tail[1] 开始min(推算vs现场),92.8,93,✓,
+hu101,schedule,role=tail[1] 结束min(推算vs现场),115.8,116,✓,
+hu101,schedule,role=wash,1步,0步,⚠,单侧无该角色步骤（口径/序列差异）
+hu101,schedule,日程总时长min(推算vs现场末步),229,217,⚠,现场末步含试压/停泵等非注入步，差异仅提示
+hu101,geometry,well_geometry.csv 同item多值行,—,"float_collar_md,liner_bottom_md,liner_inner_diameter,liner_outer_diameter,liner_top_md",⚠,CSV长表混入回接段同名item，比对取首现（尾管段）值
+hu101,geometry,悬挂器深度hanger_md_m,5407.46,5407.46,✓,
+hu101,geometry,尾管鞋shoe_md_m,7868,7868,✓,
+hu101,geometry,模型段顶top_md_m,5400,5402.89,✓,
+hu101,geometry,完钻/段底bottom_md_m,7868,7868,✓,
+hu101,geometry,下段尾管OD mm,139.7,139.7,✓,casing_liner_string 最后一 liner 段
+hu101,geometry,尾管长度m(CSV分段和 vs shoe−hanger),2460.54,2464.92,✓,含悬挂器/浮箍段长差异，容差30m
+hu101,geometry,井径剖面点数(CSV实测 vs loader模型域),110,109,⚠,loader仅保留模型段内点并可能做等效换算
+hu101,geometry,井径max mm(CSV vs loader),258.2,265.2,⚠,上段等效换算会改变数值
+hu101,geometry,井径min mm(CSV vs loader),203.9,203.9,✓,
+hu101,cbl,CBL合格率(fraction),0.6277,0.6277,✓,来源 1/1003/10031/100312.PDF
+hu101,cbl,CBL测量段 top/bottom,窗['5700-7810'],5390–7810,⚠,loader评价窗常为可评价子段（扣除双层套管/悬空段），见notes
+hu101,cbl,地层目标[目的层-喀拉扎组(J3k)] 7537-7868,covered,target_intervals.csv,✓,
+hu101,cbl,地层目标[主要气层-K1q] 7492-7536,covered,target_intervals.csv,✓,
+hu101,cbl,地层目标[差气层-J3k_1] 7718-7719,covered,target_intervals.csv,✓,
+hu101,cbl,地层目标[差气层-J3k_2] 7733-7735,covered,target_intervals.csv,✓,
+hu101,cbl,地层目标[水层-K1s] 6152-6156,covered,target_intervals.csv,✓,
+hu101,cbl,地层目标[水层-J3k] 7765-7766,covered,target_intervals.csv,✓,
+hu101,cbl,地层目标[漏层-7598m] 7598-7615,covered,target_intervals.csv,✓,
+hu101,cbl,地层目标[后效显示-7709m] 7492-7735,covered,target_intervals.csv,✓,
+hu101,cbl,地层目标[CBL评价重点-裸眼段] 5700-7868,未覆盖,target_intervals.csv,⚠,
+hu101,cbl,地层目标[CBL评价重点-气层段] 7492-7735,covered,target_intervals.csv,✓,
+hu101,总表,总表[cbl/cbl_pass_rate],0.6277,0.6277,✓,100312.PDF CBL合格率62.77%; paper CBL评价窗5700-7810m
+hu101,总表,总表[geometry/upper_composite_liner],—,—,-,paper loader keeps explicit equivalent-geometry note
+hu101,总表,总表[program/lead_volume_m3],47,47,✓,现场抽取施工量
+hu101,总表,总表[program/tail_volume_m3],23,23,✓,现场抽取施工量
+hu101,内部,每步rate×duration=体积,闭合,闭合,✓,
+hu101,内部,浆体总体积m3(lead+tail+intermediate),70,221.4,✓,日程总注入221.4m³含前置/顶替
+hu101,内部,环空体积重算m3(hole_profile×OD积分),65.53,—,⚠,重算口径：hole_diameter_profile×(双径)liner OD；技套重叠段按外推井径计
+hu101,内部,水泥浆总体积/环空体积(η_E库存比上限),1.068,—,⚠,>1 表示水泥浆量超过环空容量（返高以上/漏失/计量口径）
+hu101,内部,管内容积重算m3 vs 替浆总体积m3,16.3 vs 101.4,—,⚠,替浆总量应≈碰压时管内容积；差异大提示 liner_id/pipe_id 口径为等效或代理
+hu101,sanity,密度范围 钻井液,1960,泥浆1.05–2.35g/cc,✓,
+hu101,sanity,YP>0 钻井液,9.2,>0,✓,YP=0 仅当流体确无屈服
+hu101,sanity,YP>0 平衡液,9.2,>0,✓,YP=0 仅当流体确无屈服
+hu101,sanity,YP>0 驱油隔离液,5,>0,✓,YP=0 仅当流体确无屈服
+hu101,sanity,密度范围 领浆,2100,水泥浆1.85–1.95g/cc,⚠,超出常规水泥浆范围：加重/低密配方需与配方记录核对
+hu101,sanity,n范围 领浆,0.844,0.2–1.2,✓,
+hu101,sanity,K范围 领浆,0.381,0.05–5 Pa·s^n,✓,
+hu101,sanity,密度范围 尾浆,1900,水泥浆1.85–1.95g/cc,✓,
+hu101,sanity,n范围 尾浆,0.83,0.2–1.2,✓,
+hu101,sanity,K范围 尾浆,0.352,0.05–5 Pa·s^n,✓,
+hu101,sanity,YP>0 轻泥浆,9.2,>0,✓,YP=0 仅当流体确无屈服
+hu101,sanity,YP>0 中置液,9.2,>0,✓,YP=0 仅当流体确无屈服
+hu101,sanity,YP>0 井浆,9.2,>0,✓,YP=0 仅当流体确无屈服
+hu101,sanity,ID<OD,91.73278006948564<139.7,—,✓,
+hu101,sanity,悬挂器<鞋深,5407.46<7868.0,—,✓,
+hu101,sanity,尾管长度≈shoe−hanger,2460.5,模型段长2468.0,✓,模型段顶可为水泥返高（≠悬挂器），差异仅提示
+hu101,sanity,"standoff∈[0,1]",0.38–0.48,—,✓,
+hu101,sanity,井径>尾管OD(全部点),—,0点违反,✓,
+hu102,fluid,role=?,0条,70条,⚠,loader或CSV侧该角色无对应条目（角色映射或口径差异）
+hu102,fluid,role=displacement,1条,0条,⚠,loader或CSV侧该角色无对应条目（角色映射或口径差异）
+hu102,fluid,role=flusher,1条,0条,⚠,loader或CSV侧该角色无对应条目（角色映射或口径差异）
+hu102,fluid,role=lead,1条,0条,⚠,loader或CSV侧该角色无对应条目（角色映射或口径差异）
+hu102,fluid,role=mud,1条,0条,⚠,loader或CSV侧该角色无对应条目（角色映射或口径差异）
+hu102,fluid,role=other,2条,0条,⚠,loader或CSV侧该角色无对应条目（角色映射或口径差异）
+hu102,fluid,role=spacer,1条,0条,⚠,loader或CSV侧该角色无对应条目（角色映射或口径差异）
+hu102,fluid,role=tail,1条,0条,⚠,loader或CSV侧该角色无对应条目（角色映射或口径差异）
+hu102,fluid,role=wash,2条,0条,⚠,loader或CSV侧该角色无对应条目（角色映射或口径差异）
+hu102,schedule,role=displacement[1] 体积m3(替浆（钻井液）),74,7,✗,容差0.2m³/1%
+hu102,schedule,role=displacement[1] 排量m3/min,0.840909,—,-,
+hu102,schedule,role=lead[1] 体积m3(注入领浆),10,10,✓,
+hu102,schedule,role=lead[1] 排量m3/min,0.7,—,-,
+hu102,schedule,role=mud[1] 体积m3(循环排混浆),41,72,✗,容差0.2m³/1%
+hu102,schedule,role=mud[1] 排量m3/min,1.3,—,-,
+hu102,schedule,role=other,2步,0步,⚠,单侧无该角色步骤（口径/序列差异）
+hu102,schedule,role=spacer[1] 体积m3(注入试隔离液),5,5,✓,
+hu102,schedule,role=spacer[1] 排量m3/min,0.6,0.6,✓,
+hu102,schedule,role=spacer[2] 体积m3(注入隔离液),15,15,✓,
+hu102,schedule,role=spacer[2] 排量m3/min,0.7,—,-,
+hu102,schedule,role=tail[1] 体积m3(注入尾浆),7,7,✓,
+hu102,schedule,role=tail[1] 排量m3/min,0.7,—,-,
+hu102,schedule,role=wash[1] 体积m3(注入平衡液（前置液）),15,15,✓,
+hu102,schedule,role=wash[1] 排量m3/min,0.45,—,-,
+hu102,schedule,role=保护液,0步,1步,⚠,单侧无该角色步骤（口径/序列差异）
+hu102,geometry,悬挂器深度hanger_md_m,6823.1,7665.52,✗,well_geometry.csv；容差0.5m
+hu102,geometry,尾管鞋shoe_md_m,7735,7735,✓,
+hu102,geometry,模型段顶top_md_m,6823.1,6821.9,✓,
+hu102,geometry,完钻/段底bottom_md_m,7735,7735,✓,
+hu102,geometry,井径剖面点数(CSV实测 vs loader模型域),63,62,⚠,loader仅保留模型段内点并可能做等效换算
+hu102,geometry,井径max mm(CSV vs loader),200.6,200.6,✓,上段等效换算会改变数值
+hu102,geometry,井径min mm(CSV vs loader),184.8,184.8,✓,
+hu102,cbl,地层目标[J3k目的层] 7422-7640,covered,target_intervals.csv,✓,
+hu102,cbl,地层目标[标节1] 7432.91-7434.27,covered,target_intervals.csv,✓,
+hu102,cbl,地层目标[标节2] 7638.05-7639.4,covered,target_intervals.csv,✓,
+hu102,cbl,地层目标[裸眼段] 6720-7735,未覆盖,target_intervals.csv,⚠,
+hu102,总表,总表[cbl/cbl_pass_rate],0.6665,0.6665,✓,100413.PDF CBL合格率66.65%; CBL评价窗6840-7665m
+hu102,总表,总表[geometry/caliper_profile],—,—,-,paper metadata marks hu102 as field-rich but loader-rebuild sensitive
+hu102,总表,总表[program/pumping_schedule],—,—,-,future improvement should rebuild from extracted pumping CSV
+hu102,内部,每步rate×duration=体积,闭合,闭合,✓,
+hu102,内部,浆体总体积m3(lead+tail+intermediate),17,180,✓,日程总注入180.0m³含前置/顶替
+hu102,内部,环空体积重算m3(hole_profile×OD积分),12.38,—,⚠,重算口径：hole_diameter_profile×(双径)liner OD；技套重叠段按外推井径计
+hu102,内部,水泥浆总体积/环空体积(η_E库存比上限),1.374,—,⚠,>1 表示水泥浆量超过环空容量（返高以上/漏失/计量口径）
+hu102,内部,管内容积重算m3 vs 替浆总体积m3,8.4 vs 74.0,—,⚠,替浆总量应≈碰压时管内容积；差异大提示 liner_id/pipe_id 口径为等效或代理
+hu102,sanity,密度范围 钻井液,2020,泥浆1.05–2.35g/cc,✓,
+hu102,sanity,YP>0 钻井液,10,>0,✓,YP=0 仅当流体确无屈服
+hu102,sanity,YP>0 替浆液,10,>0,✓,YP=0 仅当流体确无屈服
+hu102,sanity,YP>0 平衡液,18,>0,✓,YP=0 仅当流体确无屈服
+hu102,sanity,YP>0 隔离液,8,>0,✓,YP=0 仅当流体确无屈服
+hu102,sanity,密度范围 领浆,2100,水泥浆1.85–1.95g/cc,⚠,超出常规水泥浆范围：加重/低密配方需与配方记录核对
+hu102,sanity,n范围 领浆,0.737,0.2–1.2,✓,
+hu102,sanity,K范围 领浆,0.947,0.05–5 Pa·s^n,✓,
+hu102,sanity,密度范围 尾管水泥浆,2100,水泥浆1.85–1.95g/cc,⚠,超出常规水泥浆范围：加重/低密配方需与配方记录核对
+hu102,sanity,n范围 尾管水泥浆,0.737,0.2–1.2,✓,
+hu102,sanity,K范围 尾管水泥浆,0.947,0.05–5 Pa·s^n,✓,
+hu102,sanity,YP>0 压塞液,10,>0,✓,YP=0 仅当流体确无屈服
+hu102,sanity,YP>0 后置液,8,>0,✓,YP=0 仅当流体确无屈服
+hu102,sanity,YP>0 冲洗液,8,>0,✓,YP=0 仅当流体确无屈服
+hu102,sanity,YP>0 冲洗液（FLUSHER）,1.5,>0,✓,YP=0 仅当流体确无屈服
+hu102,sanity,ID<OD,108.1<139.7,—,✓,
+hu102,sanity,悬挂器<鞋深,6823.1<7735.0,—,✓,
+hu102,sanity,尾管长度≈shoe−hanger,911.9,模型段长911.9,✓,模型段顶可为水泥返高（≠悬挂器），差异仅提示
+hu102,sanity,"standoff∈[0,1]",0.45–0.61,—,✓,
+hu102,sanity,井径>尾管OD(全部点),—,0点违反,✓,
+hu103,fluid,displacement/中置液 密度kg/m3,1950,2100,✗,CSV g/cm3×1000；容差10kg/m3
+hu103,fluid,displacement/中置液 PV Pa·s,0.054,—,-,
+hu103,fluid,displacement/中置液 YP Pa,10,—,-,
+hu103,fluid,displacement/替浆液 密度kg/m3,1980,1950,✗,CSV g/cm3×1000；容差10kg/m3
+hu103,fluid,displacement/替浆液 PV Pa·s,0.054,—,-,
+hu103,fluid,displacement/替浆液 YP Pa,10,—,-,
+hu103,fluid,role=intermediate,1条,0条,⚠,loader或CSV侧该角色无对应条目（角色映射或口径差异）
+hu103,fluid,role=intermediate_cement,0条,1条,⚠,loader或CSV侧该角色无对应条目（角色映射或口径差异）
+hu103,fluid,role=lead[第1对1/2] 密度kg/m3,2050,2050,✓,
+hu103,fluid,role=lead[第1对1/2] n,0.82,0.82,✓,
+hu103,fluid,role=lead[第1对1/2] K Pa·s^n,0.67,0.67,✓,
+hu103,fluid,role=lead[第1对1/2] 流变模型,power_law,power_law,✓,
+hu103,fluid,mud/钻井液[第1对1/6] 密度kg/m3,1980,1980,✓,
+hu103,fluid,mud/钻井液[第1对1/6] PV Pa·s,0.054,0.054,✓,
+hu103,fluid,mud/钻井液[第1对1/6] YP Pa,10,10,✓,
+hu103,fluid,mud/钻井液[第1对1/6] 流变模型,bingham,power_law,⚠,
+hu103,fluid,mud/平衡液[第2对2/6] 密度kg/m3,1880,1980,✗,CSV g/cm3×1000；容差10kg/m3
+hu103,fluid,mud/平衡液[第2对2/6] PV Pa·s,0.025,0.088,✗,CSV mPa·s/1000；容差2%
+hu103,fluid,mud/平衡液[第2对2/6] YP Pa,1.5,15.5,✗,容差2%
+hu103,fluid,role=other,1条,0条,⚠,loader或CSV侧该角色无对应条目（角色映射或口径差异）
+hu103,fluid,spacer/隔离液1 密度kg/m3,2000,2000,✓,
+hu103,fluid,spacer/隔离液1 n,0.54,—,-,
+hu103,fluid,spacer/隔离液1 K Pa·s^n,2.12,—,-,
+hu103,fluid,spacer/隔离液2 密度kg/m3,1950,1950,✓,
+hu103,fluid,spacer/隔离液2 n,0.54,—,-,
+hu103,fluid,spacer/隔离液2 K Pa·s^n,2.12,—,-,
+hu103,fluid,spacer/隔离液(实际) 密度kg/m3,1920,2000,✗,CSV g/cm3×1000；容差10kg/m3
+hu103,fluid,spacer/隔离液(实际) n,0.54,0.54,✓,
+hu103,fluid,spacer/隔离液(实际) K Pa·s^n,2.12,2.12,✓,
+hu103,fluid,spacer/隔离液(实际) 流变模型,power_law,power_law,✓,
+hu103,fluid,role=tail[第1对1/2] 密度kg/m3,2050,2050,✓,
+hu103,fluid,role=tail[第1对1/2] n,0.76,0.76,✓,
+hu103,fluid,role=tail[第1对1/2] K Pa·s^n,1.14,1.14,✓,
+hu103,fluid,role=tail[第1对1/2] 流变模型,power_law,power_law,✓,
+hu103,fluid,隔离液1 n(六速反算参考),0.54,0.791,⚠,140℃ 六速θ600/θ300=128.0/74.0；反算仅供温度口径参考
+hu103,fluid,隔离液1 K(六速反算参考),2.12,0.273,⚠,反算 K=0.511·θ300/(1.7023·300)^n
+hu103,fluid,隔离液2 n(六速反算参考),0.54,0.791,⚠,140℃ 六速θ600/θ300=128.0/74.0；反算仅供温度口径参考
+hu103,fluid,隔离液2 K(六速反算参考),2.12,0.273,⚠,反算 K=0.511·θ300/(1.7023·300)^n
+hu103,fluid,隔离液(实际) n(六速反算参考),0.54,0.791,⚠,140℃ 六速θ600/θ300=128.0/74.0；反算仅供温度口径参考
+hu103,fluid,隔离液(实际) K(六速反算参考),2.12,0.273,⚠,反算 K=0.511·θ300/(1.7023·300)^n
+hu103,schedule,role=displacement[1] 体积m3(替钻井液(一段)),23,7,✗,容差0.2m³/1%
+hu103,schedule,role=displacement[1] 排量m3/min,1.8,1.8,✓,
+hu103,schedule,role=displacement[2] 体积m3(替中置液),15,23,✗,容差0.2m³/1%
+hu103,schedule,role=displacement[2] 排量m3/min,1.8,1.8,✓,
+hu103,schedule,role=displacement[3] 体积m3(替钻井液(二段)),45.2,15,✗,容差0.2m³/1%
+hu103,schedule,role=displacement[3] 排量m3/min,1.8,1.8,✓,
+hu103,schedule,role=intermediate,1步,0步,⚠,单侧无该角色步骤（口径/序列差异）
+hu103,schedule,role=intermediate_cement,0步,1步,⚠,单侧无该角色步骤（口径/序列差异）
+hu103,schedule,role=lead[1] 体积m3(注入领浆),22,22,✓,
+hu103,schedule,role=lead[1] 排量m3/min,1.8,1.8,✓,
+hu103,schedule,role=mud[1] 体积m3(注入平衡液(轻泥浆)),28,28,✓,
+hu103,schedule,role=mud[1] 排量m3/min,1.6,1.6,✓,
+hu103,schedule,role=other,1步,0步,⚠,单侧无该角色步骤（口径/序列差异）
+hu103,schedule,role=spacer[1] 体积m3(注入驱油隔离液1),17.5,17.5,✓,
+hu103,schedule,role=spacer[1] 排量m3/min,1.6,1.6,✓,
+hu103,schedule,role=spacer[2] 体积m3(注入驱油隔离液2),17.5,17.5,✓,
+hu103,schedule,role=spacer[2] 排量m3/min,1.6,1.6,✓,
+hu103,schedule,role=tail[1] 体积m3(注入尾浆),26,26,✓,
+hu103,schedule,role=tail[1] 排量m3/min,1.8,1.8,✓,
+hu103,geometry,well_geometry.csv 同item多值行,—,"borehole_nominal_diameter,drill_bit_size,float_collar_md,liner_inner_diameter,liner_outer_diameter",⚠,CSV长表混入回接段同名item，比对取首现（尾管段）值
+hu103,geometry,悬挂器深度hanger_md_m,5545.97,5546,✓,
+hu103,geometry,尾管鞋shoe_md_m,7770,7770,✓,
+hu103,geometry,模型段顶top_md_m,5536.66,5536.66,✓,
+hu103,geometry,完钻/段底bottom_md_m,7770,7768.51,✓,
+hu103,geometry,下段尾管OD mm,139.7,139.7,✓,casing_liner_string 最后一 liner 段
+hu103,geometry,上段尾管OD mm,168.3,168.3,✓,
+hu103,geometry,上段尾管ID mm,138.9,138.9,✓,
+hu103,geometry,上段底/变径位置 md_m,7330.69,7330.69,✓,loader常取整（如6796.329→6796）
+hu103,geometry,尾管长度m(CSV分段和 vs shoe−hanger),2224.03,2222.49,✓,含悬挂器/浮箍段长差异，容差30m
+hu103,geometry,井径剖面点数(CSV实测 vs loader模型域),70,69,⚠,loader仅保留模型段内点并可能做等效换算
+hu103,geometry,井径max mm(CSV vs loader),295.6,295.6,✓,上段等效换算会改变数值
+hu103,geometry,井径min mm(CSV vs loader),217.7,217.7,✓,
+hu103,geometry,standoff范围(CSV:centralization_percent vs loader),0.70–0.80,0.78–0.78,✓,CSV多为扶正器布置设计值，loader常为model_assumption名义剖面
+hu103,cbl,CBL合格率(fraction),0.1206,0.1206,✓,来源 1/1005/10051/100516.pdf
+hu103,cbl,CBL测量段 top/bottom,"窗['7338-7712', '5540-7331']",7338–7712,⚠,loader评价窗常为可评价子段（扣除双层套管/悬空段），见notes
+hu103,cbl,地层目标[水层-胜金口组(K1s)] 6120-6122,covered,target_intervals.csv,✓,
+hu103,cbl,地层目标[差气层-清水河组(K1q)] 7476-7479,covered,target_intervals.csv,✓,
+hu103,cbl,地层目标[气层-清水河组(K1q)] 7507-7557,covered,target_intervals.csv,✓,
+hu103,cbl,地层目标[差气层-喀拉扎组(J3k)] 7563-7619,covered,target_intervals.csv,✓,
+hu103,cbl,地层目标[漏层1] 7542-7542.69,covered,target_intervals.csv,✓,
+hu103,cbl,地层目标[渗漏点] 7652.6-7652.6,未覆盖,target_intervals.csv,⚠,
+hu103,cbl,地层目标[领浆封固段] 5350-6000,未覆盖,target_intervals.csv,⚠,
+hu103,cbl,地层目标[中间浆封固段] 6000-7000,未覆盖,target_intervals.csv,⚠,
+hu103,cbl,地层目标[尾浆封固段] 7000-7770,未覆盖,target_intervals.csv,⚠,
+hu103,总表,总表[cbl/cbl_pass_rate],0.1206,0.1206,✓,139.7mm段7338-7712m; do not mix 168.3mm段0.0004或综合0.0605
+hu103,总表,总表[geometry/lower_liner_interval],—,139.7,-,paper main validation window is 7338-7712m
+hu103,总表,总表[program/tail_volume_m3],26,19,✗,含下塞1.18m3; intermediate slurry remains proxy
+hu103,内部,每步rate×duration=体积,闭合,闭合,✓,
+hu103,内部,浆体总体积m3(lead+tail+intermediate),83,236.2,✓,日程总注入236.2m³含前置/顶替
+hu103,内部,环空体积重算m3(hole_profile×OD积分),75.01,—,⚠,重算口径：hole_diameter_profile×(双径)liner OD；技套重叠段按外推井径计
+hu103,内部,水泥浆总体积/环空体积(η_E库存比上限),1.107,—,⚠,>1 表示水泥浆量超过环空容量（返高以上/漏失/计量口径）
+hu103,内部,管内容积重算m3 vs 替浆总体积m3,20.4 vs 83.2,—,⚠,替浆总量应≈碰压时管内容积；差异大提示 liner_id/pipe_id 口径为等效或代理
+hu103,sanity,密度范围 钻井液,1980,泥浆1.05–2.35g/cc,✓,
+hu103,sanity,YP>0 钻井液,10,>0,✓,YP=0 仅当流体确无屈服
+hu103,sanity,密度范围 平衡液,1880,泥浆1.05–2.35g/cc,✓,
+hu103,sanity,YP>0 平衡液,1.5,>0,✓,YP=0 仅当流体确无屈服
+hu103,sanity,n范围 隔离液1,0.54,0.2–1.2,✓,
+hu103,sanity,K范围 隔离液1,2.12,0.05–5 Pa·s^n,✓,
+hu103,sanity,n范围 隔离液2,0.54,0.2–1.2,✓,
+hu103,sanity,K范围 隔离液2,2.12,0.05–5 Pa·s^n,✓,
+hu103,sanity,n范围 隔离液(实际),0.54,0.2–1.2,✓,
+hu103,sanity,K范围 隔离液(实际),2.12,0.05–5 Pa·s^n,✓,
+hu103,sanity,密度范围 领浆,2050,水泥浆1.85–1.95g/cc,⚠,超出常规水泥浆范围：加重/低密配方需与配方记录核对
+hu103,sanity,n范围 领浆,0.82,0.2–1.2,✓,
+hu103,sanity,K范围 领浆,0.67,0.05–5 Pa·s^n,✓,
+hu103,sanity,密度范围 中间浆,2050,水泥浆1.85–1.95g/cc,⚠,超出常规水泥浆范围：加重/低密配方需与配方记录核对
+hu103,sanity,n范围 中间浆,0.76,0.2–1.2,✓,
+hu103,sanity,K范围 中间浆,1.11,0.05–5 Pa·s^n,✓,
+hu103,sanity,密度范围 尾浆,2050,水泥浆1.85–1.95g/cc,⚠,超出常规水泥浆范围：加重/低密配方需与配方记录核对
+hu103,sanity,n范围 尾浆,0.76,0.2–1.2,✓,
+hu103,sanity,K范围 尾浆,1.14,0.05–5 Pa·s^n,✓,
+hu103,sanity,YP>0 压塞液,10,>0,✓,YP=0 仅当流体确无屈服
+hu103,sanity,YP>0 中置液,10,>0,✓,YP=0 仅当流体确无屈服
+hu103,sanity,YP>0 替浆液,10,>0,✓,YP=0 仅当流体确无屈服
+hu103,sanity,ID<OD,107.94<139.7,—,✓,
+hu103,sanity,悬挂器<鞋深,5545.972<7770.0,—,✓,
+hu103,sanity,尾管长度≈shoe−hanger,2224,模型段长2233.3,✓,模型段顶可为水泥返高（≠悬挂器），差异仅提示
+hu103,sanity,上段OD>下段OD(双径井),168.3>139.7,—,✓,
+hu103,sanity,"standoff∈[0,1]",0.70–0.80,—,✓,
+hu103,sanity,井径>尾管OD(全部点),—,0点违反,✓,
+hu103[variant],内部,每步rate×duration=体积,闭合,闭合,✓,
+hu103[variant],内部,浆体总体积m3(lead+tail+intermediate),83,259.9,✓,日程总注入259.9m³含前置/顶替
+hu103[variant],内部,环空体积重算m3(hole_profile×OD积分),75.01,—,⚠,重算口径：hole_diameter_profile×(双径)liner OD；技套重叠段按外推井径计
+hu103[variant],内部,水泥浆总体积/环空体积(η_E库存比上限),1.107,—,⚠,>1 表示水泥浆量超过环空容量（返高以上/漏失/计量口径）
+hu103[variant],内部,管内容积重算m3 vs 替浆总体积m3,20.4 vs 90.9,—,⚠,替浆总量应≈碰压时管内容积；差异大提示 liner_id/pipe_id 口径为等效或代理
+hu103[variant],sanity,密度范围 钻井液,1980,泥浆1.05–2.35g/cc,✓,
+hu103[variant],sanity,YP>0 钻井液,10,>0,✓,YP=0 仅当流体确无屈服
+hu103[variant],sanity,密度范围 平衡液,1880,泥浆1.05–2.35g/cc,✓,
+hu103[variant],sanity,YP>0 平衡液,1.5,>0,✓,YP=0 仅当流体确无屈服
+hu103[variant],sanity,n范围 隔离液1,0.54,0.2–1.2,✓,
+hu103[variant],sanity,K范围 隔离液1,2.12,0.05–5 Pa·s^n,✓,
+hu103[variant],sanity,n范围 隔离液2,0.54,0.2–1.2,✓,
+hu103[variant],sanity,K范围 隔离液2,2.12,0.05–5 Pa·s^n,✓,
+hu103[variant],sanity,n范围 隔离液(实际),0.54,0.2–1.2,✓,
+hu103[variant],sanity,K范围 隔离液(实际),2.12,0.05–5 Pa·s^n,✓,
+hu103[variant],sanity,密度范围 领浆,2050,水泥浆1.85–1.95g/cc,⚠,超出常规水泥浆范围：加重/低密配方需与配方记录核对
+hu103[variant],sanity,n范围 领浆,0.82,0.2–1.2,✓,
+hu103[variant],sanity,K范围 领浆,0.67,0.05–5 Pa·s^n,✓,
+hu103[variant],sanity,密度范围 中间浆,2050,水泥浆1.85–1.95g/cc,⚠,超出常规水泥浆范围：加重/低密配方需与配方记录核对
+hu103[variant],sanity,n范围 中间浆,0.76,0.2–1.2,✓,
+hu103[variant],sanity,K范围 中间浆,1.11,0.05–5 Pa·s^n,✓,
+hu103[variant],sanity,密度范围 尾浆,2050,水泥浆1.85–1.95g/cc,⚠,超出常规水泥浆范围：加重/低密配方需与配方记录核对
+hu103[variant],sanity,n范围 尾浆,0.76,0.2–1.2,✓,
+hu103[variant],sanity,K范围 尾浆,1.14,0.05–5 Pa·s^n,✓,
+hu103[variant],sanity,YP>0 压塞液,10,>0,✓,YP=0 仅当流体确无屈服
+hu103[variant],sanity,YP>0 中置液,10,>0,✓,YP=0 仅当流体确无屈服
+hu103[variant],sanity,YP>0 替浆液,10,>0,✓,YP=0 仅当流体确无屈服
+hu103[variant],sanity,ID<OD,107.94<139.7,—,✓,
+hu103[variant],sanity,悬挂器<鞋深,5545.972<7770.0,—,✓,
+hu103[variant],sanity,尾管长度≈shoe−hanger,2224,模型段长2233.3,✓,模型段顶可为水泥返高（≠悬挂器），差异仅提示
+hu103[variant],sanity,上段OD>下段OD(双径井),168.3>139.7,—,✓,
+hu103[variant],sanity,"standoff∈[0,1]",0.70–0.80,—,✓,
+hu103[variant],sanity,井径>尾管OD(全部点),—,0点违反,✓,
+hu1,fluid,role=?,0条,28条,⚠,loader或CSV侧该角色无对应条目（角色映射或口径差异）
+hu1,fluid,role=displacement,2条,0条,⚠,loader或CSV侧该角色无对应条目（角色映射或口径差异）
+hu1,fluid,role=lead,1条,0条,⚠,loader或CSV侧该角色无对应条目（角色映射或口径差异）
+hu1,fluid,role=mud,1条,0条,⚠,loader或CSV侧该角色无对应条目（角色映射或口径差异）
+hu1,fluid,role=other,1条,0条,⚠,loader或CSV侧该角色无对应条目（角色映射或口径差异）
+hu1,fluid,role=spacer,1条,0条,⚠,loader或CSV侧该角色无对应条目（角色映射或口径差异）
+hu1,fluid,role=tail,1条,0条,⚠,loader或CSV侧该角色无对应条目（角色映射或口径差异）
+hu1,fluid,role=wash,1条,0条,⚠,loader或CSV侧该角色无对应条目（角色映射或口径差异）
+hu1,schedule,role=displacement,2步,0步,⚠,单侧无该角色步骤（口径/序列差异）
+hu1,schedule,role=flusher,0步,1步,⚠,单侧无该角色步骤（口径/序列差异）
+hu1,schedule,role=lead[1] 体积m3(注入领浆),24,24,✓,
+hu1,schedule,role=lead[1] 排量m3/min,0.65,0.65,✓,
+hu1,schedule,role=mud,0步,1步,⚠,单侧无该角色步骤（口径/序列差异）
+hu1,schedule,role=other,1步,0步,⚠,单侧无该角色步骤（口径/序列差异）
+hu1,schedule,role=spacer[1] 体积m3(注入驱油隔离液),15,15,✓,
+hu1,schedule,role=spacer[1] 排量m3/min,0.65,0.65,✓,
+hu1,schedule,role=tail[1] 体积m3(注入尾浆),36,36,✓,
+hu1,schedule,role=tail[1] 排量m3/min,0.65,0.65,✓,
+hu1,schedule,role=wash,1步,0步,⚠,单侧无该角色步骤（口径/序列差异）
+hu1,schedule,日程总时长min(推算vs现场末步),349.1,240,⚠,现场末步含试压/停泵等非注入步，差异仅提示
+hu1,geometry,well_geometry.csv 同item多值行,—,,⚠,CSV长表混入回接段同名item，比对取首现（尾管段）值
+hu1,geometry,井径剖面点数(CSV实测 vs loader模型域),101,96,⚠,loader仅保留模型段内点并可能做等效换算
+hu1,geometry,井径max mm(CSV vs loader),245.4,233.3,✓,上段等效换算会改变数值
+hu1,geometry,井径min mm(CSV vs loader),185.3,185.3,✓,
+hu1,cbl,地层目标[365.1mm技套固井段] 1000-3036,未覆盖,target_intervals.csv,⚠,
+hu1,内部,每步rate×duration=体积,闭合,闭合,✓,
+hu1,内部,浆体总体积m3(lead+tail+intermediate),60,177,✓,日程总注入177.0m³含前置/顶替
+hu1,内部,环空体积重算m3(hole_profile×OD积分),59.9,—,⚠,重算口径：hole_diameter_profile×(双径)liner OD；技套重叠段按外推井径计
+hu1,内部,水泥浆总体积/环空体积(η_E库存比上限),1.002,—,⚠,>1 表示水泥浆量超过环空容量（返高以上/漏失/计量口径）
+hu1,内部,管内容积重算m3 vs 替浆总体积m3,41.3 vs 85.0,—,⚠,替浆总量应≈碰压时管内容积；差异大提示 liner_id/pipe_id 口径为等效或代理
+hu1,sanity,密度范围 钻井液,2080,泥浆1.05–2.35g/cc,✓,
+hu1,sanity,YP>0 钻井液,8,>0,✓,YP=0 仅当流体确无屈服
+hu1,sanity,YP>0 平衡液(先导泥浆),8,>0,✓,YP=0 仅当流体确无屈服
+hu1,sanity,n范围 驱油隔离液,0.649,0.2–1.2,✓,
+hu1,sanity,K范围 驱油隔离液,0.585,0.05–5 Pa·s^n,✓,
+hu1,sanity,密度范围 领浆,2100,水泥浆1.85–1.95g/cc,⚠,超出常规水泥浆范围：加重/低密配方需与配方记录核对
+hu1,sanity,n范围 领浆,0.732,0.2–1.2,✓,
+hu1,sanity,K范围 领浆,0.933,0.05–5 Pa·s^n,✓,
+hu1,sanity,密度范围 尾浆,1900,水泥浆1.85–1.95g/cc,✓,
+hu1,sanity,n范围 尾浆,0.666,0.2–1.2,✓,
+hu1,sanity,K范围 尾浆,0.906,0.05–5 Pa·s^n,✓,
+hu1,sanity,YP>0 后置液,8,>0,✓,YP=0 仅当流体确无屈服
+hu1,sanity,YP>0 替浆液1,10,>0,✓,YP=0 仅当流体确无屈服
+hu1,sanity,YP>0 替浆液2,10,>0,✓,YP=0 仅当流体确无屈服
+hu1,sanity,ID<OD,111.16<139.7,—,✓,
+hu1,sanity,悬挂器<鞋深,3523.27<7601.0,—,✓,
+hu1,sanity,尾管长度≈shoe−hanger,4077.7,模型段长4077.7,✓,模型段顶可为水泥返高（≠悬挂器），差异仅提示
+hu1,sanity,"standoff∈[0,1]",0.65–0.65,—,✓,
+hu1,sanity,井径>尾管OD(全部点),—,0点违反,✓,
+hu2,fluid,role=displacement,3条,0条,⚠,loader或CSV侧该角色无对应条目（角色映射或口径差异）
+hu2,fluid,role=intermediate,1条,0条,⚠,loader或CSV侧该角色无对应条目（角色映射或口径差异）
+hu2,fluid,role=intermediate_cement,0条,2条,⚠,loader或CSV侧该角色无对应条目（角色映射或口径差异）
+hu2,fluid,role=lead[第1对1/2] 密度kg/m3,2100,2100,✓,
+hu2,fluid,role=lead[第1对1/2] n,0.811,0.811,✓,
+hu2,fluid,role=lead[第1对1/2] K Pa·s^n,0.876,0.876,✓,
+hu2,fluid,role=lead[第1对1/2] 流变模型,power_law,herschel_bulkley,⚠,
+hu2,fluid,role=mud 密度kg/m3,2060,2060,✓,
+hu2,fluid,role=mud PV Pa·s,0.058,0.058,✓,
+hu2,fluid,role=mud YP Pa,8.5,8.5,✓,
+hu2,fluid,role=mud 流变模型,bingham,herschel_bulkley,⚠,
+hu2,fluid,role=other,1条,0条,⚠,loader或CSV侧该角色无对应条目（角色映射或口径差异）
+hu2,fluid,role=plug,0条,1条,⚠,loader或CSV侧该角色无对应条目（角色映射或口径差异）
+hu2,fluid,role=spacer[第1对1/4] 密度kg/m3,2050,2050,✓,
+hu2,fluid,role=spacer[第1对1/4] n,0.545,0.545,✓,
+hu2,fluid,role=spacer[第1对1/4] K Pa·s^n,1.338,1.338,✓,
+hu2,fluid,role=spacer[第1对1/4] 流变模型,power_law,herschel_bulkley,⚠,
+hu2,fluid,role=tail[第1对1/2] 密度kg/m3,1950,1950,✓,
+hu2,fluid,role=tail[第1对1/2] n,0.886,0.886,✓,
+hu2,fluid,role=tail[第1对1/2] K Pa·s^n,0.453,0.453,✓,
+hu2,fluid,role=tail[第1对1/2] 流变模型,power_law,herschel_bulkley,⚠,
+hu2,fluid,role=wash[第1对1/2] 密度kg/m3,1850,1850,✓,
+hu2,fluid,role=wash[第1对1/2] PV Pa·s,0.03,—,-,
+hu2,fluid,role=wash[第1对1/2] YP Pa,3,—,-,
+hu2,fluid,隔离液 n(六速反算参考),0.545,0.842,⚠,94℃ 六速θ600/θ300=95.0/53.0；反算仅供温度口径参考
+hu2,fluid,隔离液 K(六速反算参考),1.338,0.142,⚠,反算 K=0.511·θ300/(1.7023·300)^n
+hu2,schedule,role=displacement[1] 体积m3(替浆泥浆(快)),12,12,✓,
+hu2,schedule,role=displacement[1] 排量m3/min,0.8,0.8,✓,
+hu2,schedule,role=displacement[1] 开始min(推算vs现场),97.5,101,⚠,loader时间为体积/排量推算；容差3min
+hu2,schedule,role=displacement[1] 结束min(推算vs现场),112.5,117,⚠,容差3min
+hu2,schedule,role=displacement[2] 体积m3(替浆中置液),15,15,✓,
+hu2,schedule,role=displacement[2] 排量m3/min,0.8,0.8,✓,
+hu2,schedule,role=displacement[2] 开始min(推算vs现场),112.5,137,⚠,loader时间为体积/排量推算；容差3min
+hu2,schedule,role=displacement[2] 结束min(推算vs现场),131.2,157,⚠,容差3min
+hu2,schedule,role=displacement[3] 体积m3(井浆快替),30,5,✗,容差0.2m³/1%
+hu2,schedule,role=displacement[3] 排量m3/min,0.8,0.5,✗,容差2%
+hu2,schedule,role=displacement[3] 开始min(推算vs现场),131.2,157,⚠,loader时间为体积/排量推算；容差3min
+hu2,schedule,role=displacement[3] 结束min(推算vs现场),168.8,167,✓,
+hu2,schedule,role=displacement[4] 体积m3(井浆慢替),17,18,✗,容差0.2m³/1%
+hu2,schedule,role=displacement[4] 排量m3/min,0.3,0.3,✓,
+hu2,schedule,role=displacement[4] 开始min(推算vs现场),168.8,167,✓,
+hu2,schedule,role=displacement[4] 结束min(推算vs现场),225.4,227,✓,
+hu2,schedule,role=intermediate,1步,0步,⚠,单侧无该角色步骤（口径/序列差异）
+hu2,schedule,role=intermediate_cement,0步,1步,⚠,单侧无该角色步骤（口径/序列差异）
+hu2,schedule,role=lead[1] 体积m3(注入领浆),12,12,✓,
+hu2,schedule,role=lead[1] 排量m3/min,0.8,0.8,✓,
+hu2,schedule,role=lead[1] 开始min(推算vs现场),43.8,44,✓,
+hu2,schedule,role=lead[1] 结束min(推算vs现场),58.8,60,✓,
+hu2,schedule,role=other,1步,0步,⚠,单侧无该角色步骤（口径/序列差异）
+hu2,schedule,role=plug,0步,1步,⚠,单侧无该角色步骤（口径/序列差异）
+hu2,schedule,role=spacer[1] 体积m3(注入隔离液),15,15,✓,
+hu2,schedule,role=spacer[1] 排量m3/min,0.8,0.8,✓,
+hu2,schedule,role=spacer[1] 开始min(推算vs现场),25,25,✓,
+hu2,schedule,role=spacer[1] 结束min(推算vs现场),43.8,44,✓,
+hu2,schedule,role=tail[1] 体积m3(注入尾浆),12,12,✓,
+hu2,schedule,role=tail[1] 排量m3/min,0.8,0.8,✓,
+hu2,schedule,role=tail[1] 开始min(推算vs现场),76.2,78,✓,
+hu2,schedule,role=tail[1] 结束min(推算vs现场),91.2,94,✓,
+hu2,schedule,role=wash[1] 体积m3(注入平衡液),20,20,✓,
+hu2,schedule,role=wash[1] 排量m3/min,0.8,0.8,✓,
+hu2,schedule,role=wash[1] 开始min(推算vs现场),0,0,✓,
+hu2,schedule,role=wash[1] 结束min(推算vs现场),25,25,✓,
+hu2,schedule,日程总时长min(推算vs现场末步),225.4,252,⚠,现场末步含试压/停泵等非注入步，差异仅提示
+hu2,geometry,悬挂器深度hanger_md_m,5292.5,5292.5,✓,
+hu2,geometry,尾管鞋shoe_md_m,7554,7554,✓,
+hu2,geometry,模型段顶top_md_m,5292.5,5292.5,✓,
+hu2,geometry,完钻/段底bottom_md_m,7554,7554,✓,
+hu2,geometry,下段尾管OD mm,139.7,139.7,✓,casing_liner_string 最后一 liner 段
+hu2,geometry,尾管长度m(CSV分段和 vs shoe−hanger),2261.5,2235.02,✓,含悬挂器/浮箍段长差异，容差30m
+hu2,geometry,井径剖面点数(CSV实测 vs loader模型域),65,64,⚠,loader仅保留模型段内点并可能做等效换算
+hu2,geometry,井径max mm(CSV vs loader),230,230,✓,上段等效换算会改变数值
+hu2,geometry,井径min mm(CSV vs loader),190.5,190.5,✓,
+hu2,geometry,standoff范围(CSV:centralization_percent vs loader),0.76–0.78,0.78–0.78,✓,CSV多为扶正器布置设计值，loader常为model_assumption名义剖面
+hu2,cbl,地层目标[白垩系清水河组(K1q)] 5702-6826.9,covered,target_intervals.csv,✓,
+hu2,cbl,地层目标[侏罗系喀拉扎组(J3k2)] 6826.9-7559,未覆盖,target_intervals.csv,⚠,
+hu2,cbl,地层目标[高压水层] 5998-6002,covered,target_intervals.csv,✓,
+hu2,cbl,地层目标[油气显示层] 7402-7500,covered,target_intervals.csv,✓,
+hu2,cbl,地层目标[后效显示层] 7402-7446,covered,target_intervals.csv,✓,
+hu2,cbl,地层目标[连木沁组(K1l)] 5292.5-5960,未覆盖,target_intervals.csv,⚠,
+hu2,cbl,地层目标[胜金口组] 5960-6092,covered,target_intervals.csv,✓,
+hu2,cbl,地层目标[呼图壁河组] 6092-6764,covered,target_intervals.csv,✓,
+hu2,cbl,地层目标[领浆封固段] 5068-5796,未覆盖,target_intervals.csv,⚠,
+hu2,cbl,地层目标[中间浆封固段] 5796-6739,covered,target_intervals.csv,✓,
+hu2,cbl,地层目标[尾浆封固段] 6739-7554,未覆盖,target_intervals.csv,⚠,
+hu2,cbl,地层目标[地破试验层] 5702-5702,covered,target_intervals.csv,✓,
+hu2,内部,每步rate×duration=体积,闭合,闭合,✓,
+hu2,内部,浆体总体积m3(lead+tail+intermediate),38,152,✓,日程总注入152.0m³含前置/顶替
+hu2,内部,环空体积重算m3(hole_profile×OD积分),33.52,—,⚠,重算口径：hole_diameter_profile×(双径)liner OD；技套重叠段按外推井径计
+hu2,内部,水泥浆总体积/环空体积(η_E库存比上限),1.134,—,⚠,>1 表示水泥浆量超过环空容量（返高以上/漏失/计量口径）
+hu2,内部,管内容积重算m3 vs 替浆总体积m3,20.7 vs 74.0,—,⚠,替浆总量应≈碰压时管内容积；差异大提示 liner_id/pipe_id 口径为等效或代理
+hu2,sanity,密度范围 钻井液,2060,泥浆1.05–2.35g/cc,✓,
+hu2,sanity,YP>0 钻井液,8.5,>0,✓,YP=0 仅当流体确无屈服
+hu2,sanity,YP>0 替浆液,8.5,>0,✓,YP=0 仅当流体确无屈服
+hu2,sanity,YP>0 平衡液,3,>0,✓,YP=0 仅当流体确无屈服
+hu2,sanity,n范围 隔离液,0.545,0.2–1.2,✓,
+hu2,sanity,K范围 隔离液,1.338,0.05–5 Pa·s^n,✓,
+hu2,sanity,密度范围 领浆,2100,水泥浆1.85–1.95g/cc,⚠,超出常规水泥浆范围：加重/低密配方需与配方记录核对
+hu2,sanity,n范围 领浆,0.811,0.2–1.2,✓,
+hu2,sanity,K范围 领浆,0.876,0.05–5 Pa·s^n,✓,
+hu2,sanity,密度范围 中间浆,1950,水泥浆1.85–1.95g/cc,✓,
+hu2,sanity,n范围 中间浆,0.871,0.2–1.2,✓,
+hu2,sanity,K范围 中间浆,0.504,0.05–5 Pa·s^n,✓,
+hu2,sanity,密度范围 尾浆,1950,水泥浆1.85–1.95g/cc,✓,
+hu2,sanity,n范围 尾浆,0.886,0.2–1.2,✓,
+hu2,sanity,K范围 尾浆,0.453,0.05–5 Pa·s^n,✓,
+hu2,sanity,YP>0 压塞液,8,>0,✓,YP=0 仅当流体确无屈服
+hu2,sanity,YP>0 中置液,8,>0,✓,YP=0 仅当流体确无屈服
+hu2,sanity,YP>0 井浆,8.5,>0,✓,YP=0 仅当流体确无屈服
+hu2,sanity,ID<OD,107.93999999999998<139.7,—,✓,
+hu2,sanity,悬挂器<鞋深,5292.5<7554.0,—,✓,
+hu2,sanity,尾管长度≈shoe−hanger,2261.5,模型段长2261.5,✓,模型段顶可为水泥返高（≠悬挂器），差异仅提示
+hu2,sanity,"standoff∈[0,1]",0.76–0.78,—,✓,
+hu2,sanity,井径>尾管OD(全部点),—,0点违反,✓,
+ht1_001,fluid,displacement/替浆液[第1对1/2] 密度kg/m3,1920,1980,✗,CSV g/cm3×1000；容差10kg/m3
+ht1_001,fluid,displacement/替浆液[第1对1/2] PV Pa·s,0.051,—,-,
+ht1_001,fluid,displacement/替浆液[第1对1/2] YP Pa,6,—,-,
+ht1_001,fluid,displacement/替钻井液[第2对2/2] 密度kg/m3,1920,1020,✗,CSV g/cm3×1000；容差10kg/m3
+ht1_001,fluid,displacement/替钻井液[第2对2/2] PV Pa·s,0.051,—,-,
+ht1_001,fluid,displacement/替钻井液[第2对2/2] YP Pa,6,—,-,
+ht1_001,fluid,displacement/中置液[第3对2/2] 密度kg/m3,1980,1020,✗,CSV g/cm3×1000；容差10kg/m3
+ht1_001,fluid,displacement/中置液[第3对2/2] PV Pa·s,0.051,—,-,
+ht1_001,fluid,displacement/中置液[第3对2/2] YP Pa,6,—,-,
+ht1_001,fluid,displacement/基液[第4对2/2] 密度kg/m3,1020,1020,✓,
+ht1_001,fluid,displacement/基液[第4对2/2] PV Pa·s,0.03,—,-,
+ht1_001,fluid,displacement/基液[第4对2/2] YP Pa,3,—,-,
+ht1_001,fluid,displacement/井浆[第5对2/2] 密度kg/m3,1920,1020,✗,CSV g/cm3×1000；容差10kg/m3
+ht1_001,fluid,displacement/井浆[第5对2/2] PV Pa·s,0.051,—,-,
+ht1_001,fluid,displacement/井浆[第5对2/2] YP Pa,6,—,-,
+ht1_001,fluid,role=intermediate,1条,0条,⚠,loader或CSV侧该角色无对应条目（角色映射或口径差异）
+ht1_001,fluid,role=intermediate_cement,0条,1条,⚠,loader或CSV侧该角色无对应条目（角色映射或口径差异）
+ht1_001,fluid,role=lead 密度kg/m3,2050,2050,✓,
+ht1_001,fluid,role=lead n,0.811,0.811,✓,
+ht1_001,fluid,role=lead K Pa·s^n,0.876,0.876,✓,
+ht1_001,fluid,role=lead 流变模型,power_law,power_law,✓,
+ht1_001,fluid,role=mud[第1对1/2] 密度kg/m3,1920,1920,✓,
+ht1_001,fluid,role=mud[第1对1/2] PV Pa·s,0.051,0.051,✓,
+ht1_001,fluid,role=mud[第1对1/2] YP Pa,6,6,✓,
+ht1_001,fluid,role=mud[第1对1/2] 流变模型,bingham,power_law,⚠,
+ht1_001,fluid,role=other,1条,0条,⚠,loader或CSV侧该角色无对应条目（角色映射或口径差异）
+ht1_001,fluid,role=spacer 密度kg/m3,1980,1980,✓,
+ht1_001,fluid,role=spacer n,0.545,0.545,✓,
+ht1_001,fluid,role=spacer K Pa·s^n,1.338,1.338,✓,
+ht1_001,fluid,role=spacer 流变模型,power_law,power_law,✓,
+ht1_001,fluid,role=tail 密度kg/m3,1900,1900,✓,
+ht1_001,fluid,role=tail n,0.886,0.886,✓,
+ht1_001,fluid,role=tail K Pa·s^n,0.453,0.453,✓,
+ht1_001,fluid,role=tail 流变模型,power_law,power_law,✓,
+ht1_001,fluid,role=wash 密度kg/m3,1750,1750,✓,
+ht1_001,fluid,role=wash PV Pa·s,0.03,—,-,
+ht1_001,fluid,role=wash YP Pa,3,—,-,
+ht1_001,fluid,隔离液 n(六速反算参考),0.545,0.511,⚠,128->93℃ 六速θ600/θ300=114.0/80.0；反算仅供温度口径参考
+ht1_001,fluid,隔离液 K(六速反算参考),1.338,1.689,⚠,反算 K=0.511·θ300/(1.7023·300)^n
+ht1_001,fluid,领浆 n(六速反算参考),0.811,0.163,⚠,128->93℃ 六速θ600/θ300=300.0/268.0；反算仅供温度口径参考
+ht1_001,fluid,领浆 K(六速反算参考),0.876,49.643,⚠,反算 K=0.511·θ300/(1.7023·300)^n
+ht1_001,fluid,中间浆 n(六速反算参考),0.871,0.441,⚠,128->93℃ 六速θ600/θ300=300.0/221.0；反算仅供温度口径参考
+ht1_001,fluid,中间浆 K(六速反算参考),0.504,7.223,⚠,反算 K=0.511·θ300/(1.7023·300)^n
+ht1_001,fluid,尾浆 n(六速反算参考),0.886,0.461,⚠,128->93℃ 六速θ600/θ300=300.0/218.0；反算仅供温度口径参考
+ht1_001,fluid,尾浆 K(六速反算参考),0.453,6.301,⚠,反算 K=0.511·θ300/(1.7023·300)^n
+ht1_001,schedule,role=displacement[1] 体积m3(替钻井液(快)),25,2,✗,容差0.2m³/1%
+ht1_001,schedule,role=displacement[1] 排量m3/min,1.4,0.6,✗,容差2%
+ht1_001,schedule,role=displacement[1] 开始min(推算vs现场),123.3,165,⚠,loader时间为体积/排量推算；容差3min
+ht1_001,schedule,role=displacement[1] 结束min(推算vs现场),141.2,168,⚠,容差3min
+ht1_001,schedule,role=displacement[2] 体积m3(替保护液/中置液),10,25,✗,容差0.2m³/1%
+ht1_001,schedule,role=displacement[2] 排量m3/min,1,1.4,✗,容差2%
+ht1_001,schedule,role=displacement[2] 开始min(推算vs现场),141.2,168,⚠,loader时间为体积/排量推算；容差3min
+ht1_001,schedule,role=displacement[2] 结束min(推算vs现场),151.2,187,⚠,容差3min
+ht1_001,schedule,role=displacement[3] 体积m3(替基液),3,10,✗,容差0.2m³/1%
+ht1_001,schedule,role=displacement[3] 排量m3/min,1,1,✓,
+ht1_001,schedule,role=displacement[3] 开始min(推算vs现场),151.2,187,⚠,loader时间为体积/排量推算；容差3min
+ht1_001,schedule,role=displacement[3] 结束min(推算vs现场),154.2,198,⚠,容差3min
+ht1_001,schedule,role=displacement[4] 体积m3(井浆快替),35,3,✗,容差0.2m³/1%
+ht1_001,schedule,role=displacement[4] 排量m3/min,1,1,✓,
+ht1_001,schedule,role=displacement[4] 开始min(推算vs现场),154.2,198,⚠,loader时间为体积/排量推算；容差3min
+ht1_001,schedule,role=displacement[4] 结束min(推算vs现场),189.2,200,⚠,容差3min
+ht1_001,schedule,role=displacement[5] 体积m3(井浆慢替),18.7,53.7,✗,容差0.2m³/1%
+ht1_001,schedule,role=displacement[5] 排量m3/min,0.6,0.9,✗,容差2%
+ht1_001,schedule,role=displacement[5] 开始min(推算vs现场),189.2,200,⚠,loader时间为体积/排量推算；容差3min
+ht1_001,schedule,role=displacement[5] 结束min(推算vs现场),220.3,259,⚠,容差3min
+ht1_001,schedule,role=intermediate,1步,0步,⚠,单侧无该角色步骤（口径/序列差异）
+ht1_001,schedule,role=intermediate_cement,0步,1步,⚠,单侧无该角色步骤（口径/序列差异）
+ht1_001,schedule,role=lead[1] 体积m3(注入领浆),20.6,20.6,✓,
+ht1_001,schedule,role=lead[1] 排量m3/min,1,1,✓,
+ht1_001,schedule,role=lead[1] 开始min(推算vs现场),48.6,70,⚠,loader时间为体积/排量推算；容差3min
+ht1_001,schedule,role=lead[1] 结束min(推算vs现场),69.2,93,⚠,容差3min
+ht1_001,schedule,role=other,1步,0步,⚠,单侧无该角色步骤（口径/序列差异）
+ht1_001,schedule,role=spacer[1] 体积m3(注入隔离液),20,20,✓,
+ht1_001,schedule,role=spacer[1] 排量m3/min,1,1,✓,
+ht1_001,schedule,role=spacer[1] 开始min(推算vs现场),28.6,50,⚠,loader时间为体积/排量推算；容差3min
+ht1_001,schedule,role=spacer[1] 结束min(推算vs现场),48.6,70,⚠,容差3min
+ht1_001,schedule,role=tail[1] 体积m3(注入尾浆),22.1,22.1,✓,
+ht1_001,schedule,role=tail[1] 排量m3/min,1,1,✓,
+ht1_001,schedule,role=tail[1] 开始min(推算vs现场),97.9,125,⚠,loader时间为体积/排量推算；容差3min
+ht1_001,schedule,role=tail[1] 结束min(推算vs现场),120,156,⚠,容差3min
+ht1_001,schedule,role=wash[1] 体积m3(注入平衡液),40,40,✓,
+ht1_001,schedule,role=wash[1] 排量m3/min,1.4,1.4,✓,
+ht1_001,schedule,role=wash[1] 开始min(推算vs现场),0,10,⚠,loader时间为体积/排量推算；容差3min
+ht1_001,schedule,role=wash[1] 结束min(推算vs现场),28.6,45,⚠,容差3min
+ht1_001,schedule,日程总时长min(推算vs现场末步),220.3,259,⚠,现场末步含试压/停泵等非注入步，差异仅提示
+ht1_001,geometry,悬挂器深度hanger_md_m,5469.71,5460.16,✓,
+ht1_001,geometry,尾管鞋shoe_md_m,7746,7746,✓,
+ht1_001,geometry,模型段顶top_md_m,5469.71,5460.16,✓,
+ht1_001,geometry,完钻/段底bottom_md_m,7746,7746,✓,
+ht1_001,geometry,井径剖面点数(CSV实测 vs loader模型域),70,69,⚠,loader仅保留模型段内点并可能做等效换算
+ht1_001,geometry,井径max mm(CSV vs loader),259.1,259.1,✓,上段等效换算会改变数值
+ht1_001,geometry,井径min mm(CSV vs loader),223.7,223.7,✓,
+ht1_001,geometry,standoff范围(CSV:standoff_ratio vs loader),0.80–0.80,0.80–0.80,✓,CSV多为扶正器布置设计值，loader常为model_assumption名义剖面
+ht1_001,cbl,地层目标[K1s_水层1] 6060-6064,covered,target_intervals.csv,✓,
+ht1_001,cbl,地层目标[K1s_水层2] 6092-6098,covered,target_intervals.csv,✓,
+ht1_001,cbl,地层目标[K1q_干层] 7355-7409,covered,target_intervals.csv,✓,
+ht1_001,cbl,地层目标[K1q_差气层1] 7409-7423,covered,target_intervals.csv,✓,
+ht1_001,cbl,地层目标[K1q_差气层2] 7460-7462,covered,target_intervals.csv,✓,
+ht1_001,cbl,地层目标[K1q_油气同层] 7504-7566,covered,target_intervals.csv,✓,
+ht1_001,cbl,地层目标[J3k3_差气层3] 7624-7632,covered,target_intervals.csv,✓,
+ht1_001,cbl,地层目标[J3k3_气层] 7642-7661,covered,target_intervals.csv,✓,
+ht1_001,cbl,地层目标[J3k3_差气层4] 7661-7685,covered,target_intervals.csv,✓,
+ht1_001,cbl,地层目标[J3k2_干层] 7734-7746,covered,target_intervals.csv,✓,
+ht1_001,cbl,地层目标[K1q_J3k_主要目的层段] 6828-7746,covered,target_intervals.csv,✓,
+ht1_001,cbl,地层目标[裸眼模拟段] 5670-7746,未覆盖,target_intervals.csv,⚠,
+ht1_001,cbl,地层目标[重叠段] 5460.16-5670,未覆盖,target_intervals.csv,⚠,
+ht1_001,cbl,地层目标[领浆封固段] 5185.7-5900,未覆盖,target_intervals.csv,⚠,
+ht1_001,cbl,地层目标[中间浆封固段] 5900-7000,未覆盖,target_intervals.csv,⚠,
+ht1_001,cbl,地层目标[尾浆封固段] 7000-7746,covered,target_intervals.csv,✓,
+ht1_001,总表,总表[sample_class/main_validation_status],—,—,-,not included in CBL error metrics until cleaned schedule and CBL window are frozen
+ht1_001,内部,每步rate×duration=体积,闭合,闭合,✓,
+ht1_001,内部,浆体总体积m3(lead+tail+intermediate),71.4,225.1,✓,日程总注入225.1m³含前置/顶替
+ht1_001,内部,环空体积重算m3(hole_profile×OD积分),72.76,—,⚠,重算口径：hole_diameter_profile×(双径)liner OD；技套重叠段按外推井径计
+ht1_001,内部,水泥浆总体积/环空体积(η_E库存比上限),0.981,—,⚠,>1 表示水泥浆量超过环空容量（返高以上/漏失/计量口径）
+ht1_001,内部,管内容积重算m3 vs 替浆总体积m3,20.8 vs 91.7,—,⚠,替浆总量应≈碰压时管内容积；差异大提示 liner_id/pipe_id 口径为等效或代理
+ht1_001,sanity,密度范围 钻井液,1920,泥浆1.05–2.35g/cc,✓,
+ht1_001,sanity,YP>0 钻井液,6,>0,✓,YP=0 仅当流体确无屈服
+ht1_001,sanity,YP>0 替浆液,6,>0,✓,YP=0 仅当流体确无屈服
+ht1_001,sanity,YP>0 平衡液,3,>0,✓,YP=0 仅当流体确无屈服
+ht1_001,sanity,n范围 隔离液,0.545,0.2–1.2,✓,
+ht1_001,sanity,K范围 隔离液,1.338,0.05–5 Pa·s^n,✓,
+ht1_001,sanity,密度范围 领浆,2050,水泥浆1.85–1.95g/cc,⚠,超出常规水泥浆范围：加重/低密配方需与配方记录核对
+ht1_001,sanity,n范围 领浆,0.811,0.2–1.2,✓,
+ht1_001,sanity,K范围 领浆,0.876,0.05–5 Pa·s^n,✓,
+ht1_001,sanity,密度范围 中间浆,1900,水泥浆1.85–1.95g/cc,✓,
+ht1_001,sanity,n范围 中间浆,0.871,0.2–1.2,✓,
+ht1_001,sanity,K范围 中间浆,0.504,0.05–5 Pa·s^n,✓,
+ht1_001,sanity,密度范围 尾浆,1900,水泥浆1.85–1.95g/cc,✓,
+ht1_001,sanity,n范围 尾浆,0.886,0.2–1.2,✓,
+ht1_001,sanity,K范围 尾浆,0.453,0.05–5 Pa·s^n,✓,
+ht1_001,sanity,YP>0 压塞液,6,>0,✓,YP=0 仅当流体确无屈服
+ht1_001,sanity,YP>0 替钻井液,6,>0,✓,YP=0 仅当流体确无屈服
+ht1_001,sanity,YP>0 中置液,6,>0,✓,YP=0 仅当流体确无屈服
+ht1_001,sanity,YP>0 基液,3,>0,✓,YP=0 仅当流体确无屈服
+ht1_001,sanity,YP>0 井浆,6,>0,✓,YP=0 仅当流体确无屈服
+ht1_001,sanity,ID<OD,107.94<139.7,—,✓,
+ht1_001,sanity,悬挂器<鞋深,5469.711<7746.0,—,✓,
+ht1_001,sanity,尾管长度≈shoe−hanger,2276.3,模型段长2276.3,✓,模型段顶可为水泥返高（≠悬挂器），差异仅提示
+ht1_001,sanity,"standoff∈[0,1]",0.80–0.80,—,✓,
+ht1_001,sanity,井径>尾管OD(全部点),—,0点违反,✓,
+ht1_003,fluid,displacement/保护液[第1对1/3] 密度kg/m3,1950,1950,✓,
+ht1_003,fluid,displacement/保护液[第1对1/3] PV Pa·s,0.03,0.03,✓,
+ht1_003,fluid,displacement/保护液[第1对1/3] YP Pa,8.2,8.2,✓,
+ht1_003,fluid,displacement/保护液[第1对1/3] 流变模型,bingham,bingham,✓,
+ht1_003,fluid,displacement/基液[第2对2/3] 密度kg/m3,1020,1020,✓,
+ht1_003,fluid,displacement/基液[第2对2/3] PV Pa·s,0.03,0.03,✓,
+ht1_003,fluid,displacement/基液[第2对2/3] YP Pa,8,8,✓,
+ht1_003,fluid,displacement/基液[第2对2/3] 流变模型,bingham,bingham,✓,
+ht1_003,fluid,displacement/替钻井液[第3对3/3] 密度kg/m3,1950,1950,✓,
+ht1_003,fluid,displacement/替钻井液[第3对3/3] PV Pa·s,0.062,—,-,
+ht1_003,fluid,displacement/替钻井液[第3对3/3] YP Pa,10,62,✗,容差2%
+ht1_003,fluid,displacement/井浆[第4对3/3] 密度kg/m3,1950,1950,✓,
+ht1_003,fluid,displacement/井浆[第4对3/3] PV Pa·s,0.03,—,-,
+ht1_003,fluid,displacement/井浆[第4对3/3] YP Pa,9.3,62,✗,容差2%
+ht1_003,fluid,role=lead 密度kg/m3,2050,2050,✓,
+ht1_003,fluid,role=lead n,0.597,0.597,✓,
+ht1_003,fluid,role=lead K Pa·s^n,1.622,1.622,✓,
+ht1_003,fluid,role=lead 流变模型,power_law,power_law,✓,
+ht1_003,fluid,role=mud[第1对1/3] 密度kg/m3,1950,1950,✓,
+ht1_003,fluid,role=mud[第1对1/3] n,0.631,0.82,✗,容差2%
+ht1_003,fluid,role=mud[第1对1/3] K Pa·s^n,0.751,0.21,✗,容差3%
+ht1_003,fluid,role=mud[第1对1/3] 流变模型,power_law,mixed,✓,CSV为混合口径(幂律+宾汉)
+ht1_003,fluid,role=other,1条,0条,⚠,loader或CSV侧该角色无对应条目（角色映射或口径差异）
+ht1_003,fluid,role=plug,0条,1条,⚠,loader或CSV侧该角色无对应条目（角色映射或口径差异）
+ht1_003,fluid,spacer/隔离液1 密度kg/m3,2050,2050,✓,
+ht1_003,fluid,spacer/隔离液1 n,0.668,0.668,✓,
+ht1_003,fluid,spacer/隔离液1 K Pa·s^n,1.245,1.245,✓,
+ht1_003,fluid,spacer/隔离液1 流变模型,power_law,power_law,✓,
+ht1_003,fluid,spacer/隔离液2 密度kg/m3,1950,1950,✓,
+ht1_003,fluid,spacer/隔离液2 n,0.668,0.668,✓,
+ht1_003,fluid,spacer/隔离液2 K Pa·s^n,1.245,1.245,✓,
+ht1_003,fluid,spacer/隔离液2 流变模型,power_law,power_law,✓,
+ht1_003,fluid,role=tail 密度kg/m3,1950,1950,✓,
+ht1_003,fluid,role=tail n,0.585,0.585,✓,
+ht1_003,fluid,role=tail K Pa·s^n,1.673,1.673,✓,
+ht1_003,fluid,role=tail 流变模型,power_law,power_law,✓,
+ht1_003,fluid,role=wash 密度kg/m3,1750,1750,✓,
+ht1_003,fluid,role=wash PV Pa·s,0.055,0.055,✓,
+ht1_003,fluid,role=wash YP Pa,9.2,9.2,✓,
+ht1_003,fluid,role=wash 流变模型,bingham,bingham,✓,
+ht1_003,fluid,隔离液1 n(六速反算参考),0.668,0.433,⚠,93℃ 六速θ600/θ300=239.0/177.0；反算仅供温度口径参考
+ht1_003,fluid,隔离液1 K(六速反算参考),1.245,6.068,⚠,反算 K=0.511·θ300/(1.7023·300)^n
+ht1_003,fluid,隔离液2 n(六速反算参考),0.668,0.433,⚠,93℃ 六速θ600/θ300=239.0/177.0；反算仅供温度口径参考
+ht1_003,fluid,隔离液2 K(六速反算参考),1.245,6.068,⚠,反算 K=0.511·θ300/(1.7023·300)^n
+ht1_003,fluid,领浆 n(六速反算参考),0.597,0.775,⚠,93℃ 六速θ600/θ300=207.0/121.0；反算仅供温度口径参考
+ht1_003,fluid,领浆 K(六速反算参考),1.622,0.494,⚠,反算 K=0.511·θ300/(1.7023·300)^n
+ht1_003,fluid,尾浆 n(六速反算参考),0.585,0.732,⚠,93℃ 六速θ600/θ300=196.0/118.0；反算仅供温度口径参考
+ht1_003,fluid,尾浆 K(六速反算参考),1.673,0.628,⚠,反算 K=0.511·θ300/(1.7023·300)^n
+ht1_003,schedule,role=displacement[1] 体积m3(替浆（单段，实际）),91.9,91.9,✓,
+ht1_003,schedule,role=displacement[1] 排量m3/min,1.4,1.4,✓,
+ht1_003,schedule,role=displacement[1] 开始min(推算vs现场),106.7,22.83,⚠,loader时间为体积/排量推算；容差3min
+ht1_003,schedule,role=displacement[1] 结束min(推算vs现场),172.3,24.17,⚠,容差3min
+ht1_003,schedule,role=lead[1] 体积m3(注入领浆),39,39,✓,
+ht1_003,schedule,role=lead[1] 排量m3/min,1.2,1.2,✓,
+ht1_003,schedule,role=lead[1] 开始min(推算vs现场),49.3,21.58,⚠,loader时间为体积/排量推算；容差3min
+ht1_003,schedule,role=lead[1] 结束min(推算vs现场),81.8,22.27,⚠,容差3min
+ht1_003,schedule,role=other,1步,0步,⚠,单侧无该角色步骤（口径/序列差异）
+ht1_003,schedule,role=spacer[1] 体积m3(注入隔离液1),16,16,✓,
+ht1_003,schedule,role=spacer[1] 排量m3/min,1,1,✓,
+ht1_003,schedule,role=spacer[1] 开始min(推算vs现场),23.3,21,✓,
+ht1_003,schedule,role=spacer[1] 结束min(推算vs现场),39.3,21.25,⚠,容差3min
+ht1_003,schedule,role=spacer[2] 体积m3(注入隔离液2),10,10,✓,
+ht1_003,schedule,role=spacer[2] 排量m3/min,1,1,✓,
+ht1_003,schedule,role=spacer[2] 开始min(推算vs现场),39.3,21.25,⚠,loader时间为体积/排量推算；容差3min
+ht1_003,schedule,role=spacer[2] 结束min(推算vs现场),49.3,21.58,⚠,容差3min
+ht1_003,schedule,role=tail[1] 体积m3(注入尾浆),28,28,✓,
+ht1_003,schedule,role=tail[1] 排量m3/min,1.2,1.2,✓,
+ht1_003,schedule,role=tail[1] 开始min(推算vs现场),81.8,22.27,⚠,loader时间为体积/排量推算；容差3min
+ht1_003,schedule,role=tail[1] 结束min(推算vs现场),105.2,22.83,⚠,容差3min
+ht1_003,schedule,role=wash[1] 体积m3(注入先导浆（平衡液）),28,28,✓,
+ht1_003,schedule,role=wash[1] 排量m3/min,1.2,1.2,✓,
+ht1_003,schedule,role=wash[1] 开始min(推算vs现场),0,18.6,⚠,loader时间为体积/排量推算；容差3min
+ht1_003,schedule,role=wash[1] 结束min(推算vs现场),23.3,21,✓,
+ht1_003,schedule,日程总时长min(推算vs现场末步),172.3,27.17,⚠,现场末步含试压/停泵等非注入步，差异仅提示
+ht1_003,geometry,well_geometry.csv 同item多值行,—,"borehole_nominal_diameter,drill_bit_size,float_collar_md,liner_inner_diameter,liner_outer_diameter",⚠,CSV长表混入回接段同名item，比对取首现（尾管段）值
+ht1_003,geometry,悬挂器深度hanger_md_m,5307.54,5307.54,✓,
+ht1_003,geometry,尾管鞋shoe_md_m,7618,7618,✓,
+ht1_003,geometry,模型段顶top_md_m,5307.54,5316.04,✓,
+ht1_003,geometry,下段尾管OD mm,139.7,139.7,✓,casing_liner_string 最后一 liner 段
+ht1_003,geometry,尾管长度m(CSV分段和 vs shoe−hanger),2310.46,2300.52,✓,含悬挂器/浮箍段长差异，容差30m
+ht1_003,geometry,井径剖面点数(CSV实测 vs loader模型域),69,68,⚠,loader仅保留模型段内点并可能做等效换算
+ht1_003,geometry,井径max mm(CSV vs loader),254.1,254.1,✓,上段等效换算会改变数值
+ht1_003,geometry,井径min mm(CSV vs loader),216.4,216.4,✓,
+ht1_003,geometry,standoff范围(CSV:centralization_percent vs loader),0.83–0.83,0.83–0.83,✓,CSV多为扶正器布置设计值，loader常为model_assumption名义剖面
+ht1_003,cbl,CBL合格率(fraction),0.787,0.787,✓,来源 
+ht1_003,cbl,CBL测量段 top/bottom,窗['5568-7618'],5307.54–7514.21,⚠,loader评价窗常为可评价子段（扣除双层套管/悬空段），见notes
+ht1_003,cbl,地层目标[水层-K1q] 6860-6880,未覆盖,target_intervals.csv,⚠,
+ht1_003,cbl,地层目标[干层-K1q] 7110-7114,未覆盖,target_intervals.csv,⚠,
+ht1_003,cbl,地层目标[气层-K1q] 7418-7440,covered,target_intervals.csv,✓,
+ht1_003,cbl,地层目标[差气层-J3k3] 7451-7463,covered,target_intervals.csv,✓,
+ht1_003,cbl,地层目标[差气层-J3k3] 7474-7485,covered,target_intervals.csv,✓,
+ht1_003,cbl,地层目标[差气层-J3k3] 7490-7498,covered,target_intervals.csv,✓,
+ht1_003,cbl,地层目标[气层-J3k3] 7536-7554,covered,target_intervals.csv,✓,
+ht1_003,cbl,地层目标[差气层-J3k3] 7564-7576,covered,target_intervals.csv,✓,
+ht1_003,cbl,地层目标[主力油层段] 6860-7522,未覆盖,target_intervals.csv,⚠,
+ht1_003,cbl,地层目标[目的井段] 7442-7618,covered,target_intervals.csv,✓,
+ht1_003,内部,每步rate×duration=体积,闭合,闭合,✓,
+ht1_003,内部,浆体总体积m3(lead+tail+intermediate),67,214.9,✓,日程总注入214.9m³含前置/顶替
+ht1_003,内部,环空体积重算m3(hole_profile×OD积分),69.99,—,⚠,重算口径：hole_diameter_profile×(双径)liner OD；技套重叠段按外推井径计
+ht1_003,内部,水泥浆总体积/环空体积(η_E库存比上限),0.957,—,⚠,>1 表示水泥浆量超过环空容量（返高以上/漏失/计量口径）
+ht1_003,内部,管内容积重算m3 vs 替浆总体积m3,31.8 vs 91.9,—,⚠,替浆总量应≈碰压时管内容积；差异大提示 liner_id/pipe_id 口径为等效或代理
+ht1_003,sanity,密度范围 钻井液,1950,泥浆1.05–2.35g/cc,✓,
+ht1_003,sanity,n范围 钻井液,0.631,0.2–1.2,✓,
+ht1_003,sanity,K范围 钻井液,0.751,0.05–5 Pa·s^n,✓,
+ht1_003,sanity,YP>0 平衡液,9.2,>0,✓,YP=0 仅当流体确无屈服
+ht1_003,sanity,n范围 隔离液1,0.668,0.2–1.2,✓,
+ht1_003,sanity,K范围 隔离液1,1.245,0.05–5 Pa·s^n,✓,
+ht1_003,sanity,n范围 隔离液2,0.668,0.2–1.2,✓,
+ht1_003,sanity,K范围 隔离液2,1.245,0.05–5 Pa·s^n,✓,
+ht1_003,sanity,密度范围 领浆,2050,水泥浆1.85–1.95g/cc,⚠,超出常规水泥浆范围：加重/低密配方需与配方记录核对
+ht1_003,sanity,n范围 领浆,0.597,0.2–1.2,✓,
+ht1_003,sanity,K范围 领浆,1.622,0.05–5 Pa·s^n,✓,
+ht1_003,sanity,密度范围 尾浆,1950,水泥浆1.85–1.95g/cc,✓,
+ht1_003,sanity,n范围 尾浆,0.585,0.2–1.2,✓,
+ht1_003,sanity,K范围 尾浆,1.673,0.05–5 Pa·s^n,✓,
+ht1_003,sanity,YP>0 压塞液,8,>0,✓,YP=0 仅当流体确无屈服
+ht1_003,sanity,YP>0 保护液,8.2,>0,✓,YP=0 仅当流体确无屈服
+ht1_003,sanity,YP>0 基液,8,>0,✓,YP=0 仅当流体确无屈服
+ht1_003,sanity,YP>0 替钻井液,10,>0,✓,YP=0 仅当流体确无屈服
+ht1_003,sanity,YP>0 井浆,9.3,>0,✓,YP=0 仅当流体确无屈服
+ht1_003,sanity,ID<OD,107.94<139.7,—,✓,
+ht1_003,sanity,悬挂器<鞋深,5307.539<7618.0,—,✓,
+ht1_003,sanity,尾管长度≈shoe−hanger,2310.5,模型段长2310.5,✓,模型段顶可为水泥返高（≠悬挂器），差异仅提示
+ht1_003,sanity,"standoff∈[0,1]",0.83–0.83,—,✓,
+ht1_003,sanity,井径>尾管OD(全部点),—,0点违反,✓,
+ht1_003[variant],内部,每步rate×duration=体积,闭合,闭合,✓,
+ht1_003[variant],内部,浆体总体积m3(lead+tail+intermediate),67,212.9,✓,日程总注入212.9m³含前置/顶替
+ht1_003[variant],内部,环空体积重算m3(hole_profile×OD积分),69.99,—,⚠,重算口径：hole_diameter_profile×(双径)liner OD；技套重叠段按外推井径计
+ht1_003[variant],内部,水泥浆总体积/环空体积(η_E库存比上限),0.957,—,⚠,>1 表示水泥浆量超过环空容量（返高以上/漏失/计量口径）
+ht1_003[variant],内部,管内容积重算m3 vs 替浆总体积m3,31.8 vs 89.9,—,⚠,替浆总量应≈碰压时管内容积；差异大提示 liner_id/pipe_id 口径为等效或代理
+ht1_003[variant],sanity,密度范围 钻井液,1950,泥浆1.05–2.35g/cc,✓,
+ht1_003[variant],sanity,n范围 钻井液,0.631,0.2–1.2,✓,
+ht1_003[variant],sanity,K范围 钻井液,0.751,0.05–5 Pa·s^n,✓,
+ht1_003[variant],sanity,YP>0 平衡液,9.2,>0,✓,YP=0 仅当流体确无屈服
+ht1_003[variant],sanity,n范围 隔离液1,0.668,0.2–1.2,✓,
+ht1_003[variant],sanity,K范围 隔离液1,1.245,0.05–5 Pa·s^n,✓,
+ht1_003[variant],sanity,n范围 隔离液2,0.668,0.2–1.2,✓,
+ht1_003[variant],sanity,K范围 隔离液2,1.245,0.05–5 Pa·s^n,✓,
+ht1_003[variant],sanity,密度范围 领浆,2050,水泥浆1.85–1.95g/cc,⚠,超出常规水泥浆范围：加重/低密配方需与配方记录核对
+ht1_003[variant],sanity,n范围 领浆,0.597,0.2–1.2,✓,
+ht1_003[variant],sanity,K范围 领浆,1.622,0.05–5 Pa·s^n,✓,
+ht1_003[variant],sanity,密度范围 尾浆,1950,水泥浆1.85–1.95g/cc,✓,
+ht1_003[variant],sanity,n范围 尾浆,0.585,0.2–1.2,✓,
+ht1_003[variant],sanity,K范围 尾浆,1.673,0.05–5 Pa·s^n,✓,
+ht1_003[variant],sanity,YP>0 压塞液,8,>0,✓,YP=0 仅当流体确无屈服
+ht1_003[variant],sanity,YP>0 保护液,8.2,>0,✓,YP=0 仅当流体确无屈服
+ht1_003[variant],sanity,YP>0 基液,8,>0,✓,YP=0 仅当流体确无屈服
+ht1_003[variant],sanity,YP>0 替钻井液,10,>0,✓,YP=0 仅当流体确无屈服
+ht1_003[variant],sanity,YP>0 井浆,9.3,>0,✓,YP=0 仅当流体确无屈服
+ht1_003[variant],sanity,ID<OD,107.94<139.7,—,✓,
+ht1_003[variant],sanity,悬挂器<鞋深,5307.539<7618.0,—,✓,
+ht1_003[variant],sanity,尾管长度≈shoe−hanger,2310.5,模型段长2310.5,✓,模型段顶可为水泥返高（≠悬挂器），差异仅提示
+ht1_003[variant],sanity,"standoff∈[0,1]",0.83–0.83,—,✓,
+ht1_003[variant],sanity,井径>尾管OD(全部点),—,0点违反,✓,
+ht1_004,fluid,displacement/保护液[第1对1/3] 密度kg/m3,1900,1900,✓,
+ht1_004,fluid,displacement/保护液[第1对1/3] PV Pa·s,0.05,—,-,
+ht1_004,fluid,displacement/保护液[第1对1/3] YP Pa,9.2,—,-,
+ht1_004,fluid,displacement/替钻井液[第2对2/3] 密度kg/m3,1900,1020,✗,CSV g/cm3×1000；容差10kg/m3
+ht1_004,fluid,displacement/替钻井液[第2对2/3] PV Pa·s,0.05,—,-,
+ht1_004,fluid,displacement/替钻井液[第2对2/3] YP Pa,9.5,—,-,
+ht1_004,fluid,displacement/基液[第3对3/3] 密度kg/m3,1020,1910,✗,CSV g/cm3×1000；容差10kg/m3
+ht1_004,fluid,displacement/基液[第3对3/3] PV Pa·s,0.05,—,-,
+ht1_004,fluid,displacement/基液[第3对3/3] YP Pa,9,50,✗,容差2%
+ht1_004,fluid,displacement/井浆[第4对3/3] 密度kg/m3,1900,1910,✓,
+ht1_004,fluid,displacement/井浆[第4对3/3] PV Pa·s,0.055,—,-,
+ht1_004,fluid,displacement/井浆[第4对3/3] YP Pa,9.5,50,✗,容差2%
+ht1_004,fluid,role=flusher,1条,0条,⚠,loader或CSV侧该角色无对应条目（角色映射或口径差异）
+ht1_004,fluid,role=lead[第1对1/2] 密度kg/m3,1930,1930,✓,
+ht1_004,fluid,role=lead[第1对1/2] PV Pa·s,0.17,—,-,
+ht1_004,fluid,role=lead[第1对1/2] YP Pa,13,—,-,
+ht1_004,fluid,role=lead[第1对1/2] 流变模型,bingham,power_law,⚠,
+ht1_004,fluid,role=mud[第1对1/4] 密度kg/m3,1900,1910,✓,
+ht1_004,fluid,role=mud[第1对1/4] PV Pa·s,0.053,0.053,✓,
+ht1_004,fluid,role=mud[第1对1/4] YP Pa,8.5,8.5,✓,
+ht1_004,fluid,role=mud[第1对1/4] 流变模型,bingham,mixed,✓,CSV为混合口径(幂律+宾汉)
+ht1_004,fluid,role=other,1条,0条,⚠,loader或CSV侧该角色无对应条目（角色映射或口径差异）
+ht1_004,fluid,role=plug,0条,1条,⚠,loader或CSV侧该角色无对应条目（角色映射或口径差异）
+ht1_004,fluid,spacer/隔离液1 密度kg/m3,1950,1950,✓,
+ht1_004,fluid,spacer/隔离液1 PV Pa·s,0.058,—,-,
+ht1_004,fluid,spacer/隔离液1 YP Pa,9.8,—,-,
+ht1_004,fluid,spacer/隔离液1 流变模型,bingham,power_law,⚠,
+ht1_004,fluid,spacer/隔离液2 密度kg/m3,1750,1750,✓,
+ht1_004,fluid,spacer/隔离液2 PV Pa·s,0.065,—,-,
+ht1_004,fluid,spacer/隔离液2 YP Pa,10,—,-,
+ht1_004,fluid,spacer/隔离液2 流变模型,bingham,power_law,⚠,
+ht1_004,fluid,role=tail[第1对1/2] 密度kg/m3,1900,1900,✓,
+ht1_004,fluid,role=tail[第1对1/2] PV Pa·s,0.18,—,-,
+ht1_004,fluid,role=tail[第1对1/2] YP Pa,14,—,-,
+ht1_004,fluid,role=tail[第1对1/2] 流变模型,bingham,power_law,⚠,
+ht1_004,fluid,role=wash 密度kg/m3,1750,1750,✓,
+ht1_004,fluid,role=wash PV Pa·s,0.058,0.03,✗,CSV mPa·s/1000；容差2%
+ht1_004,fluid,role=wash YP Pa,9.8,7,✗,容差2%
+ht1_004,fluid,role=wash 流变模型,bingham,bingham,✓,
+ht1_004,schedule,role=displacement[1] 体积m3(替钻井液(快)),29,97.1,✗,容差0.2m³/1%
+ht1_004,schedule,role=displacement[1] 排量m3/min,1.5,—,-,
+ht1_004,schedule,role=displacement[1] 开始min(推算vs现场),103.6,170,⚠,loader时间为体积/排量推算；容差3min
+ht1_004,schedule,role=displacement[1] 结束min(推算vs现场),122.9,260,⚠,容差3min
+ht1_004,schedule,role=displacement[2] 体积m3(替保护液),14,2,✗,容差0.2m³/1%
+ht1_004,schedule,role=displacement[2] 排量m3/min,1.4,1.2,✗,容差2%
+ht1_004,schedule,role=displacement[3] 体积m3(替基液),1,29,✗,容差0.2m³/1%
+ht1_004,schedule,role=displacement[3] 排量m3/min,1.4,1.5,✗,容差2%
+ht1_004,schedule,role=displacement[4] 体积m3(井浆替入1),14,14,✓,
+ht1_004,schedule,role=displacement[4] 排量m3/min,1.15,1.5,✗,容差2%
+ht1_004,schedule,role=displacement[5] 体积m3(井浆替入2),10,30,✗,容差0.2m³/1%
+ht1_004,schedule,role=displacement[5] 排量m3/min,1.05,—,-,
+ht1_004,schedule,role=displacement[6] 体积m3(井浆替入3),10,22,✗,容差0.2m³/1%
+ht1_004,schedule,role=displacement[6] 排量m3/min,0.95,—,-,
+ht1_004,schedule,role=displacement[7] 体积m3(井浆替入4),10,200,✗,容差0.2m³/1%
+ht1_004,schedule,role=displacement[7] 排量m3/min,0.85,2.4,✗,容差2%
+ht1_004,schedule,role=displacement[7] 开始min(推算vs现场),165.9,390,⚠,loader时间为体积/排量推算；容差3min
+ht1_004,schedule,role=displacement[7] 结束min(推算vs现场),177.6,470,⚠,容差3min
+ht1_004,schedule,role=displacement[8] 体积m3(井浆替入5),9.4,2,✗,容差0.2m³/1%
+ht1_004,schedule,role=displacement[8] 排量m3/min,0.75,1.2,✗,容差2%
+ht1_004,schedule,role=lead[1] 体积m3(注入领浆),48,48,✓,
+ht1_004,schedule,role=lead[1] 排量m3/min,1.2,1.2,✓,
+ht1_004,schedule,role=lead[1] 开始min(推算vs现场),39.5,73,⚠,loader时间为体积/排量推算；容差3min
+ht1_004,schedule,role=lead[1] 结束min(推算vs现场),79.5,140,⚠,容差3min
+ht1_004,schedule,role=other,1步,0步,⚠,单侧无该角色步骤（口径/序列差异）
+ht1_004,schedule,role=spacer[1] 体积m3(注入隔离液1),16,16,✓,
+ht1_004,schedule,role=spacer[1] 排量m3/min,1.2,1,✗,容差2%
+ht1_004,schedule,role=spacer[1] 开始min(推算vs现场),17.9,25,⚠,loader时间为体积/排量推算；容差3min
+ht1_004,schedule,role=spacer[1] 结束min(推算vs现场),31.2,60,⚠,容差3min
+ht1_004,schedule,role=spacer[2] 体积m3(注入隔离液2),10,10,✓,
+ht1_004,schedule,role=spacer[2] 排量m3/min,1.2,1,✗,容差2%
+ht1_004,schedule,role=spacer[2] 开始min(推算vs现场),31.2,60,⚠,loader时间为体积/排量推算；容差3min
+ht1_004,schedule,role=spacer[2] 结束min(推算vs现场),39.5,73,⚠,容差3min
+ht1_004,schedule,role=tail[1] 体积m3(注入尾浆),28,28,✓,
+ht1_004,schedule,role=tail[1] 排量m3/min,1.25,1,✗,容差2%
+ht1_004,schedule,role=tail[1] 开始min(推算vs现场),79.5,140,⚠,loader时间为体积/排量推算；容差3min
+ht1_004,schedule,role=tail[1] 结束min(推算vs现场),101.9,170,⚠,容差3min
+ht1_004,schedule,role=wash[1] 体积m3(注入先导浆),25,25,✓,
+ht1_004,schedule,role=wash[1] 排量m3/min,1.4,1.2,✗,容差2%
+ht1_004,schedule,role=wash[1] 开始min(推算vs现场),0,5,⚠,loader时间为体积/排量推算；容差3min
+ht1_004,schedule,role=wash[1] 结束min(推算vs现场),17.9,25,⚠,容差3min
+ht1_004,schedule,日程总时长min(推算vs现场末步),190.2,470,⚠,现场末步含试压/停泵等非注入步，差异仅提示
+ht1_004,geometry,well_geometry.csv 同item多值行,—,"borehole_nominal_diameter,drill_bit_size,float_collar_md,liner_inner_diameter,liner_outer_diameter",⚠,CSV长表混入回接段同名item，比对取首现（尾管段）值
+ht1_004,geometry,悬挂器深度hanger_md_m,5243.21,5243.21,✓,
+ht1_004,geometry,尾管鞋shoe_md_m,7660,7660,✓,
+ht1_004,geometry,模型段顶top_md_m,5243.21,5251.11,✓,
+ht1_004,geometry,下段尾管OD mm,139.7,139.7,✓,casing_liner_string 最后一 liner 段
+ht1_004,geometry,上段尾管OD mm,168.3,168.28,✓,
+ht1_004,geometry,上段尾管ID mm,138.9,138.9,✓,
+ht1_004,geometry,上段底/变径位置 md_m,7376.66,7376.66,✓,loader常取整（如6796.329→6796）
+ht1_004,geometry,尾管长度m(CSV分段和 vs shoe−hanger),2416.79,2408.89,✓,含悬挂器/浮箍段长差异，容差30m
+ht1_004,geometry,井径剖面点数(CSV实测 vs loader模型域),72,72,✓,loader仅保留模型段内点并可能做等效换算
+ht1_004,geometry,井径max mm(CSV vs loader),251.2,251.2,✓,上段等效换算会改变数值
+ht1_004,geometry,井径min mm(CSV vs loader),216,216,✓,
+ht1_004,geometry,standoff范围(CSV:centralization_percent vs loader),0.83–0.83,0.83–0.83,✓,CSV多为扶正器布置设计值，loader常为model_assumption名义剖面
+ht1_004,cbl,CBL合格率(fraction),0.003,0.003,✓,来源 
+ht1_004,cbl,CBL测量段 top/bottom,窗['5245-7581'],5245–7581,⚠,loader评价窗常为可评价子段（扣除双层套管/悬空段），见notes
+ht1_004,cbl,地层目标[干层-K1q] 6908-6912,未覆盖,target_intervals.csv,⚠,
+ht1_004,cbl,地层目标[干层-K1q] 6938-6943,未覆盖,target_intervals.csv,⚠,
+ht1_004,cbl,地层目标[干层-K1q] 6971-6975,未覆盖,target_intervals.csv,⚠,
+ht1_004,cbl,地层目标[干层-K1q] 7049-7055,未覆盖,target_intervals.csv,⚠,
+ht1_004,cbl,地层目标[气层-K1q(主力)] 7495-7526,covered,target_intervals.csv,✓,
+ht1_004,cbl,地层目标[气层-J3k3(主力)] 7531-7550,covered,target_intervals.csv,✓,
+ht1_004,cbl,地层目标[差气层-J3k2] 7601-7603,未覆盖,target_intervals.csv,⚠,
+ht1_004,cbl,地层目标[差气层-J3k2] 7610-7613,未覆盖,target_intervals.csv,⚠,
+ht1_004,cbl,地层目标[差气层-J3k2] 7617-7621,未覆盖,target_intervals.csv,⚠,
+ht1_004,cbl,地层目标[主力气层段] 7495-7550,未覆盖,target_intervals.csv,⚠,
+ht1_004,cbl,地层目标[目的井段] 7495-7550,未覆盖,target_intervals.csv,⚠,
+ht1_004,cbl,地层目标[油气水层段] 7482-7560,未覆盖,target_intervals.csv,⚠,
+ht1_004,内部,每步rate×duration=体积,闭合,闭合,✓,
+ht1_004,内部,浆体总体积m3(lead+tail+intermediate),76,226.4,✓,日程总注入226.4m³含前置/顶替
+ht1_004,内部,环空体积重算m3(hole_profile×OD积分),59.8,—,⚠,重算口径：hole_diameter_profile×(双径)liner OD；技套重叠段按外推井径计
+ht1_004,内部,水泥浆总体积/环空体积(η_E库存比上限),1.271,—,⚠,>1 表示水泥浆量超过环空容量（返高以上/漏失/计量口径）
+ht1_004,内部,管内容积重算m3 vs 替浆总体积m3,34.9 vs 97.4,—,⚠,替浆总量应≈碰压时管内容积；差异大提示 liner_id/pipe_id 口径为等效或代理
+ht1_004,sanity,密度范围 钻井液,1900,泥浆1.05–2.35g/cc,✓,
+ht1_004,sanity,YP>0 钻井液,8.5,>0,✓,YP=0 仅当流体确无屈服
+ht1_004,sanity,YP>0 保护液,9.2,>0,✓,YP=0 仅当流体确无屈服
+ht1_004,sanity,YP>0 先导浆,9.8,>0,✓,YP=0 仅当流体确无屈服
+ht1_004,sanity,YP>0 隔离液1,9.8,>0,✓,YP=0 仅当流体确无屈服
+ht1_004,sanity,YP>0 隔离液2,10,>0,✓,YP=0 仅当流体确无屈服
+ht1_004,sanity,密度范围 领浆,1930,水泥浆1.85–1.95g/cc,✓,
+ht1_004,sanity,YP>0 领浆,13,>0,✓,YP=0 仅当流体确无屈服
+ht1_004,sanity,密度范围 尾浆,1900,水泥浆1.85–1.95g/cc,✓,
+ht1_004,sanity,YP>0 尾浆,14,>0,✓,YP=0 仅当流体确无屈服
+ht1_004,sanity,YP>0 压塞液,9,>0,✓,YP=0 仅当流体确无屈服
+ht1_004,sanity,YP>0 替钻井液,9.5,>0,✓,YP=0 仅当流体确无屈服
+ht1_004,sanity,YP>0 基液,9,>0,✓,YP=0 仅当流体确无屈服
+ht1_004,sanity,YP>0 井浆,9.5,>0,✓,YP=0 仅当流体确无屈服
+ht1_004,sanity,YP>0 冲洗液（FLUSHER）,9,>0,✓,YP=0 仅当流体确无屈服
+ht1_004,sanity,ID<OD,107.93999999999998<139.7,—,✓,
+ht1_004,sanity,悬挂器<鞋深,5243.207<7660.0,—,✓,
+ht1_004,sanity,尾管长度≈shoe−hanger,2416.8,模型段长2416.8,✓,模型段顶可为水泥返高（≠悬挂器），差异仅提示
+ht1_004,sanity,上段OD>下段OD(双径井),168.3>139.7,—,✓,
+ht1_004,sanity,"standoff∈[0,1]",0.83–0.83,—,✓,
+ht1_004,sanity,井径>尾管OD(全部点),—,0点违反,✓,
+ht1_004[variant],内部,每步rate×duration=体积,闭合,闭合,✓,
+ht1_004[variant],内部,浆体总体积m3(lead+tail+intermediate),76,224,✓,日程总注入224.0m³含前置/顶替
+ht1_004[variant],内部,环空体积重算m3(hole_profile×OD积分),59.8,—,⚠,重算口径：hole_diameter_profile×(双径)liner OD；技套重叠段按外推井径计
+ht1_004[variant],内部,水泥浆总体积/环空体积(η_E库存比上限),1.271,—,⚠,>1 表示水泥浆量超过环空容量（返高以上/漏失/计量口径）
+ht1_004[variant],内部,管内容积重算m3 vs 替浆总体积m3,34.9 vs 95.0,—,⚠,替浆总量应≈碰压时管内容积；差异大提示 liner_id/pipe_id 口径为等效或代理
+ht1_004[variant],sanity,密度范围 钻井液,1900,泥浆1.05–2.35g/cc,✓,
+ht1_004[variant],sanity,n范围 钻井液,0.635,0.2–1.2,✓,
+ht1_004[variant],sanity,K范围 钻井液,0.738,0.05–5 Pa·s^n,✓,
+ht1_004[variant],sanity,YP>0 保护液,9.2,>0,✓,YP=0 仅当流体确无屈服
+ht1_004[variant],sanity,YP>0 先导浆,9.8,>0,✓,YP=0 仅当流体确无屈服
+ht1_004[variant],sanity,n范围 隔离液1,0.611,0.2–1.2,✓,
+ht1_004[variant],sanity,K范围 隔离液1,0.736,0.05–5 Pa·s^n,✓,
+ht1_004[variant],sanity,n范围 隔离液2,0.611,0.2–1.2,✓,
+ht1_004[variant],sanity,K范围 隔离液2,0.736,0.05–5 Pa·s^n,✓,
+ht1_004[variant],sanity,密度范围 领浆,1930,水泥浆1.85–1.95g/cc,✓,
+ht1_004[variant],sanity,n范围 领浆,0.853,0.2–1.2,✓,
+ht1_004[variant],sanity,K范围 领浆,0.746,0.05–5 Pa·s^n,✓,
+ht1_004[variant],sanity,密度范围 尾浆,1900,水泥浆1.85–1.95g/cc,✓,
+ht1_004[variant],sanity,n范围 尾浆,0.869,0.2–1.2,✓,
+ht1_004[variant],sanity,K范围 尾浆,0.669,0.05–5 Pa·s^n,✓,
+ht1_004[variant],sanity,YP>0 压塞液,9,>0,✓,YP=0 仅当流体确无屈服
+ht1_004[variant],sanity,YP>0 替钻井液,9.5,>0,✓,YP=0 仅当流体确无屈服
+ht1_004[variant],sanity,YP>0 基液,9,>0,✓,YP=0 仅当流体确无屈服
+ht1_004[variant],sanity,YP>0 井浆,9.5,>0,✓,YP=0 仅当流体确无屈服
+ht1_004[variant],sanity,YP>0 冲洗液（FLUSHER）,9,>0,✓,YP=0 仅当流体确无屈服
+ht1_004[variant],sanity,ID<OD,107.93999999999998<139.7,—,✓,
+ht1_004[variant],sanity,悬挂器<鞋深,5243.207<7660.0,—,✓,
+ht1_004[variant],sanity,尾管长度≈shoe−hanger,2416.8,模型段长2416.8,✓,模型段顶可为水泥返高（≠悬挂器），差异仅提示
+ht1_004[variant],sanity,上段OD>下段OD(双径井),168.3>139.7,—,✓,
+ht1_004[variant],sanity,"standoff∈[0,1]",0.83–0.83,—,✓,
+ht1_004[variant],sanity,井径>尾管OD(全部点),—,0点违反,✓,

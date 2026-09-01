@@ -1,0 +1,9 @@
+﻿kind,name,top_md_m,bottom_md_m,extra
+evaluation_window,CBL评价井段(139.7mm段),7338.0,7712.0,cbl
+evaluation_window,CBL评价井段(168.3mm段),5540.0,7330.6,cbl
+evaluation_window,全尾管段,5536.662,7770.0,custom
+evaluation_window,气层-K1q(地层目标),7507.0,7557.0,formation_target
+evaluation_window,差气层-K1q(地层目标),7476.0,7479.0,formation_target
+evaluation_window,差气层-J3k(地层目标),7563.0,7619.0,formation_target
+evaluation_window,高压水层-K1s(地层目标),6120.0,6122.0,formation_target
+validation,cbl_pass_rate,,,0.1206

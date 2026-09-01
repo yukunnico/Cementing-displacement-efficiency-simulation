@@ -1,0 +1,7 @@
+﻿kind,name,top_md_m,bottom_md_m,extra
+evaluation_window,CBL评价井段,5292.5,7554.0,cbl
+evaluation_window,目标层段（油气显示层）,7402.0,7500.0,formation_target
+evaluation_window,目的层-K1q清水河组(地层目标),5702.0,6826.9,formation_target
+evaluation_window,目的层-J3k2喀拉扎组(地层目标),6826.9,7554.0,formation_target
+evaluation_window,高压水层(地层目标),5998.0,6002.0,formation_target
+validation,cbl_pass_rate,,,—

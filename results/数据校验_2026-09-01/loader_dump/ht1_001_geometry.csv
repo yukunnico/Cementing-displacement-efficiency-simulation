@@ -1,0 +1,39 @@
+﻿key,value
+well_name,呼探1-001井（HT1-001）
+top_md_m,5469.71
+bottom_md_m,7746
+shoe_md_m,7746
+hanger_md_m,5469.71
+casing_id_mm,245.42
+liner_od_mm,139.7
+liner_id_mm,107.94
+is_dual_diameter,False
+upper_section_bottom_md_m,—
+upper_liner_od_mm,—
+upper_liner_id_mm,—
+liner_wall_thickness_mm,—
+shoe_lag_volume_m3,—
+hole_profile_n,70
+hole_profile_min_mm,223.71
+hole_profile_max_mm,259.13
+hole_profile_mean_mm,245.44
+hole_profile_depth_range,5469.711–7746.0
+inclination_profile_n,70
+inclination_max_deg,1.6
+standoff_profile_n,70
+standoff_min,0.804
+standoff_max,0.804
+standoff_mean,0.804
+pipe_id_profile_n,0
+cbl_pass_rate,—
+note_0,呼探1-001井（HT1-001）不是呼探1井，本加载器使用 HT1-001 专属井眼、流体和施工程序参数。
+note_1,2026-08-29 复核：悬挂器改回实测 5469.711m（0708 三源；2026-08-16 曾按施工设计施工前预估改 5460.159m，方向反转登记）；井径/井斜为现场提取包 69 点实测剖面（caliper_profile.csv / inclination_profile.csv）。
+note_2,井径：上段 5670–7441 实测均值 247.7mm（名义 241.3）、下段 7441–7746 实测均值 230.65mm（名义 215.9）；旧上段等效 222.3mm 废除（环空体积低估约 9%）；小结 1.4.2 官方 1m 曲线统计值 247.83/229.46 与 CSV 30m 抽样 247.69/230.65 之差为统计口径，非数据错误（2026-08-29 补记）。
+note_3,井斜：实测近似直井 0.15–1.60°（最大 1.7665°@7665m），替换旧合成 2.0–7.8°（量级错误，原沿用呼探1井代理，直接影响重力项）。
+note_4,重叠段 5469.711–5670m（200.289m）为 168.3mm 尾管在 273.1mm 技套内的双层套管段，无裸眼电测点，按技套 ID 245.42mm 等效（model_assumption）。
+note_5,下段尾管内径 107.94mm（139.7−2×15.88）；上段尾管内径 138.9mm（现场壁厚标注 14.27mm 与 ID 138.76mm 内部不一致，保留口径见核对报告 §4.1）。
+note_6,鞋口滞后体积 94.5m³：按施工设计 6.4.1 分段内容积链（45.8+17.4+26.0+4.3≈94.5，理论总量含后置液）；小结 5.3 全管内容积 95m³ 作上界、实际泵入替浆段 93.7m³（含压塞液 2）/纯替浆 91.7m³ 各口径并存；LEGACY(2026-08-29 前): 83.2m³（52+26.0+5.2）无 0708 依据。WellSpec.liner_id_mm 使用下段内径 107.94mm。
+note_7,居中度无实测，按设计模拟 80.4%（施工设计 section 6.3）取均一 standoff=0.804（model_assumption）。
+note_8,"CBL 定量数据确认完全缺失：施工小结仅定性""合格""；油层尾管报告.pdf 为水泥浆化验报告（非 CBL）；20512/20514 为 365.13mm（二开）浮箍浮鞋出厂检验报告，非尾管段附件、非 CBL；20511 为浅层测井。CBL 评价窗为模型假设，勿写成现场窗。"
+note_9,验证窗口分口径：cbl（模型假设）/ formation_target（录井显示层，field_measured）/ model_focus（7400–7500 模型关注窗）；油气显示 K1q 7409–7423/7460–7462/7504–7566、J3k3 气层 7642–7661、主要目的层 K1q+J3k2 6828–7746。
+note_10,数据标签口径见模块常量 HT1_001_DATA_LABELS（field_measured / interpreted / model_assumption / loader_legacy）。

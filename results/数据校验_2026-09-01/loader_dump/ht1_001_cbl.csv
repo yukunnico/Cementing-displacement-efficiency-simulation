@@ -1,0 +1,11 @@
+﻿kind,name,top_md_m,bottom_md_m,extra
+evaluation_window,"CBL对比窗(模型假设,现场无CBL定量)",5469.711,7746.0,model_focus
+evaluation_window,K1q差气层1(录井显示),7409.0,7423.0,formation_target
+evaluation_window,K1q差气层2(录井显示高峰),7460.0,7462.0,formation_target
+evaluation_window,K1q油气同层(录井显示),7504.0,7566.0,formation_target
+evaluation_window,J3k3气层(录井显示),7642.0,7661.0,formation_target
+evaluation_window,K1s水层1(录井解释),6060.0,6064.0,formation_target
+evaluation_window,K1s水层2(录井解释),6092.0,6098.0,formation_target
+evaluation_window,K1q+J3k2主要目的层,6828.0,7746.0,formation_target
+evaluation_window,模型关注窗(替浆/掺混分析),7400.0,7500.0,model_focus
+validation,cbl_pass_rate,,,—

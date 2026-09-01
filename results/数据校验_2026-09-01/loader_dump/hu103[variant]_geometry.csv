@@ -1,0 +1,35 @@
+﻿key,value
+well_name,呼103
+top_md_m,5536.66
+bottom_md_m,7770
+shoe_md_m,7770
+hanger_md_m,5545.97
+casing_id_mm,138.9
+liner_od_mm,139.7
+liner_id_mm,107.94
+is_dual_diameter,True
+upper_section_bottom_md_m,7330.69
+upper_liner_od_mm,168.3
+upper_liner_id_mm,138.9
+liner_wall_thickness_mm,15.88
+shoe_lag_volume_m3,—
+hole_profile_n,70
+hole_profile_min_mm,217.69
+hole_profile_max_mm,295.61
+hole_profile_mean_mm,264.86
+hole_profile_depth_range,5536.662–7740.0
+inclination_profile_n,70
+inclination_max_deg,1.46
+standoff_profile_n,70
+standoff_min,0.69736
+standoff_max,0.80134
+standoff_mean,0.719
+pipe_id_profile_n,0
+cbl_pass_rate,—
+note_0,呼103井 168.3+139.7mm 复合油层尾管固井段（5536.662–7770m），不含回接固井与其他套管段。
+note_1,悬挂器 5536.662–5545.972m（NSSX-CYFMD 封隔一体式）；上段 168.3mm(5546.022–7330.694m)、下段 139.7mm(7330.694–7768.51m)。
+note_2,139.7mm 段 ID 107.94mm（壁厚15.88mm）、168.3mm 段 ID 138.9mm（壁厚14.7mm）为实测/设计口径（20313.doc/20315.doc）。
+note_3,井径/井斜用现场实测分段曲线（20313.doc 1.5.1/1.5.2）；5536.662–5755m 重叠段无实测，取首测点等效外推。
+note_4,居中度仅设计模拟值 77.8%（20313.doc 6.3），无实测，模型按 proxy 处理。
+note_5,复合尾管由 dual-diameter 上层字段 + liner_od_profile 表达；LEGACY(2026-08 前) 为 139.7mm 单外径代理模型。
+note_6,2026-08-29 校准补记：168.3mm 段实际下深 5545.972–7330.604m（20318，与设计口径 5546.022–7330.694m 并存）；回接筒 5536.662–5539.762m（OD 226/ID 202）。

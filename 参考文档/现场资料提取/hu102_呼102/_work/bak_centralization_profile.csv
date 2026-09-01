@@ -1,0 +1,2 @@
+﻿well_id,md_m,standoff_ratio,centralization_percent,eccentricity_ratio,data_type,source_file,source_location,confidence,notes
+hu102,,,,,design,2021/20211.doc,section 1.8,medium,"扶正器分段: 6820-7350m(22个/23m间距), 7350-7560m(11个/19m), 7560-7735m(22个/8m); 无连续居中度数据, 需模型估算"

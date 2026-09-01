@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import csv
 import math
+import warnings
 from pathlib import Path
 
 from cemdisp.data.fluid_spec import FluidRole, FluidSpec, RheologyModel
@@ -61,8 +62,10 @@ HT1_004_BOTTOM_MD_M = HT1_004_DRILLED_DEPTH_MD_M
 HT1_004_SHOE_MD_M = HT1_004_DRILLED_DEPTH_MD_M
 
 # --- 套管/管柱尺寸 [实测] ---
-# 注：casing_id_mm 字段在本仓库语义中实际存 273.1 技术套管"外径"（hu102/hu103 同为 OD 口径，
-# 命名历史遗留，全仓未统一）；环空计算由 casing_inner_diameter 与 liner_od_profile 完成。
+# 2026-08-29 语义统一：casing_id_mm 按 PACKAGE_REFERENCE 文档语义存"外层套管内径"——
+# 273.05mm 技套（名义 273.1）真实 ID=245.37（设计电测井径表口径；计算值 245.42）；OD 公称 273.1 存档。
+# 字段不被求解器消费（环空计算由 casing_inner_diameter 与 liner_od_profile/hole_diameter_profile 完成）。
+# LEGACY(2026-08-29 前): 本字段传 OD 273.1（名义口径，命名历史遗留）。
 HT1_004_CASING_OD_MM = 273.1
 HT1_004_CASING_INNER_DIAMETER_MM = 245.37  # 设计电测井径表口径（计算值 245.42）
 HT1_004_UPPER_LINER_OD_MM = 168.3
@@ -97,6 +100,18 @@ def _read_caliper_rows(caliper_csv_path: Path) -> tuple[tuple[float, float], ...
             rows.append((float(md), float(cal)))
     if not rows:
         raise ValueError(f"井径 CSV 为空: {caliper_csv_path}")
+    # 轻量 sanity check（2026-08-29 校准）：汇总统计行曾混入 caliper_profile.csv（本次已删 4 行），
+    # 这里按"重复深度必错"直接拒绝，并对异常密集采样告警，防止汇总统计行再次混入。
+    depths = [md for md, _ in rows]
+    duplicates = sorted({d for d in depths if depths.count(d) > 1})
+    if duplicates:
+        raise ValueError(f"井径 CSV 存在重复深度（疑汇总统计行混入）: {duplicates}: {caliper_csv_path}")
+    sorted_depths = sorted(depths)
+    min_gap = min((b - a) for a, b in zip(sorted_depths, sorted_depths[1:]))
+    if min_gap < 1.0:
+        warnings.warn(
+            f"井径 CSV 相邻深度最小间隔仅 {min_gap:.3f}m，疑含非测点行/汇总行，请人工复核: {caliper_csv_path}"
+        )
     return tuple(sorted(rows))
 
 
@@ -218,8 +233,9 @@ def _pipe_volume_m3(length_m: float, inner_diameter_mm: float) -> float:
     return math.pi * radius_m**2 * length_m
 
 
-# 4 段管柱 ID 累加（上段 ID 已按 14.7mm 壁厚修正为 138.9mm，结果 ~99.4m³；
-# 与设计 7.2 理论替浆 97.1m³（含压塞2）接近）。
+# 4 段管柱 ID 累加（上段 ID 已按 14.7mm 壁厚修正为 138.9mm，结果 99.36m³，名义内径算至 7660）。
+# 三口径并存（2026-08-29 校准）：99.36（名义内径算至 7660）≈ 作业史 99.31；
+# 设计/碰压口径 97.1（149.2 段实测 12.9 L/m、算至球座 7560.286、含压塞 2）。loader 取 4 段管柱 ID 累加值。
 HT1_004_SHOE_LAG_VOLUME_M3 = (
     _pipe_volume_m3(_DP1_BOTTOM_MD_M, _DP1_ID_MM)
     + _pipe_volume_m3(_DP2_BOTTOM_MD_M - _DP1_BOTTOM_MD_M, _DP2_ID_MM)
@@ -387,7 +403,7 @@ def _build_well_spec(
         bottom_md_m=HT1_004_BOTTOM_MD_M,
         shoe_md_m=HT1_004_SHOE_MD_M,
         hanger_md_m=HT1_004_HANGER_MD_M,
-        casing_id_mm=HT1_004_CASING_OD_MM,
+        casing_id_mm=HT1_004_CASING_INNER_DIAMETER_MM,  # 2026-08-29 语义统一：存真实内径 245.37（原传 OD 273.1）
         liner_od_mm=HT1_004_LOWER_LINER_OD_MM,
         liner_id_mm=HT1_004_LINER_ID_MM,
         liner_wall_thickness_mm=HT1_004_LOWER_LINER_WALL_THICKNESS_MM,
@@ -418,6 +434,12 @@ def _build_well_spec(
             "默认输入为'优化参数化'：流体流变（领浆PV170/YP13、尾浆180/14等）与替浆排量（1.15-0.75、末段9.4补足）"
             "来自优化参数.docx（2026-06-11），非现场实测；密度与泵注体积为现场值。",
             "居中度采用设计文档6.3节模拟值(平均83%)固定剖面（model_assumption）。",
+            "2026-08-29 校准补记：鞋口滞后三口径 99.36（名义内径算至 7660）≈ 作业史 99.31 vs 设计/碰压口径 97.1"
+            "（149.2 段实测 12.9 L/m、算至球座 7560.286、含压塞 2），loader 取管柱 ID 累加值；"
+            "替浆介质密度双口径 1.90（设计/总结）vs 1.91（记录表）；"
+            "'灰量 161t'为图头浆体质量（领 100+尾 61）非干灰（干灰 72.7t）；"
+            "技套 273.05（图头/名义）vs 273.1 双口径；"
+            "MATLAB 基础参数代码.docx 的 168.3-2×15.88 为上游错误源，勿回滚 2026-08-16 壁厚修正。",
         ),
     )
 
@@ -672,7 +694,7 @@ def load_ht1_004_tailpipe_actual(
                                 remarks="实际: 尾浆 28m³@1.0m³/min，密度1.90g/cm³，泵压22MPa（作业史记1.2）；流变按化验 n=0.869/K=0.669。"),
             PumpingScheduleStep("注入压塞液(实际)", "压塞液",
                                 HT1_004_PLUG_VOLUME_M3, HT1_004_ACTUAL_PLUG_RATE_M3_MIN,
-                                remarks="实际: 压塞液 2m³@1.2m³/min，密度1.70g/cm³，泵压13MPa（作业史 7a）。"),
+                                remarks="实际: 压塞液 2m³@1.2m³/min，密度1.70g/cm³，泵压13MPa（作业史 7a；记录表 15MPa 变体，2026-08-29 补记）。"),
             PumpingScheduleStep("替钻井液(实际)", "替钻井液",
                                 HT1_004_DISPLACEMENT_FAST_VOLUME_M3,
                                 HT1_004_ACTUAL_DISPLACEMENT_FAST_RATE_M3_MIN,

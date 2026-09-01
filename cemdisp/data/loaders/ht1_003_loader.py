@@ -57,11 +57,14 @@ HT1_003_UPPER_SECTION_BOTTOM_MD_M = 7089.576  # 168.3mm 上段尾管底界/变�
 HT1_003_LOWER_SECTION_TOP_MD_M = 7096.0  # 241.3mm裸眼→215.9mm裸眼变径位置
 HT1_003_BOTTOM_MD_M = HT1_003_DRILLED_DEPTH_MD_M  # 下段 139.7mm 尾管鞋
 HT1_003_SHOE_MD_M = HT1_003_DRILLED_DEPTH_MD_M
-# 注：casing_id_mm 字段在本仓库语义中实际存 273.1 技术套管"外径"（hu102/hu103 同为 OD 口径，
-# 命名历史遗留，全仓未统一）；求解器仅用其作为上层套管外径参考，环空计算由
-# casing_inner_diameter 与 liner_od_profile 完成，不影响结果。
-HT1_003_CASING_ID_MM = 273.1  # 技术套管外径（名义）
-HT1_003_CASING_INNER_DIAMETER_MM = 245.42  # 273.1mm套管内径（设计 5.1）
+# 2026-08-29 语义统一：casing_id_mm 按 PACKAGE_REFERENCE 文档语义存"外层套管内径"——
+# 273.05mm 技套（名义 273.1）真实 ID=245.37（设计五.5.1 原文+CBL 图头 273.050-2×13.84）；
+# OD 公称 273.1 存档于 CASING_OD_MM。字段不被求解器消费（环空计算由 casing_inner_diameter 与
+# liner_od_profile/hole_diameter_profile 完成），纯元数据口径。
+# LEGACY(2026-08-29 前): 本字段存 OD 273.1（名义口径，命名历史遗留）。
+HT1_003_CASING_ID_MM = 245.37  # 技术套管真实内径（语义统一后口径）
+HT1_003_CASING_OD_MM = 273.1  # 技术套管外径（OD 公称，存档）
+HT1_003_CASING_INNER_DIAMETER_MM = 245.37  # 273.1mm套管内径（设计五.5.1 原文 + CBL 图头 273.050-2×13.84，2026-08-29 校准）；LEGACY(2026-08-29 前): 245.42（计算值）
 HT1_003_UPPER_HOLE_NOMINAL_DIAMETER_MM = 241.3  # 上段井眼名义尺寸（钻头程序 241.3*7096）
 HT1_003_LOWER_HOLE_DIAMETER_MM = 215.9  # 下段井眼名义尺寸
 HT1_003_BIT_DIAMETER_LOWER_MM = 215.9  # 下段钻头尺寸
@@ -204,13 +207,11 @@ def _pipe_volume_m3(length_m: float, inner_diameter_mm: float) -> float:
     return math.pi * radius_m**2 * length_m
 
 
-# 鞋口滞后体积估算（2026-08-16 修复）：
-# LEGACY(2026-08-16 前): HT1_003_SURFACE_TO_HANGER_EFFECTIVE_ID_MM 按 52/π/7868 反算——
-#   7868 为 hu101 的 TD 常数，系复制粘贴 bug（原鞋口滞后 66.92m³ 偏低约 25m³）。
-# 现按 4 段管柱 ID 累加（129.9/107.7/138.9/107.94mm），结果 ~94m³，
-# 与现场替浆 91.9m³（设计 7.2 理论顶替量含压塞 2）、数采 91.01m³ 接近（差约压塞液 2m³ 口径）。
-HT1_003_SURFACE_TO_HANGER_EFFECTIVE_ID_MM = math.sqrt(4.0 * 52.0 / (math.pi * 7868.0)) * 1000.0  # LEGACY
-HT1_003_SHOE_LAG_VOLUME_M3 = (
+# 鞋口滞后体积（2026-08-29 校准）：设计七.1.4 顶替量计算表 42.9+18.1+27+3.9=91.9m³
+# （胶塞试通过 61m³ 实测验证；149.2 段用 12.91 L/m 折算口径；数采计量 91.009m³ 与理论差 1%）。
+# LEGACY(2026-08-29 前): 4 段管柱 ID 直接累加 ≈93.95m³（149.2 段用 12.91 L/m 折算与水力 ID 129.9 双口径差异）；
+# 更早 LEGACY(2026-08-16 前): 7868 常数 bug（复制 hu101 TD 的笔误，鞋口滞后 66.92m³ 偏低约 25m³）已修复。
+_HT1_003_SHOE_LAG_PIPE_SUM_LEGACY_M3 = (
     _pipe_volume_m3(_DP1_BOTTOM_MD_M, _DP1_ID_MM)
     + _pipe_volume_m3(HT1_003_HANGER_MD_M - _DP1_BOTTOM_MD_M, _DP2_ID_MM)
     + _pipe_volume_m3(
@@ -221,7 +222,9 @@ HT1_003_SHOE_LAG_VOLUME_M3 = (
         HT1_003_BOTTOM_MD_M - HT1_003_UPPER_SECTION_BOTTOM_MD_M,
         HT1_003_LOWER_LINER_ID_MM,
     )
-)
+)  # ≈93.95，LEGACY(2026-08-29 前) 保留供口径追溯
+HT1_003_SURFACE_TO_HANGER_EFFECTIVE_ID_MM = math.sqrt(4.0 * 52.0 / (math.pi * 7868.0)) * 1000.0  # LEGACY
+HT1_003_SHOE_LAG_VOLUME_M3 = 91.9  # 设计七.1.4 顶替量计算表（42.9+18.1+27+3.9），见上注释与 notes。
 HT1_003_LINER_ID_MM = HT1_003_LOWER_LINER_ID_MM
 
 # ===========================================================================
@@ -402,7 +405,14 @@ def _build_well_spec(
             "井径/井斜剖面使用现场提取包 caliper_profile.csv（设计一.1.4.2 电测井径 66 点）与 inclination_profile.csv（设计一.1.4.1 井斜 67 点）。",
             "liner_od_profile 按深度分段：5307-7089m=168.3mm，7089-7618m=139.7mm；pipe_id_profile 按4段管柱内径：129.9/107.7/138.9/107.94mm。",
             "悬挂器取喇叭口 5307.539m（本体 5315.439m、CBL 头 5307.540-5315.440m）；变径 7089.576m（变径变扣 7091.016m）。",
-            "鞋口滞后体积按 4 段管柱 ID 累加（~94m³），与现场替浆 91.9m³、数采 91.01m³ 接近；LEGACY 7868 常数 bug 已修复。",
+            "鞋口滞后体积 91.9m³（2026-08-29 校准：设计七.1.4 顶替量计算表 42.9+18.1+27+3.9；胶塞试通过 61m³ 实测验证；"
+            "数采计量 91.009m³ 与理论差 1%）；LEGACY(2026-08-29 前): 4 段管柱 ID 累加 ≈93.95m³"
+            "（149.2 段体积口径 12.91 L/m 折算 vs 水力 ID 129.9 双口径并存）；更早 LEGACY 7868 常数 bug 已于 2026-08-16 修复。",
+            "压塞液密度保留 1.95（设计 7.2 口径）；记录表'后置液 密度1.02 基液'为另一口径"
+            "（数采密度计 0.998-1.000 存疑），需甲方确认（2026-08-29 注记）。",
+            "2026-08-29 校准补记：井径均值 CSV 重算 247.00/220.27 vs 设计自称 247.3/218.9 为统计口径差；"
+            "大肚子 5573-5577 平均 370.84/最大 387.43（0.5m 曲线极值，30m 表未含）；"
+            "悬挂器本体最小内径 138.22（5307.539-5316.036 段容差 0.05m³ 可忽略）。",
             "流体流变改用化验报告幂律实测（领/尾浆/隔离液/钻井液），先导浆/压塞/保护/基液为设计值。",
             "居中度取设计模拟值 0.83（设计 6.3，裸眼段无连续实测；model_assumption）。",
         ),
