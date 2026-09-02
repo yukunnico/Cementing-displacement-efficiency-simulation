@@ -418,18 +418,25 @@ class TestLegacyProviderTimeline(unittest.TestCase):
         ))
 
     def test_legacy_provider_exposes_dispersion_transition(self) -> None:
-        """弥散开启时，旧分支在前缘到达时刻返回多相过渡带。"""
+        """弥散开启时，旧分支在前缘到达时刻返回多相过渡带。
+
+        2026-09-02 F4 收尾修正口径：erf 过渡带在 [t_arrival-σ, t_arrival+σ] 内为
+        多相中间浓度；t >= t_arrival+σ 后正体期分数到 1.0（F4 收尾事件），
+        不再封顶 0.5*(1+erf(1))≈0.9214。采样点相应改为过渡带内，
+        并新增"过渡带结束后 frac=1.0"断言。
+        """
 
         solver = CasingFlowSolver()  # 弥散默认开启
         fluids = self._make_fluids()
-        result = solver.run(self._make_well_spec(), fluids, self._make_schedule())
+        well_spec = self._make_well_spec()
+        result = solver.run(well_spec, fluids, self._make_schedule())
         provider = build_coupled_annulus_inlet_provider(result, solver, fluids)
 
-        # 水泥前缘到达鞋口时刻（重力修正后）
+        # 水泥前缘到达鞋口时刻（重力修正后）= 过渡带 erf 中心（frac=0.5）
         arrival = next(f.time_s for f in result.fronts if f.fluid_name == "水泥")
 
-        # 到达时刻附近应出现多相过渡带（弥散/混浆增强产物）
-        for t in (arrival, arrival + 100.0, arrival + 200.0):
+        # 到达时刻附近（过渡带内）应出现多相过渡带（弥散/混浆增强产物）
+        for t in (arrival - 1.0, arrival, arrival + 1.0):
             state = provider(t)
             self.assertGreater(state.flow_rate_m3_s, 0.0, f"t={t} 应处于流动阶段")
             self.assertGreater(len(state.phase_fractions), 1, f"t={t} 弥散过渡带应为多相")
@@ -439,6 +446,28 @@ class TestLegacyProviderTimeline(unittest.TestCase):
                 f"t={t} 应存在中间浓度相",
             )
             self.assertAlmostEqual(sum(mapped.values()), 1.0, places=6, msg=f"t={t} 分数之和应为 1")
+
+        # F4 收尾：过渡带结束后（>= 最后一个中间浓度子事件之后）正体期分数到 1.0
+        transition_times = [
+            e.time_s for e in result.shoe_timeline.events
+            if e.kind == ShoeEventKind.FRONT_ARRIVAL
+            and e.phase_fractions
+            and e.phase_fractions[0][0] == "水泥"
+            and 0.0 < e.phase_fractions[0][1] < 1.0
+        ]
+        self.assertTrue(transition_times, "过渡带内应存在中间浓度子事件")
+        after_band = provider(max(transition_times) + 1.0)
+        after_band_frac = dict(after_band.phase_fractions)
+        # provider 输出为角色名（mud/cement 等），故断言角色无关：
+        # 过渡带结束后存在 frac=1.0 的相且无中间浓度（不再封顶 0.9214）
+        self.assertTrue(
+            any(abs(f - 1.0) < 1e-9 for f in after_band_frac.values()),
+            f"F4 收尾后正体期应有 frac=1.0 相，实得 {after_band_frac}",
+        )
+        self.assertFalse(
+            any(0.0 < f < 1.0 for f in after_band_frac.values()),
+            f"F4 收尾后不应残留中间浓度，实得 {after_band_frac}",
+        )
 
         # 前缘尚未到达前仍为纯泥浆单相
         early = provider(arrival / 2.0)

@@ -71,6 +71,15 @@ HU102_CASING_ID_MM = 193.70     # 上层技术套管内径（悬挂器以上）
 HU102_LINER_OD_MM = 139.70      # 尾管外径
 HU102_LINER_WALL_THICKNESS_MM = 15.80  # 尾管壁厚（底部厚壁段 15.8mm，对应 ID 108.10mm）
 HU102_LINER_ID_MM = HU102_LINER_OD_MM - 2.0 * HU102_LINER_WALL_THICKNESS_MM  # 尾管内径（108.10mm）
+
+# 呼102 全井管容链（2026-09-02 现场核实修复）：shoe_lag_volume_m3 直接驱动
+# casing_flow._timeline_pipe_volume 与 _pipe_cross_section_area 双链，统一到现场真值。
+# 实测/核算链组成（0708 原件）：149.2 钻杆 ID129.9（0–5101.25m）+ 114.3 钻杆 ID97.18
+# （5101.25–6819.37m）+ 尾管 139.7 ID108.1（6819.37–7735m）≈ 88.9m³。
+# 替浆口径分歧（现场真实，保留注记）：20212.doc 施工记录替浆行 87.5m³（18:26–20:25，
+# 排量 0.9–0.4）vs 汇总口径 74m³ / 泵冲到量 72m³——单流阀失效、到量未碰压，
+# 模型泵注按 74m³ 如实反映（尾浆部分滞留管内为预期行为，非 bug）。
+HU102_SHOE_LAG_VOLUME_M3 = 88.9
 # 6823.10–7119.80m 双层套管段（139.7mm 尾管在 219.1mm 技术套管内）等效井径。
 # 现场该段无裸眼井径测点（CBL 6840–7119.8m 标注"双层套管不评价"），按双层段环空外筒内径 193.7mm 处理（几何推导，非实测）。
 # LEGACY(2026-08-29 前): 215.9（旧 loader 等效值）。
@@ -250,6 +259,9 @@ def load_hu102_tailpipe(
         liner_od_mm=HU102_LINER_OD_MM,
         liner_id_mm=HU102_LINER_ID_MM,
         liner_wall_thickness_mm=HU102_LINER_WALL_THICKNESS_MM,
+        # 全井管容链现场核实值（2026-09-02）：88.9m³ = 149.2 钻杆 + 114.3 钻杆 + 尾管链，
+        # 驱动 casing_flow._timeline_pipe_volume 与 _pipe_cross_section_area 双链。
+        shoe_lag_volume_m3=HU102_SHOE_LAG_VOLUME_M3,
         hole_diameter_profile=_build_hole_profile(profile_rows),
         inclination_profile=_build_inclination_profile(profile_rows),
         standoff_profile=_build_standoff_profile(profile_rows),
@@ -271,6 +283,11 @@ def load_hu102_tailpipe(
             "6823.10–7119.80m 双层套管段按双层段环空外筒内径 193.7mm 处理（几何推导，非实测；LEGACY(2026-08-29 前): 215.9 等效值）。",
             "标节1/2（原文'标节'，7432.914–7434.268/7638.05–7639.403m）与 CBL 图头'短套管下深'另一对并存待考（2026-08-29 校准注记）。",
             "最大井斜 11.49°：现场摘要一处记@7450m（20211.doc 井径表）、一处记@7490m（测斜表），两处并存、峰值一致，模型按逐点实测剖面取值。",
+            "管容链现场核实（2026-09-02）：shoe_lag_volume_m3=88.9m³ 为全井管容链（149.2 钻杆 ID129.9 "
+            "0–5101.25m + 114.3 钻杆 ID97.18 5101.25–6819.37m + 尾管 139.7 ID108.1），旧口径（单一尾管 "
+            "ID108.1 反推 ≈71m³）漏计送入钻杆段；替浆口径分歧保留：20212.doc 施工记录替浆行 87.5m³ vs "
+            "汇总 74m³/泵冲到量 72m³（单流阀失效、到量未碰压，现场真实）——模型泵注按 74m³ 如实反映，"
+            "尾浆部分滞留管内为预期行为而非 bug。",
         ),
     )
 

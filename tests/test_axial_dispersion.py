@@ -213,6 +213,51 @@ class TestDispersionTimeline(unittest.TestCase):
         )
         self.assertTrue(has_intermediate, "应存在中间浓度的过渡事件")
 
+    def test_dispersion_transition_reaches_full_fraction(self) -> None:
+        """F4 收尾（2026-09-02）：erf 过渡带子事件后必须存在 frac=1.0 收尾事件。
+
+        修复前 5 子事件分数封顶于 0.5*(1+erf(1))≈0.9214（k=4 项），正体期入库
+        浓度系统性封顶 92.14%；修复后追加 t=t_arrival+σ、frac=1.0 的收尾事件
+        （同 FRONT_ARRIVAL、同 phase 结构 ((next,1.0),(prev,0.0))），保证正体期
+        相分数到 1.0。
+        """
+        solver = CasingFlowSolver(enable_axial_dispersion=True)
+        well = self._make_well_spec()
+        cement = FluidSpec(
+            name="cement",
+            role=FluidRole.LEAD,
+            density_kg_m3=1900.0,
+            rheology_model=RheologyModel.NEWTONIAN,
+            plastic_viscosity_pa_s=0.3,
+        )
+        mud = FluidSpec(
+            name="mud",
+            role=FluidRole.MUD,
+            density_kg_m3=1200.0,
+            rheology_model=RheologyModel.NEWTONIAN,
+            plastic_viscosity_pa_s=0.01,
+        )
+        schedule = self._make_schedule()
+
+        result = solver.run(well, (mud, cement), schedule)
+        events = result.shoe_timeline.events
+
+        cement_transitions = [
+            e for e in events
+            if e.kind == ShoeEventKind.FRONT_ARRIVAL
+            and e.phase_fractions
+            and e.phase_fractions[0][0] == "cement"
+        ]
+        self.assertGreaterEqual(len(cement_transitions), 5)
+        fracs = [dict(e.phase_fractions).get("cement", 0.0) for e in cement_transitions]
+        # 修复口径：存在 frac=1.0 收尾事件（不再是 0.9214 封顶）
+        self.assertEqual(max(fracs), 1.0)
+        self.assertAlmostEqual(fracs[-2], 0.5 * (1.0 + math.erf(1.0)), places=12)
+        # 收尾事件与最后一个 erf 子事件同刻（均为 t_arrival+σ），且为该时刻最终状态
+        self.assertEqual(cement_transitions[-1].time_s, cement_transitions[-2].time_s)
+        # 分数单调非降
+        self.assertEqual(fracs, sorted(fracs))
+
     def test_dispersed_events_sorted_by_time(self) -> None:
         """弥散事件按时间升序排列。"""
         solver = CasingFlowSolver(enable_axial_dispersion=True)

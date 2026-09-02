@@ -10,6 +10,7 @@
   以适配求解器单一 139.7mm 外径几何；下部 139.7mm 段直接用实测值。
 - liner_id_mm=91.73（52m³ 鞋口滞后体积反推）显式标 model_assumption：非实测单一内径，
   为复合尾管（168.3 上段 + 139.7 下段，厚壁 ID 108.1/薄壁 ID 111.16）的等效几何口径。
+  【2026-09-02 退役】91.73 反推与 52m³ 滞后均已退役，见下方 2026-09-02 校准更新。
 - standoff 0.38–0.48 剖面显式标 model_assumption：现场仅有扶正器布置（132 只）无实测居中度，
   且悬挂器坐挂失败、最终座底固井，居中度实际更低。
 - cbl_pass_rate=0.6277 结构化进 ValidationData（参照 hu102=0.6665 / hu103=0.1206 写法），
@@ -30,6 +31,14 @@
 - 鞋口滞后 52m³ 标 missing（0708 七份文本未找到出处，2026-08-29 查证）；liner_id 91.73 反推依赖它，
   91.73/52 为 legacy 等效口径——0708 分段真实内径链（149.2 钻杆 ID129.9 0–5397.21 + 168.3 ID138.9 +
   139.7 ID111.16/108.1）管内容积≈102.6m³，与理论碰压 102.2m³（2011114）呼应。
+
+2026-09-02 管容链修复（0708 原件核实，tests/test_pipe_capacity_chain_fix.py 锁定）：
+- shoe_lag_volume_m3=102.6m³：0708 分段真实内径链（149.2 送入钻杆 ID129.9 0–5397.21m +
+  尾管两段）管内容积，与 2011114.txt 行157"理论需102.2方碰压"（实泵 101.8，行158）呼应；
+  直接驱动 casing_flow._timeline_pipe_volume 与 _pipe_cross_section_area 双链。
+- liner_id=91.73（52m³ 无出处滞后反推）退役：改用 139.7mm 段厚壁真实内径 108.10mm
+  （=139.7−2×15.8，与 HU101_LINER_WALL_THICKNESS_MM 自洽）；该字段仅剩弥散半径/
+  屈服半径两个次口径消费，管容主口径由 shoe_lag 驱动。
 """
 
 from __future__ import annotations
@@ -78,9 +87,12 @@ HU101_UPPER_ACTUAL_LINER_OD_MM = 168.30  # 上段尾管外径（5402.885–6796.
 HU101_LOWER_HOLE_DIAMETER_MM = 215.90  # 下段井眼名义/实测井径（139.7mm 段，7048–7868 段均值 216.24）。
 HU101_LOWER_LINER_OD_MM = 139.70  # 下段尾管外径（6796.329–7868m，field_measured）。
 HU101_LINER_WALL_THICKNESS_MM = 15.80  # 139.7mm 段厚壁段壁厚（ID 108.1）；上部薄壁段 14.27mm（ID 111.16）存在。
-# 鞋口滞后体积 52m³：0708 七份文本未找到出处（missing，2026-08-29 查证）；liner_id 91.73 反推依赖它。
-# LEGACY(2026-08-29 前) 注记"现场记录，model_assumption 口径"——实为无出处，值保留不改。
-HU101_SHOE_LAG_VOLUME_M3 = 52.0
+# 鞋口滞后体积（2026-09-02 现场核实修复）：102.6m³ = 0708 分段真实内径链管内容积
+# （149.2 送入钻杆 ID129.9 0–5397.21m + 尾管两段），与 2011114.txt 行157"理论需102.2方碰压"
+# （实泵 101.8，行158）呼应；直接驱动 casing_flow 管容双链（_timeline_pipe_volume /
+# _pipe_cross_section_area）。
+# LEGACY(2026-09-02 前): 52.0——0708 七份文本未找到出处（missing，2026-08-29 查证），已退役。
+HU101_SHOE_LAG_VOLUME_M3 = 102.6
 
 
 def _equivalent_hole_diameter_mm(actual_hole_mm: float, actual_od_mm: float, reference_od_mm: float) -> float:
@@ -95,13 +107,12 @@ HU101_UPPER_HOLE_DIAMETER_MM = _equivalent_hole_diameter_mm(
     actual_od_mm=HU101_UPPER_ACTUAL_LINER_OD_MM,
     reference_od_mm=HU101_LOWER_LINER_OD_MM,
 )
-# HU101_LINER_ID_MM：由 52m³ 鞋口滞后体积 / 7868m 反推的等效内径（约 91.73mm）。
-# **model_assumption**：非实测单一内径——139.7mm 段真实内径为厚壁 108.1mm / 薄壁 111.16mm，
-# 该等效值仅服务 1D 到鞋时间口径（管内容积），论文不可写成现场内径。
-# 2026-08-29 校准对比：0708 分段真实内径链（149.2 钻杆 ID129.9 0–5397.21 + 168.3 ID138.9 +
-# 139.7 ID111.16/108.1）管内容积≈102.6m³，与理论碰压 102.2m³（2011114）呼应；
-# 91.73/52 为 legacy 等效口径（鞋口滞后 52 无 0708 出处，missing）。
-HU101_LINER_ID_MM = math.sqrt(4.0 * HU101_SHOE_LAG_VOLUME_M3 / (math.pi * HU101_SHOE_MD_M)) * 1000.0
+# HU101_LINER_ID_MM：139.7mm 段厚壁真实内径 108.10mm（=139.70−2×15.80，与壁厚常量自洽）。
+# 【2026-09-02 退役】旧公式 sqrt(4×shoe_lag/(π×shoe_md))×1000 由 52m³ 无出处滞后反推出
+# 91.73mm 等效内径，随 52m³ 一并退役。1D 管容主口径现由 shoe_lag_volume_m3=102.6 直接驱动；
+# 本字段仅剩弥散半径（casing_flow:532）与屈服半径（casing_flow:1020）两个次口径消费。
+# **field_derived**：厚壁 ID 108.1（139.7mm 段）；上部薄壁段 14.27mm 壁厚对应 ID 111.16 存在。
+HU101_LINER_ID_MM = HU101_LOWER_LINER_OD_MM - 2.0 * HU101_LINER_WALL_THICKNESS_MM
 
 # 呼101现场施工与流体参数（2026-08-16 按提取包 fluid_properties.csv/pumping_schedule.csv 核对，
 # 密度/体积/流变均 field_measured；此处不逐项改变）。
@@ -298,6 +309,9 @@ def load_hu101_tailpipe(
         casing_id_mm=HU101_TECH_CASING_EQUIV_ID_MM,
         liner_od_mm=HU101_LOWER_LINER_OD_MM,
         liner_id_mm=HU101_LINER_ID_MM,
+        # 全井管容链现场核实值（2026-09-02）：102.6m³ = 0708 分段真实内径链管内容积，
+        # 驱动 casing_flow._timeline_pipe_volume 与 _pipe_cross_section_area 双链。
+        shoe_lag_volume_m3=HU101_SHOE_LAG_VOLUME_M3,
         hole_diameter_profile=_depth_points(_build_hole_profile(caliper_rows)),
         inclination_profile=_depth_points(_build_inclination_profile(incl_rows)),
         standoff_profile=_depth_points(standoff_points),
@@ -318,11 +332,11 @@ def load_hu101_tailpipe(
         notes=(
             "呼101上部168.3mm+下部139.7mm复合尾管（变径变扣 6796.329m）；求解器为单一 139.7mm 外径几何，"
             "上部实测井径按保面积转换为等效（model_assumption），下部直接使用实测值。",
-            "liner_id_mm 使用 52m³ 鞋口滞后反推的等效内径（约 91.73mm），**model_assumption**：非实测单一内径（"
-            "139.7mm 段厚壁 ID 108.1 / 薄壁 ID 111.16），仅服务 1D 到鞋时间口径，论文不可写成现场内径；"
-            "0708 分段真实内径链（149.2 钻杆 ID129.9 0–5397.21 + 168.3 ID138.9 + 139.7 ID111.16/108.1）"
-            "管内容积≈102.6m³，与理论碰压 102.2m³（2011114）呼应；91.73/52 为 legacy 等效口径"
-            "（鞋口滞后 52m³ 于 0708 七份文本未找到出处，missing，2026-08-29 查证）。",
+            "管容链现场核实（2026-09-02）：shoe_lag_volume_m3=102.6m³ 为 0708 分段真实内径链管内容积"
+            "（149.2 送入钻杆 ID129.9 0–5397.21m + 168.3 ID138.9 + 139.7 ID111.16/108.1 尾管两段），"
+            "与 2011114.txt 行157'理论需102.2方碰压'、行158'累计泵冲到量碰压…=101.8方（96%上水效率）'呼应；"
+            "liner_id=91.73（由 52m³ 无出处鞋口滞后反推，missing）已退役，改用 139.7mm 段厚壁真实内径 "
+            "108.10mm；1D 管容主口径由 shoe_lag 驱动，liner_id 仅剩弥散/屈服半径次口径消费。",
             "井径/井斜剖面为现场提取包实测（109 点，5700–7868m，2011116.xls Sheet2 电子版重建，"
             "2011113.doc 逐点互证，field_measured）：井径 204–265mm，"
             "井斜 0.19–8.19°（均值 2.81°，7440m 处最大 8.19°）；5400–5720m 技套内重叠段取首测点外推。",

@@ -606,6 +606,22 @@ class CasingFlowSolver:
                     ),
                 ))
 
+            # F4 收尾事件（2026-09-02）：erf 截断使 5 子事件最后分数封顶于
+            # 0.5*(1+erf(1))≈0.9214，正体期入库浓度系统性损失 ~7.9pp。
+            # 追加 t=t_arrival+σ 的 frac=1.0 收尾事件（同 FRONT_ARRIVAL、同
+            # phase 结构），保证正体期相分数到 1.0；与最后子事件同刻，
+            # ShoeTimeline.at() 的"最近过去事件"语义保证该时刻取收尾状态。
+            dispersed_events.append(ShoeEvent(
+                time_s=t_arrival + sigma_t,
+                kind=ShoeEventKind.FRONT_ARRIVAL,
+                flow_rate_m3_s=event.flow_rate_m3_s,
+                stage_name=event.stage_name,
+                phase_fractions=(
+                    (next_fluid, 1.0),
+                    (prev_fluid, 0.0),
+                ),
+            ))
+
         return sorted(dispersed_events, key=lambda e: e.time_s)
 
     def _build_shoe_timeline(
