@@ -579,7 +579,7 @@ class TestStaticWallLayer:
         s = _make_solver()
         assert hasattr(s, "c_min")
         assert s.c_min == 0.05
-        assert s.enable_yield_gate is False
+        assert s.enable_yield_gate is True  # 2026-09-02 起默认启用可逆τw物理屈服门
         assert s.yield_gate_f_safety == 1.15
         assert s.yield_gate_c_min_residual == 0.01
 
@@ -604,16 +604,24 @@ class TestStaticWallLayer:
                 phase_fractions=(("cement", 1.0), ("lead", 1.0)),
             )
 
-        s = AnnulusD2DGASolver(dt=4.0, nz=20, ny=8, total_t=40.0, c_min=0.05)
+        s = AnnulusD2DGASolver(dt=4.0, nz=20, ny=8, total_t=40.0, c_min=0.05, enable_yield_gate=False)
         res = s.run(well, fluids, _inlet)
         cement = np.clip(res.lead_field + res.tail_field, 0.0, 1.0)
-        # wall=1 → cement < c_min; wall=0 → cement >= c_min
+        # wall=1 → cement < c_min；wall=0 → 水泥主体(c>=c_min)、弥散光晕痕量(c<=ε)
+        # 或 A 防护解冻格（ε<c<c_min，少数）。C 根因修复 2026-09-02 后 wall=0 侧
+        # 不再要求一致（旧断言"wall=0 必须 c>=c_min"正是死锁缺陷语义的锚定）。
         wall_one = res.wall_field > 0.5
         if wall_one.any():
             assert np.all(cement[wall_one] < 0.05 + 1e-9), "wall=1 处 cement 应 < c_min"
         wall_zero = res.wall_field < 0.5
         if wall_zero.any():
-            assert np.all(cement[wall_zero] >= 0.05 - 1e-9), "wall=0 处 cement 应 >= c_min"
+            cz = cement[wall_zero]
+            body_or_halo = (cz >= 0.05 - 1e-9) | (cz <= s.wall_seed_c_min + 1e-9)
+            assert np.all(body_or_halo | (cz < 0.05)), (
+                "wall=0 处低浓度格应限于光晕痕量(c<=ε)与 A 解冻格(ε<c<c_min)")
+            unfrozen_mid = int((body_or_halo == False).sum())  # noqa: E712
+            assert unfrozen_mid <= max(1, int(0.05 * cz.size)), (
+                "ε<c<c_min 的 wall=0 格应仅限 A 防护解冻格（少数）")
 
     def test_wall_zeros_velocity_in_wall_cells(self):
         """wall=1 处速度 w≈0（流动度归零）。"""

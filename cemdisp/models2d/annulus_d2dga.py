@@ -249,8 +249,9 @@ class AnnulusD2DGASolver:
         cfl_number: float = 0.5,
         dt_min: float = 0.1,
         c_min: float = 0.05,
+        wall_seed_c_min: float = 0.005,
         e_clip_max: float = 0.55,
-        enable_yield_gate: bool = False,
+        enable_yield_gate: bool = True,  # 2026-09-02 默认启用可逆τw物理屈服门（替代非物理永久浓度冻结，结果网格收敛）
         yield_gate_f_safety: float = 1.15,
         yield_gate_c_min_residual: float = 0.01,
         dispersion_axial: float = 0.018,
@@ -300,6 +301,12 @@ class AnnulusD2DGASolver:
             c_min: 壁面静止层浓度阈值（Bararpour 2025 式 2.35-2.41），默认 0.05。
                 局部水泥浓度 c < c_min 时该处壁面层泥浆滞留不流动（wall=1）。
                 屈服门槛关闭（enable_yield_gate=False）时作为 OFF 路径兜底。
+            wall_seed_c_min: wall 判据的"水泥到达"种子阈值 ε，默认 0.005（C 根因修复，
+                2026-09-02）。baseline wall 判据中 cement_ever > ε 才视为"水泥已到达"。
+                物理依据（Bararpour 残泥原意）：D2DGA 间隙弥散在前缘前方留下痕量水泥
+                光晕（c≈O(ε)），痕量不构成"前缘已过、残泥滞留"，不应触发壁面冻结。
+                ε=0（旧判据）时任何数值弥散痕迹都会永久钉住 wall=1，是 hu1/hu103
+                η≈0 死锁的根因。ε 可后续标定：ε↑ 冻结判据更保守，ε→0 退回缺陷行为。
             e_clip_max: M4 偏心度 e 硬截断上限，默认 0.55（逐位复现基线）。
                 由 e = clip(1-standoff, 0.05, e_clip_max) 构造几何；
                 生产跑道（Task 13 重跑阶段）显式设 0.90 放宽截断。
@@ -342,6 +349,7 @@ class AnnulusD2DGASolver:
         self.cfl_number: float = cfl_number
         self.dt_min: float = dt_min
         self.c_min: float = c_min
+        self.wall_seed_c_min: float = wall_seed_c_min
         self.e_clip_max: float = e_clip_max
         self.enable_yield_gate: bool = enable_yield_gate
         self.yield_gate_f_safety: float = yield_gate_f_safety
@@ -544,8 +552,8 @@ class AnnulusD2DGASolver:
         ref_mask = np.zeros_like(w, dtype=bool)
         ref_mask[ref_row_safe[has_flow], col[has_flow]] = True
         immobile = (tau_w_extrap <= f_safety * tau_y) & (~ref_mask) & (cement_ever > 0.0)
-        residual_wall = (cement_ever > 0.0) & (cement_local < c_min_residual) & (~ref_mask)
-        wall_new = np.where(immobile | residual_wall, 1.0, 0.0)
+        # 2026-09-02 删除非物理的 residual_wall 永久浓度冻结（见下行注释），静泥层只由 immobile 决定
+        wall_new = np.where(immobile, 1.0, 0.0)  # 仅可逆τw判据；残余泥膜由浓度场c<1计入ηE，不再清零速度
         # 整列无流动且水泥已到 -> 整列冻结（无法定义参考 G）
         col_freeze = ~has_flow & np.any(cement_ever > 0.0, axis=0)
         wall_new[:, col_freeze] = 1.0
@@ -811,7 +819,8 @@ class AnnulusD2DGASolver:
         if wall is not None:
             pref = pref * (1.0 - wall)
 
-        # 由截面排量约束得到轴向速度 w
+        # 由截面排量约束得到轴向速度 w（2026-09-02 守恒修正：截面权重去掉多余因子2，
+        # 使同心极限 w=Q/A、全环空通量 2∫w b dy=Q；旧口径仅输运 Q/2 导致 η_E 系统偏低）。
         dy = np.gradient(geom["y"])[:, None]
         if self.enable_regime_split:
             # M2: 局部流态修正固定点迭代（Maleki & Frigaard 2017 式58-66）
@@ -831,7 +840,7 @@ class AnnulusD2DGASolver:
                 re_p = rc.metzner_reed_re(w_k, rho_kg_m3, n_mix, kappa_mix, b)
                 R_new, _ = rc.drag_weight(re_p, he, n_mix, re_crit, self.regime_re_turb_ratio)
                 pref_k = np.maximum(base * buoyancy_shape * R_new, 1.0e-8) * wall_factor
-                area_w = np.sum(pref_k * b * dy * 2.0, axis=0, keepdims=True)
+                area_w = np.sum(pref_k * b * dy, axis=0, keepdims=True)
                 w_raw = q_half * pref_k / np.maximum(area_w, 1.0e-12)
                 w_new = self.regime_relax_alpha * w_raw + (1.0 - self.regime_relax_alpha) * w_k
                 if (np.max(np.abs(w_new - w_k))
@@ -842,15 +851,15 @@ class AnnulusD2DGASolver:
                 w_k = w_new
                 R = R_new
             # 欠松弛只是求解 R 的迭代手段；报告的 w 必须是以最终 R 直接归一的结果，
-            # 使 2·Σw·b·dy = q_half 对任意迭代步数精确成立（真正的不动点），
+            # 使全环空通量 2·Σw·b·dy = 2·q_half = Q 精确成立（2026-09-02 守恒修正口径）。
             # 消除欠松弛迭代返回 w_k 时 ~1.6% 的瞬态守恒误差。
             pref_final = np.maximum(base * buoyancy_shape * R, 1.0e-8) * wall_factor
-            area_final = np.sum(pref_final * b * dy * 2.0, axis=0, keepdims=True)
+            area_final = np.sum(pref_final * b * dy, axis=0, keepdims=True)
             w = q_half * pref_final / np.maximum(area_final, 1.0e-12)
             # area_weight 与最终 w 构成一致配对（同一 area_final）
             area_weight = area_final
         else:
-            area_weight = np.sum(pref * b * dy * 2.0, axis=0, keepdims=True)
+            area_weight = np.sum(pref * b * dy, axis=0, keepdims=True)
             w = q_half * pref / np.maximum(area_weight, 1.0e-12)
 
         # 横向速度 v 由连续性方程求解（简化处理，论文版未显式计算 v）
@@ -1157,7 +1166,26 @@ class AnnulusD2DGASolver:
                         w, geom["effective_b"], mu, _tau_y, cement_ever, cement_local,
                         self.yield_gate_f_safety, self.yield_gate_c_min_residual)
                 else:
-                    wall = np.where(cement_ever > 0, (cement_local < self.c_min).astype(float), 0.0)
+                    # C 根因修复（2026-09-02）：cement_ever 种子阈值从 0 提高到
+                    # wall_seed_c_min（默认 0.005）——弥散光晕痕量（≤ε）不算"水泥已
+                    # 到达"，不应触发壁面冻结（Bararpour 残泥原意）。A 防护块保留兜底。
+                    wall = np.where(
+                        cement_ever > self.wall_seed_c_min,
+                        (cement_local < self.c_min).astype(float), 0.0)
+                    # 缺陷防护（2026-09-02）：c_min 判据可能把某列全部格子冻结。
+                    # 整列 wall=1 → 该列 area_weight=0 → w=0，入口水泥无法进入环空，
+                    # 且冻结自我强化（hu1/hu103 回归：全场 wall=1、occ≈1/nz）。
+                    # 每列保住一个流动通道：优先解冻该列 w>0 的最快元（对齐 M3
+                    # ref_mask 不变量"正在流动的格子不应被浓度判据冻结"），无流动
+                    # 列解冻 cement_local 最大元（死锁重启通道）。
+                    col_all_frozen = np.nonzero((wall > 0.5).all(axis=0))[0]
+                    if col_all_frozen.size > 0:
+                        w_rank = np.where(w > 0.0, np.abs(w), -1.0)
+                        for j_col in col_all_frozen:
+                            i_row = int(np.argmax(w_rank[:, j_col]))
+                            if w_rank[i_row, j_col] <= 0.0:
+                                i_row = int(np.argmax(cement_local[:, j_col]))
+                            wall[i_row, j_col] = 0.0
 
             else:
                 # === 泵停阶段：冻结浓度场，仅记录指标 ===

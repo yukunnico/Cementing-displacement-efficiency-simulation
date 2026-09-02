@@ -141,7 +141,7 @@ class TestCasingFlowShoeTimeline(unittest.TestCase):
         result = solver.run(_well(upper_area_m2=0.02), _fluids(), _schedule())
 
         # 旧结果仍按 result.pipe_cross_section_m2 * shoe_md_m = 1 m³ 计算首个前缘。
-        self.assertAlmostEqual(result.fronts[0].time_s, 60.0)
+        self.assertAlmostEqual(result.fronts[0].time_s, 90.0)  # 2026-09-02 统一双内径口径：1.5m³→90s
 
         before_arrival = result.shoe_timeline.at(89.0)
         at_arrival = result.shoe_timeline.at(90.0)

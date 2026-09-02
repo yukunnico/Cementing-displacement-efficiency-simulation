@@ -210,6 +210,8 @@ class CasingFlowSolver:
         pipe_area_m2 = self._pipe_cross_section_area(well_spec)
         shoe_depth_m = well_spec.shoe_md_m
         pipe_volume_m3 = shoe_depth_m * pipe_area_m2
+        # 2026-09-02 修复：到达鞋口的迟到体积改用双内径感知口径，与鞋口时间线(provider)一致（hu103双内径停算偏早）
+        arrival_pipe_volume_m3 = self._timeline_pipe_volume(well_spec, pipe_volume_m3)
         scheduled_steps = self._build_scheduled_steps(schedule)
         initial_fluid = self._initial_fluid_name(fluids, schedule)
         fluid_by_name = {fluid.name: fluid for fluid in fluids}
@@ -221,7 +223,7 @@ class CasingFlowSolver:
         # 而不是只由该流体自身注入体积决定。
         fronts: list[InterfaceFront] = []
         for i, scheduled in enumerate(scheduled_steps):
-            arrival_time_s = self._front_arrival_time(scheduled, scheduled_steps, pipe_volume_m3)
+            arrival_time_s = self._front_arrival_time(scheduled, scheduled_steps, arrival_pipe_volume_m3)
             if arrival_time_s is None:
                 # 不可压缩管流下，该前缘在泵注结束前未到达鞋口（目标累计体积
                 # 超过总泵入体积）。若回退到该步骤自身 end_time，会插到更早步骤
@@ -260,7 +262,7 @@ class CasingFlowSolver:
                 continue
             if max_cement_front_time_s is None or fronts[i].time_s > max_cement_front_time_s:
                 max_cement_front_time_s = fronts[i].time_s
-            rear_arrival_time_s = self._rear_arrival_time(scheduled, scheduled_steps, pipe_volume_m3)
+            rear_arrival_time_s = self._rear_arrival_time(scheduled, scheduled_steps, arrival_pipe_volume_m3)
             if rear_arrival_time_s is None:
                 # 尾缘在泵注结束前未越过鞋口（目标累计体积超过总泵入体积）：
                 # 以泵注结束时刻为上界标记，保证不早于水泥前缘到达时刻。

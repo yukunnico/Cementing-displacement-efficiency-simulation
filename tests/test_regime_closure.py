@@ -100,13 +100,13 @@ class TestRegimeSplitSolver:
         b = geom["effective_b"]
         dy = np.gradient(geom["y"])[:, None]
         flow_per_col = np.sum(w * b * dy * 2.0, axis=0)
-        np.testing.assert_allclose(flow_per_col, q / 2.0, atol=1e-9)
+        np.testing.assert_allclose(flow_per_col, q, atol=1e-9)  # 全环空通量=全排量q（2026-09-02守恒修正）
 
     def test_split_changes_w_when_turbulent(self):
         """高排量使部分元 Re>re_crit：R≠1 令 w 相对层流归一发生可感变化（证明开关在工作）。"""
         s_off = _regime_solver()
         s_on = _regime_solver(enable_regime_split=True, regime_max_iter=200, regime_tol_rel=1e-14)
-        q = 0.15
+        q = 0.05  # 2026-09-02 守恒修正后 w 翻倍，取该排量使宽/窄间隙格跨层流-湍流转捩带，R 非均匀从而改变归一后的 w
         w_off = _call_velocity(s_off, q_m3s=q, w_prev_val=2.0, wall=None)
         w_on = _call_velocity(s_on, q_m3s=q, w_prev_val=2.0, wall=None)
         assert not np.allclose(w_on, w_off, rtol=1e-3)
@@ -124,7 +124,7 @@ class TestRegimeSplitSolver:
         b = geom["effective_b"]
         dy = np.gradient(geom["y"])[:, None]
         flow_per_col = 2.0 * np.sum(w * b * dy, axis=0)
-        np.testing.assert_allclose(flow_per_col, q / 2.0, rtol=1e-9)  # q_half
+        np.testing.assert_allclose(flow_per_col, q, rtol=1e-9)  # 全环空通量=全排量q（2026-09-02守恒修正）
 
 
 def test_metzner_reed_re_shape_and_positive():
