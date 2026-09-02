@@ -1,0 +1,21 @@
+[run ] hu101 start
+[done] hu101 elapsed=2.6min
+[snap] 新值快照.json refreshed (8/8)
+[cmp] written duibibiao CSV
+[cmp] written huizong MD
+[run ] hu102 start
+[done] hu102 elapsed=3.6min
+[snap] 新值快照.json refreshed (8/8)
+[cmp] written duibibiao CSV
+[cmp] written huizong MD
+[run ] hu103 start
+[done] hu103 elapsed=2.0min
+[snap] 新值快照.json refreshed (8/8)
+[cmp] written duibibiao CSV
+[cmp] written huizong MD
+[run ] hu1 start
+[done] hu1 elapsed=2.5min
+[snap] 新值快照.json refreshed (8/8)
+[cmp] written duibibiao CSV
+[cmp] written huizong MD
+[run ] hu2 start

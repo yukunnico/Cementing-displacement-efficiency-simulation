@@ -1,0 +1,66 @@
+{
+  "hu101": {
+    "status": "done",
+    "elapsed_s": 153.9,
+    "elapsed_min": 2.6,
+    "error_tail": null,
+    "log": "D:\\users\\desktop\\research\\控压固井项目\\cement model\\results\\全井runner重跑_停止修复_2026-09-02\\logs\\hu101.log",
+    "finished_at": "2026-09-02 13:27:38"
+  },
+  "hu102": {
+    "status": "done",
+    "elapsed_s": 214.5,
+    "elapsed_min": 3.6,
+    "error_tail": null,
+    "log": "D:\\users\\desktop\\research\\控压固井项目\\cement model\\results\\全井runner重跑_停止修复_2026-09-02\\logs\\hu102.log",
+    "finished_at": "2026-09-02 13:31:13"
+  },
+  "hu103": {
+    "status": "done",
+    "elapsed_s": 122.1,
+    "elapsed_min": 2.0,
+    "error_tail": null,
+    "log": "D:\\users\\desktop\\research\\控压固井项目\\cement model\\results\\全井runner重跑_停止修复_2026-09-02\\logs\\hu103.log",
+    "finished_at": "2026-09-02 13:33:15"
+  },
+  "hu1": {
+    "status": "done",
+    "elapsed_s": 150.0,
+    "elapsed_min": 2.5,
+    "error_tail": null,
+    "log": "D:\\users\\desktop\\research\\控压固井项目\\cement model\\results\\全井runner重跑_停止修复_2026-09-02\\logs\\hu1.log",
+    "finished_at": "2026-09-02 13:35:45"
+  },
+  "hu2": {
+    "status": "done",
+    "elapsed_s": 360.3,
+    "elapsed_min": 6.0,
+    "error_tail": null,
+    "log": "D:\\users\\desktop\\research\\控压固井项目\\cement model\\results\\全井runner重跑_停止修复_2026-09-02\\logs\\hu2.log",
+    "finished_at": "2026-09-02 11:48:49"
+  },
+  "ht1_001": {
+    "status": "done",
+    "elapsed_s": 306.6,
+    "elapsed_min": 5.1,
+    "error_tail": null,
+    "log": "D:\\users\\desktop\\research\\控压固井项目\\cement model\\results\\全井runner重跑_停止修复_2026-09-02\\logs\\ht1_001.log",
+    "finished_at": "2026-09-02 11:53:56"
+  },
+  "ht1_003": {
+    "status": "done",
+    "elapsed_s": 367.7,
+    "elapsed_min": 6.1,
+    "error_tail": null,
+    "log": "D:\\users\\desktop\\research\\控压固井项目\\cement model\\results\\全井runner重跑_停止修复_2026-09-02\\logs\\ht1_003.log",
+    "finished_at": "2026-09-02 12:00:03"
+  },
+  "ht1_004": {
+    "status": "done",
+    "elapsed_s": 380.2,
+    "elapsed_min": 6.3,
+    "error_tail": null,
+    "log": "D:\\users\\desktop\\research\\控压固井项目\\cement model\\results\\全井runner重跑_停止修复_2026-09-02\\logs\\ht1_004.log",
+    "finished_at": "2026-09-02 12:06:24"
+  }
+}
