@@ -127,21 +127,25 @@ def test_hu102_shoe_lag_volume_matches_field_chain():
 
 
 def test_hu102_displacement_front_cannot_reach_shoe():
-    """hu102 尾浆尾缘 52+88.9=140.9 > 替浆步累计 139 → 替浆步内尾缘到不了鞋口。
+    """hu102 尾浆尾缘 52+88.9=140.9 > 替浆序列累计 139 → 尾缘到不了鞋口。
 
-    schedule 末尾的"循环排混浆"（次日后处理，RESTART，41m³）继续注入，
-    尾浆尾缘 140.9 将落在该步时间窗内——模型按步骤串行如实反映；
-    本测试只锁定 0708 核实事实：替浆到量（139m³）时尾浆尾缘仍未过鞋口。
+    0708 核实事实：替浆到量（139m³，单流阀失效、到量未碰压）时尾浆尾缘仍未
+    过鞋口，差 1.9m³。胶塞语义修复（2026-09-03 用户现场工艺裁定）后，次日后
+    处理步"循环排混浆"（RESTART，41m³）不推动管内界面——界面推进截断到顶替
+    序列（首个 RESTART 步之前），替浆不足时 cement_end 停在替浆步末，尾浆尾段
+    1.9m³ 滞留管内（详见 tests/test_plug_semantics_restart.py）。
     """
     well, fluids, schedule, _ = load_hu102_tailpipe()
     solver = CasingFlowSolver(enable_gravity=False)
     result = solver.run(well, fluids, schedule)
     displacement_end_cum = sum(s.volume_m3 for s in schedule.steps[:8])
-    # 替浆步结束时累计 139 < 尾浆尾缘过鞋口所需 52+88.9=140.9
+    # 替浆序列累计 139 < 尾浆尾缘过鞋口所需 52+88.9=140.9
     assert displacement_end_cum == pytest.approx(139.0)
     assert 52.0 + well.shoe_lag_volume_m3 > displacement_end_cum
-    # 尾浆尾缘过鞋口时刻落在循环排混浆步内：晚于替浆步结束时刻
-    circulation_volume = schedule.steps[8].volume_m3
-    circulation_rate_m3_s = schedule.steps[8].rate_m3_min / 60.0
-    circulation_start_s = result.pumping_end_time_s - circulation_volume / circulation_rate_m3_s
-    assert result.cement_end_time_s > circulation_start_s
+    # 胶塞语义：RESTART 步不推动界面 → cement_end = 替浆步末 = pumping_end
+    # （旧口径下尾缘会被循环排混浆步推出鞋口，cement_end 落在其时间窗内）
+    assert result.cement_end_time_s == pytest.approx(result.pumping_end_time_s)
+    displacement_end_s = sum(
+        s.volume_m3 / s.rate_m3_min * 60.0 for s in schedule.steps[:8]
+    )
+    assert result.cement_end_time_s == pytest.approx(displacement_end_s, abs=1e-6)

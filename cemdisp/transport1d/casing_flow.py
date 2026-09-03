@@ -103,6 +103,21 @@ class CasingFlowSolver:
     - 停泵期间考虑凝胶强度发展（指数增长模型）和屈服应力对沉降的抑制。
     - 凝胶强度发展参考 Kelessidis et al. (JPT, 2006) 的实验数据拟合。
 
+    胶塞语义（2026-09-03 用户现场工艺裁定，无条件生效）：
+    - 尾管固井尾浆之后有胶塞：替浆顶胶塞、胶塞驱动尾浆进环空，替浆本身
+      不进环空（胶塞机械隔离）；
+    - 次日后处理步（首个 RESTART 步起，如循环排混浆）与水泥顶替过程解耦，
+      不推动管内界面；
+    - 顶替序列 = 首个 RESTART 步之前的全部注入步骤；其终点（首个 RESTART
+      步的 start_time，无 RESTART 井 = 全日程最晚结束时刻）取代全日程 max
+      成为 pumping_end_time_s（外推上界）；
+    - cement_end_time_s = min(尾浆尾缘过鞋口时刻, 顶替序列终点)：碰压成功井
+      不变（尾缘在替浆步内过鞋口），替浆不足（未碰压）井停在替浆步末，
+      尾浆尾段滞留管内（如实反映单流阀失效井）；
+    - RESTART 步不生成鞋口事件、不推进迟到体积——替浆不进环空由"累计封顶
+      后替浆前缘永不到达"自动实现。该截断不依赖 has_plug 开关；has_plug
+      仅承载混浆增强因子=1 的语义。
+
     Literature references:
     - Romero & Carter, SPE 55927 (1999): Gravity settling in inclined wells
     - Shah & Sutton, SPE 18036 (1990): Yield stress effects on settling
@@ -160,8 +175,16 @@ class CasingFlowSolver:
                 经验值，需六井数据标定。
             max_mixing_enhancement: 混浆增强因子上限，无量纲，默认 10.0。
                 防止过渡带不物理地过宽。
-            has_plug: 是否有胶塞（尾管固井常配胶塞）；有则胶塞刮拭阻止混浆，
-                混浆增强因子恒为 1，默认 False。
+            has_plug: 是否有胶塞（尾管固井常配胶塞）。该开关承载两个相关但实现
+                独立的语义：
+                (1) 混浆增强因子=1（本实现实际消费的语义）：有胶塞时胶塞刮拭
+                    阻止界面混浆，混浆增强因子恒为 1，默认 False。
+                (2) "替浆不进环空"的胶塞隔离语义：不由本开关控制——它是用户
+                    现场工艺裁定（2026-09-03）的无条件事实：尾浆之后有胶塞，
+                    替浆顶胶塞驱动尾浆进环空，替浆本身不进环空；首个 RESTART
+                    步（次日后处理，如循环排混浆）不推动管内界面。该语义由
+                    顶替序列截断（_displacement_sequence_cutoff）在时间线构造
+                    中无条件保证，与 has_plug 取值无关（见类文档"胶塞语义"）。
         """
         if not math.isfinite(dt) or dt <= 0.0:
             raise ValueError("dt 必须为大于0的有限数值")
@@ -212,12 +235,19 @@ class CasingFlowSolver:
         pipe_volume_m3 = shoe_depth_m * pipe_area_m2
         # 2026-09-02 修复：到达鞋口的迟到体积改用双内径感知口径，与鞋口时间线(provider)一致（hu103双内径停算偏早）
         arrival_pipe_volume_m3 = self._timeline_pipe_volume(well_spec, pipe_volume_m3)
-        scheduled_steps = self._build_scheduled_steps(schedule)
+        scheduled_steps_full = self._build_scheduled_steps(schedule)
+        # 胶塞语义（2026-09-03 用户现场工艺裁定）：截断出"顶替序列"。
+        # 尾浆之后有胶塞——替浆顶胶塞、胶塞驱动尾浆进环空，替浆本身不进环空；
+        # 次日后处理步（首个 RESTART 步起，如循环排混浆）与水泥顶替过程解耦，
+        # 不推动管内界面。RESTART 步及其后的体积不计入累计泵入体积，累计封顶后
+        # 替浆前缘的到达体积坐标恒超出封顶值 → 替浆（及其后流体）永不到达鞋口，
+        # "替浆不进环空"由时间线构造自动保证。详见 _displacement_sequence_cutoff。
+        scheduled_steps, pumping_end_time_s = self._displacement_sequence_cutoff(scheduled_steps_full)
+        # 泵注结束时刻（= 顶替序列终点）：首个 RESTART 步之前序列的最晚结束时刻
+        # （无 RESTART 井 = 全日程最晚结束时刻，与旧口径一致）。用于"某前缘/尾缘
+        # 在顶替序列结束前未到达鞋口"时的保守上界标记。
         initial_fluid = self._initial_fluid_name(fluids, schedule)
         fluid_by_name = {fluid.name: fluid for fluid in fluids}
-        # 泵注结束时刻：取全部步骤的最晚结束时间（对末尾停泵步骤亦稳健）。
-        # 用于"某前缘/尾缘在泵注结束前未到达鞋口"时的保守上界标记。
-        pumping_end_time_s = max((s.end_time_s for s in scheduled_steps), default=0.0)
 
         # 为每个注入步骤建立"前缘"：前缘位置由累计泵入体积推动，
         # 而不是只由该流体自身注入体积决定。
@@ -287,6 +317,15 @@ class CasingFlowSolver:
             # 同一物理界面两时刻必须同刻；此约束只上抬不下压，纯安全约束
             cement_end_time_s = max(cement_end_time_s, max_cement_front_time_s)
 
+        plug_notes: list[str] = []
+        if len(scheduled_steps) < len(scheduled_steps_full):
+            # 胶塞语义注记（仅在实际发生 RESTART 截断时写入）
+            plug_notes.append(
+                "胶塞语义（用户现场工艺裁定）：尾浆后有胶塞，替浆顶胶塞驱动尾浆进环空，替浆不进环空；"
+                "首个 RESTART 步（次日后处理，如循环排混浆）不推动管内界面，鞋口序列止于顶替序列终点"
+                "（=顶替序列最晚结束时刻）；替浆不足（未碰压）时尾浆尾段滞留管内，"
+                "cement_end_time_s 停在替浆步末。"
+            )
         result = CasingFlowResult(
             fronts=tuple(fronts),
             schedule_steps=schedule.steps,
@@ -302,8 +341,11 @@ class CasingFlowSolver:
                 legacy_pipe_volume_m3=pipe_volume_m3,
             ),
             notes=(
-                "套管内采用体积推进前沿追踪；鞋口出流时间线含轴向弥散过渡带（enable_axial_dispersion 可关）。",
-                f"初始管内流体按 {initial_fluid} 处理。",
+                (
+                    "套管内采用体积推进前沿追踪；鞋口出流时间线含轴向弥散过渡带（enable_axial_dispersion 可关）。",
+                    f"初始管内流体按 {initial_fluid} 处理。",
+                )
+                + tuple(plug_notes)
             ),
         )
         self._scheduled_steps_by_result_id[id(result)] = scheduled_steps
@@ -318,6 +360,9 @@ class CasingFlowSolver:
             raise ValueError("time_s 必须为非负有限数值")
 
         scheduled_steps = self._scheduled_steps_for_result(result)
+        # 胶塞语义截断（幂等防御）：与 run()/时间轴同口径，RESTART 后处理步
+        # 不推进管内界面（存量调用方传入全序列时亦一致）。
+        scheduled_steps, _ = self._displacement_sequence_cutoff(scheduled_steps)
         pipe_volume_m3 = result.shoe_md_m * result.pipe_cross_section_m2
         initial_fluid = self._initial_fluid_by_result_id.get(id(result), "初始管内流体")
         state = self._pipe_exit_state_from_volume(
@@ -640,6 +685,9 @@ class CasingFlowSolver:
         """
 
         pipe_volume_m3 = self._timeline_pipe_volume(well_spec, legacy_pipe_volume_m3)
+        # 胶塞语义截断（幂等防御）：RESTART 后处理步不生成鞋口事件、不推进迟到体积；
+        # 时间轴止于顶替序列终点（run() 已传入截断序列，此处保证直接调用亦同口径）。
+        scheduled_steps, _ = self._displacement_sequence_cutoff(scheduled_steps)
         event_points: list[tuple[float, ShoeEventKind, tuple[tuple[str, float], ...] | None]] = []
         for i, scheduled in enumerate(scheduled_steps):
             displaced_fluid = self._displaced_fluid_name(scheduled_steps, i, initial_fluid)
@@ -791,6 +839,54 @@ class CasingFlowSolver:
             elapsed_s = end_time_s
             cumulative_volume_m3 += step.volume_m3
         return tuple(scheduled_steps)
+
+    @staticmethod
+    def _displacement_sequence_cutoff(
+        scheduled_steps: tuple[_ScheduledStep, ...],
+    ) -> tuple[tuple[_ScheduledStep, ...], float]:
+        """胶塞语义（2026-09-03 用户现场工艺裁定）：截断出"顶替序列"并给出其终点。
+
+        现场工艺：尾管固井尾浆之后有胶塞——替浆顶胶塞、胶塞驱动尾浆进环空，
+        替浆本身不进环空；次日后处理步（首个 RESTART 步起，如 hu102 循环排混浆）
+        与水泥顶替过程解耦，不推动管内界面。因此：
+
+        - 顶替序列 = 首个 RESTART 步之前的全部注入步骤；
+        - "顶替序列终点" = 首个 RESTART 步的 start_time（无 RESTART 井 = 全日程
+          最晚结束时刻，与旧口径一致），它取代"全日程 max"成为 pumping_end_time_s
+          （界面推进/外推上界）；
+        - RESTART 步及其后的体积不计入累计泵入体积——累计封顶后，替浆前缘的到达
+          体积坐标恒超出封顶值，替浆（及其后流体）永不到达鞋口，"替浆不进环空"
+          由时间线构造自动保证；
+        - 鞋口序列止于顶替序列终点（有胶塞时即尾浆尾缘 ≡ 胶塞面，替浆不足/未碰压
+          时尾浆尾段滞留管内）。
+
+        该截断是无条件工艺事实（不依赖 has_plug 开关）；has_plug 仅继续承载
+        "混浆增强因子=1"的语义（见 __init__ 文档）。本方法幂等：对已截断序列
+        再截断返回其自身。
+
+        Returns:
+            (截断后的步骤序列, 顶替序列终点[秒])。
+        """
+        restart_index = next(
+            (
+                i
+                for i, s in enumerate(scheduled_steps)
+                if s.step.event_tag == PumpingStageEvent.RESTART
+            ),
+            None,
+        )
+        if restart_index is None:
+            cutoff_time_s = max((s.end_time_s for s in scheduled_steps), default=0.0)
+            return scheduled_steps, cutoff_time_s
+        cutoff_time_s = scheduled_steps[restart_index].start_time_s
+        truncated = scheduled_steps[:restart_index]
+        if not truncated:
+            # 兜底：首个步骤即 RESTART（异常日程，顶替序列为空）→ 不截断。
+            cutoff_time_s = max(
+                (s.end_time_s for s in scheduled_steps), default=cutoff_time_s
+            )
+            return scheduled_steps, cutoff_time_s
+        return truncated, cutoff_time_s
 
     @staticmethod
     def _initial_fluid_name(fluids: tuple[FluidSpec, ...], schedule: PumpingSchedule) -> str:

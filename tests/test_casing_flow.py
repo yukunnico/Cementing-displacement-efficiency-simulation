@@ -124,7 +124,10 @@ class TestCasingFlowShoeTimeline(unittest.TestCase):
         self.assertIn(ShoeEventKind.FRONT_ARRIVAL, kinds)
         self.assertIn(ShoeEventKind.REAR_EXIT, kinds)
         self.assertIn(ShoeEventKind.SHUTDOWN, kinds)
-        self.assertIn(ShoeEventKind.RESTART, kinds)
+        # 胶塞语义（2026-09-03 用户现场工艺裁定）：RESTART 步为次日后处理，
+        # 不生成鞋口事件、不推进管内界面；时间轴止于顶替序列终点（RESTART 步 start）。
+        self.assertNotIn(ShoeEventKind.RESTART, kinds)
+        self.assertEqual(result.shoe_timeline.events[-1].time_s, 180.0)
         self.assertEqual(result.shoe_timeline.events[-1].kind, ShoeEventKind.END)
 
         for time_s in (0.0, 60.0, 150.0, 210.0, 240.0):
