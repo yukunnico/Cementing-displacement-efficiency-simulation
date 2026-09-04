@@ -1,0 +1,763 @@
+{
+ "rows": {
+  "hu1": {
+   "effective_efficiency": 0.9658877187134948,
+   "eta_narrow": 0.8728605132573565,
+   "channeling_index": 0.028112449799189778,
+   "mixing_index": 0.07914791130680146,
+   "最终结果.最终失稳指数": 0.07345117289433456,
+   "最终结果.最终失稳指数_线性": 0.3814426702280177,
+   "最终结果.浮力数_b": 1.3921525624511208,
+   "最终结果.最终水泥浆占据率": 0.9658877187134948,
+   "tier0_diagnostics.muskat_regime.eccentricity": 0.35,
+   "tier0_diagnostics.muskat_regime.regime": "stable",
+   "tier0_diagnostics.muskat_regime.viscosity_ratio": 0.08145766345123258,
+   "tier0_diagnostics.muskat_regime.shock_detected": true,
+   "tier0_diagnostics.flow_classification.flow_class": "non_dispersive_steady",
+   "tier0_diagnostics.flow_classification.w0_m_s": 0.4538237062281662,
+   "tier0_diagnostics.displacement_metrics.mud_retention_fraction": 0.02365,
+   "tier0_diagnostics.displacement_metrics.interface_length_ratio": 0.028513,
+   "tier0_diagnostics.displacement_metrics.t_br_s": 16062.842082199528,
+   "tier0_diagnostics.displacement_metrics.t_br_hat": 2.092740109220319,
+   "tier0_diagnostics.displacement_metrics.eta_narrow": 0.872861,
+   "tier0_diagnostics.displacement_metrics.eta_global": 0.965888,
+   "tier0_diagnostics.displacement_metrics.mean_flusher": 0.0,
+   "tier0_diagnostics.buoyancy_regime.b_number": 1.3921525624511208,
+   "tier0_diagnostics.buoyancy_regime.regime": "highly_dispersive",
+   "低尾指标.standoff低于0.5段占比": null,
+   "低尾指标.窄边效率低于0.05域占比": null,
+   "物理环空体积_m3": 59.902895514663875,
+   "井段_m": [
+    3523.27,
+    7601.0
+   ],
+   "模拟对象": "呼探1井 尾管段 3523.27-7601.00m"
+  },
+  "hu2": {
+   "effective_efficiency": 0.9846174683614209,
+   "eta_narrow": 0.9909542964951032,
+   "channeling_index": 0.0,
+   "mixing_index": 0.028362298478600743,
+   "最终结果.最终失稳指数": 0.0,
+   "最终结果.最终失稳指数_线性": 0.0,
+   "最终结果.浮力数_b": 4.230583562581153,
+   "最终结果.最终水泥浆占据率": 0.9846174683614209,
+   "tier0_diagnostics.muskat_regime.eccentricity": 0.2202781704596162,
+   "tier0_diagnostics.muskat_regime.regime": "stable",
+   "tier0_diagnostics.muskat_regime.viscosity_ratio": 0.06621004566210047,
+   "tier0_diagnostics.muskat_regime.shock_detected": true,
+   "tier0_diagnostics.flow_classification.flow_class": "insufficient_data",
+   "tier0_diagnostics.flow_classification.w0_m_s": null,
+   "tier0_diagnostics.displacement_metrics.mud_retention_fraction": 0.014201,
+   "tier0_diagnostics.displacement_metrics.interface_length_ratio": 0.0,
+   "tier0_diagnostics.displacement_metrics.t_br_s": 9314.6491792396,
+   "tier0_diagnostics.displacement_metrics.t_br_hat": 4.72711815994435,
+   "tier0_diagnostics.displacement_metrics.eta_narrow": 0.990954,
+   "tier0_diagnostics.displacement_metrics.eta_global": 0.984617,
+   "tier0_diagnostics.displacement_metrics.mean_flusher": 0.0,
+   "tier0_diagnostics.buoyancy_regime.b_number": 4.230583562581153,
+   "tier0_diagnostics.buoyancy_regime.regime": "highly_dispersive",
+   "低尾指标.standoff低于0.5段占比": null,
+   "低尾指标.窄边效率低于0.05域占比": null,
+   "物理环空体积_m3": 33.51580307999014,
+   "井段_m": [
+    5292.5,
+    7554.0
+   ],
+   "模拟对象": "呼探1-002井（HT1-002） 尾管段 5292.50-7554.00m"
+  },
+  "hu101": {
+   "effective_efficiency": 0.5859130175532576,
+   "eta_narrow": 0.04558200539146034,
+   "channeling_index": 0.9799196787144625,
+   "mixing_index": 0.3200581434757568,
+   "最终结果.最终失稳指数": 1.0,
+   "最终结果.最终失稳指数_线性": 6694.515118864949,
+   "最终结果.浮力数_b": 51.51726729046141,
+   "最终结果.最终水泥浆占据率": 0.5859130175532576,
+   "tier0_diagnostics.muskat_regime.eccentricity": 0.5467999719688567,
+   "tier0_diagnostics.muskat_regime.regime": "stable",
+   "tier0_diagnostics.muskat_regime.viscosity_ratio": 0.15223097112860892,
+   "tier0_diagnostics.muskat_regime.shock_detected": true,
+   "tier0_diagnostics.flow_classification.flow_class": "unsteady_dispersive",
+   "tier0_diagnostics.flow_classification.w0_m_s": 0.3065836311217323,
+   "tier0_diagnostics.displacement_metrics.mud_retention_fraction": 0.329596,
+   "tier0_diagnostics.displacement_metrics.interface_length_ratio": 1.92126,
+   "tier0_diagnostics.displacement_metrics.t_br_s": 9702.994474790514,
+   "tier0_diagnostics.displacement_metrics.t_br_hat": 3.101815281934775,
+   "tier0_diagnostics.displacement_metrics.eta_narrow": 0.045582,
+   "tier0_diagnostics.displacement_metrics.eta_global": 0.585913,
+   "tier0_diagnostics.displacement_metrics.mean_flusher": 0.0,
+   "tier0_diagnostics.buoyancy_regime.b_number": 51.51726729046141,
+   "tier0_diagnostics.buoyancy_regime.regime": "steady_capable",
+   "低尾指标.standoff低于0.5段占比": null,
+   "低尾指标.窄边效率低于0.05域占比": null,
+   "物理环空体积_m3": 65.53042974168298,
+   "井段_m": [
+    5400.0,
+    7868.0
+   ],
+   "模拟对象": "呼101 尾管段 5400.00-7868.00m"
+  },
+  "hu102": {
+   "effective_efficiency": 0.9835664485830562,
+   "eta_narrow": 0.8853293677178756,
+   "channeling_index": 0.0,
+   "mixing_index": 0.053060755522590604,
+   "最终结果.最终失稳指数": 0.0,
+   "最终结果.最终失稳指数_线性": 0.0,
+   "最终结果.浮力数_b": 2.456409709811229,
+   "最终结果.最终水泥浆占据率": 0.9835664485830562,
+   "tier0_diagnostics.muskat_regime.eccentricity": 0.5059549408375887,
+   "tier0_diagnostics.muskat_regime.regime": "stable",
+   "tier0_diagnostics.muskat_regime.viscosity_ratio": 0.06969376979936642,
+   "tier0_diagnostics.muskat_regime.shock_detected": true,
+   "tier0_diagnostics.flow_classification.flow_class": "non_dispersive_steady",
+   "tier0_diagnostics.flow_classification.w0_m_s": 1.148972375016415,
+   "tier0_diagnostics.displacement_metrics.mud_retention_fraction": 0.005093,
+   "tier0_diagnostics.displacement_metrics.interface_length_ratio": 0.0,
+   "tier0_diagnostics.displacement_metrics.t_br_s": 10944.726309717704,
+   "tier0_diagnostics.displacement_metrics.t_br_hat": 15.950579351832703,
+   "tier0_diagnostics.displacement_metrics.eta_narrow": 0.885329,
+   "tier0_diagnostics.displacement_metrics.eta_global": 0.983566,
+   "tier0_diagnostics.displacement_metrics.mean_flusher": 0.0,
+   "tier0_diagnostics.buoyancy_regime.b_number": 2.456409709811229,
+   "tier0_diagnostics.buoyancy_regime.regime": "highly_dispersive",
+   "低尾指标.standoff低于0.5段占比": null,
+   "低尾指标.窄边效率低于0.05域占比": null,
+   "物理环空体积_m3": 12.376013794032469,
+   "井段_m": [
+    6823.1,
+    7735.0
+   ],
+   "模拟对象": "呼102 尾管段 6823.10-7735.00m"
+  },
+  "hu103": {
+   "effective_efficiency": 0.9926255504890169,
+   "eta_narrow": 0.9667169683820409,
+   "channeling_index": 0.0,
+   "mixing_index": 0.027006034294682752,
+   "最终结果.最终失稳指数": 0.0,
+   "最终结果.最终失稳指数_线性": 0.0,
+   "最终结果.浮力数_b": 9.78251157208345,
+   "最终结果.最终水泥浆占据率": 0.9926255504890169,
+   "tier0_diagnostics.muskat_regime.eccentricity": 0.27803281276503233,
+   "tier0_diagnostics.muskat_regime.regime": "stable",
+   "tier0_diagnostics.muskat_regime.viscosity_ratio": 0.08059701492537313,
+   "tier0_diagnostics.muskat_regime.shock_detected": true,
+   "tier0_diagnostics.flow_classification.flow_class": "non_dispersive_steady",
+   "tier0_diagnostics.flow_classification.w0_m_s": 1.0042212716751753,
+   "tier0_diagnostics.displacement_metrics.mud_retention_fraction": 0.003392,
+   "tier0_diagnostics.displacement_metrics.interface_length_ratio": 0.0,
+   "tier0_diagnostics.displacement_metrics.t_br_s": 6394.012472152303,
+   "tier0_diagnostics.displacement_metrics.t_br_hat": 3.312126111579095,
+   "tier0_diagnostics.displacement_metrics.eta_narrow": 0.966717,
+   "tier0_diagnostics.displacement_metrics.eta_global": 0.992626,
+   "tier0_diagnostics.displacement_metrics.mean_flusher": 0.0,
+   "tier0_diagnostics.buoyancy_regime.b_number": 9.78251157208345,
+   "tier0_diagnostics.buoyancy_regime.regime": "highly_dispersive",
+   "低尾指标.standoff低于0.5段占比": null,
+   "低尾指标.窄边效率低于0.05域占比": null,
+   "物理环空体积_m3": 75.00755035317786,
+   "井段_m": [
+    5536.662,
+    7770.0
+   ],
+   "模拟对象": "呼103 尾管段 5536.66-7770.00m"
+  },
+  "ht1_001": {
+   "effective_efficiency": 0.9897643308238399,
+   "eta_narrow": 0.9779971414585653,
+   "channeling_index": 0.0,
+   "mixing_index": 0.037147346950035263,
+   "最终结果.最终失稳指数": 0.0,
+   "最终结果.最终失稳指数_线性": 0.0,
+   "最终结果.浮力数_b": 35.412414129497705,
+   "最终结果.最终水泥浆占据率": 0.9897643308238399,
+   "tier0_diagnostics.muskat_regime.eccentricity": 0.19599999999999995,
+   "tier0_diagnostics.muskat_regime.regime": "stable",
+   "tier0_diagnostics.muskat_regime.viscosity_ratio": 0.05821917808219178,
+   "tier0_diagnostics.muskat_regime.shock_detected": true,
+   "tier0_diagnostics.flow_classification.flow_class": "non_dispersive_steady",
+   "tier0_diagnostics.flow_classification.w0_m_s": 0.6838469013375946,
+   "tier0_diagnostics.displacement_metrics.mud_retention_fraction": 0.001252,
+   "tier0_diagnostics.displacement_metrics.interface_length_ratio": 0.0,
+   "tier0_diagnostics.displacement_metrics.t_br_s": 9512.60182138591,
+   "tier0_diagnostics.displacement_metrics.t_br_hat": 3.8472840548591227,
+   "tier0_diagnostics.displacement_metrics.eta_narrow": 0.977997,
+   "tier0_diagnostics.displacement_metrics.eta_global": 0.989764,
+   "tier0_diagnostics.displacement_metrics.mean_flusher": 0.0,
+   "tier0_diagnostics.buoyancy_regime.b_number": 35.412414129497705,
+   "tier0_diagnostics.buoyancy_regime.regime": "steady_capable",
+   "低尾指标.standoff低于0.5段占比": null,
+   "低尾指标.窄边效率低于0.05域占比": null,
+   "物理环空体积_m3": 72.76185764242368,
+   "井段_m": [
+    5469.711,
+    7746.0
+   ],
+   "模拟对象": "呼探1-001井（HT1-001） 尾管段 5469.71-7746.00m"
+  },
+  "ht1_003": {
+   "effective_efficiency": 0.9983666153700114,
+   "eta_narrow": 0.9942658540185164,
+   "channeling_index": 0.0,
+   "mixing_index": 0.005973811374000503,
+   "最终结果.最终失稳指数": 0.0,
+   "最终结果.最终失稳指数_线性": 0.0,
+   "最终结果.浮力数_b": 8.691712185843206,
+   "最终结果.最终水泥浆占据率": 0.9983666153700114,
+   "tier0_diagnostics.muskat_regime.eccentricity": 0.17,
+   "tier0_diagnostics.muskat_regime.regime": "stable",
+   "tier0_diagnostics.muskat_regime.viscosity_ratio": 0.46300863131935877,
+   "tier0_diagnostics.muskat_regime.shock_detected": true,
+   "tier0_diagnostics.flow_classification.flow_class": "non_dispersive_steady",
+   "tier0_diagnostics.flow_classification.w0_m_s": 1.1383710234948277,
+   "tier0_diagnostics.displacement_metrics.mud_retention_fraction": 0.000584,
+   "tier0_diagnostics.displacement_metrics.interface_length_ratio": 0.0,
+   "tier0_diagnostics.displacement_metrics.t_br_s": 8759.60907003196,
+   "tier0_diagnostics.displacement_metrics.t_br_hat": 4.557607957268312,
+   "tier0_diagnostics.displacement_metrics.eta_narrow": 0.994266,
+   "tier0_diagnostics.displacement_metrics.eta_global": 0.998367,
+   "tier0_diagnostics.displacement_metrics.mean_flusher": 0.0,
+   "tier0_diagnostics.buoyancy_regime.b_number": 8.691712185843206,
+   "tier0_diagnostics.buoyancy_regime.regime": "highly_dispersive",
+   "低尾指标.standoff低于0.5段占比": null,
+   "低尾指标.窄边效率低于0.05域占比": null,
+   "物理环空体积_m3": 57.68992895196336,
+   "井段_m": [
+    5307.539,
+    7618.0
+   ],
+   "模拟对象": "呼1-003井（HT1-003） 尾管段 5307.54-7618.00m"
+  },
+  "ht1_004": {
+   "effective_efficiency": 0.998523636248255,
+   "eta_narrow": 0.9937717273539248,
+   "channeling_index": 0.0,
+   "mixing_index": 0.0057897059084298635,
+   "最终结果.最终失稳指数": 0.0,
+   "最终结果.最终失稳指数_线性": 0.0,
+   "最终结果.浮力数_b": 4.372167242775293,
+   "最终结果.最终水泥浆占据率": 0.998523636248255,
+   "tier0_diagnostics.muskat_regime.eccentricity": 0.17,
+   "tier0_diagnostics.muskat_regime.regime": "stable",
+   "tier0_diagnostics.muskat_regime.viscosity_ratio": 0.3117647058823529,
+   "tier0_diagnostics.muskat_regime.shock_detected": true,
+   "tier0_diagnostics.flow_classification.flow_class": "non_dispersive_steady",
+   "tier0_diagnostics.flow_classification.w0_m_s": 0.8611240596090437,
+   "tier0_diagnostics.displacement_metrics.mud_retention_fraction": 0.000162,
+   "tier0_diagnostics.displacement_metrics.interface_length_ratio": 0.0,
+   "tier0_diagnostics.displacement_metrics.t_br_s": 8969.542118855436,
+   "tier0_diagnostics.displacement_metrics.t_br_hat": 2.971726317949159,
+   "tier0_diagnostics.displacement_metrics.eta_narrow": 0.993772,
+   "tier0_diagnostics.displacement_metrics.eta_global": 0.998524,
+   "tier0_diagnostics.displacement_metrics.mean_flusher": 0.0,
+   "tier0_diagnostics.buoyancy_regime.b_number": 4.372167242775293,
+   "tier0_diagnostics.buoyancy_regime.regime": "highly_dispersive",
+   "低尾指标.standoff低于0.5段占比": null,
+   "低尾指标.窄边效率低于0.05域占比": null,
+   "物理环空体积_m3": 59.80426899474763,
+   "井段_m": [
+    5243.207,
+    7660.0
+   ],
+   "模拟对象": "呼1-004井（HT1-004） 尾管段 5243.21-7660.00m"
+  }
+ },
+ "windows": {
+  "hu1": {
+   "CBL评价井段": {
+    "window_type": "cbl",
+    "eta_E": 0.9674896767294332,
+    "eta_N": 0.8753771440972009
+   },
+   "CBL质量段(不合格40m)": {
+    "window_type": "cbl_quality",
+    "eta_E": 0.9999999999143679,
+    "eta_N": 0.9999999994737946
+   },
+   "CBL质量段(差)": {
+    "window_type": "cbl_quality",
+    "eta_E": 0.0,
+    "eta_N": 0.9999999969356417
+   },
+   "尾管封固段(模型聚焦窗)": {
+    "window_type": "model_focus",
+    "eta_E": 0.9658877187134947,
+    "eta_N": 0.8728605132573574
+   }
+  },
+  "hu2": {
+   "CBL评价井段": {
+    "window_type": "cbl",
+    "eta_E": 0.9846174683614209,
+    "eta_N": 0.9909542964951031
+   },
+   "目标层段（油气显示层）": {
+    "window_type": "formation_target",
+    "eta_E": 0.8299798397249228,
+    "eta_N": 0.9998823541037625
+   },
+   "目的层-K1q清水河组(地层目标)": {
+    "window_type": "formation_target",
+    "eta_E": 0.9994919338967208,
+    "eta_N": 0.9975286817074148
+   },
+   "目的层-J3k2喀拉扎组(地层目标)": {
+    "window_type": "formation_target",
+    "eta_E": 0.9522358957217606,
+    "eta_N": 0.9888981559767678
+   },
+   "高压水层(地层目标)": {
+    "window_type": "formation_target",
+    "eta_E": 0.0,
+    "eta_N": 0.9975561710866518
+   }
+  },
+  "hu101": {
+   "CBL评价井段(单层套管可评价段)": {
+    "window_type": "cbl",
+    "eta_E": 0.6040050222257084,
+    "eta_N": 0.029999381080532513
+   },
+   "CBL质量段(连续差段)": {
+    "window_type": "cbl_quality",
+    "eta_E": 0.7939008544850046,
+    "eta_N": 0.08989156549122454
+   },
+   "主要气层-K1q(地层目标)": {
+    "window_type": "formation_target",
+    "eta_E": 0.7801189424797813,
+    "eta_N": 0.0731317597514431
+   },
+   "气层段(CBL评价重点)": {
+    "window_type": "formation_target",
+    "eta_E": 0.7966457262630843,
+    "eta_N": 0.09407010110900338
+   },
+   "目的层-喀拉扎组J3k(地层目标)": {
+    "window_type": "formation_target",
+    "eta_E": 0.8507671532706687,
+    "eta_N": 0.2994743130558366
+   },
+   "水层-K1s(地层目标)": {
+    "window_type": "formation_target",
+    "eta_E": 0.0,
+    "eta_N": 0.0006218505673000143
+   }
+  },
+  "hu102": {
+   "CBL评价井段": {
+    "window_type": "cbl",
+    "eta_E": 0.9826790651652949,
+    "eta_N": 0.8792530419134478
+   },
+   "CBL质量段一(胶结差/不合格)": {
+    "window_type": "cbl_quality",
+    "eta_E": 0.9938500722094887,
+    "eta_N": 0.9583545066968971
+   },
+   "CBL质量段二(胶结差/不合格)": {
+    "window_type": "cbl_quality",
+    "eta_E": 0.9966835188323209,
+    "eta_N": 0.9755801304228215
+   },
+   "J3k目的层(地层目标)": {
+    "window_type": "formation_target",
+    "eta_E": 0.9968472151455938,
+    "eta_N": 0.9771282306538944
+   }
+  },
+  "hu103": {
+   "CBL评价井段(139.7mm段)": {
+    "window_type": "cbl",
+    "eta_E": 0.999999999999695,
+    "eta_N": 0.9999999999983071
+   },
+   "CBL评价井段(168.3mm段)": {
+    "window_type": "cbl",
+    "eta_E": 0.991617122436492,
+    "eta_N": 0.9589055442637304
+   },
+   "全尾管段": {
+    "window_type": "custom",
+    "eta_E": 0.9926255504890165,
+    "eta_N": 0.9667169683820406
+   },
+   "气层-K1q(地层目标)": {
+    "window_type": "formation_target",
+    "eta_E": 0.9999999999999993,
+    "eta_N": 0.9999999999999982
+   },
+   "差气层-J3k(地层目标)": {
+    "window_type": "formation_target",
+    "eta_E": 0.9999999999999991,
+    "eta_N": 0.9999999999999989
+   }
+  },
+  "ht1_001": {
+   "CBL对比窗(模型假设,现场无CBL定量)": {
+    "window_type": "model_focus",
+    "eta_E": 0.9897643308238399,
+    "eta_N": 0.9779971414585651
+   },
+   "K1q差气层1(录井显示)": {
+    "window_type": "formation_target",
+    "eta_E": 0.0,
+    "eta_N": 0.9999999999999998
+   },
+   "K1q油气同层(录井显示)": {
+    "window_type": "formation_target",
+    "eta_E": 0.9999999999999999,
+    "eta_N": 1.0
+   },
+   "J3k3气层(录井显示)": {
+    "window_type": "formation_target",
+    "eta_E": 0.9999999999999996,
+    "eta_N": 1.0
+   },
+   "K1s水层1(录井解释)": {
+    "window_type": "formation_target",
+    "eta_E": 0.0,
+    "eta_N": 0.9791685824234353
+   },
+   "K1q+J3k2主要目的层": {
+    "window_type": "formation_target",
+    "eta_E": 0.9985599544328353,
+    "eta_N": 0.9986707765182167
+   },
+   "模型关注窗(替浆/掺混分析)": {
+    "window_type": "model_focus",
+    "eta_E": 0.9999999999999999,
+    "eta_N": 0.9999999999999996
+   }
+  },
+  "ht1_003": {
+   "CBL评价井段(尾管段)": {
+    "window_type": "cbl",
+    "eta_E": 0.9989294030924142,
+    "eta_N": 0.9969881272160165
+   },
+   "CBL数字化窗(78.7%对应)": {
+    "window_type": "cbl_digitization",
+    "eta_E": 0.9988283278113594,
+    "eta_N": 0.9946126799333342
+   },
+   "气层-K1q主力油层段(地层目标)": {
+    "window_type": "formation_target",
+    "eta_E": 0.9999999999999992,
+    "eta_N": 0.9999999999999996
+   },
+   "目的井段(地层目标)": {
+    "window_type": "formation_target",
+    "eta_E": 0.9932248430955294,
+    "eta_N": 0.9932248544057748
+   }
+  },
+  "ht1_004": {
+   "CBL评价井段(尾管段)": {
+    "window_type": "cbl",
+    "eta_E": 0.9984984539359769,
+    "eta_N": 0.9936550904795921
+   },
+   "目的井段1(地层目标)": {
+    "window_type": "formation_target",
+    "eta_E": 0.9999999999999996,
+    "eta_N": 0.9999999999999999
+   },
+   "目的井段2(地层目标)": {
+    "window_type": "formation_target",
+    "eta_E": 0.9999999999999994,
+    "eta_N": 0.9999999999999999
+   },
+   "油气水层段(红线)": {
+    "window_type": "oil_gas_show",
+    "eta_E": 0.9999999999999996,
+    "eta_N": 0.9999999999999997
+   }
+  }
+ },
+ "sums": {
+  "hu101": {
+   "井": "hu101",
+   "本轮η_E": 0.5859,
+   "η_N": 0.0456,
+   "stop_s": 13742.7,
+   "入环空水泥_m3": 72.19,
+   "域内水泥_m3": 38.4,
+   "守恒率": 0.5318,
+   "库存比": 1.068,
+   "宽边前缘m": 2468.0,
+   "窄边前缘m": 49.6,
+   "域长m": 2468.0,
+   "宽边到位率": 1.0,
+   "窄边到位率": 0.0201,
+   "壁面冻结占比": 0.4427,
+   "混浆指数": 0.3201,
+   "耗时s": 63.0,
+   "shoe_lag_m3": 102.6,
+   "上轮η_E": 0.5859,
+   "Δη_E": 0.0,
+   "上轮stop_s": 13742.7,
+   "stop增量_s": 0.0273,
+   "上轮入库水泥_m3": 72.19,
+   "Δ入库水泥_m3": 0.0037,
+   "上轮域内水泥_m3": 38.4,
+   "Δ域内水泥_m3": -0.0049,
+   "本轮修复注记": "无RESTART步→胶塞截断为无操作（stop/η_E 应逐位不变，见对照列）",
+   "2D入库积分_m3": 72.19,
+   "2D入库减1s积分_m3": -0.0,
+   "场体积漂移_m3": -33.8,
+   "域满体积_m3": 65.53,
+   "物理环空体积_m3": 65.53,
+   "状态": "ok",
+   "stop_B3前_s": 9521.2
+  },
+  "hu102": {
+   "井": "hu102",
+   "本轮η_E": 0.9836,
+   "η_N": 0.8853,
+   "stop_s": 11737.1,
+   "入环空水泥_m3": 16.86,
+   "域内水泥_m3": 12.17,
+   "守恒率": 0.7219,
+   "库存比": 1.374,
+   "宽边前缘m": 911.9,
+   "窄边前缘m": 911.9,
+   "域长m": 911.9,
+   "宽边到位率": 1.0,
+   "窄边到位率": 1.0,
+   "壁面冻结占比": 0.0,
+   "混浆指数": 0.0531,
+   "耗时s": 116.6,
+   "shoe_lag_m3": 88.9,
+   "上轮η_E": 0.9846,
+   "Δη_E": -0.001,
+   "上轮stop_s": 11824.8,
+   "stop增量_s": -87.6571,
+   "上轮入库水泥_m3": 18.74,
+   "Δ入库水泥_m3": -1.8779,
+   "上轮域内水泥_m3": 12.19,
+   "Δ域内水泥_m3": -0.0174,
+   "本轮修复注记": "胶塞语义：循环排混浆(RESTART,41m³)不再推动管内界面；替浆74<管容88.9(未碰压)→尾浆尾段1.9m³滞留管内，stop -87.69s",
+   "2D入库积分_m3": 16.86,
+   "2D入库减1s积分_m3": -0.01,
+   "场体积漂移_m3": -4.68,
+   "域满体积_m3": 12.38,
+   "物理环空体积_m3": 12.376,
+   "状态": "ok",
+   "stop_B3前_s": 10594.9
+  },
+  "hu103": {
+   "井": "hu103",
+   "本轮η_E": 0.9926,
+   "η_N": 0.9667,
+   "stop_s": 8012.9,
+   "入环空水泥_m3": 84.89,
+   "域内水泥_m3": 74.45,
+   "守恒率": 0.8771,
+   "库存比": 1.107,
+   "宽边前缘m": 2233.3,
+   "窄边前缘m": 2233.3,
+   "域长m": 2233.3,
+   "宽边到位率": 1.0,
+   "窄边到位率": 1.0,
+   "壁面冻结占比": 0.0,
+   "混浆指数": 0.027,
+   "耗时s": 56.6,
+   "shoe_lag_m3": 88.55,
+   "上轮η_E": 0.9926,
+   "Δη_E": 0.0,
+   "上轮stop_s": 8012.9,
+   "stop增量_s": -0.0022,
+   "上轮入库水泥_m3": 84.89,
+   "Δ入库水泥_m3": -0.0044,
+   "上轮域内水泥_m3": 74.45,
+   "Δ域内水泥_m3": 0.0044,
+   "本轮修复注记": "无RESTART步→胶塞截断为无操作（stop/η_E 应逐位不变，见对照列）",
+   "2D入库积分_m3": 84.87,
+   "2D入库减1s积分_m3": -0.01,
+   "场体积漂移_m3": -10.42,
+   "域满体积_m3": 75.01,
+   "物理环空体积_m3": 75.008,
+   "状态": "ok",
+   "stop_B3前_s": 7436.2
+  },
+  "hu1": {
+   "井": "hu1",
+   "本轮η_E": 0.9659,
+   "η_N": 0.8729,
+   "stop_s": 20944.4,
+   "入环空水泥_m3": 60.11,
+   "域内水泥_m3": 57.86,
+   "守恒率": 0.9626,
+   "库存比": 1.002,
+   "宽边前缘m": 4077.7,
+   "窄边前缘m": 3963.1,
+   "域长m": 4077.7,
+   "宽边到位率": 1.0,
+   "窄边到位率": 0.9719,
+   "壁面冻结占比": 0.0093,
+   "混浆指数": 0.0791,
+   "耗时s": 66.5,
+   "shoe_lag_m3": 88.01079700052479,
+   "上轮η_E": 0.9659,
+   "Δη_E": -0.0,
+   "上轮stop_s": 20944.4,
+   "stop增量_s": -0.041,
+   "上轮入库水泥_m3": 60.11,
+   "Δ入库水泥_m3": -0.0039,
+   "上轮域内水泥_m3": 57.86,
+   "Δ域内水泥_m3": -0.0005,
+   "本轮修复注记": "无RESTART步→胶塞截断为无操作（stop/η_E 应逐位不变，见对照列）",
+   "2D入库积分_m3": 60.1,
+   "2D入库减1s积分_m3": -0.01,
+   "场体积漂移_m3": -2.24,
+   "域满体积_m3": 59.9,
+   "物理环空体积_m3": 59.903,
+   "状态": "ok",
+   "stop_B3前_s": 20944.4
+  },
+  "hu2": {
+   "井": "hu2",
+   "本轮η_E": 0.9846,
+   "η_N": 0.991,
+   "stop_s": 11663.6,
+   "入环空水泥_m3": 39.34,
+   "域内水泥_m3": 33.0,
+   "守恒率": 0.8389,
+   "库存比": 1.134,
+   "宽边前缘m": 2261.5,
+   "窄边前缘m": 2261.5,
+   "域长m": 2261.5,
+   "宽边到位率": 1.0,
+   "窄边到位率": 1.0,
+   "壁面冻结占比": 0.0,
+   "混浆指数": 0.0284,
+   "耗时s": 52.8,
+   "shoe_lag_m3": null,
+   "上轮η_E": 0.9846,
+   "Δη_E": 0.0,
+   "上轮stop_s": 11663.6,
+   "stop增量_s": 0.0166,
+   "上轮入库水泥_m3": 39.34,
+   "Δ入库水泥_m3": -0.0029,
+   "上轮域内水泥_m3": 33.0,
+   "Δ域内水泥_m3": 0.0002,
+   "本轮修复注记": "无RESTART步→胶塞截断为无操作（stop/η_E 应逐位不变，见对照列）",
+   "2D入库积分_m3": 39.35,
+   "2D入库减1s积分_m3": 0.02,
+   "场体积漂移_m3": -6.35,
+   "域满体积_m3": 33.52,
+   "物理环空体积_m3": 33.516,
+   "状态": "ok",
+   "stop_B3前_s": 11663.6
+  },
+  "ht1_001": {
+   "井": "ht1_001",
+   "本轮η_E": 0.9898,
+   "η_N": 0.978,
+   "stop_s": 10899.6,
+   "入环空水泥_m3": 70.04,
+   "域内水泥_m3": 72.02,
+   "守恒率": 1.0283,
+   "库存比": 0.981,
+   "宽边前缘m": 2276.3,
+   "窄边前缘m": 2276.3,
+   "域长m": 2276.3,
+   "宽边到位率": 1.0,
+   "窄边到位率": 1.0,
+   "壁面冻结占比": 0.0,
+   "混浆指数": 0.0371,
+   "耗时s": 34.4,
+   "shoe_lag_m3": null,
+   "上轮η_E": 0.9898,
+   "Δη_E": -0.0,
+   "上轮stop_s": 10899.6,
+   "stop增量_s": 0.038,
+   "上轮入库水泥_m3": 70.04,
+   "Δ入库水泥_m3": -0.0033,
+   "上轮域内水泥_m3": 72.02,
+   "Δ域内水泥_m3": -0.0029,
+   "本轮修复注记": "无RESTART步→胶塞截断为无操作（stop/η_E 应逐位不变，见对照列）",
+   "2D入库积分_m3": 69.99,
+   "2D入库减1s积分_m3": -0.05,
+   "场体积漂移_m3": 2.03,
+   "域满体积_m3": 72.76,
+   "物理环空体积_m3": 72.762,
+   "状态": "ok",
+   "stop_B3前_s": 10899.6
+  },
+  "ht1_003": {
+   "井": "ht1_003",
+   "本轮η_E": 0.9984,
+   "η_N": 0.9943,
+   "stop_s": 10255.2,
+   "入环空水泥_m3": 71.27,
+   "域内水泥_m3": 57.6,
+   "守恒率": 0.8082,
+   "库存比": 1.161,
+   "宽边前缘m": 2310.5,
+   "窄边前缘m": 2310.5,
+   "域长m": 2310.5,
+   "宽边到位率": 1.0,
+   "窄边到位率": 1.0,
+   "壁面冻结占比": 0.0,
+   "混浆指数": 0.006,
+   "耗时s": 30.9,
+   "shoe_lag_m3": 91.9,
+   "上轮η_E": 0.9984,
+   "Δη_E": -0.0,
+   "上轮stop_s": 10255.2,
+   "stop增量_s": -0.0352,
+   "上轮入库水泥_m3": 71.27,
+   "Δ入库水泥_m3": -0.0016,
+   "上轮域内水泥_m3": 57.6,
+   "Δ域内水泥_m3": -0.0043,
+   "本轮修复注记": "无RESTART步→胶塞截断为无操作（stop/η_E 应逐位不变，见对照列）",
+   "2D入库积分_m3": 71.2,
+   "2D入库减1s积分_m3": -0.07,
+   "场体积漂移_m3": -13.6,
+   "域满体积_m3": 57.69,
+   "物理环空体积_m3": 57.69,
+   "状态": "ok",
+   "stop_B3前_s": 10255.2
+  },
+  "ht1_004": {
+   "井": "ht1_004",
+   "本轮η_E": 0.9985,
+   "η_N": 0.9938,
+   "stop_s": 11409.6,
+   "入环空水泥_m3": 74.44,
+   "域内水泥_m3": 59.72,
+   "守恒率": 0.8022,
+   "库存比": 1.271,
+   "宽边前缘m": 2416.8,
+   "窄边前缘m": 2416.8,
+   "域长m": 2416.8,
+   "宽边到位率": 1.0,
+   "窄边到位率": 1.0,
+   "壁面冻结占比": 0.0,
+   "混浆指数": 0.0058,
+   "耗时s": 48.2,
+   "shoe_lag_m3": 99.3642017872715,
+   "上轮η_E": 0.9985,
+   "Δη_E": 0.0,
+   "上轮stop_s": 11409.6,
+   "stop增量_s": 0.0104,
+   "上轮入库水泥_m3": 74.44,
+   "Δ入库水泥_m3": -0.0029,
+   "上轮域内水泥_m3": 59.72,
+   "Δ域内水泥_m3": -0.004,
+   "本轮修复注记": "无RESTART步→胶塞截断为无操作（stop/η_E 应逐位不变，见对照列）",
+   "2D入库积分_m3": 74.45,
+   "2D入库减1s积分_m3": 0.01,
+   "场体积漂移_m3": -14.73,
+   "域满体积_m3": 59.8,
+   "物理环空体积_m3": 59.804,
+   "状态": "ok",
+   "stop_B3前_s": 11409.6
+  }
+ }
+}
