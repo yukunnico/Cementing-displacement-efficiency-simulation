@@ -20,9 +20,10 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+import math
+from dataclasses import dataclass, field, replace as _dataclass_replace
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, Dict, Tuple
+from typing import TYPE_CHECKING, Callable, Dict, Sequence, Tuple
 
 import numpy as np
 from numpy.typing import NDArray
@@ -258,6 +259,9 @@ class AnnulusD2DGASolver:
         dispersion_azimuthal: float = 0.015,
         dispersion_dt_ref: float = 4.0,
         dispersion_dt_scale: float = 1.0,
+        enable_e_clip_ruling: bool = True,
+        e_clip_measured_max: float = 0.90,
+        enable_power_law_gap_law: bool = True,
     ) -> None:
         """初始化环空二维求解器参数。
 
@@ -311,6 +315,12 @@ class AnnulusD2DGASolver:
                 由 e = clip(1-standoff, 0.05, e_clip_max) 构造几何；
                 生产跑道（Task 13 重跑阶段）显式设 0.90 放宽截断。
                 体积校正（_build_geom 末尾 scale）每个 run 重算，half_volume 守恒。
+            enable_e_clip_ruling: e_clip 按井数据来源自动裁定开关（2026-09-06），默认 True。
+                True: well_spec.standoff_measured=True（实测居中度剖面井，如呼101实测口径）
+                时截断上限取 e_clip_measured_max=0.90，否则维持 e_clip_max（设计/代理
+                值井保持保守截断——在假设输入上放大模型响应会制造伪敏感性）；
+                False: 恒用 e_clip_max（旧口径）。
+                显式传入 e_clip_max 时该井仍按裁定选择上限（显式值覆盖设计值井路径）。
             enable_yield_gate: M3 屈服门槛开关，默认 False（不改变既有行为）。
                 True 时 pump 分支用 _yield_gate_wall 重建壁面冻结层（Task 9 接线）。
             yield_gate_f_safety: 屈服门槛安全系数 f，默认 1.15。
@@ -358,6 +368,10 @@ class AnnulusD2DGASolver:
         self.dispersion_azimuthal = dispersion_azimuthal
         self.dispersion_dt_ref = dispersion_dt_ref
         self.dispersion_dt_scale = dispersion_dt_scale
+        # 2026-09-06 e_clip 裁定 + 幂律缝隙律（构造参数见 docstring）
+        self.enable_e_clip_ruling = enable_e_clip_ruling
+        self.e_clip_measured_max = e_clip_measured_max
+        self.enable_power_law_gap_law = enable_power_law_gap_law
 
     def _build_geom(self, well_spec: WellSpec, mud_cake_thickness: Array | None = None) -> Dict[str, Array]:
         """根据井筒规格构建环空二维网格几何参数。
@@ -401,7 +415,13 @@ class AnnulusD2DGASolver:
         else:
             od_mm = np.full_like(md, float(well_spec.liner_od_mm or 0.0), dtype=float)
 
-        e = np.clip(1.0 - standoff, 0.05, self.e_clip_max)
+        # 2026-09-06 e_clip 裁定：实测居中度井（standoff_measured=True）放开截断到
+        # e_clip_measured_max（默认 0.90）；设计/代理值井维持 e_clip_max（默认 0.55），
+        # 避免在假设输入上放大模型响应。enable_e_clip_ruling=False 退回旧口径。
+        e_cap = self.e_clip_max
+        if self.enable_e_clip_ruling and getattr(well_spec, "standoff_measured", False):
+            e_cap = max(self.e_clip_max, self.e_clip_measured_max)
+        e = np.clip(1.0 - standoff, 0.05, e_cap)
         clearance = (hole - od_mm) / 1000.0
         half_gap_mean = clearance / 2.0
         mean_radius = ((hole + od_mm) / 4.0) / 1000.0
@@ -456,15 +476,114 @@ class AnnulusD2DGASolver:
 
         自 T1-6 起返回 5 元组 (mud, lead, tail, spacer, flusher)，
         其中 lead/tail/spacer/flusher 均可为 None。
+
+        2026-09-06 选相修复：当 WASH 与 SPACER 角色并存时（如"平衡液"+"驱油隔离液"），
+        返回体积加权等效代表流体（_composite_spacer_fluid），不再取第一个 WASH/SPACER——
+        旧口径使真实隔离液（高密度幂律）物性在 2D 闭包中失效，密度场/浮力项失真。
         """
         mud = next((fluid for fluid in fluids if fluid.role == FluidRole.MUD), None)
         lead = next((fluid for fluid in fluids if fluid.role == FluidRole.LEAD), None)
         tail = next((fluid for fluid in fluids if fluid.role == FluidRole.TAIL), None)
-        spacer = next((fluid for fluid in fluids if fluid.role in {FluidRole.WASH, FluidRole.SPACER}), None)
+        wash_or_spacer = [fluid for fluid in fluids
+                          if fluid.role in {FluidRole.WASH, FluidRole.SPACER}]
+        spacer: FluidSpec | None = None
+        if len(wash_or_spacer) == 1:
+            spacer = wash_or_spacer[0]
+        elif len(wash_or_spacer) > 1:
+            # 多种 WASH/SPACER 并存：等权合成占位，run() 内按入库体积权重重建（见下）。
+            spacer = self._composite_spacer_fluid(wash_or_spacer)
         flusher = next((fluid for fluid in fluids if fluid.role == FluidRole.FLUSHER), None)
         if mud is None or (lead is None and tail is None):
             raise ValueError("需要钻井液和至少一个水泥浆流体")
         return mud, lead, tail, spacer, flusher
+
+    @staticmethod
+    def _wash_spacer_volume_weights(
+        wash_spacer_fluids: Sequence[FluidSpec],
+        schedule: "PumpingSchedule | None",
+    ) -> list[float] | None:
+        """从泵注程序提取各 WASH/SPACER 流体的设计体积权重。
+
+        schedule 为 None 或某流体未出现在泵注序列中时，该流体权重记 0；
+        全部权重为 0 时返回 None（退化等权）。仅统计正向泵注（排量>0）步骤。
+        """
+        if schedule is None:
+            return None
+        name_by_norm = {f.name.strip(): i for i, f in enumerate(wash_spacer_fluids)}
+        volumes = [0.0] * len(wash_spacer_fluids)
+        for step in schedule.steps:
+            idx = name_by_norm.get(step.fluid_name.strip())
+            if idx is None:
+                continue
+            if float(step.rate_m3_min) > 0.0:
+                volumes[idx] += float(step.volume_m3)
+        if all(v <= 0.0 for v in volumes):
+            return None
+        return volumes
+
+    @staticmethod
+    def _composite_spacer_fluid(
+        fluids: Sequence[FluidSpec],
+        volume_fractions: Sequence[float] | None = None,
+    ) -> FluidSpec:
+        """把多种 WASH/SPACER 流体合成为单一等效代表流体。
+
+        合成规则（体积加权）：
+        - 密度：线性加权 ρ_mix = Σfᵢ·ρᵢ；
+        - Bingham：PV/YP 线性加权（与 _compute_props 对相分数做体积加权混合的口径一致）；
+        - 幂律：n 线性加权、K 对数加权（与 _compute_props 的 n_mix/kappa_mix 同口径）；
+        - 组分流变模型不一致时统一映射为 Bingham：幂律/HB 折算 γ_ref=20 s⁻¹ 等效黏度
+          参与线性加权（现场泵排量对应剪切速率量级），YP 线性加权。
+        全部组分流变一致时保留原模型类型。
+        """
+        if volume_fractions is None:
+            weights = np.full(len(fluids), 1.0 / len(fluids), dtype=float)
+        else:
+            weights = np.asarray(volume_fractions, dtype=float)
+            total = float(weights.sum())
+            weights = weights / total if total > 0.0 else np.full(len(fluids), 1.0 / len(fluids))
+        models = {f.rheology_model for f in fluids}
+        density = float(sum(w * f.density_kg_m3 for w, f in zip(weights, fluids)))
+        name = "+".join(f.name for f in fluids)
+        role = FluidRole.SPACER
+        if len(models) == 1:
+            model = models.pop()
+            if model == RheologyModel.BINGHAM:
+                pv = float(sum(w * (f.plastic_viscosity_pa_s or 0.0) for w, f in zip(weights, fluids)))
+                yp = float(sum(w * (f.yield_stress_pa or 0.0) for w, f in zip(weights, fluids)))
+                return FluidSpec(name, role, density, model, plastic_viscosity_pa_s=pv,
+                                 yield_stress_pa=yp)
+            if model == RheologyModel.POWER_LAW:
+                n_mix = float(sum(w * (f.power_law_n or 1.0) for w, f in zip(weights, fluids)))
+                log_k = float(sum(w * math.log(max(f.consistency_k or 1e-12, 1e-12))
+                                  for w, f in zip(weights, fluids)))
+                return FluidSpec(name, role, density, model, power_law_n=n_mix,
+                                 consistency_k=math.exp(log_k))
+            if model == RheologyModel.NEWTONIAN:
+                pv = float(sum(w * (f.plastic_viscosity_pa_s or 0.0) for w, f in zip(weights, fluids)))
+                return FluidSpec(name, role, density, model, plastic_viscosity_pa_s=pv)
+            # HB：屈服+幂律参数全保留
+            yp = float(sum(w * (f.yield_stress_pa or 0.0) for w, f in zip(weights, fluids)))
+            n_mix = float(sum(w * (f.power_law_n or 1.0) for w, f in zip(weights, fluids)))
+            log_k = float(sum(w * math.log(max(f.consistency_k or 1e-12, 1e-12))
+                              for w, f in zip(weights, fluids)))
+            return FluidSpec(name, role, density, model,
+                             yield_stress_pa=yp, power_law_n=n_mix, consistency_k=math.exp(log_k))
+        # 混合模型：统一映射为 Bingham（幂律/HB 折算 γ_ref 等效黏度线性加权，YP 线性加权）
+        gamma_ref = 20.0
+        eff_mu = []
+        for f in fluids:
+            if f.rheology_model == RheologyModel.POWER_LAW:
+                eff_mu.append(float(f.consistency_k or 0.0) * gamma_ref ** (float(f.power_law_n or 1.0) - 1.0))
+            elif f.rheology_model == RheologyModel.HERSCHEL_BULKLEY:
+                eff_mu.append(float(f.yield_stress_pa or 0.0) / gamma_ref
+                              + float(f.consistency_k or 0.0) * gamma_ref ** (float(f.power_law_n or 1.0) - 1.0))
+            else:
+                eff_mu.append(float(f.plastic_viscosity_pa_s or 0.0))
+        pv_mix = float(sum(w * mu for w, mu in zip(weights, eff_mu)))
+        yp_mix = float(sum(w * (f.yield_stress_pa or 0.0) for w, f in zip(weights, fluids)))
+        return FluidSpec(name, role, density, RheologyModel.BINGHAM,
+                         plastic_viscosity_pa_s=max(pv_mix, 1e-6), yield_stress_pa=yp_mix)
 
     @staticmethod
     def _fluid_yield_stress(fluid: FluidSpec) -> float:
@@ -781,7 +900,22 @@ class AnnulusD2DGASolver:
         # 牛顿极限 m→1 时 I₁=1/3，不改变 base 形状；m≠1 时修正方位分布
         m_local = float(np.mean(m_field)) if np.all(np.isfinite(m_field)) else self.d2dga_viscosity_ratio
         i1_base = d2dga_dispersion_I1(c_bar, m_local)
-        base = (b / np.maximum(b_mean, 1.0e-12)) ** 2 / np.maximum(eta_mix, 1.0e-9)
+        if self.enable_power_law_gap_law:
+            # 2026-09-06 幂律缝隙律修正：层流偏心环空各通道流量份额
+            # q ∝ b^(2+1/n)·G^(1/n)（Walton & Bittleston 1991 JFM 222:39-60 窄隙
+            #   Bingham/幂律槽流；Pelipenko & Frigaard 2004c JFM 520:343-377；
+            #   Maleki & Frigaard 2017 式60-61 闭式）。
+            # 速度场取缝隙平均速度口径 w = q/b ∝ b^(1+1/n)：
+            #   牛顿 n=1 → w ∝ b²、通量 w·b ∝ b³（Poiseuille，与旧口径逐位一致）；
+            #   剪切变稀 n<1 → 指数 1+1/n > 2，窄边分流比 b³ 更极端（b³ 低估通道化）。
+            # 压降梯度项 G^(1/n) 全截面同值，被归一化分母吸收，不影响方位分配。
+            # 混合物 n 用 _compute_props 的 n_mix 场（体积分数加权，Bingham→n=1）。
+            n_safe = np.clip(n_mix, 0.25, 1.5)
+            gap_exponent = 1.0 + 1.0 / n_safe
+            base = (b / np.maximum(b_mean, 1.0e-12)) ** gap_exponent / np.maximum(eta_mix, 1.0e-9)
+        else:
+            # 旧口径：Hele-Shaw b² 流动度（逐位复现基线）
+            base = (b / np.maximum(b_mean, 1.0e-12)) ** 2 / np.maximum(eta_mix, 1.0e-9)
         base = base * i1_base  # I₁ 乘子
 
         # === 速度场流动度：偏心通道主导 + 浮力修正 ===
@@ -956,6 +1090,17 @@ class AnnulusD2DGASolver:
         """
 
         mud_fluid, lead_fluid, tail_fluid, spacer_fluid, flusher_fluid = self._pick_fluids(fluids)
+        # 2026-09-06 选相修复：多种 WASH/SPACER 并存（如平衡液+驱油隔离液）时，
+        # 按泵注程序中各流体的设计体积加权重建等效代表流体——进入环空的 spacer 相
+        # 由这些流体按入库体积混合而成，物性（密度/黏度/屈服）应取入库加权而非
+        # "第一个 WASH/SPACER"（旧口径使真实隔离液物性在 2D 闭包中失效）。
+        _wash_spacer_fluids = [f for f in fluids
+                               if f.role in {FluidRole.WASH, FluidRole.SPACER}]
+        if len(_wash_spacer_fluids) > 1:
+            _ws_weights = self._wash_spacer_volume_weights(_wash_spacer_fluids, schedule)
+            spacer_fluid = self._composite_spacer_fluid(_wash_spacer_fluids, _ws_weights)
+        # 诊断暴露：最近一次 run 实际使用的等效隔离液（rerun/报告脚本读取）
+        self._active_spacer_fluid = spacer_fluid
         geom = self._build_geom(well_spec)
         lead = np.zeros((self.ny, self.nz), dtype=float)
         tail = np.zeros((self.ny, self.nz), dtype=float)

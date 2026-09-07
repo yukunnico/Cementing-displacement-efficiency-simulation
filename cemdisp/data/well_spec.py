@@ -132,6 +132,11 @@ class WellSpec:
     liner_wall_thickness_mm: Optional[float] = None   # 衬管壁厚（mm）
     # --- 管内径剖面（1D前沿追踪用，深度→内径mm） ---
     pipe_id_profile: Tuple[DepthValuePoint, ...] = field(default_factory=tuple)
+    # --- 居中度数据来源标识（e_clip 裁定用，2026-09-06） ---
+    # True: standoff_profile 来自井下实测（如呼101居中度检测图）；
+    # False/None: 设计模拟值或代理假设（此时 2D e_clip 保持保守默认，避免在
+    # 假设输入上放大模型响应制造伪敏感性）。
+    standoff_measured: bool = False
 
     @property
     def is_dual_diameter(self) -> bool:
