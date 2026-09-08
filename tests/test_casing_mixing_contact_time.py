@@ -18,6 +18,20 @@ mixing_contact_time 开关（默认 False）：
                                        尾浆界面 pin σ_on/σ_off == sqrt(88.55/V_liner)；
 4. test_segmented_injection_boundary —— 同流体分两段注入，界面归着到
                                        该前缘所在注入步的出发时刻。
+
+Task 2（胶塞面零掺混 plug_face_zero_mixing，默认 False）：
+5. test_plug_face_no_dispersion    —— ht1_003（loader 生产口径 has_plug=False，
+                                       单测属性覆盖 has_plug=True）开关开：
+                                       "尾浆→压塞液"界面无过渡子事件（仅原
+                                       阶跃单相事件），其余 5 界面过渡带逐位
+                                       不受影响；
+6. test_plug_face_off_bitwise      —— ht1_003 生产口径（has_plug 默认 False）
+                                       仅开 plug_face_zero_mixing：与全关参照
+                                       逐位相同（has_plug 门空转，零效应）；
+7. test_hu102_unaffected           —— hu102（has_plug=True + 开关开）：其
+                                       界面集无压塞液界面（压塞液前缘被
+                                       RESTART 截断挡在鞋口上游），开关开 vs 关
+                                       shoe_timeline 逐位相同（保护性断言）。
 """
 
 import json
@@ -53,6 +67,22 @@ def _hu103_case():
     from cemdisp.data.loaders import load_hu103_tailpipe
 
     return load_hu103_tailpipe()
+
+
+def _ht1_003_case():
+    """加载 ht1_003 真实井（实际施工版，loader 生产口径 has_plug=False）。"""
+
+    from cemdisp.data.loaders import load_ht1_003_tailpipe
+
+    return load_ht1_003_tailpipe()
+
+
+def _hu102_case():
+    """加载 hu102 真实井（唯一含 RESTART 步的重建现场程序）。"""
+
+    from cemdisp.data.loaders import load_hu102_tailpipe
+
+    return load_hu102_tailpipe()
 
 
 def _synthetic_fluids(mud_rho: float = 1200.0, spacer_rho: float | None = None,
@@ -395,6 +425,163 @@ class TestMixingContactTime(unittest.TestCase):
         # 反证：若串到第一段出发时刻（t_inject=0），段2 σ 会是 sqrt(2) 倍
         sigma_seg2_wrong = solver._contact_time_integrated_sigma(t_arr2, t_inject_seg1, t_travel, d_eff, u_rate, solver.dt)
         self.assertAlmostEqual(sigma_seg2_wrong / sigma_seg2, math.sqrt(2.0), places=9)
+
+
+class TestPlugFaceZeroMixing(unittest.TestCase):
+    """胶塞面零掺混开关（plug_face_zero_mixing，路线 B Task 2）行为测试。"""
+
+    # ------------------------------------------------------------------
+    # 5. 开关开：尾浆→压塞液界面零过渡，其余界面不受影响
+    # ------------------------------------------------------------------
+    def test_plug_face_no_dispersion(self) -> None:
+        """ht1_003（碰压成功井；loader 生产口径 has_plug=False——单测直接
+        属性覆盖 solver.has_plug=True + plug_face_zero_mixing=True）：
+        "尾浆→压塞液"界面（prev=尾浆, next=压塞液）无过渡子事件——
+        弥散函数保留原单相阶跃 FRONT_ARRIVAL（("压塞液",1.0)），不再生成
+        双相 (next,prev) 事件对；其余 5 个界面对（钻井液→平衡液/平衡液→
+        隔离液1/隔离液1→隔离液2/隔离液2→领浆/领浆→尾浆）的过渡带子事件数
+        与开关关时逐位相同（双相事件数不变、band 中心与 σ 不变）。
+        """
+
+        well, fluids, schedule, _ = _ht1_003_case()
+
+        solver_off = CasingFlowSolver(enable_gravity=True)
+        solver_off.has_plug = True  # 属性覆盖（不重跑 loader），混浆增强=1 口径
+        result_off = solver_off.run(well, fluids, schedule)
+        events_off = result_off.shoe_timeline.events
+
+        solver_on = CasingFlowSolver(enable_gravity=True, plug_face_zero_mixing=True)
+        solver_on.has_plug = True
+        result_on = solver_on.run(well, fluids, schedule)
+        events_on = result_on.shoe_timeline.events
+
+        # 压塞液界面在开关关时确有过渡带（探针实证 5 子事件）——守卫前置
+        bands_off = _dispersion_bands(events_off)
+        self.assertIn(("压塞液", "尾浆"), {(n, p) for n, p, _, _ in bands_off})
+
+        # 开关开：无任何 (压塞液, *) 双相子事件
+        for e in events_on:
+            if e.kind == ShoeEventKind.FRONT_ARRIVAL and len(e.phase_fractions) == 2:
+                self.assertNotEqual(
+                    e.phase_fractions[0][0], "压塞液",
+                    "开关开后不应存在 next=压塞液 的双相过渡子事件",
+                )
+
+        # 原单相阶跃事件保留：("压塞液", 1.0) 的 FRONT_ARRIVAL 恰好 1 个
+        single_plug_on = [
+            e for e in events_on
+            if e.kind == ShoeEventKind.FRONT_ARRIVAL
+            and e.phase_fractions == (("压塞液", 1.0),)
+        ]
+        self.assertEqual(len(single_plug_on), 1)
+        single_plug_off = [
+            e for e in events_off
+            if e.kind == ShoeEventKind.FRONT_ARRIVAL
+            and e.phase_fractions == (("压塞液", 1.0),)
+        ]
+        # 开关关时该时刻只存在过渡子事件（无单相阶跃）——探针实证
+        self.assertEqual(len(single_plug_off), 0)
+        # 保留的阶跃事件与开关关时压塞液界面的到达时刻（band 中心）同刻：
+        # 阶跃事件本身即原 FRONT_ARRIVAL，其 time_s 与过渡带中心一致
+        plug_band_off = next(b for b in bands_off if b[0] == "压塞液" and b[1] == "尾浆")
+        self.assertEqual(single_plug_on[0].time_s, plug_band_off[3])
+        self.assertEqual(single_plug_on[0].flow_rate_m3_s,
+                         _band_flow_rate(events_off, plug_band_off))
+
+        # 其余 5 个界面对：过渡带逐位不受影响（双相事件数、band 中心与 σ）。
+        # _dispersion_bands 键约定为 (next, prev)——与探针实证的
+        # ('压塞液','尾浆') 同向，注意别写成 (prev, next)。
+        other_pairs = {
+            ("平衡液", "钻井液"), ("隔离液1", "平衡液"), ("隔离液2", "隔离液1"),
+            ("领浆", "隔离液2"), ("尾浆", "领浆"),
+        }
+        bands_on = _dispersion_bands(events_on)
+        pairs_off = {(n, p): (s, c) for n, p, s, c in bands_off}
+        pairs_on = {(n, p): (s, c) for n, p, s, c in bands_on}
+        self.assertEqual(set(pairs_on), other_pairs, "开关开后应恰余 5 个界面过渡带")
+        for pair in other_pairs:
+            with self.subTest(interface=f"{pair[0]}<-{pair[1]}"):
+                self.assertIn(pair, pairs_off)
+                self.assertEqual(pairs_on[pair], pairs_off[pair])
+
+        # 体积链不受本开关影响（仅时间线后处理）
+        self.assertEqual(result_off.cement_end_time_s, result_on.cement_end_time_s)
+
+    # ------------------------------------------------------------------
+    # 6. 开关关：ht1_003 生产口径逐位回归（fresh 参照，不依赖冻结文件）
+    # ------------------------------------------------------------------
+    def test_plug_face_off_bitwise(self) -> None:
+        """ht1_003（has_plug 默认 False，生产口径）：仅 plug_face_zero_mixing=True
+        vs 开关全关 fresh 参照，shoe_timeline 逐事件逐位相同（time_s/kind/
+        flow_rate/stage/phase_fractions == 级对比）。
+
+        生产口径 has_plug=False 使判据第二项（has_plug 门）恒假 → 开关空转、
+        零效应；这是"开关关逐位回归"的等价强断言（等价于 Task 1 的
+        test_default_off_bitwise 锚思路，但不重复建 ht1_003 冻结文件）。
+        """
+
+        well, fluids, schedule, _ = _ht1_003_case()
+
+        solver_ref = CasingFlowSolver(enable_gravity=True)
+        self.assertFalse(solver_ref.has_plug)  # loader 生产口径，默认 False
+        self.assertFalse(solver_ref.plug_face_zero_mixing)  # 默认关
+        events_ref = solver_ref.run(well, fluids, schedule).shoe_timeline.events
+
+        solver_on = CasingFlowSolver(enable_gravity=True, plug_face_zero_mixing=True)
+        self.assertFalse(solver_on.has_plug)
+        events_on = solver_on.run(well, fluids, schedule).shoe_timeline.events
+
+        self.assertEqual(len(events_ref), len(events_on))
+        for i, (ev, ref) in enumerate(zip(events_on, events_ref)):
+            with self.subTest(event_index=i):
+                self.assertEqual(ev.time_s, ref.time_s)
+                self.assertEqual(ev.kind, ref.kind)
+                self.assertEqual(ev.flow_rate_m3_s, ref.flow_rate_m3_s)
+                self.assertEqual(ev.stage_name, ref.stage_name)
+                self.assertEqual(ev.phase_fractions, ref.phase_fractions)
+
+    # ------------------------------------------------------------------
+    # 7. hu102 保护性断言：界面集无压塞液界面，开关零效应
+    # ------------------------------------------------------------------
+    def test_hu102_unaffected(self) -> None:
+        """hu102（生产 has_plug=True 语义井、替浆步被 RESTART 截断）+
+        plug_face_zero_mixing=True：shoe_timeline 与开关关时逐位相同。
+
+        保护性断言依据：hu102 顶替序列被 RESTART（循环排混浆）截断，压塞液/
+        后置液/替浆液前缘均未到达鞋口，其界面集无"尾浆→压塞液"异物对
+        （探针实证：过渡带对仅 钻井液→平衡液/隔离液→平衡液/领浆→隔离液/
+        尾管水泥浆→领浆）——开关不应有任何效应。has_plug=True 直传构造参数
+        （混浆增强=1 语义口径）。"""
+
+        well, fluids, schedule, _ = _hu102_case()
+
+        solver_off = CasingFlowSolver(enable_gravity=True, has_plug=True)
+        r_off = solver_off.run(well, fluids, schedule)
+        solver_on = CasingFlowSolver(enable_gravity=True, has_plug=True,
+                                     plug_face_zero_mixing=True)
+        r_on = solver_on.run(well, fluids, schedule)
+
+        # 守卫：确认界面集确无压塞液界面（若未来 hu102 程序变更使压塞液
+        # 前缘到达鞋口，本测试的"零效应"前提失效，须重裁定断言）
+        events_off = r_off.shoe_timeline.events
+        plug_next_events = [
+            e for e in events_off
+            if e.kind == ShoeEventKind.FRONT_ARRIVAL
+            and e.phase_fractions and e.phase_fractions[0][0] == "压塞液"
+        ]
+        self.assertEqual(plug_next_events, [])
+
+        # 开关开 vs 关：逐事件逐位相同
+        events_on = r_on.shoe_timeline.events
+        self.assertEqual(len(events_off), len(events_on))
+        for i, (ev, ref) in enumerate(zip(events_on, events_off)):
+            with self.subTest(event_index=i):
+                self.assertEqual(ev.time_s, ref.time_s)
+                self.assertEqual(ev.kind, ref.kind)
+                self.assertEqual(ev.flow_rate_m3_s, ref.flow_rate_m3_s)
+                self.assertEqual(ev.stage_name, ref.stage_name)
+                self.assertEqual(ev.phase_fractions, ref.phase_fractions)
+        self.assertEqual(r_off.cement_end_time_s, r_on.cement_end_time_s)
 
 
 def _band_flow_rate(events, band) -> float:

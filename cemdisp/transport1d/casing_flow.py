@@ -143,6 +143,7 @@ class CasingFlowSolver:
         max_mixing_enhancement: float = 10.0,
         has_plug: bool = False,
         mixing_contact_time: bool = False,
+        plug_face_zero_mixing: bool = False,
     ) -> None:
         """初始化求解器。
 
@@ -195,6 +196,18 @@ class CasingFlowSolver:
                 截断井的晚注入界面）过渡带收窄；D_eff 计算、混浆增强、防御
                 上下限（min(σ, 0.5·t_travel)、max(σ, dt)）、n_sub=5 与 F4 收尾
                 结构全部不变。False（默认）时走原路径逐位不变。
+            plug_face_zero_mixing: 是否对胶塞面施加零掺混（路线 B Task 2，默认 False）。
+                物理依据：尾管固井尾浆之后有胶塞，压塞液顶胶塞驱动尾浆——
+                "尾浆→压塞液"界面被胶塞机械隔离，不存在流体间掺混，其弥散
+                过渡带（含混浆增强）是伪物理。True 时该界面的 FRONT_ARRIVAL
+                事件跳过过渡带生成，保留原单相阶跃事件（零过渡子事件）。
+                触发条件（三重合取）：本开关开 且 has_plug=True（胶塞工艺在场，
+                与混浆增强因子=1 语义一致）且界面 next 侧是压塞液（role=OTHER
+                且名含"压塞液"）。prev→next 界面的 next 侧判定天然不误伤
+                "压塞液→替浆"界面（该界面 next 是替浆，不触发）。仅改
+                _apply_dispersion_to_timeline 的时间线后处理，前缘追踪/到达
+                时刻/ cement_end_time_s 等体积链全部不变。False（默认）时
+                走原路径逐位不变。
         """
         if not math.isfinite(dt) or dt <= 0.0:
             raise ValueError("dt 必须为大于0的有限数值")
@@ -229,6 +242,7 @@ class CasingFlowSolver:
         self.max_mixing_enhancement: float = max_mixing_enhancement
         self.has_plug: bool = has_plug
         self.mixing_contact_time: bool = mixing_contact_time
+        self.plug_face_zero_mixing: bool = plug_face_zero_mixing
         self._scheduled_steps_by_result_id: dict[int, tuple[_ScheduledStep, ...]] = {}
         self._initial_fluid_by_result_id: dict[int, str] = {}
         self._fluids_by_result_id: dict[int, tuple[FluidSpec, ...]] = {}
@@ -516,6 +530,24 @@ class CasingFlowSolver:
 
         return tau_y / shear_rate + k_cons * shear_rate ** (n - 1.0)
 
+    @staticmethod
+    def _is_plug_release_fluid(fluid_name: str, fluids: tuple[FluidSpec, ...]) -> bool:
+        """判别流体是否为压塞液（胶塞释放液，路线 B Task 2 胶塞面零掺混判据）。
+
+        ⚠️ 权宜判据（2026-09-08）：现状 8 井 5 个 loader（ht1_001/ht1_003/
+        ht1_004/hu2/hu102/hu103）的压塞液全部是 FluidRole.OTHER + 名含
+        "压塞液"（hu103/hu102 同为 OTHER+名字），故按 "role==OTHER 且
+        '压塞液' in 名" 识别。不新增角色枚举、不动 FluidSpec——改动最小且
+        向后兼容。若未来 FluidRole 引入 PLUG 专用枚举，应切换为
+        fluid.role == FluidRole.PLUG 的角色判据（届时本方法的 OTHER+名字
+        分支可保留为兼容回退）。
+        """
+
+        fluid = next((f for f in fluids if f.name == fluid_name), None)
+        if fluid is None:
+            return False
+        return fluid.role == FluidRole.OTHER and "压塞液" in fluid_name
+
     def _interface_instability_factor(
         self,
         fluid_next: FluidSpec,
@@ -632,6 +664,17 @@ class CasingFlowSolver:
             if not prev_fluid:
                 # 前方找不到异名流体（前缘到达前鞋口已在流出同名流体）：
                 # 无界面可言，保留原阶跃事件
+                dispersed_events.append(event)
+                continue
+
+            # 路线 B Task 2：胶塞面零掺混。尾浆之后有胶塞，压塞液顶胶塞驱动
+            # 尾浆——"尾浆→压塞液"界面被胶塞机械隔离，无流体掺混，弥散过渡带
+            # （含混浆增强）是伪物理。判据插在 prev_fluid 已知后、混浆增强计算
+            # 前（界面由 prev→fluid 构成，判据需两者已知）；只对 next 侧
+            # （fluid）是压塞液的界面触发——"压塞液→替浆"界面的 next 是替浆，
+            # 天然不触发。保留原阶跃事件（零过渡子事件）。
+            if (self.plug_face_zero_mixing and self.has_plug
+                    and self._is_plug_release_fluid(fluid_name, fluids)):
                 dispersed_events.append(event)
                 continue
 
