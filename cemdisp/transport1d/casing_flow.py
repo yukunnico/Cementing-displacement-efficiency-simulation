@@ -142,6 +142,7 @@ class CasingFlowSolver:
         mixing_enhancement_factor: float = 5.0,
         max_mixing_enhancement: float = 10.0,
         has_plug: bool = False,
+        mixing_contact_time: bool = False,
     ) -> None:
         """初始化求解器。
 
@@ -185,6 +186,15 @@ class CasingFlowSolver:
                     步（次日后处理，如循环排混浆）不推动管内界面。该语义由
                     顶替序列截断（_displacement_sequence_cutoff）在时间线构造
                     中无条件保证，与 has_plug 取值无关（见类文档"胶塞语义"）。
+            mixing_contact_time: 是否启用接触时间积分 σ_t（路线 B Task 1，默认 False）。
+                True 时前缘弥散时间宽度 σ_t 的"时间来源"由全程行程时间近似
+                （σ_t = sqrt(2·D_eff·t_travel)/U，t_travel = shoe_md/U）替换为
+                界面真实接触时间历程积分（σ_t = sqrt(2·D_eff·t_contact)/U，
+                t_contact = t_arrival − t_inject，界面从地面注入到前缘到达鞋口
+                的历时积分）。该修正使接触时间短于全程行程时间的界面（减速井、
+                截断井的晚注入界面）过渡带收窄；D_eff 计算、混浆增强、防御
+                上下限（min(σ, 0.5·t_travel)、max(σ, dt)）、n_sub=5 与 F4 收尾
+                结构全部不变。False（默认）时走原路径逐位不变。
         """
         if not math.isfinite(dt) or dt <= 0.0:
             raise ValueError("dt 必须为大于0的有限数值")
@@ -218,6 +228,7 @@ class CasingFlowSolver:
         self.mixing_enhancement_factor: float = mixing_enhancement_factor
         self.max_mixing_enhancement: float = max_mixing_enhancement
         self.has_plug: bool = has_plug
+        self.mixing_contact_time: bool = mixing_contact_time
         self._scheduled_steps_by_result_id: dict[int, tuple[_ScheduledStep, ...]] = {}
         self._initial_fluid_by_result_id: dict[int, str] = {}
         self._fluids_by_result_id: dict[int, tuple[FluidSpec, ...]] = {}
@@ -577,6 +588,22 @@ class CasingFlowSolver:
         pipe_radius_m = (well_spec.liner_id_mm or 100.0) / 2000.0
         fluid_by_name = {f.name: f for f in fluids}
 
+        # 路线 B Task 1（mixing_contact_time=True）：按流体分组的前缘到达时刻
+        # 缓存与消耗指针。事件按"该流体尚未消耗的最早到达时刻"依次消耗归着
+        # （同一流体多段注入时逐个配对，与 prev_fluid 跳过同名事件逻辑对齐）。
+        timeline_pipe_volume_m3 = self._timeline_pipe_volume(
+            well_spec, well_spec.shoe_md_m * math.pi * pipe_radius_m ** 2
+        )
+        # 初始管内流体名：与 _build_shoe_timeline 的重力修正配对口径一致
+        #（_displaced_fluid_name 首步回退到该名）。弥散函数收不到 initial_fluid，
+        # 由截断序列步原样重建 PumpingSchedule 后复用 _initial_fluid_name 重推。
+        initial_fluid = self._initial_fluid_name(
+            fluids,
+            PumpingSchedule(steps=tuple(s.step for s in scheduled_steps)),
+        ) if scheduled_steps else ""
+        _arrival_cache: dict[str, list[tuple[float, _ScheduledStep]]] = {}
+        _arrival_cursor: dict[str, int] = {}
+
         dispersed_events: list[ShoeEvent] = []
 
         for i, event in enumerate(events):
@@ -626,7 +653,58 @@ class CasingFlowSolver:
             # 弥散时间宽度: σ_t = sqrt(2 × D_eff × t_travel) / U
             # t_travel = pipe_volume / Q ≈ shoe_md_m / U
             t_travel = well_spec.shoe_md_m / max(U, 1e-9)
-            sigma_t = math.sqrt(2.0 * D_eff * t_travel) / max(U, 1e-9)
+            if self.mixing_contact_time:
+                # 路线 B Task 1：接触时间积分 σ_t —— 弥散函数收不到 front_step，
+                # 在此按流体分组预计算"该流体各注入步的前缘到达时刻列表"
+                # （对截断序列里该流体的每个 scheduled step 调 _front_arrival_time，
+                # pipe_volume 与 _build_shoe_timeline 同款 _timeline_pipe_volume，
+                # 再套重力修正，参数对齐 _build_shoe_timeline 的调用方式）；
+                # 事件按"该流体尚未消耗的最早到达时刻"依次消耗归着（同一流体
+                # 多段注入时逐个配对）。7 口无 RESTART 井全序列=截断序列；
+                # hu102 水泥前缘全在截断前缀内，语义等价。
+                if fluid_name not in _arrival_cache:
+                    _arrival_cache[fluid_name] = []
+                    for idx, scheduled in enumerate(scheduled_steps):
+                        if scheduled.step.fluid_name != fluid_name:
+                            continue
+                        front_t = self._front_arrival_time(scheduled, scheduled_steps, timeline_pipe_volume_m3)
+                        if front_t is None:
+                            # 前缘在泵注结束前未到达鞋口（截断/滞留井）：以注入
+                            # 步自身终点为上界标记（与 run() 的保守口径一致）。
+                            front_t = scheduled.end_time_s
+                        elif self.enable_gravity:
+                            front_t = self._gravity_corrected_arrival_time(
+                                front_t,
+                                scheduled.step.fluid_name,
+                                self._displaced_fluid_name(scheduled_steps, idx, initial_fluid),
+                                fluids,
+                                well_spec,
+                            )
+                        _arrival_cache[fluid_name].append((front_t, scheduled))
+                    _arrival_cursor[fluid_name] = 0
+                cursor = _arrival_cursor[fluid_name]
+                arrival_list = _arrival_cache[fluid_name]
+                if cursor < len(arrival_list):
+                    # 事件按"尚未消耗的最早到达时刻"依次消耗归着：
+                    # (到达时刻, 归着注入步) 配对消耗
+                    t_arrival_matched, front_step_matched = arrival_list[cursor]
+                    _arrival_cursor[fluid_name] = cursor + 1
+                else:
+                    # 防御：该流体的注入步前缘事件已耗尽（异常日程）→
+                    # 不改写 t_arrival；注入步守卫无 front_step 时 t_inject
+                    # 退化为 t_arrival（t_contact=0，σ 走 dt 下限）
+                    t_arrival_matched = t_arrival
+                    front_step_matched = None
+                t_inject = (
+                    self._inject_start_time(front_step_matched, scheduled_steps)
+                    if front_step_matched is not None
+                    else t_arrival_matched
+                )
+                sigma_t = self._contact_time_integrated_sigma(
+                    t_arrival_matched, t_inject, t_travel, D_eff, U, self.dt
+                )
+            else:
+                sigma_t = math.sqrt(2.0 * D_eff * t_travel) / max(U, 1e-9)
             # 防御上限：过渡带宽度不超过行程时间的一半，防止参数极端时盖满时间窗
             sigma_t = min(sigma_t, 0.5 * t_travel)
             sigma_t = max(sigma_t, self.dt)  # 至少一个时间步
@@ -915,6 +993,65 @@ class CasingFlowSolver:
                 volume_into_step_m3 = max(target_volume_m3 - scheduled.cumulative_volume_start_m3, 0.0)
                 return scheduled.start_time_s + volume_into_step_m3 / scheduled.step.rate_m3_min * 60.0
         return None
+
+    @staticmethod
+    def _inject_start_time(
+        front_step: _ScheduledStep,
+        scheduled_steps: tuple[_ScheduledStep, ...],
+    ) -> float:
+        """路线 B Task 1：界面（front_step 流体）从地面注入的时刻。
+
+        界面注入时刻 = front_step.cumulative_volume_start_m3（该前缘所在注入步
+        的出发体积坐标）经 _front_arrival_time 同款体积→时刻反解在注入序列上查
+        （注意不是管容偏移——全程行程时间近似的旧公式不含此项）。
+
+        归着（与 prev_fluid 跳过同名事件逻辑对齐）：同一流体分多段注入时
+        （如"尾浆 RATE_SWITCH + 尾浆 FRONT_ARRIVAL"），调用方先把 FRONT_ARRIVAL
+        事件归着到该流体尚未消耗的最早到达时刻对应的注入步（front_step），
+        本方法只对**该前缘所在注入步**反解出发时刻，不串到该流体更早的第一段。
+
+        特例：首步流体 t_inject = scheduled_steps[0].start_time_s（≈0）——
+        首步出发体积坐标 0 由同款反解自动落到首步 start_time_s，无需分支。
+
+        Args:
+            front_step: 该前缘所归着的注入步（内部 _ScheduledStep）
+            scheduled_steps: 注入步骤序列（传入的截断序列）
+
+        Returns:
+            界面从地面注入的时刻（秒）。体积坐标无法反解（异常日程）时回退
+            front_step.start_time_s。
+        """
+        target_volume_m3 = front_step.cumulative_volume_start_m3
+        for scheduled in scheduled_steps:
+            if target_volume_m3 <= scheduled.cumulative_volume_end_m3 + 1.0e-12:
+                if scheduled.step.rate_m3_min <= 0.0:
+                    return scheduled.end_time_s
+                volume_into_step_m3 = max(
+                    target_volume_m3 - scheduled.cumulative_volume_start_m3, 0.0
+                )
+                return scheduled.start_time_s + volume_into_step_m3 / scheduled.step.rate_m3_min * 60.0
+        return front_step.start_time_s
+
+    @staticmethod
+    def _contact_time_integrated_sigma(
+        t_arrival: float,
+        t_inject: float,
+        t_travel: float,
+        D_eff: float,
+        U: float,
+        dt: float,
+    ) -> float:
+        """路线 B Task 1：接触时间积分 σ_t。
+
+        σ_t = sqrt(2·D_eff·t_contact)/U，其中
+        t_contact = max(t_arrival − t_inject, 0.0)
+        （防负值：尾浆滞留井 t_arrival 可能被截断到泵注结束前）。
+        防御上限 min(σ, 0.5·t_travel)、下限 max(σ, dt) 与现状一致——由调用方
+        在两条路径（旧公式/本函数）之后统一施加，本函数只替换时间来源，
+        不重复 clamp。t_travel 仅作为该防御上限的输入被传入。
+        """
+        t_contact = max(t_arrival - t_inject, 0.0)
+        return math.sqrt(2.0 * D_eff * t_contact) / max(U, 1e-9)
 
     @staticmethod
     def _rear_arrival_time(
