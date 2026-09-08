@@ -63,7 +63,7 @@ class TestMFieldFromProps:
                           rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.053, yield_stress_pa=8.5)
         cement_f = FluidSpec(name="tail", role=FluidRole.TAIL, density_kg_m3=1900.0,
                               rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.180, yield_stress_pa=14.0)
-        out = s._compute_props(lead, tail, spacer, np.zeros_like(lead), w_prev, geom, mud_f, None, cement_f, None)
+        out = s._compute_props(lead, tail, spacer, w_prev, geom, mud_f, None, cement_f, None)
         # 期望多返回 m_field + 相黏度场 eta1/eta2（T1-4）
         # Task1: _compute_props 扩为 9 元组（+ n_mix/kappa_mix）
         assert len(out) == 9
@@ -398,7 +398,7 @@ class TestTwoLayerViscosity:
         tail = np.zeros((ny, nz))
         spacer = np.zeros((ny, nz))
         _, _, _, _, _, eta1, eta2, _, _ = s._compute_props(
-            lead, tail, spacer, np.zeros_like(lead), w_prev, geom, mud_f, None, cement_f, None)
+            lead, tail, spacer, w_prev, geom, mud_f, None, cement_f, None)
         c_bar = np.clip(lead + tail, 0.0, 1.0)
         eta_mix = self._compute_eta_mix(c_bar, eta1, eta2)
         np.testing.assert_allclose(eta_mix, eta1, rtol=1e-10)
@@ -419,7 +419,7 @@ class TestTwoLayerViscosity:
         tail = np.zeros((ny, nz))
         spacer = np.zeros((ny, nz))
         _, _, _, _, _, eta1, eta2, _, _ = s._compute_props(
-            lead, tail, spacer, np.zeros_like(lead), w_prev, geom, mud_f, lead_fluid=cement_f, tail_fluid=None, spacer_fluid=None)
+            lead, tail, spacer, w_prev, geom, mud_f, lead_fluid=cement_f, tail_fluid=None, spacer_fluid=None)
         c_bar = np.clip(lead + tail, 0.0, 1.0)
         eta_mix = self._compute_eta_mix(c_bar, eta1, eta2)
         np.testing.assert_allclose(eta_mix, eta2, rtol=1e-10)
@@ -440,7 +440,7 @@ class TestTwoLayerViscosity:
         tail = np.zeros((ny, nz))
         spacer = np.zeros((ny, nz))
         _, _, _, _, _, eta1, eta2, _, _ = s._compute_props(
-            lead, tail, spacer, np.zeros_like(lead), w_prev, geom, mud_f, lead_fluid=cement_f, tail_fluid=None, spacer_fluid=None)
+            lead, tail, spacer, w_prev, geom, mud_f, lead_fluid=cement_f, tail_fluid=None, spacer_fluid=None)
         c_bar = np.clip(lead + tail, 0.0, 1.0)
         eta_mix = self._compute_eta_mix(c_bar, eta1, eta2)
         eta_min = np.minimum(eta1, eta2)
@@ -484,7 +484,7 @@ class TestBuoyancyForceInjection:
         """由 _compute_props 重建基础流动度 base 与混合物性场。"""
         s = AnnulusD2DGASolver(dt=4.0, nz=20, ny=10, total_t=40.0)
         mu, rho, mud, tau_y, m_field, eta1, eta2, _n_mix, _kappa_mix = s._compute_props(
-            lead, tail, spacer, np.zeros_like(lead), w_prev, geom, mud_f, lead_f, None, None
+            lead, tail, spacer, w_prev, geom, mud_f, lead_f, None, None
         )
         c_bar = np.clip(lead + tail, 0.0, 1.0)
         eta_mix = 1.0 / (
@@ -548,7 +548,7 @@ class TestBuoyancyForceInjection:
         geom, ny, nz, mud_f, lead_f, lead, tail, spacer, w_prev = self._setup_heavy_over_light(s)
 
         w, *_ = s._compute_velocity(
-            lead, tail, spacer, np.zeros_like(lead), geom, q_m3s=0.02, w_prev=w_prev,
+            lead, tail, spacer, geom, q_m3s=0.02, w_prev=w_prev,
             mud_fluid=mud_f, lead_fluid=lead_f, tail_fluid=None, spacer_fluid=None,
         )
         assert np.all(w > 0), "速度应为正"
@@ -569,326 +569,6 @@ class TestBuoyancyForceInjection:
         shape_exp = 1.0 + stable * ebar * (2.0 * phi[:, 0] - 1.0)
 
         np.testing.assert_allclose(shape_est_mean, shape_exp, rtol=1.0e-10, atol=1.0e-10)
-
-
-class TestStaticWallLayer:
-    """T1-5: Static wall layer c_min 判据（Bararpour 2025 式 2.35-2.41）"""
-
-    def test_constructor_has_cmin_default(self):
-        """c_min 参数默认值应为 0.05；M3 屈服门槛默认关闭且参数齐备。"""
-        s = _make_solver()
-        assert hasattr(s, "c_min")
-        assert s.c_min == 0.05
-        assert s.enable_yield_gate is True  # 2026-09-02 起默认启用可逆τw物理屈服门
-        assert s.yield_gate_f_safety == 1.15
-        assert s.yield_gate_c_min_residual == 0.01
-
-    def test_cmin_parameter_stored(self):
-        """c_min 参数可配置。"""
-        s = _make_solver(c_min=0.3)
-        assert s.c_min == 0.3
-
-    def test_wall_consistency_after_run(self):
-        """运行后 wall 场与水泥浓度场一致：wall=1 ↔ cement < c_min。"""
-        from cemdisp.models2d.boundary_bridge import AnnulusInletState
-        well = _toy_well()
-        mud = FluidSpec(name="mud", role=FluidRole.MUD, density_kg_m3=1900.0,
-                        rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.053, yield_stress_pa=8.5)
-        lead = FluidSpec(name="lead", role=FluidRole.LEAD, density_kg_m3=1930.0,
-                         rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.180, yield_stress_pa=14.0)
-        fluids = (mud, lead)
-
-        def _inlet(t: float):
-            return AnnulusInletState(
-                time_s=t, flow_rate_m3_s=0.02, stage_name="pump",
-                phase_fractions=(("cement", 1.0), ("lead", 1.0)),
-            )
-
-        s = AnnulusD2DGASolver(dt=4.0, nz=20, ny=8, total_t=40.0, c_min=0.05, enable_yield_gate=False)
-        res = s.run(well, fluids, _inlet)
-        cement = np.clip(res.lead_field + res.tail_field, 0.0, 1.0)
-        # wall=1 → cement < c_min；wall=0 → 水泥主体(c>=c_min)、弥散光晕痕量(c<=ε)
-        # 或 A 防护解冻格（ε<c<c_min，少数）。C 根因修复 2026-09-02 后 wall=0 侧
-        # 不再要求一致（旧断言"wall=0 必须 c>=c_min"正是死锁缺陷语义的锚定）。
-        wall_one = res.wall_field > 0.5
-        if wall_one.any():
-            assert np.all(cement[wall_one] < 0.05 + 1e-9), "wall=1 处 cement 应 < c_min"
-        wall_zero = res.wall_field < 0.5
-        if wall_zero.any():
-            cz = cement[wall_zero]
-            body_or_halo = (cz >= 0.05 - 1e-9) | (cz <= s.wall_seed_c_min + 1e-9)
-            assert np.all(body_or_halo | (cz < 0.05)), (
-                "wall=0 处低浓度格应限于光晕痕量(c<=ε)与 A 解冻格(ε<c<c_min)")
-            unfrozen_mid = int((body_or_halo == False).sum())  # noqa: E712
-            assert unfrozen_mid <= max(1, int(0.05 * cz.size)), (
-                "ε<c<c_min 的 wall=0 格应仅限 A 防护解冻格（少数）")
-
-    def test_wall_zeros_velocity_in_wall_cells(self):
-        """wall=1 处速度 w≈0（流动度归零）。"""
-        s = _make_solver(c_min=0.05)
-        well = _toy_well()
-        geom = s._build_geom(well)
-        ny, nz = s.ny, s.nz
-        mud_f = FluidSpec(name="mud", role=FluidRole.MUD, density_kg_m3=1900.0,
-                          rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.053, yield_stress_pa=8.5)
-        lead_f = FluidSpec(name="lead", role=FluidRole.LEAD, density_kg_m3=1930.0,
-                           rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.180, yield_stress_pa=14.0)
-        lead = np.full((ny, nz), 0.6)
-        tail = np.zeros((ny, nz))
-        spacer = np.zeros((ny, nz))
-        w_prev = np.full((ny, nz), 0.4)
-        wall = np.zeros((ny, nz))
-        wall[:, :nz//2] = 1.0
-
-        w, *_ = s._compute_velocity(
-            lead, tail, spacer, np.zeros_like(lead), geom, 0.02, w_prev, mud_f, lead_f, None, None, wall=wall,
-        )
-
-        # wall=1 处速度 ≈ 0
-        assert np.all(np.abs(w[:, :nz//2]) < 1e-10), "wall=1 处速度应 ≈ 0"
-        # wall=0 处速度 > 0
-        assert np.all(w[:, nz//2:] > 0), "wall=0 处速度应 > 0"
-
-    def test_cmin_0_3_more_wall_than_cmin_0_05(self):
-        """c_min=0.3 时 wall=1 网格数多于 c_min=0.05。"""
-        from cemdisp.models2d.boundary_bridge import AnnulusInletState
-        well = _toy_well()
-        mud = FluidSpec(name="mud", role=FluidRole.MUD, density_kg_m3=1900.0,
-                        rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.053, yield_stress_pa=8.5)
-        lead = FluidSpec(name="lead", role=FluidRole.LEAD, density_kg_m3=1930.0,
-                         rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.180, yield_stress_pa=14.0)
-        fluids = (mud, lead)
-
-        def _inlet(t: float):
-            return AnnulusInletState(
-                time_s=t, flow_rate_m3_s=0.02, stage_name="pump",
-                phase_fractions=(("cement", 1.0), ("lead", 1.0)),
-            )
-
-        s_low = AnnulusD2DGASolver(dt=4.0, nz=20, ny=8, total_t=40.0, c_min=0.05)
-        s_high = AnnulusD2DGASolver(dt=4.0, nz=20, ny=8, total_t=40.0, c_min=0.3)
-        res_low = s_low.run(well, fluids, _inlet)
-        res_high = s_high.run(well, fluids, _inlet)
-        assert np.sum(res_high.wall_field) >= np.sum(res_low.wall_field), (
-            f"c_min=0.3 wall=1 网格数 ({np.sum(res_high.wall_field)}) "
-            f"应 >= c_min=0.05 ({np.sum(res_low.wall_field)})"
-        )
-
-    def test_wall_zero_before_cement_arrival(self):
-        """水泥前锋未到达时（全场 cement=0），wall 场必须全为 0，不得提前堵死。"""
-        from cemdisp.models2d.boundary_bridge import AnnulusInletState
-        well = _toy_well()
-        mud = FluidSpec(name="mud", role=FluidRole.MUD, density_kg_m3=1900.0,
-                        rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.053, yield_stress_pa=8.5)
-        lead = FluidSpec(name="lead", role=FluidRole.LEAD, density_kg_m3=1930.0,
-                         rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.180, yield_stress_pa=14.0)
-        fluids = (mud, lead)
-
-        def _inlet(t: float):
-            return AnnulusInletState(
-                time_s=t, flow_rate_m3_s=0.02, stage_name="pump",
-                phase_fractions=(("mud", 1.0),),
-            )
-
-        s = AnnulusD2DGASolver(dt=4.0, nz=20, ny=8, total_t=40.0, c_min=0.05)
-        res = s.run(well, fluids, _inlet)
-        assert np.all(res.wall_field == 0.0), "水泥前锋未到达时 wall 场应全为 0"
-
-
-class TestFlusherField:
-    """T1-6: FLUSHER 独立浓度场（被动平流相）测试。"""
-
-    def test_annulus_result_default_flusher_field_none(self):
-        """AnnulusSimulationResult 默认 flusher_field=None 后向兼容。"""
-        from cemdisp.models2d.annulus_d2dga import AnnulusSimulationResult
-        result = AnnulusSimulationResult(
-            well_name="test",
-            geom={},
-            cement_field=np.zeros((2, 2)),
-            spacer_field=np.zeros((2, 2)),
-            wall_field=np.zeros((2, 2)),
-            metrics=None,  # type: ignore[arg-type]
-            depth_profiles=None,  # type: ignore[arg-type]
-            summary={},
-        )
-        assert result.flusher_field is None
-        assert result.flusher_snapshots == ()
-
-    def test_flusher_injected_via_inlet(self):
-        """flusher 通过入口注入后 flusher_field 非空且独立于 cement/spacer。"""
-        from cemdisp.models2d.boundary_bridge import AnnulusInletState
-        well = _toy_well()
-        mud = FluidSpec(name="mud", role=FluidRole.MUD, density_kg_m3=1900.0,
-                        rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.053, yield_stress_pa=8.5)
-        lead = FluidSpec(name="lead", role=FluidRole.LEAD, density_kg_m3=1930.0,
-                         rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.180, yield_stress_pa=14.0)
-        flusher = FluidSpec(name="flusher", role=FluidRole.FLUSHER, density_kg_m3=1850.0,
-                            rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.04, yield_stress_pa=3.0)
-        fluids = (mud, lead, flusher)
-
-        def _inlet(t: float):
-            return AnnulusInletState(
-                time_s=t, flow_rate_m3_s=0.02, stage_name="flusher",
-                phase_fractions=(("flusher", 1.0),),
-            )
-
-        s = AnnulusD2DGASolver(dt=4.0, nz=20, ny=8, total_t=40.0)
-        res = s.run(well, fluids, _inlet)
-        assert res.flusher_field is not None
-        assert np.any(res.flusher_field > 0), "flusher 应出现在求解域内"
-        cement = np.clip(res.lead_field + res.tail_field, 0.0, 1.0)
-        assert np.all(cement == 0.0), "flusher 不应混入 lead/tail"
-        assert np.all(res.spacer_field == 0.0), "flusher 不应混入 spacer"
-
-    def test_flusher_not_mixed_with_cement_on_coexistence(self):
-        """flusher 与水泥共存时，cement/spacer 场不受 flusher 侵入。"""
-        from cemdisp.models2d.boundary_bridge import AnnulusInletState
-        well = _toy_well()
-        mud = FluidSpec(name="mud", role=FluidRole.MUD, density_kg_m3=1900.0,
-                        rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.053, yield_stress_pa=8.5)
-        lead = FluidSpec(name="lead", role=FluidRole.LEAD, density_kg_m3=1930.0,
-                         rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.180, yield_stress_pa=14.0)
-        flusher = FluidSpec(name="flusher", role=FluidRole.FLUSHER, density_kg_m3=1850.0,
-                            rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.04, yield_stress_pa=3.0)
-        fluids = (mud, lead, flusher)
-
-        # 分阶段注入：先 flusher，后水泥，验证 flusher 场和水泥场各自独立
-        def _inlet(t: float):
-            if t < 20.0:
-                return AnnulusInletState(
-                    time_s=t, flow_rate_m3_s=0.02, stage_name="flusher",
-                    phase_fractions=(("flusher", 1.0),),
-                )
-            else:
-                return AnnulusInletState(
-                    time_s=t, flow_rate_m3_s=0.02, stage_name="cement",
-                    phase_fractions=(("cement", 1.0), ("lead", 1.0)),
-                )
-
-        s = AnnulusD2DGASolver(dt=4.0, nz=20, ny=8, total_t=40.0)
-        res = s.run(well, fluids, _inlet)
-        assert res.flusher_field is not None
-        # flusher 应在域内存在（前 20s 注入）
-        assert np.any(res.flusher_field > 0), "flusher 应出现在求解域内"
-        # cement 应在域内存在（后 20s 注入）
-        cement = np.clip(res.lead_field + res.tail_field, 0.0, 1.0)
-        assert np.any(cement > 0), "cement 应出现在求解域内"
-        # 验证 flusher 与 cement 不混：flusher 注入期间前锋处 cement 应为 0
-        # 注意：数值扩散/弥散会导致界面处两相轻微重叠，允许 5% 容差
-        assert np.all(cement + res.flusher_field <= 1.05), "flusher+cement 不应超 1.05"
-
-    def test_five_phase_closure_in_compute_props(self):
-        """_compute_props 五相闭合：lead+tail+spacer+flusher+mud ≈ 1。"""
-        s = _make_solver()
-        well = _toy_well()
-        geom = s._build_geom(well)
-        ny, nz = s.ny, s.nz
-        lead = np.full((ny, nz), 0.3)
-        tail = np.full((ny, nz), 0.2)
-        spacer = np.full((ny, nz), 0.1)
-        flusher = np.full((ny, nz), 0.05)
-        w_prev = np.full((ny, nz), 0.4)
-        mud_f = FluidSpec(name="mud", role=FluidRole.MUD, density_kg_m3=1900.0,
-                          rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.053, yield_stress_pa=8.5)
-        cement_f = FluidSpec(name="tail", role=FluidRole.TAIL, density_kg_m3=1900.0,
-                              rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.180, yield_stress_pa=14.0)
-        spacer_f = FluidSpec(name="spacer", role=FluidRole.SPACER, density_kg_m3=1850.0,
-                              rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.07, yield_stress_pa=5.0)
-        flusher_f = FluidSpec(name="flusher", role=FluidRole.FLUSHER, density_kg_m3=1850.0,
-                               rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.04, yield_stress_pa=3.0)
-        out = s._compute_props(lead, tail, spacer, flusher, w_prev, geom, mud_f, cement_f, None, spacer_f)
-        mu, rho, mud, tau_y, m_field, eta1, eta2, _, _ = out
-        # 五相闭合：sum = lead + tail + spacer + flusher + mud ≈ 1
-        phase_sum = lead + tail + spacer + flusher + mud
-        assert np.allclose(phase_sum, 1.0, atol=1e-10), (
-            f"五相之和应 ≈ 1，实际 min={phase_sum.min()} max={phase_sum.max()}"
-        )
-
-    def test_flusher_reduces_mud_in_compute_props(self):
-        """flusher 注入后 mud 分数减少，且 flusher 不参与 c_bar/m_field。"""
-        s = _make_solver()
-        well = _toy_well()
-        geom = s._build_geom(well)
-        ny, nz = s.ny, s.nz
-        lead = np.full((ny, nz), 0.3)
-        tail = np.zeros((ny, nz))
-        spacer = np.full((ny, nz), 0.15)
-        w_prev = np.full((ny, nz), 0.4)
-        mud_f = FluidSpec(name="mud", role=FluidRole.MUD, density_kg_m3=1900.0,
-                          rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.053, yield_stress_pa=8.5)
-        cement_f = FluidSpec(name="lead", role=FluidRole.LEAD, density_kg_m3=1930.0,
-                              rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.180, yield_stress_pa=14.0)
-        spacer_f = FluidSpec(name="spacer", role=FluidRole.SPACER, density_kg_m3=1850.0,
-                              rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.07, yield_stress_pa=5.0)
-        # 无 flusher 时：mud1 = 1 - lead - tail - spacer
-        out_no_flusher = s._compute_props(lead, tail, spacer, np.zeros_like(lead), w_prev, geom, mud_f, cement_f, None, spacer_f)
-        mu1, rho1, mud1, tau_y1, m_field1, eta1_1, eta2_1, _, _ = out_no_flusher
-        sum_no_flusher = lead + tail + spacer + mud1
-        assert np.allclose(sum_no_flusher, 1.0, atol=1e-10), "四相闭合应 ≈ 1"
-        # 有 flusher 时：mud2 = 1 - lead - tail - spacer - flusher
-        flusher = np.full((ny, nz), 0.08)
-        out_with_flusher = s._compute_props(lead, tail, spacer, flusher, w_prev, geom, mud_f, cement_f, None, spacer_f)
-        mu2, rho2, mud2, tau_y2, m_field2, eta1_2, eta2_2, _, _ = out_with_flusher
-        sum_with_flusher = lead + tail + spacer + flusher + mud2
-        assert np.allclose(sum_with_flusher, 1.0, atol=1e-10), "五相闭合应 ≈ 1"
-        # 有 flusher 时 mud 应减少（约等于 flusher 分数）
-        # 注意：数值舍入，允许微小差异
-        assert np.all(mud2 <= mud1 + 1e-10), "flusher 注入后 mud 应减少或不变"
-        # flusher 不参与 m_field（被动相）：m_field 与无 flusher 时一致
-        assert np.allclose(m_field1, m_field2, atol=1e-6), "flusher 不应影响 m_field"
-
-    def test_five_phase_closure_in_run_result(self):
-        """完整 run 后五相闭合 sum(lead+tail+spacer+flusher+mud) ≈ 1。"""
-        from cemdisp.models2d.boundary_bridge import AnnulusInletState
-        well = _toy_well()
-        mud = FluidSpec(name="mud", role=FluidRole.MUD, density_kg_m3=1900.0,
-                        rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.053, yield_stress_pa=8.5)
-        lead = FluidSpec(name="lead", role=FluidRole.LEAD, density_kg_m3=1930.0,
-                         rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.180, yield_stress_pa=14.0)
-        spacer = FluidSpec(name="spacer", role=FluidRole.SPACER, density_kg_m3=1850.0,
-                           rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.07, yield_stress_pa=5.0)
-        flusher = FluidSpec(name="flusher", role=FluidRole.FLUSHER, density_kg_m3=1850.0,
-                            rheology_model=RheologyModel.BINGHAM, plastic_viscosity_pa_s=0.04, yield_stress_pa=3.0)
-        fluids = (mud, lead, spacer, flusher)
-
-        # 分阶段注入：flusher → spacer → cement
-        def _inlet(t: float):
-            if t < 10.0:
-                return AnnulusInletState(
-                    time_s=t, flow_rate_m3_s=0.02, stage_name="flusher",
-                    phase_fractions=(("flusher", 1.0),),
-                )
-            elif t < 20.0:
-                return AnnulusInletState(
-                    time_s=t, flow_rate_m3_s=0.02, stage_name="spacer",
-                    phase_fractions=(("spacer", 1.0),),
-                )
-            else:
-                return AnnulusInletState(
-                    time_s=t, flow_rate_m3_s=0.02, stage_name="cement",
-                    phase_fractions=(("cement", 1.0), ("lead", 1.0)),
-                )
-
-        s = AnnulusD2DGASolver(dt=4.0, nz=20, ny=8, total_t=40.0)
-        res = s.run(well, fluids, _inlet)
-        # 五相闭合检查：result 中存 lead_field, tail_field, spacer_field, flusher_field
-        # mud 由 1 - sum 反算；要求四相显式体积分数之和始终不超过 1（I3 修复验证）。
-        # 数值弥散/浮点噪声可能引入 ~1e-8 量级的越界，显式容差 1e-8 覆盖之。
-        lead_f = res.lead_field
-        tail_f = res.tail_field
-        spacer_f = res.spacer_field
-        flusher_f = res.flusher_field
-        assert flusher_f is not None
-        tracked_sum = lead_f + tail_f + spacer_f + flusher_f
-        assert np.all(tracked_sum <= 1.0 + 1e-8), (
-            f"run 后显式四相之和应 ≤ 1（容差 1e-8），max={tracked_sum.max()}"
-        )
-        mud_f = np.clip(1.0 - tracked_sum, 0.0, 1.0)
-        phase_sum = tracked_sum + mud_f
-        # 允许 1e-10 舍入误差
-        assert np.allclose(phase_sum, 1.0, atol=1e-10), (
-            f"run 后五相之和应 ≈ 1，min={phase_sum.min()} max={phase_sum.max()}"
-        )
 
 
 class TestCFLAdaptive:
@@ -1097,7 +777,7 @@ class TestComputeVelocityTuple12:
         lead_f = FluidSpec(name="lead", role=FluidRole.LEAD, density_kg_m3=1900.0,
                            rheology_model=RheologyModel.POWER_LAW, power_law_n=0.7, consistency_k=0.4)
         out = s._compute_velocity(
-            lead, tail, spacer, flusher, geom,
+            lead, tail, spacer, geom,
             q_m3s=0.01, w_prev=w_prev,
             mud_fluid=mud_f, lead_fluid=lead_f, tail_fluid=None, spacer_fluid=None,
             wall=wall,
@@ -1120,7 +800,7 @@ class TestYieldGateWall:
         tau_y = np.full((ny, nz), 5.0)
         cement_ever = np.ones((ny, nz)); cement_local = np.full((ny, nz), 0.9)
         wall = AnnulusD2DGASolver._yield_gate_wall(
-            w, b, mu_reg, tau_y, cement_ever, cement_local, 1.15, 0.01)
+            w, b, mu_reg, tau_y, cement_ever, cement_local, 1.15)
         assert wall.shape == (ny, nz)
         # 第1/3列无流动参考元 -> 整列冻结
         assert wall[0, 0] == 1.0 and wall[0, 2] == 1.0
@@ -1133,8 +813,8 @@ class TestYieldGateWall:
         mu_reg = np.full((ny, nz), 0.1); tau_y = np.full((ny, nz), 5.0)
         w_lo = np.array([[0.05, 0.05], [0.04, 0.04], [0.03, 0.03], [0.0, 0.0]])
         w_hi = w_lo * 5.0
-        wall_lo = AnnulusD2DGASolver._yield_gate_wall(w_lo, b, mu_reg, tau_y, cement_ever, cement_local, 1.15, 0.01)
-        wall_hi = AnnulusD2DGASolver._yield_gate_wall(w_hi, b, mu_reg, tau_y, cement_ever, cement_local, 1.15, 0.01)
+        wall_lo = AnnulusD2DGASolver._yield_gate_wall(w_lo, b, mu_reg, tau_y, cement_ever, cement_local, 1.15)
+        wall_hi = AnnulusD2DGASolver._yield_gate_wall(w_hi, b, mu_reg, tau_y, cement_ever, cement_local, 1.15)
         # 两种都至少保留流动参考元（row0）不冻结
         assert wall_lo[0, 0] == 0.0 and wall_hi[0, 0] == 0.0
         # 高排量冻结元数 <= 低排量
@@ -1144,7 +824,7 @@ class TestYieldGateWall:
         ny, nz = 2, 2
         wall = AnnulusD2DGASolver._yield_gate_wall(
             np.zeros((ny, nz)), np.full((ny, nz), 0.02), np.full((ny, nz), 0.1),
-            np.zeros((ny, nz)), np.zeros((ny, nz)), np.zeros((ny, nz)), 1.15, 0.01)
+            np.zeros((ny, nz)), np.zeros((ny, nz)), np.zeros((ny, nz)), 1.15)
         # cement_ever=0 前锋未到，不得全域冻结
         assert np.all(wall == 0.0)
 
@@ -1155,7 +835,7 @@ class TestYieldGateWall:
         mu_reg = np.full((ny, nz), 0.1); tau_y = np.full((ny, nz), 5.0)
         cement_ever = np.zeros((ny, nz)); cement_local = np.zeros((ny, nz))
         wall = AnnulusD2DGASolver._yield_gate_wall(
-            w, b, mu_reg, tau_y, cement_ever, cement_local, 1.15, 0.01)
+            w, b, mu_reg, tau_y, cement_ever, cement_local, 1.15)
         assert np.all(wall == 0.0)
 
 
@@ -1184,7 +864,7 @@ class TestYieldGateIntegration:
                 phase_fractions=(("cement", 1.0), ("lead", 1.0)),
             )
 
-        s = AnnulusD2DGASolver(dt=4.0, nz=20, ny=8, total_t=total_t, c_min=0.05,
+        s = AnnulusD2DGASolver(dt=4.0, nz=20, ny=8, total_t=total_t,
                                enable_yield_gate=True, save_interval=save_interval)
         return s, s.run(well, fluids, _inlet)
 
@@ -1223,7 +903,7 @@ class TestYieldGateIntegration:
                 phase_fractions=(("cement", 1.0), ("lead", 1.0)),
             )
 
-        s = AnnulusD2DGASolver(dt=4.0, nz=20, ny=8, total_t=40.0, c_min=0.05,
+        s = AnnulusD2DGASolver(dt=4.0, nz=20, ny=8, total_t=40.0,
                                enable_yield_gate=True, save_interval=1)
         res = s.run(well, fluids, _inlet)
         times = np.asarray(res.snapshot_times_s)

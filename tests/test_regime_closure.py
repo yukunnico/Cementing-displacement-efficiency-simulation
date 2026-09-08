@@ -44,7 +44,7 @@ def _call_velocity(solver: AnnulusD2DGASolver, q_m3s: float, w_prev_val: float =
         lead_f = FluidSpec(name="lead", role=FluidRole.LEAD, density_kg_m3=1900.0,
                            rheology_model=RheologyModel.POWER_LAW, power_law_n=0.7, consistency_k=0.4)
     out = solver._compute_velocity(
-        lead, tail, spacer, flusher, geom, q_m3s, w_prev, mud_f, lead_f, None, None, wall=wall,
+        lead, tail, spacer, geom, q_m3s, w_prev, mud_f, lead_f, None, None, wall=wall,
     )
     return out[0]  # w
 

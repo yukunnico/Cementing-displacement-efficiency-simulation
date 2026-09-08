@@ -178,7 +178,7 @@ class TestPowerLawGapLaw:
         lead_f = FluidSpec("lead", FluidRole.LEAD, 2100.0, RheologyModel.POWER_LAW,
                            power_law_n=n_lead, consistency_k=0.4)
         _, _, _, _, _, _, _, n_mix, _ = solver._compute_props(
-            lead, tail, np.zeros_like(lead), np.zeros_like(lead), w_prev, geom,
+            lead, tail, np.zeros_like(lead), w_prev, geom,
             mud_f, lead_f, None, None)
         return geom, lead, tail, w_prev, mud_f, lead_f, n_mix
 
@@ -189,11 +189,11 @@ class TestPowerLawGapLaw:
         s_old = _make_solver(enable_power_law_gap_law=False)
         geom, lead, tail, w_prev, mud_f, lead_f, n_mix = self._fields_with_lead(s_new, well, 0.54)
         assert np.mean(n_mix) < 1.0
-        w_new, *_ = s_new._compute_velocity(lead, tail, np.zeros_like(lead), np.zeros_like(lead),
+        w_new, *_ = s_new._compute_velocity(lead, tail, np.zeros_like(lead),
                                             geom, q_m3s=0.02, w_prev=w_prev,
                                             mud_fluid=mud_f, lead_fluid=lead_f,
                                             tail_fluid=None, spacer_fluid=None)
-        w_old, *_ = s_old._compute_velocity(lead, tail, np.zeros_like(lead), np.zeros_like(lead),
+        w_old, *_ = s_old._compute_velocity(lead, tail, np.zeros_like(lead),
                                             geom, q_m3s=0.02, w_prev=w_prev,
                                             mud_fluid=mud_f, lead_fluid=lead_f,
                                             tail_fluid=None, spacer_fluid=None)
@@ -206,7 +206,7 @@ class TestPowerLawGapLaw:
         well = _toy_well()
         s_new = _make_solver()
         geom, lead, tail, w_prev, mud_f, lead_f, _ = self._fields_with_lead(s_new, well, 0.54)
-        w, *_ = s_new._compute_velocity(lead, tail, np.zeros_like(lead), np.zeros_like(lead),
+        w, *_ = s_new._compute_velocity(lead, tail, np.zeros_like(lead),
                                         geom, q_m3s=0.02, w_prev=w_prev,
                                         mud_fluid=mud_f, lead_fluid=lead_f,
                                         tail_fluid=None, spacer_fluid=None)
@@ -225,11 +225,11 @@ class TestPowerLawGapLaw:
         w_prev = np.full((ny, nz), 0.4)
         mud_f = FluidSpec("mud", FluidRole.MUD, 1900.0, RheologyModel.BINGHAM,
                           plastic_viscosity_pa_s=0.053, yield_stress_pa=8.5)
-        w_new, *_ = s_new._compute_velocity(lead, lead, lead, np.zeros_like(lead),
+        w_new, *_ = s_new._compute_velocity(lead, lead, lead,
                                             geom, q_m3s=0.02, w_prev=w_prev,
                                             mud_fluid=mud_f, lead_fluid=None,
                                             tail_fluid=None, spacer_fluid=None)
-        w_old, *_ = s_old._compute_velocity(lead, lead, lead, np.zeros_like(lead),
+        w_old, *_ = s_old._compute_velocity(lead, lead, lead,
                                             geom, q_m3s=0.02, w_prev=w_prev,
                                             mud_fluid=mud_f, lead_fluid=None,
                                             tail_fluid=None, spacer_fluid=None)
