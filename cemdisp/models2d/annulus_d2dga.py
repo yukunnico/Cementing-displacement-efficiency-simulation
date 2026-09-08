@@ -230,8 +230,6 @@ class AnnulusD2DGASolver:
         ny: int = 40,
         total_t: float = 12000.0,
         enable_d2dga: bool = True,
-        d2dga_viscosity_ratio: float = 1.0,
-        enable_d2dga_auto_m: bool = True,
         enable_d2dga_i3_flux: bool = True,
         enable_local_i3: bool = False,
         enable_true_buoyancy: bool = True,
@@ -267,10 +265,8 @@ class AnnulusD2DGASolver:
             ny: 方位角方向网格数，默认40
             total_t: 总模拟时间（秒），默认12000秒（200分钟）
             enable_d2dga: 是否启用D2DGA通量修正（Zhang & Frigaard 2022），默认开启
-            d2dga_viscosity_ratio: D2DGA粘度比 m = η_displaced/η_displacing，默认1.0
-            enable_d2dga_auto_m: 是否按局部流体物性自动计算黏度比 m 场（R1），默认 True。
-                True: m = μ_displaced/μ_displacing 按浓度场每步计算（改进版）；
-                False: 退化为 d2dga_viscosity_ratio 构造常数（旧论文 R0 状态）。
+                2026-09-07 R0 分支删除：黏度比 m 恒由 auto-m 自动计算（旧
+                d2dga_viscosity_ratio 标量路径为旧论文 R0 状态，已移除）。
             enable_d2dga_i3_flux: 是否启用 D2DGA 浮力弥散通量 I3（R2，式4.25第二项），默认 True。
             enable_local_i3: I3 通量局部化开关，默认 False（不改变既有行为）。
                 False: eta2 用 cement 表观粘度场均值、Δρ 用全场均值（基线逐位复现）；
@@ -326,7 +322,6 @@ class AnnulusD2DGASolver:
         self.ny = ny
         self.total_t = total_t
         self.enable_d2dga = enable_d2dga
-        self.d2dga_viscosity_ratio = d2dga_viscosity_ratio
         self.instability_decay_scale = instability_decay_scale
         self.save_interval: int = save_interval
         self.yield_regularization_M: float = yield_regularization_M
@@ -335,7 +330,6 @@ class AnnulusD2DGASolver:
         self.regime_max_iter: int = regime_max_iter
         self.regime_tol_rel: float = regime_tol_rel
         self.regime_re_turb_ratio: float = regime_re_turb_ratio
-        self.enable_d2dga_auto_m: bool = enable_d2dga_auto_m
         self.enable_d2dga_i3_flux: bool = enable_d2dga_i3_flux
         self.enable_local_i3: bool = enable_local_i3
         self.enable_true_buoyancy: bool = enable_true_buoyancy
@@ -879,7 +873,9 @@ class AnnulusD2DGASolver:
                          + (1.0 - c_bar**3) / np.maximum(eta1, 1.0e-9))
         # T1-3b: I₁(c̄,m) 乘子（Zhang 2022 式 4.22，S ∝ 1/(2I₁)）
         # 牛顿极限 m→1 时 I₁=1/3，不改变 base 形状；m≠1 时修正方位分布
-        m_local = float(np.mean(m_field)) if np.all(np.isfinite(m_field)) else self.d2dga_viscosity_ratio
+        # 2026-09-07 R0 分支删除：m 恒由 _compute_props 自动计算（enable_d2dga_auto_m
+        # 恒 True，标量 d2dga_viscosity_ratio 路径为旧论文 R0 状态已移除）。
+        m_local = float(np.mean(m_field))
         i1_base = d2dga_dispersion_I1(c_bar, m_local)
         if self.enable_power_law_gap_law:
             # 2026-09-06 幂律缝隙律修正：层流偏心环空各通道流量份额
@@ -1164,11 +1160,8 @@ class AnnulusD2DGASolver:
 
                 cement = np.clip(lead + tail, 0.0, 1.0)
                 if self.enable_d2dga:
-                    if self.enable_d2dga_auto_m:
-                        m_for_amp = m_field  # 数组
-                    else:
-                        m_for_amp = self.d2dga_viscosity_ratio  # 标量
-                    f_amp = d2dga_flux_amplification(cement, m_for_amp)
+                    # 2026-09-07 R0 分支删除：m 恒用 auto-m 场
+                    f_amp = d2dga_flux_amplification(cement, m_field)
                 else:
                     f_amp = 1.0
 
@@ -1231,9 +1224,8 @@ class AnnulusD2DGASolver:
                         eta2 = float(np.mean(mu)) if np.all(np.isfinite(mu)) else 0.18
                         delta_rho = (rho.mean() - mud_density_gcc) * 1000.0
                     H_field = geom["H"]
-                    m_for_flux = m_field if self.enable_d2dga_auto_m else self.d2dga_viscosity_ratio
                     q_phi, q_xi = d2dga_buoyancy_flux(
-                        cement_for_flux, m_for_flux, delta_rho, H_field, eta2,
+                        cement_for_flux, m_field, delta_rho, H_field, eta2,
                         f_phi_arr, f_xi_arr,
                     )
                     # 散度通量：dc/dt += -div(q) = -(dq_xi/ds + dq_phi/dy)

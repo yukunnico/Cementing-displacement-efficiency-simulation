@@ -25,16 +25,11 @@ def _toy_well():
 
 
 class TestAutoMField:
-    def test_constructor_has_enable_d2dga_auto_m_default_true(self):
+    def test_auto_m_always_on_r0_removed(self):
+        """2026-09-07 R0 分支删除：auto-m 恒开，标量 m 路径不存在。"""
         s = _make_solver()
-        assert hasattr(s, "enable_d2dga_auto_m")
-        assert s.enable_d2dga_auto_m is True
-
-    def test_auto_m_off_falls_back_to_scalar(self):
-        # enable_d2dga_auto_m=False -> m 场退化为构造常数
-        s = _make_solver(enable_d2dga_auto_m=False, d2dga_viscosity_ratio=0.8)
-        assert s.enable_d2dga_auto_m is False
-        assert s.d2dga_viscosity_ratio == 0.8
+        assert not hasattr(s, "enable_d2dga_auto_m")
+        assert not hasattr(s, "d2dga_viscosity_ratio")
 
 
 class TestEClipMax:
@@ -236,7 +231,6 @@ class TestSwitchRegression:
         s_r0 = AnnulusD2DGASolver(
             dt=4.0, nz=20, ny=8, total_t=40.0,
             enable_d2dga=True,
-            enable_d2dga_auto_m=False,
             enable_d2dga_i3_flux=False,
             enable_true_buoyancy=False,
         )
@@ -247,8 +241,7 @@ class TestSwitchRegression:
         s_r3 = AnnulusD2DGASolver(
             dt=4.0, nz=20, ny=8, total_t=40.0,
             enable_d2dga=True,
-            enable_d2dga_auto_m=True,
-            enable_d2dga_i3_flux=True,
+                        enable_d2dga_i3_flux=True,
             enable_true_buoyancy=True,
         )
         res_r3 = s_r3.run(well, fluids, _inlet)
@@ -282,8 +275,7 @@ class TestI3FluxPhysicalUpdate:
         s_on = AnnulusD2DGASolver(
             dt=4.0, nz=20, ny=8, total_t=40.0,
             enable_d2dga=True,
-            enable_d2dga_auto_m=True,
-            enable_d2dga_i3_flux=True,
+                        enable_d2dga_i3_flux=True,
             enable_true_buoyancy=True,
         )
         res_on = s_on.run(well, fluids, _inlet)
@@ -293,8 +285,7 @@ class TestI3FluxPhysicalUpdate:
         s_off = AnnulusD2DGASolver(
             dt=4.0, nz=20, ny=8, total_t=40.0,
             enable_d2dga=True,
-            enable_d2dga_auto_m=True,
-            enable_d2dga_i3_flux=False,
+                        enable_d2dga_i3_flux=False,
             enable_true_buoyancy=True,
         )
         res_off = s_off.run(well, fluids, _inlet)
@@ -508,7 +499,7 @@ class TestBuoyancyForceInjection:
         # True 分支 pref：式 4.24，重顶替轻时 f_phi>0 的中缝区修正最大
         s_true = AnnulusD2DGASolver(
             dt=4.0, nz=20, ny=10, total_t=40.0,
-            enable_d2dga=True, enable_d2dga_auto_m=True,
+            enable_d2dga=True,
             enable_d2dga_i3_flux=True, enable_true_buoyancy=True,
         )
         f_phi, _ = s_true._buoyancy_force_vector(geom, float(np.mean(geom["inc_deg"])))
@@ -542,7 +533,7 @@ class TestBuoyancyForceInjection:
         """enable_true_buoyancy=False 时，pref 形状恢复为 (2φ−1) 简化代理。"""
         s = AnnulusD2DGASolver(
             dt=4.0, nz=20, ny=10, total_t=40.0,
-            enable_d2dga=True, enable_d2dga_auto_m=True,
+            enable_d2dga=True,
             enable_d2dga_i3_flux=True, enable_true_buoyancy=False,
         )
         geom, ny, nz, mud_f, lead_f, lead, tail, spacer, w_prev = self._setup_heavy_over_light(s)
@@ -935,7 +926,7 @@ class TestI3Localization:
 
         s = AnnulusD2DGASolver(
             dt=4.0, nz=20, ny=8, total_t=40.0,
-            enable_d2dga=True, enable_d2dga_auto_m=True,
+            enable_d2dga=True,
             enable_d2dga_i3_flux=True, enable_true_buoyancy=True,
             enable_local_i3=enable_local_i3,
         )

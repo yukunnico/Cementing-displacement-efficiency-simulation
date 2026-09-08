@@ -402,7 +402,7 @@ def _run_solver_for_figures():
 
         solver = AnnulusD2DGASolver(
             dt=8.0, nz=80, ny=30, total_t=total_t,
-            enable_d2dga=True, d2dga_viscosity_ratio=1.5,
+            enable_d2dga=True,
             save_interval=20,
         )
         print("[INFO] 正在运行模拟...")
