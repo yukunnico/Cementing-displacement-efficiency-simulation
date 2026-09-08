@@ -1,0 +1,897 @@
+{
+  "_meta": {
+    "purpose": "Task0 基线冻结锚：hu103 shoe_timeline.events 逐位回归基准（路线B Task1 用）",
+    "well_name": "呼103",
+    "loader": "cemdisp.data.loaders.load_hu103_tailpipe",
+    "loader_kwargs": {},
+    "solver_class": "cemdisp.transport1d.CasingFlowSolver",
+    "solver_params": {
+      "enable_gravity": true,
+      "其余参数全部默认": true
+    },
+    "event_count": 59,
+    "cement_end_time_s": 8012.897845698079,
+    "baseline_commit": "2190bb3",
+    "branch": "feat/casing-mixing-contact-time-routeB",
+    "generated_utc": "2026-09-08T10:03:35+00:00",
+    "format_notes": "events 为按时间升序的 ShoeEvent 序列；kind 取 ShoeEventKind.value 字符串；phase_fractions 序列化为 [[name, frac], ...]（原为 tuple of (name, frac)）；float 全部 JSON 原样精度（repr 双射），Task1 对比用 == 或 pytest.approx(rel=1e-12)"
+  },
+  "events": [
+    {
+      "time_s": 0.0,
+      "kind": "RATE_SWITCH",
+      "flow_rate_m3_s": 0.02666666666666667,
+      "stage_name": "注入平衡液(轻泥浆)",
+      "phase_fractions": [
+        [
+          "钻井液",
+          1.0
+        ]
+      ]
+    },
+    {
+      "time_s": 1050.0,
+      "kind": "RATE_SWITCH",
+      "flow_rate_m3_s": 0.02666666666666667,
+      "stage_name": "注入驱油隔离液1",
+      "phase_fractions": [
+        [
+          "钻井液",
+          1.0
+        ]
+      ]
+    },
+    {
+      "time_s": 1706.25,
+      "kind": "RATE_SWITCH",
+      "flow_rate_m3_s": 0.02666666666666667,
+      "stage_name": "注入驱油隔离液2",
+      "phase_fractions": [
+        [
+          "钻井液",
+          1.0
+        ]
+      ]
+    },
+    {
+      "time_s": 2362.5,
+      "kind": "RATE_SWITCH",
+      "flow_rate_m3_s": 0.030000000000000002,
+      "stage_name": "注入领浆",
+      "phase_fractions": [
+        [
+          "钻井液",
+          1.0
+        ]
+      ]
+    },
+    {
+      "time_s": 3095.833333333333,
+      "kind": "RATE_SWITCH",
+      "flow_rate_m3_s": 0.030000000000000002,
+      "stage_name": "注入中间浆",
+      "phase_fractions": [
+        [
+          "钻井液",
+          1.0
+        ]
+      ]
+    },
+    {
+      "time_s": 3287.9009635961866,
+      "kind": "FRONT_ARRIVAL",
+      "flow_rate_m3_s": 0.030000000000000002,
+      "stage_name": "注入中间浆",
+      "phase_fractions": [
+        [
+          "平衡液",
+          0.07864960352514255
+        ],
+        [
+          "钻井液",
+          0.9213503964748575
+        ]
+      ]
+    },
+    {
+      "time_s": 3291.7234599144954,
+      "kind": "FRONT_ARRIVAL",
+      "flow_rate_m3_s": 0.030000000000000002,
+      "stage_name": "注入中间浆",
+      "phase_fractions": [
+        [
+          "平衡液",
+          0.23975006109347674
+        ],
+        [
+          "钻井液",
+          0.7602499389065233
+        ]
+      ]
+    },
+    {
+      "time_s": 3295.5459562328047,
+      "kind": "FRONT_ARRIVAL",
+      "flow_rate_m3_s": 0.030000000000000002,
+      "stage_name": "注入中间浆",
+      "phase_fractions": [
+        [
+          "平衡液",
+          0.5
+        ],
+        [
+          "钻井液",
+          0.5
+        ]
+      ]
+    },
+    {
+      "time_s": 3299.368452551114,
+      "kind": "FRONT_ARRIVAL",
+      "flow_rate_m3_s": 0.030000000000000002,
+      "stage_name": "注入中间浆",
+      "phase_fractions": [
+        [
+          "平衡液",
+          0.7602499389065233
+        ],
+        [
+          "钻井液",
+          0.23975006109347674
+        ]
+      ]
+    },
+    {
+      "time_s": 3303.1909488694228,
+      "kind": "FRONT_ARRIVAL",
+      "flow_rate_m3_s": 0.030000000000000002,
+      "stage_name": "注入中间浆",
+      "phase_fractions": [
+        [
+          "平衡液",
+          0.9213503964748575
+        ],
+        [
+          "钻井液",
+          0.0786496035251425
+        ]
+      ]
+    },
+    {
+      "time_s": 3303.1909488694228,
+      "kind": "FRONT_ARRIVAL",
+      "flow_rate_m3_s": 0.030000000000000002,
+      "stage_name": "注入中间浆",
+      "phase_fractions": [
+        [
+          "平衡液",
+          1.0
+        ],
+        [
+          "钻井液",
+          0.0
+        ]
+      ]
+    },
+    {
+      "time_s": 4011.8777047010863,
+      "kind": "FRONT_ARRIVAL",
+      "flow_rate_m3_s": 0.030000000000000002,
+      "stage_name": "注入中间浆",
+      "phase_fractions": [
+        [
+          "隔离液1",
+          0.07864960352514255
+        ],
+        [
+          "平衡液",
+          0.9213503964748575
+        ]
+      ]
+    },
+    {
+      "time_s": 4015.5538125364405,
+      "kind": "FRONT_ARRIVAL",
+      "flow_rate_m3_s": 0.030000000000000002,
+      "stage_name": "注入中间浆",
+      "phase_fractions": [
+        [
+          "隔离液1",
+          0.23975006109347674
+        ],
+        [
+          "平衡液",
+          0.7602499389065233
+        ]
+      ]
+    },
+    {
+      "time_s": 4019.2299203717953,
+      "kind": "FRONT_ARRIVAL",
+      "flow_rate_m3_s": 0.030000000000000002,
+      "stage_name": "注入中间浆",
+      "phase_fractions": [
+        [
+          "隔离液1",
+          0.5
+        ],
+        [
+          "平衡液",
+          0.5
+        ]
+      ]
+    },
+    {
+      "time_s": 4022.90602820715,
+      "kind": "FRONT_ARRIVAL",
+      "flow_rate_m3_s": 0.030000000000000002,
+      "stage_name": "注入中间浆",
+      "phase_fractions": [
+        [
+          "隔离液1",
+          0.7602499389065233
+        ],
+        [
+          "平衡液",
+          0.23975006109347674
+        ]
+      ]
+    },
+    {
+      "time_s": 4026.5821360425043,
+      "kind": "FRONT_ARRIVAL",
+      "flow_rate_m3_s": 0.030000000000000002,
+      "stage_name": "注入中间浆",
+      "phase_fractions": [
+        [
+          "隔离液1",
+          0.9213503964748575
+        ],
+        [
+          "平衡液",
+          0.0786496035251425
+        ]
+      ]
+    },
+    {
+      "time_s": 4026.5821360425043,
+      "kind": "FRONT_ARRIVAL",
+      "flow_rate_m3_s": 0.030000000000000002,
+      "stage_name": "注入中间浆",
+      "phase_fractions": [
+        [
+          "隔离液1",
+          1.0
+        ],
+        [
+          "平衡液",
+          0.0
+        ]
+      ]
+    },
+    {
+      "time_s": 4252.510299240516,
+      "kind": "REAR_EXIT",
+      "flow_rate_m3_s": 0.030000000000000002,
+      "stage_name": "注入中间浆",
+      "phase_fractions": [
+        [
+          "隔离液1",
+          1.0
+        ]
+      ]
+    },
+    {
+      "time_s": 4262.5,
+      "kind": "RATE_SWITCH",
+      "flow_rate_m3_s": 0.030000000000000002,
+      "stage_name": "注入尾浆",
+      "phase_fractions": [
+        [
+          "隔离液1",
+          1.0
+        ]
+      ]
+    },
+    {
+      "time_s": 4584.522454882597,
+      "kind": "REAR_EXIT",
+      "flow_rate_m3_s": 0.030000000000000002,
+      "stage_name": "注入尾浆",
+      "phase_fractions": [
+        [
+          "隔离液1",
+          1.0
+        ]
+      ]
+    },
+    {
+      "time_s": 4785.47772173675,
+      "kind": "FRONT_ARRIVAL",
+      "flow_rate_m3_s": 0.030000000000000002,
+      "stage_name": "注入尾浆",
+      "phase_fractions": [
+        [
+          "隔离液2",
+          0.07864960352514255
+        ],
+        [
+          "隔离液1",
+          0.9213503964748575
+        ]
+      ]
+    },
+    {
+      "time_s": 4788.0967832517545,
+      "kind": "FRONT_ARRIVAL",
+      "flow_rate_m3_s": 0.030000000000000002,
+      "stage_name": "注入尾浆",
+      "phase_fractions": [
+        [
+          "隔离液2",
+          0.23975006109347674
+        ],
+        [
+          "隔离液1",
+          0.7602499389065233
+        ]
+      ]
+    },
+    {
+      "time_s": 4790.715844766758,
+      "kind": "FRONT_ARRIVAL",
+      "flow_rate_m3_s": 0.030000000000000002,
+      "stage_name": "注入尾浆",
+      "phase_fractions": [
+        [
+          "隔离液2",
+          0.5
+        ],
+        [
+          "隔离液1",
+          0.5
+        ]
+      ]
+    },
+    {
+      "time_s": 4793.3349062817615,
+      "kind": "FRONT_ARRIVAL",
+      "flow_rate_m3_s": 0.030000000000000002,
+      "stage_name": "注入尾浆",
+      "phase_fractions": [
+        [
+          "隔离液2",
+          0.7602499389065233
+        ],
+        [
+          "隔离液1",
+          0.23975006109347674
+        ]
+      ]
+    },
+    {
+      "time_s": 4795.953967796766,
+      "kind": "FRONT_ARRIVAL",
+      "flow_rate_m3_s": 0.030000000000000002,
+      "stage_name": "注入尾浆",
+      "phase_fractions": [
+        [
+          "隔离液2",
+          0.9213503964748575
+        ],
+        [
+          "隔离液1",
+          0.0786496035251425
+        ]
+      ]
+    },
+    {
+      "time_s": 4795.953967796766,
+      "kind": "FRONT_ARRIVAL",
+      "flow_rate_m3_s": 0.030000000000000002,
+      "stage_name": "注入尾浆",
+      "phase_fractions": [
+        [
+          "隔离液2",
+          1.0
+        ],
+        [
+          "隔离液1",
+          0.0
+        ]
+      ]
+    },
+    {
+      "time_s": 5129.166666666667,
+      "kind": "RATE_SWITCH",
+      "flow_rate_m3_s": 0.030000000000000002,
+      "stage_name": "注入压塞液",
+      "phase_fractions": [
+        [
+          "隔离液2",
+          1.0
+        ]
+      ]
+    },
+    {
+      "time_s": 5175.500385585103,
+      "kind": "FRONT_ARRIVAL",
+      "flow_rate_m3_s": 0.030000000000000002,
+      "stage_name": "注入压塞液",
+      "phase_fractions": [
+        [
+          "领浆",
+          0.07864960352514255
+        ],
+        [
+          "隔离液2",
+          0.9213503964748575
+        ]
+      ]
+    },
+    {
+      "time_s": 5178.408056561271,
+      "kind": "FRONT_ARRIVAL",
+      "flow_rate_m3_s": 0.030000000000000002,
+      "stage_name": "注入压塞液",
+      "phase_fractions": [
+        [
+          "领浆",
+          0.23975006109347674
+        ],
+        [
+          "隔离液2",
+          0.7602499389065233
+        ]
+      ]
+    },
+    {
+      "time_s": 5181.315727537441,
+      "kind": "FRONT_ARRIVAL",
+      "flow_rate_m3_s": 0.030000000000000002,
+      "stage_name": "注入压塞液",
+      "phase_fractions": [
+        [
+          "领浆",
+          0.5
+        ],
+        [
+          "隔离液2",
+          0.5
+        ]
+      ]
+    },
+    {
+      "time_s": 5184.22339851361,
+      "kind": "FRONT_ARRIVAL",
+      "flow_rate_m3_s": 0.030000000000000002,
+      "stage_name": "注入压塞液",
+      "phase_fractions": [
+        [
+          "领浆",
+          0.7602499389065233
+        ],
+        [
+          "隔离液2",
+          0.23975006109347674
+        ]
+      ]
+    },
+    {
+      "time_s": 5187.131069489778,
+      "kind": "FRONT_ARRIVAL",
+      "flow_rate_m3_s": 0.030000000000000002,
+      "stage_name": "注入压塞液",
+      "phase_fractions": [
+        [
+          "领浆",
+          0.9213503964748575
+        ],
+        [
+          "隔离液2",
+          0.0786496035251425
+        ]
+      ]
+    },
+    {
+      "time_s": 5187.131069489778,
+      "kind": "FRONT_ARRIVAL",
+      "flow_rate_m3_s": 0.030000000000000002,
+      "stage_name": "注入压塞液",
+      "phase_fractions": [
+        [
+          "领浆",
+          1.0
+        ],
+        [
+          "隔离液2",
+          0.0
+        ]
+      ]
+    },
+    {
+      "time_s": 5362.5,
+      "kind": "RATE_SWITCH",
+      "flow_rate_m3_s": 0.030000000000000002,
+      "stage_name": "替钻井液(一段)",
+      "phase_fractions": [
+        [
+          "领浆",
+          1.0
+        ]
+      ]
+    },
+    {
+      "time_s": 5381.432964959947,
+      "kind": "REAR_EXIT",
+      "flow_rate_m3_s": 0.030000000000000002,
+      "stage_name": "替钻井液(一段)",
+      "phase_fractions": [
+        [
+          "领浆",
+          1.0
+        ]
+      ]
+    },
+    {
+      "time_s": 5896.316172924448,
+      "kind": "REAR_EXIT",
+      "flow_rate_m3_s": 0.030000000000000002,
+      "stage_name": "替钻井液(一段)",
+      "phase_fractions": [
+        [
+          "领浆",
+          1.0
+        ]
+      ]
+    },
+    {
+      "time_s": 6043.083226029435,
+      "kind": "FRONT_ARRIVAL",
+      "flow_rate_m3_s": 0.030000000000000002,
+      "stage_name": "替钻井液(一段)",
+      "phase_fractions": [
+        [
+          "中间浆",
+          0.07864960352514255
+        ],
+        [
+          "领浆",
+          0.9213503964748575
+        ]
+      ]
+    },
+    {
+      "time_s": 6045.291613014718,
+      "kind": "FRONT_ARRIVAL",
+      "flow_rate_m3_s": 0.030000000000000002,
+      "stage_name": "替钻井液(一段)",
+      "phase_fractions": [
+        [
+          "中间浆",
+          0.23975006109347674
+        ],
+        [
+          "领浆",
+          0.7602499389065233
+        ]
+      ]
+    },
+    {
+      "time_s": 6047.5,
+      "kind": "FRONT_ARRIVAL",
+      "flow_rate_m3_s": 0.030000000000000002,
+      "stage_name": "替钻井液(一段)",
+      "phase_fractions": [
+        [
+          "中间浆",
+          0.5
+        ],
+        [
+          "领浆",
+          0.5
+        ]
+      ]
+    },
+    {
+      "time_s": 6049.708386985282,
+      "kind": "FRONT_ARRIVAL",
+      "flow_rate_m3_s": 0.030000000000000002,
+      "stage_name": "替钻井液(一段)",
+      "phase_fractions": [
+        [
+          "中间浆",
+          0.7602499389065233
+        ],
+        [
+          "领浆",
+          0.23975006109347674
+        ]
+      ]
+    },
+    {
+      "time_s": 6051.916773970565,
+      "kind": "FRONT_ARRIVAL",
+      "flow_rate_m3_s": 0.030000000000000002,
+      "stage_name": "替钻井液(一段)",
+      "phase_fractions": [
+        [
+          "中间浆",
+          0.9213503964748575
+        ],
+        [
+          "领浆",
+          0.0786496035251425
+        ]
+      ]
+    },
+    {
+      "time_s": 6051.916773970565,
+      "kind": "FRONT_ARRIVAL",
+      "flow_rate_m3_s": 0.030000000000000002,
+      "stage_name": "替钻井液(一段)",
+      "phase_fractions": [
+        [
+          "中间浆",
+          1.0
+        ],
+        [
+          "领浆",
+          0.0
+        ]
+      ]
+    },
+    {
+      "time_s": 6129.166666666667,
+      "kind": "RATE_SWITCH",
+      "flow_rate_m3_s": 0.030000000000000002,
+      "stage_name": "替中置液",
+      "phase_fractions": [
+        [
+          "中间浆",
+          1.0
+        ]
+      ]
+    },
+    {
+      "time_s": 6629.166666666667,
+      "kind": "RATE_SWITCH",
+      "flow_rate_m3_s": 0.030000000000000002,
+      "stage_name": "替钻井液(二段)",
+      "phase_fractions": [
+        [
+          "中间浆",
+          1.0
+        ]
+      ]
+    },
+    {
+      "time_s": 7209.749892696102,
+      "kind": "FRONT_ARRIVAL",
+      "flow_rate_m3_s": 0.030000000000000002,
+      "stage_name": "替钻井液(二段)",
+      "phase_fractions": [
+        [
+          "尾浆",
+          0.07864960352514255
+        ],
+        [
+          "中间浆",
+          0.9213503964748575
+        ]
+      ]
+    },
+    {
+      "time_s": 7211.958279681385,
+      "kind": "FRONT_ARRIVAL",
+      "flow_rate_m3_s": 0.030000000000000002,
+      "stage_name": "替钻井液(二段)",
+      "phase_fractions": [
+        [
+          "尾浆",
+          0.23975006109347674
+        ],
+        [
+          "中间浆",
+          0.7602499389065233
+        ]
+      ]
+    },
+    {
+      "time_s": 7214.166666666667,
+      "kind": "REAR_EXIT",
+      "flow_rate_m3_s": 0.030000000000000002,
+      "stage_name": "替钻井液(二段)",
+      "phase_fractions": [
+        [
+          "尾浆",
+          1.0
+        ]
+      ]
+    },
+    {
+      "time_s": 7214.166666666667,
+      "kind": "FRONT_ARRIVAL",
+      "flow_rate_m3_s": 0.030000000000000002,
+      "stage_name": "替钻井液(二段)",
+      "phase_fractions": [
+        [
+          "尾浆",
+          0.5
+        ],
+        [
+          "中间浆",
+          0.5
+        ]
+      ]
+    },
+    {
+      "time_s": 7216.375053651949,
+      "kind": "FRONT_ARRIVAL",
+      "flow_rate_m3_s": 0.030000000000000002,
+      "stage_name": "替钻井液(二段)",
+      "phase_fractions": [
+        [
+          "尾浆",
+          0.7602499389065233
+        ],
+        [
+          "中间浆",
+          0.23975006109347674
+        ]
+      ]
+    },
+    {
+      "time_s": 7218.583440637232,
+      "kind": "FRONT_ARRIVAL",
+      "flow_rate_m3_s": 0.030000000000000002,
+      "stage_name": "替钻井液(二段)",
+      "phase_fractions": [
+        [
+          "尾浆",
+          0.9213503964748575
+        ],
+        [
+          "中间浆",
+          0.0786496035251425
+        ]
+      ]
+    },
+    {
+      "time_s": 7218.583440637232,
+      "kind": "FRONT_ARRIVAL",
+      "flow_rate_m3_s": 0.030000000000000002,
+      "stage_name": "替钻井液(二段)",
+      "phase_fractions": [
+        [
+          "尾浆",
+          1.0
+        ],
+        [
+          "中间浆",
+          0.0
+        ]
+      ]
+    },
+    {
+      "time_s": 8007.557637760332,
+      "kind": "FRONT_ARRIVAL",
+      "flow_rate_m3_s": 0.030000000000000002,
+      "stage_name": "替钻井液(二段)",
+      "phase_fractions": [
+        [
+          "压塞液",
+          0.07864960352514255
+        ],
+        [
+          "尾浆",
+          0.9213503964748575
+        ]
+      ]
+    },
+    {
+      "time_s": 8010.227741729205,
+      "kind": "FRONT_ARRIVAL",
+      "flow_rate_m3_s": 0.030000000000000002,
+      "stage_name": "替钻井液(二段)",
+      "phase_fractions": [
+        [
+          "压塞液",
+          0.23975006109347674
+        ],
+        [
+          "尾浆",
+          0.7602499389065233
+        ]
+      ]
+    },
+    {
+      "time_s": 8012.897845698079,
+      "kind": "FRONT_ARRIVAL",
+      "flow_rate_m3_s": 0.030000000000000002,
+      "stage_name": "替钻井液(二段)",
+      "phase_fractions": [
+        [
+          "压塞液",
+          0.5
+        ],
+        [
+          "尾浆",
+          0.5
+        ]
+      ]
+    },
+    {
+      "time_s": 8015.567949666954,
+      "kind": "FRONT_ARRIVAL",
+      "flow_rate_m3_s": 0.030000000000000002,
+      "stage_name": "替钻井液(二段)",
+      "phase_fractions": [
+        [
+          "压塞液",
+          0.7602499389065233
+        ],
+        [
+          "尾浆",
+          0.23975006109347674
+        ]
+      ]
+    },
+    {
+      "time_s": 8018.238053635827,
+      "kind": "FRONT_ARRIVAL",
+      "flow_rate_m3_s": 0.030000000000000002,
+      "stage_name": "替钻井液(二段)",
+      "phase_fractions": [
+        [
+          "压塞液",
+          0.9213503964748575
+        ],
+        [
+          "尾浆",
+          0.0786496035251425
+        ]
+      ]
+    },
+    {
+      "time_s": 8018.238053635827,
+      "kind": "FRONT_ARRIVAL",
+      "flow_rate_m3_s": 0.030000000000000002,
+      "stage_name": "替钻井液(二段)",
+      "phase_fractions": [
+        [
+          "压塞液",
+          1.0
+        ],
+        [
+          "尾浆",
+          0.0
+        ]
+      ]
+    },
+    {
+      "time_s": 8080.833333333334,
+      "kind": "REAR_EXIT",
+      "flow_rate_m3_s": 0.030000000000000002,
+      "stage_name": "替钻井液(二段)",
+      "phase_fractions": [
+        [
+          "压塞液",
+          1.0
+        ]
+      ]
+    },
+    {
+      "time_s": 8135.833333333334,
+      "kind": "END",
+      "flow_rate_m3_s": 0.0,
+      "stage_name": "施工结束后保持",
+      "phase_fractions": [
+        [
+          "压塞液",
+          1.0
+        ]
+      ]
+    }
+  ]
+}
