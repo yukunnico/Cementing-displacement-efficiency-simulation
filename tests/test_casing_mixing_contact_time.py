@@ -185,8 +185,11 @@ class TestMixingContactTime(unittest.TestCase):
             )
         )
 
-        solver_off = CasingFlowSolver(enable_gravity=False, mixing_contact_time=False)
-        solver_on = CasingFlowSolver(enable_gravity=False, mixing_contact_time=True)
+        # dt=0.05（非默认 2.0）：默认 dt 下"隔离液←泥浆"界面 raw σ≈1.008s 会被
+        # max(σ, dt) 下限 clamp 成 2.0 平凡相等（无区分度）；dt=0.05 下 3 界面
+        # raw σ 全部 > dt，断言对所有界面都有区分度（Task 1 审查 F1）。
+        solver_off = CasingFlowSolver(enable_gravity=False, mixing_contact_time=False, dt=0.05)
+        solver_on = CasingFlowSolver(enable_gravity=False, mixing_contact_time=True, dt=0.05)
         events_off = solver_off.run(well, fluids, schedule).shoe_timeline.events
         events_on = solver_on.run(well, fluids, schedule).shoe_timeline.events
 
@@ -267,7 +270,7 @@ class TestMixingContactTime(unittest.TestCase):
         self.assertIsNotNone(shoe_lag_volume_m3)
         r_liner_m = well_hu.liner_id_mm / 2000.0
         v_liner_m3 = well_hu.shoe_md_m * math.pi * r_liner_m ** 2
-        expected_ratio = math.sqrt(shoe_lag_volume_m3 / v_liner_m3)  # sqrt(88.55/71.101)≈1.1156
+        expected_ratio = math.sqrt(shoe_lag_volume_m3 / v_liner_m3)  # sqrt(88.55/71.101)≈1.115980
         actual_ratio = tail_band_on[2] / tail_band_off[2]
         self.assertLessEqual(
             abs(actual_ratio - expected_ratio) / expected_ratio, 1.0e-2,
@@ -291,16 +294,15 @@ class TestMixingContactTime(unittest.TestCase):
             fluids_hu, well_hu,
         )
         t_inject = solver_hu_on._inject_start_time(steps[tail_idx], steps)
+        band_q_m3_s = _band_flow_rate(r_off.shoe_timeline.events, tail_band_off)
         t_travel = well_hu.shoe_md_m / (
-            tail_band_off[3] and _band_flow_rate(r_off.shoe_timeline.events, tail_band_off)
-            / (math.pi * r_liner_m ** 2)
+            band_q_m3_s / (math.pi * r_liner_m ** 2)
         )
         # σ 比值独立重算：sqrt(t_contact / t_travel)
         d_off = solver_hu_on._compute_dispersion_coefficient(
             r_liner_m,
             next(f for f in fluids_hu if f.name == "尾浆"),
-            _band_flow_rate(r_off.shoe_timeline.events, tail_band_off)
-            / (math.pi * r_liner_m ** 2),
+            band_q_m3_s / (math.pi * r_liner_m ** 2),
         )
         u_rate = _band_flow_rate(r_off.shoe_timeline.events, tail_band_off) / (math.pi * r_liner_m ** 2)
         sigma_off_recomputed = math.sqrt(2.0 * d_off * t_travel) / u_rate
