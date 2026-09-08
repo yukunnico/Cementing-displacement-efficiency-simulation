@@ -31,7 +31,11 @@ Task 2（胶塞面零掺混 plug_face_zero_mixing，默认 False）：
 7. test_hu102_unaffected           —— hu102（has_plug=True + 开关开）：其
                                        界面集无压塞液界面（压塞液前缘被
                                        RESTART 截断挡在鞋口上游），开关开 vs 关
-                                       shoe_timeline 逐位相同（保护性断言）。
+                                       shoe_timeline 逐位相同（保护性断言）；
+8. test_both_switches_orthogonal   —— 双开关正交性：ht1_003 双开 vs 仅开
+                                       contact_time，非压塞液事件序列逐位
+                                       相同；压塞液界面在双开下仅余 1 个
+                                       单相阶跃（移除恰 5 子+F4、新增恰 1）。
 """
 
 import json
@@ -544,7 +548,8 @@ class TestPlugFaceZeroMixing(unittest.TestCase):
     # 7. hu102 保护性断言：界面集无压塞液界面，开关零效应
     # ------------------------------------------------------------------
     def test_hu102_unaffected(self) -> None:
-        """hu102（生产 has_plug=True 语义井、替浆步被 RESTART 截断）+
+        """hu102（语义上应配胶塞的井；此处直传 True 覆盖混浆增强=1 口径
+        ——生产 8 井脚本 has_plug 全 False，替浆步被 RESTART 截断）+
         plug_face_zero_mixing=True：shoe_timeline 与开关关时逐位相同。
 
         保护性断言依据：hu102 顶替序列被 RESTART（循环排混浆）截断，压塞液/
@@ -582,6 +587,83 @@ class TestPlugFaceZeroMixing(unittest.TestCase):
                 self.assertEqual(ev.stage_name, ref.stage_name)
                 self.assertEqual(ev.phase_fractions, ref.phase_fractions)
         self.assertEqual(r_off.cement_end_time_s, r_on.cement_end_time_s)
+
+    # ------------------------------------------------------------------
+    # 8. 双开关正交性：plug_face_zero_mixing 只削压塞液过渡带，不碰其余
+    # ------------------------------------------------------------------
+    def test_both_switches_orthogonal(self) -> None:
+        """ht1_003 双开（mixing_contact_time + plug_face_zero_mixing，均
+        直传构造参数；has_plug 属性覆盖 True，混浆增强=1 口径）vs 仅开
+        mixing_contact_time 参照：
+
+        (a) 非压塞液事件序列逐位相同（time_s/kind/flow_rate/stage_name/
+            phase_fractions 全字段 == 级对比）；
+        (b) 压塞液界面在双开下仅余 1 个单相阶跃 FRONT_ARRIVAL（("压塞液",1.0)），
+            无双相过渡子事件、无 F4 收尾（frac=1.0）事件；
+        (c) 双开 vs 仅 contact_time：移除恰 6 个事件（5 个 (压塞液,尾浆)
+            过渡子事件 + 1 个 F4 收尾）、新增恰 1 个（单相阶跃）。
+
+        即 plug_face_zero_mixing 在 contact_time 已开的场景下仍严格只作用于
+        "尾浆→压塞液"过渡带——两开关效应正交。"""
+
+        well, fluids, schedule, _ = _ht1_003_case()
+
+        solver_ref = CasingFlowSolver(enable_gravity=True, mixing_contact_time=True)
+        solver_ref.has_plug = True  # 属性覆盖（不重跑 loader），混浆增强=1 口径
+        events_ref = solver_ref.run(well, fluids, schedule).shoe_timeline.events
+
+        solver_both = CasingFlowSolver(enable_gravity=True, mixing_contact_time=True,
+                                       plug_face_zero_mixing=True)
+        solver_both.has_plug = True
+        events_both = solver_both.run(well, fluids, schedule).shoe_timeline.events
+
+        # ---------- (b) 双开下压塞液界面仅余 1 个单相阶跃事件 ----------
+        plug_events_both = [
+            e for e in events_both
+            if e.kind == ShoeEventKind.FRONT_ARRIVAL
+            and e.phase_fractions and e.phase_fractions[0][0] == "压塞液"
+        ]
+        self.assertEqual(len(plug_events_both), 1)
+        self.assertEqual(plug_events_both[0].phase_fractions, (("压塞液", 1.0),))
+
+        # ---------- (a) 非压塞液事件序列逐位相同 ----------
+        ref_non_plug = [
+            e for e in events_ref
+            if not (e.kind == ShoeEventKind.FRONT_ARRIVAL
+                    and e.phase_fractions and e.phase_fractions[0][0] == "压塞液")
+        ]
+        both_non_plug = [
+            e for e in events_both
+            if not (e.kind == ShoeEventKind.FRONT_ARRIVAL
+                    and e.phase_fractions and e.phase_fractions[0][0] == "压塞液")
+        ]
+        self.assertEqual(len(ref_non_plug), len(both_non_plug))
+        for i, (ev, ref) in enumerate(zip(both_non_plug, ref_non_plug)):
+            with self.subTest(non_plug_index=i):
+                self.assertEqual(ev.time_s, ref.time_s)
+                self.assertEqual(ev.kind, ref.kind)
+                self.assertEqual(ev.flow_rate_m3_s, ref.flow_rate_m3_s)
+                self.assertEqual(ev.stage_name, ref.stage_name)
+                self.assertEqual(ev.phase_fractions, ref.phase_fractions)
+
+        # ---------- (c) 事件数守恒账：移除恰 6、新增恰 1 ----------
+        # 参照侧压塞液相关事件 = 5 个双相过渡子事件（frac<1.0）+ 1 个 F4
+        # 收尾（frac=1.0、与末子事件同刻）= 6 个，全部被移除；
+        # 双开侧新增 1 个单相阶跃事件。
+        plug_events_ref = [
+            e for e in events_ref
+            if e.kind == ShoeEventKind.FRONT_ARRIVAL
+            and e.phase_fractions and e.phase_fractions[0][0] == "压塞液"
+        ]
+        # 守卫：参照侧压塞液事件确为 5 子 + 1 F4 结构（frac<1.0 恰 5 个）
+        sub_events_ref = [e for e in plug_events_ref if e.phase_fractions[0][1] < 1.0]
+        self.assertEqual(len(sub_events_ref), 5)
+        self.assertEqual(len(plug_events_ref) - len(sub_events_ref), 1)  # F4 收尾
+
+        removed = len(plug_events_ref)          # 6（5 子 + F4）
+        added = 1                               # 单相阶跃
+        self.assertEqual(len(events_both) - len(events_ref), added - removed)
+        self.assertEqual(len(events_both) - len(events_ref), 1 - 6)
 
 
 def _band_flow_rate(events, band) -> float:

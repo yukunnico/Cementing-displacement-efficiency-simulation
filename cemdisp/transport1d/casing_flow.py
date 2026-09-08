@@ -534,7 +534,7 @@ class CasingFlowSolver:
     def _is_plug_release_fluid(fluid_name: str, fluids: tuple[FluidSpec, ...]) -> bool:
         """判别流体是否为压塞液（胶塞释放液，路线 B Task 2 胶塞面零掺混判据）。
 
-        ⚠️ 权宜判据（2026-09-08）：现状 8 井 5 个 loader（ht1_001/ht1_003/
+        ⚠️ 权宜判据（2026-09-08）：现状 8 井 6 个 loader（ht1_001/ht1_003/
         ht1_004/hu2/hu102/hu103）的压塞液全部是 FluidRole.OTHER + 名含
         "压塞液"（hu103/hu102 同为 OTHER+名字），故按 "role==OTHER 且
         '压塞液' in 名" 识别。不新增角色枚举、不动 FluidSpec——改动最小且
@@ -724,6 +724,8 @@ class CasingFlowSolver:
                                 well_spec,
                             )
                         _arrival_cache[fluid_name].append((front_t, scheduled))
+                    # 按到达时刻排序，防重力修正重排多段次序（8 井实测已递增，恒等防御）
+                    _arrival_cache[fluid_name].sort(key=lambda x: x[0])
                     _arrival_cursor[fluid_name] = 0
                 cursor = _arrival_cursor[fluid_name]
                 arrival_list = _arrival_cache[fluid_name]
