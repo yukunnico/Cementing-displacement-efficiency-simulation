@@ -334,7 +334,16 @@ def run_hu2_tailpipe_initial() -> None:
 
     # 严格现场耦合流程：先在套管内做 1D 前沿追踪，再把鞋口出流桥接到环空入口。
     # 启用重力项，使停泵和密度差对鞋口出流时序的影响能被保留到边界条件中。
-    casing_solver = CasingFlowSolver(enable_gravity=True)
+    casing_solver = CasingFlowSolver(
+        enable_gravity=True,
+        # T1 生产口径（2026-09-09 用户裁定）：双开关全开 + has_plug=True。
+        # mixing_contact_time: σ_t 用界面真实接触时间历程积分（替代全程行程时间近似）；
+        # plug_face_zero_mixing: 胶塞面（尾浆→压塞液）零掺混；
+        # has_plug=True: 胶塞在场 → 胶塞刮拭 → 混浆增强因子=1（09-03 胶塞语义的生产化）。
+        mixing_contact_time=True,
+        plug_face_zero_mixing=True,
+        has_plug=True,
+    )
     casing_result = casing_solver.run(well_spec, fluids, schedule)
     coupled_provider = build_coupled_annulus_inlet_provider(
         casing_result,

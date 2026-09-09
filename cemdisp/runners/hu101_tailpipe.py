@@ -177,7 +177,16 @@ def run_hu101_tailpipe_initial() -> None:
     well_spec, fluids, schedule, _ = load_hu101_tailpipe()
 
     # 1D-2D耦合模式：由现场分段施工程序先经过套管内前沿追踪，再转成环空入口边界。
-    casing_solver = CasingFlowSolver(enable_gravity=True)
+    casing_solver = CasingFlowSolver(
+        enable_gravity=True,
+        # T1 生产口径（2026-09-09 用户裁定）：双开关全开 + has_plug=True。
+        # mixing_contact_time: σ_t 用界面真实接触时间历程积分（替代全程行程时间近似）；
+        # plug_face_zero_mixing: 胶塞面（尾浆→压塞液）零掺混；
+        # has_plug=True: 胶塞在场 → 胶塞刮拭 → 混浆增强因子=1（09-03 胶塞语义的生产化）。
+        mixing_contact_time=True,
+        plug_face_zero_mixing=True,
+        has_plug=True,
+    )
     casing_result = casing_solver.run(well_spec, fluids, schedule)
     annulus_stop_time_value_s = annulus_stop_time_s(casing_result=casing_result, fluids=fluids)
     coupled_provider = build_coupled_annulus_inlet_provider(

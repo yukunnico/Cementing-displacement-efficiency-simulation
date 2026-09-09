@@ -308,7 +308,16 @@ def run_ht1_004_tailpipe_initial() -> None:
     output_dir = PROJECT_ROOT / "results" / "呼1-004_1D2D耦合模型"
 
     # 严格现场模式：套管内前沿追踪 → 鞋口出流 → 环空入口
-    casing_solver = CasingFlowSolver(enable_gravity=True)
+    casing_solver = CasingFlowSolver(
+        enable_gravity=True,
+        # T1 生产口径（2026-09-09 用户裁定）：双开关全开 + has_plug=True。
+        # mixing_contact_time: σ_t 用界面真实接触时间历程积分（替代全程行程时间近似）；
+        # plug_face_zero_mixing: 胶塞面（尾浆→压塞液）零掺混；
+        # has_plug=True: 胶塞在场 → 胶塞刮拭 → 混浆增强因子=1（09-03 胶塞语义的生产化）。
+        mixing_contact_time=True,
+        plug_face_zero_mixing=True,
+        has_plug=True,
+    )
     casing_result = casing_solver.run(well_spec, fluids, schedule)
     coupled_provider = build_coupled_annulus_inlet_provider(
         casing_result, casing_solver, fluids, split_cement_phases=True

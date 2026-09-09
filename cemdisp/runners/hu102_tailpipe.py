@@ -286,7 +286,16 @@ def run_hu102_tailpipe_initial() -> None:
 
     # 严格现场模式只使用 1D-2D 耦合：套管内前沿追踪 → 鞋口出流 → 环空入口。
     # 套管内同样启用重力项，使鞋口边界能反映停泵后的密度分异趋势。
-    casing_solver = CasingFlowSolver(enable_gravity=True)
+    casing_solver = CasingFlowSolver(
+        enable_gravity=True,
+        # T1 生产口径（2026-09-09 用户裁定）：双开关全开 + has_plug=True。
+        # mixing_contact_time: σ_t 用界面真实接触时间历程积分（替代全程行程时间近似）；
+        # plug_face_zero_mixing: 胶塞面（尾浆→压塞液）零掺混；
+        # has_plug=True: 胶塞在场 → 胶塞刮拭 → 混浆增强因子=1（09-03 胶塞语义的生产化）。
+        mixing_contact_time=True,
+        plug_face_zero_mixing=True,
+        has_plug=True,
+    )
     casing_result = casing_solver.run(well_spec, fluids, schedule)
     # split_cement_phases=True 与其余 7 井口径一致（领浆/中间浆并入前导水泥相，尾浆单独成相）。
     coupled_provider = build_coupled_annulus_inlet_provider(
