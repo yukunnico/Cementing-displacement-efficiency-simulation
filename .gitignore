@@ -42,3 +42,4 @@ wheels/
 # 临时对比脚本与输出
 _tmp_*.py
 _t10t11_out/
+2D场数据.npz
