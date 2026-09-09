@@ -331,9 +331,12 @@ def interp_annulus_profiles(mean_fields: dict, md_descending, table_depths, tol_
     in_depths = table[in_mask]
     in_vals: dict[str, np.ndarray] = {}
     for ch, field in mean_fields.items():
-        field = np.asarray(field, dtype=float)
-        in_vals[ch] = np.stack([np.interp(in_depths, md_asc, field[k])
-                                for k in range(field.shape[0])])
+        # 场与 md 同步翻转（md 降序=井底在前 → 升序=浅在前）：若只翻 md 不翻场，
+        # np.interp 会对不齐的 x/y 静默产出镜像剖面（2026-09-09 实锤缺陷）。
+        # 场形状 (n_t, nz)：深度在 axis 1，flipud 翻的是 axis 0（时间维）——必须用列反转。
+        field_asc = np.asarray(field, dtype=float)[:, ::-1]
+        in_vals[ch] = np.stack([np.interp(in_depths, md_asc, field_asc[k])
+                                for k in range(field_asc.shape[0])])
     return in_mask, in_depths, in_vals
 
 

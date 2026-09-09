@@ -213,18 +213,36 @@ def _synthetic_means(n_t=2, nz=4):
 
 
 def test_interp_annulus_exact_at_nodes(mod):
-    """表格深度 = 模型网格节点 → 逐位一致；节点间深度 → 线性插值解析解。"""
+    """表格深度 = 模型网格节点 → 逐位一致；节点间深度 → 线性插值解析解。
+
+    合成约定与真实 NPZ 一致：md_desc 降序（index 0=最深），fields 逐位对应 md_desc，
+    即 fields[:, 0] 是最深点的值、fields[:, -1] 是最浅点的值。
+    （旧版此测试误把"浅深度配 fields[:,0]"的镜像期望当基准，2026-09-09 修正。）
+    """
     md_desc, fields = _synthetic_means()
     table = np.array([100.0, 110.0, 120.0, 130.0])
     in_mask, in_depths, in_vals = mod.interp_annulus_profiles(fields, md_desc, table)
     assert in_mask.tolist() == [True] * 4
     for ch in ("lead", "tail", "spacer"):
-        np.testing.assert_array_equal(in_vals[ch], fields[ch])  # 逐位
-    # 中点深度（md_asc=[100,110,120,130]，105 位于前两节点之间）
+        np.testing.assert_array_equal(in_vals[ch], fields[ch][:, ::-1])  # 节点逐位
+    # 中点深度 105：位于 md_asc [100,110] 之间 → (fields[:, -1] + fields[:, -2]) / 2
     table2 = np.array([105.0])
     _, _, vals2 = mod.interp_annulus_profiles(fields, md_desc, table2)
     for ch in ("lead", "tail", "spacer"):
-        np.testing.assert_allclose(vals2[ch][:, 0], 0.5 * (fields[ch][:, 0] + fields[ch][:, 1]))
+        expected = 0.5 * (fields[ch][:, -1] + fields[ch][:, -2])
+        np.testing.assert_allclose(vals2[ch][:, 0], expected)
+
+
+def test_interp_annulus_mirror_regression(mod):
+    """镜像回归（2026-09-09 实锤缺陷）：md 降序喂入、场取非对称单调剖面，
+    浅深度值必须出现在浅表格深度（而非镜像到深端）。
+    缺陷实现（md 翻转而场未翻转）在本断言下必然失败。"""
+    # 场沿"升序 md"递增：浅(100)=0.1 → 深(130)=0.9（非对称，镜像必错）
+    md_desc = np.array([130.0, 120.0, 110.0, 100.0])
+    field = np.tile(np.array([0.9, 0.7, 0.3, 0.1]), (2, 1))  # (n_t=2, nz=4)，与 md_desc 逐位对应
+    table = np.array([100.0, 115.0, 130.0])
+    _, in_depths, vals = mod.interp_annulus_profiles({"tail": field}, md_desc, table)
+    np.testing.assert_allclose(vals["tail"][0], [0.1, 0.5, 0.9], atol=1e-12)
 
 
 def test_domain_mask_tolerance(mod):
