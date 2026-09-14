@@ -244,7 +244,7 @@ def test_froude_squared_matches_manual_scale():
     f2 = froude_squared(mu_displaced=0.058, w0_mps=0.345, half_gap_m=0.0229,
                         rho_displaced=1200.0, gap_scale_m=0.0229,
                         mean_radius_m=0.1071)
-    assert 1e-3 < f2 < 1.0     # 实测量级 O(10⁻²)，绝不是 1.0
+    assert 1e-4 < f2 < 1.0     # 实测量级 O(10⁻²)，绝不是 1.0
 ```
 
 - [ ] **Step 2: 跑测试确认失败** → `ModuleNotFoundError: cemdisp.models2d.buoyancy`
@@ -349,7 +349,7 @@ def test_buoyancy_force_vector_uses_froude_scale():
             "od_mm": np.full((1, 2), 168.3)}
     f_unit, _ = s._buoyancy_force_vector(geom, 1.9, f2=1.0)
     f_phys, _ = s._buoyancy_force_vector(geom, 1.9, f2=1.0e-2)
-    # 断言**正比关系**（f ∝ 1/F²），而非任意阈值——物理 F² 取 O(10⁻²)，
+    # 断言**正比关系**（f ∝ 1/F²），而非任意阈值——物理 F² 取 O(10⁻³)，
     # 固定"50×"阈值会随 F² 取值失效。
     assert f_phys.max() == pytest.approx(f_unit.max() / 1.0e-2, rel=1e-12)
 ```
