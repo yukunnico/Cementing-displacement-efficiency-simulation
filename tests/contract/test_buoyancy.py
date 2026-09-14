@@ -154,3 +154,53 @@ def test_summary_call_site_uses_unique_density_and_paper_half_gap(monkeypatch):
     # summary 的值即该调用返回值
     assert float(result.summary["buoyancy_number"]) == pytest.approx(
         real(**captured), rel=1e-12)
+
+
+# ---------------------------------------------------------------------------
+# Task 4: _buoyancy_force_vector 的 F² 标定（Z&F22 (2.6)/(2.5b)）
+# ---------------------------------------------------------------------------
+def test_buoyancy_force_vector_uses_froude_scale():
+    """f_φ 必须带 1/F² 标定。f2 的取值按 (2.6) 用呼101 实参**现算**，
+    不要硬抄——`F² = τ̂₀/(ρ̂₁ĝδ₀r̂ₐ*)`，`τ̂₀ = μ̂₁ŵ₀/d̂`，`d̂ = mean(geom["H"])`。
+    参考量级 O(1e-2)。"""
+    import numpy as np
+    from cemdisp.models2d.annulus_d2dga import AnnulusD2DGASolver
+    s = AnnulusD2DGASolver(ny=40, nz=2)
+    geom = {"phi": np.linspace(0, 1, 40), "hole_mm": np.full((1, 2), 260.0),
+            "od_mm": np.full((1, 2), 168.3)}
+    f_unit, _ = s._buoyancy_force_vector(geom, 1.9, f2=1.0)
+    f_phys, _ = s._buoyancy_force_vector(geom, 1.9, f2=1.0e-2)
+    # 断言**正比关系**（f ∝ 1/F²），而非任意阈值——物理 F² 取 O(10⁻²)，
+    # 固定"50×"阈值会随 F² 取值失效。
+    assert f_phys.max() == pytest.approx(f_unit.max() / 1.0e-2, rel=1e-12)
+
+
+def test_solver_call_sites_pass_physical_f2(monkeypatch):
+    """两个调用点必须传入按 (2.6) 现算的 F²（量级 O(10⁻²)），不得硬编码 1.0。
+
+    覆盖：`_compute_velocity` 的 R3 真体力段（式 2.5b）与 run 循环的
+    R2 I3 浮力弥散通量段（式 4.25 第二项）——两处共用同一浮力向量。
+    """
+    captured: list[float] = []
+    real = AnnulusD2DGASolver._buoyancy_force_vector
+
+    def _spy(self, geom, beta_deg, f2):
+        captured.append(float(f2))
+        return real(self, geom, beta_deg, f2)
+
+    monkeypatch.setattr(AnnulusD2DGASolver, "_buoyancy_force_vector", _spy)
+    well = _toy_well()
+    fluids = (_fluid("泥浆", FluidRole.MUD, 1960.0), _fluid("尾浆", FluidRole.TAIL, 1900.0))
+    q_m3s = 0.02
+
+    def _inlet(t: float) -> AnnulusInletState:
+        return AnnulusInletState(time_s=t, flow_rate_m3_s=q_m3s, stage_name="pump",
+                                 phase_fractions=(("cement", 1.0), ("tail", 1.0)))
+
+    solver = AnnulusD2DGASolver(dt=4.0, nz=20, ny=8, total_t=40.0)
+    solver.run(well, fluids, _inlet)
+
+    assert captured, "两个调用点都未调用 _buoyancy_force_vector"
+    for f2 in captured:
+        assert f2 != 1.0
+        assert 1e-4 < f2 < 1.0

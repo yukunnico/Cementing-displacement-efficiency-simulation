@@ -757,12 +757,22 @@ class AnnulusD2DGASolver:
         kappa_mix = np.exp(log_k_mix)
         return mu, rho, mud, tau_y, m_field, eta1, eta2, n_mix, kappa_mix
 
-    def _buoyancy_force_vector(self, geom: Dict[str, Array], beta_deg: Array | float) -> Tuple[Array, Array]:
-        """计算论文式 2.5b 的浮力体力向量 f = (r_a·cosβ/F², r_a·sin(πφ)·sinβ/F²)。
+    def _buoyancy_force_vector(self, geom: Dict[str, Array], beta_deg: Array | float,
+                               f2: float) -> Tuple[Array, Array]:
+        """计算论文式 (2.5b) 的浮力体力向量 f = (r_a·cosβ, r_a·sin(πφ)·sinβ)/F²。
 
-        R2 (I3 通量) 与 R3 (真体力) 共用。F 为 Froude 数（此处用经验常数 1.0 归一化，
-        实际数值在 _compute_velocity 中按 F 定义校准）。
-        返回 (f_phi, f_xi)，shape 与 geom['phi'] 广播兼容 (ny, nz)。
+        R2 (I3 通量) 与 R3 (真体力) 共用。**F² 必须由调用方按 Z&F22 (2.6) 现算传入**
+        （见 `_froude_squared_at`，物理量级 O(10⁻²)）：本方法原先把 ``F2 = 1.0`` 写死在
+        内部并声称"真 F 校正在 _compute_velocity 内做"，而那次校正从未存在，导致
+        方位浮力修正幅度只剩 ~4×10⁻⁵——浮力在动力学里实际缺席。2026-09-14 Task 4 废止。
+
+        Args:
+            geom: 几何字典（用 ``phi``；``hole_mm``/``od_mm`` 推平均半径 r_a）。
+            beta_deg: 井斜角 β，度。
+            f2: Froude 数平方 F²（无量纲，Z&F22 (2.6)）；非正/极小值被夹到 1e-12 防除零。
+
+        Returns:
+            (f_phi, f_xi)，shape 与 ``geom['phi']`` 广播兼容，即 (ny, nz)。
         """
         phi = geom["phi"][:, None]  # (ny, 1)
         beta_rad = np.deg2rad(np.asarray(beta_deg, dtype=float))
@@ -771,14 +781,73 @@ class AnnulusD2DGASolver:
         od_mm = geom.get("od_mm", np.full((1, self.nz), 139.7))
         # 沿深度取均值半径（米），广播到 (ny, nz)
         r_a_m = np.mean((hole_mm + od_mm) / 4.0) / 1000.0
-        # F 取 1.0（无量纲归一化；真 F 校正在 _compute_velocity 内做）
-        F2 = 1.0
-        f_phi = (r_a_m / F2) * np.sin(np.pi * phi) * np.sin(beta_rad)  # (ny,1) 广播
-        f_xi = np.full_like(f_phi, (r_a_m / F2) * np.cos(beta_rad))
+        # Task 4: 1/F² 由外部按 (2.6) 传入（原先硬编码 F2 = 1.0）；下限防除零。
+        f2_safe = max(float(f2), 1.0e-12)
+        f_phi = (r_a_m / f2_safe) * np.sin(np.pi * phi) * np.sin(beta_rad)  # (ny,1) 广播
+        f_xi = np.full_like(f_phi, (r_a_m / f2_safe) * np.cos(beta_rad))
         # 广播到 (ny, nz)
         f_phi = np.broadcast_to(f_phi, (self.ny, self.nz)).astype(float, copy=True)
         f_xi = np.broadcast_to(f_xi, (self.ny, self.nz)).astype(float, copy=True)
         return f_phi, f_xi
+
+    def _froude_squared_at(self, geom: Dict[str, Array], q_m3s: float, w_field: Array,
+                           mud_fluid: FluidSpec) -> float:
+        """按 Z&F22 (2.6) 现算当前时间步的 F²（式 2.5b 浮力体力向量的标定分母）。
+
+        ``F = √(τ̂₀/(ρ̂₁·ĝ·δ₀·r̂ₐ*))`` ⇒ ``F² = τ̂₀/(ρ̂₁·ĝ·δ₀·r̂ₐ*)``，其中
+        ``τ̂₀ = μ̂₁·ŵ₀/d̂`` 为**被顶替液（钻井液）**中的黏性应力尺度。
+
+        取值口径（与 Task 3 的 :mod:`cemdisp.models2d.buoyancy`、summary 段一致）：
+
+        - ``μ̂₁ = buoyancy.fluid_apparent_viscosity(mud, γ̇)``，剪切率 ``γ̇ = 6|w|/b``
+          与 `_compute_props` 同约定；单位 Pa·s。
+        - ``ŵ₀ = q/A``：截面平均轴向速度（**不是** ``mean(|w|)``），m/s。
+        - ``ρ̂₁ = mud_fluid.density_kg_m3``（被顶替液密度），kg/m³。
+        - ``d̂ = mean(geom["H"])``：Z&F22 半间隙（``= (r_o−r_i)/2 = (井径−外径)/4``），m。
+        - ``r̂ₐ* = mean((hole+od)/4)/1000``：沿程平均半径，m（论文中 ``r̂ₐ*`` 沿环空流道平均）。
+        - ``δ₀ = d̂/r̂ₐ*``：**无量纲**参考间隙比。论文 (2.1) 推导处把窄间隙参数写作
+          ``δ = d̂/(πr̂ₐ*)``；(2.6) 的 ``δ₀`` 是同一量的参考值，本实现由
+          ``δ₀·r̂ₐ* = d̂`` 钉定。该取值的依据：把 (2.5b)/(2.6) 的
+          ``|b| ≈ (ρ−1)/F²``（论文 p.8"b 即浮力向量的大小"）与论文 p.8 的浮力数
+          ``b = Δρ·ĝ·d̂²/(μ̂₁ŵ₀)`` 联立，得 ``F²·b = Δρ/ρ̂₁``（Atwood 数），
+          即 ``F² = μ̂₁ŵ₀/(ρ̂₁·ĝ·d̂²)``，等价于 ``δ₀·r̂ₐ* = d̂``。
+
+        传给 `buoyancy.froude_squared` 时 ``gap_scale_m = half_gap_m / mean_radius_m``
+        ——二者是**不同的量**（前者无量纲间隙比、后者长度），但乘积恰为 ``d̂``。
+
+        两个调用点（`_compute_velocity` 的 R3 真体力、run 循环的 R2 I3 弥散通量）
+        各自按本方法现算，同一时间步内几何/物性口径一致。
+        """
+        half_gap_m = float(np.mean(geom["H"])) if "H" in geom else 0.5 * float(np.mean(geom["b"]))
+        # 退化口径：合成几何的单元测试可能只给 y/phi/b（无 hole/od/H）。
+        # 因本式只以乘积 ``δ₀·r̂ₐ* = d̂`` 起作用，此时取 r̂ₐ* = d̂（即 δ₀ = 1）不影响 F²；
+        # 环形截面积改取模型自身的 ``∫ b dy``（与体积 scale 依赖的
+        # ``∫∫ b dy ds = 物理环空体积`` 恒等式同源），仍保持 ŵ₀ = q/A 的口径。
+        if "hole_mm" in geom and "od_mm" in geom:
+            mean_radius_m = float(np.mean((geom["hole_mm"] + geom["od_mm"]) / 4.0)) / 1000.0
+            annulus_area_m2 = float(
+                np.mean(np.pi / 4.0 * ((geom["hole_mm"] / 1000.0) ** 2
+                                       - (geom["od_mm"] / 1000.0) ** 2))
+            )
+        else:
+            mean_radius_m = half_gap_m
+            annulus_area_m2 = float(np.trapezoid(np.mean(geom["b"], axis=1), x=geom["y"]))
+        if float(q_m3s) > 0.0 and annulus_area_m2 > 0.0:
+            w0_mps = float(q_m3s) / annulus_area_m2
+        else:
+            # 退让口径：无泵注排量（异常输入）时回落到末步速度场均值
+            w0_mps = float(np.mean(np.abs(w_field)))
+        # 泥浆表观黏度的剪切率约定与 _compute_props 一致：γ̇ = 6|w|/b
+        shear_rate_mud = (6.0 * float(np.mean(np.abs(w_field)))
+                          / max(float(np.mean(geom["b"])), 1e-12))
+        return buoyancy.froude_squared(
+            mu_displaced=buoyancy.fluid_apparent_viscosity(mud_fluid, shear_rate_mud),
+            w0_mps=w0_mps,
+            half_gap_m=half_gap_m,
+            rho_displaced=float(mud_fluid.density_kg_m3),
+            gap_scale_m=half_gap_m / max(mean_radius_m, 1.0e-12),
+            mean_radius_m=mean_radius_m,
+        )
 
     def _compute_buoyancy_number(self, rho_displacing_kg_m3: float, rho_displaced_kg_m3: float,
                                  gap_m: float, mu_displaced_pa_s: float, velocity_m_s: float) -> float:
@@ -915,7 +984,10 @@ class AnnulusD2DGASolver:
         if self.enable_true_buoyancy and self.enable_d2dga:
             # T1-3b: 体力向量注入流动度（式 2.5b/4.24），替换 (2φ−1) 简化代理
             beta_deg_local = float(np.mean(geom.get("inc_deg", np.zeros(self.nz))))
-            f_phi_arr, _ = self._buoyancy_force_vector(geom, beta_deg_local)
+            # Task 4: F² 按 Z&F22 (2.6) 现算（原先内部硬编码 1.0 → 浮力缺席动力学），
+            # 量级 O(10⁻²)；ŵ₀ = q/A、μ̂₁ 取泥浆、d̂ = mean(geom["H"])。
+            f2_local = self._froude_squared_at(geom, q_m3s, w_prev, mud_fluid)
+            f_phi_arr, _ = self._buoyancy_force_vector(geom, beta_deg_local, f2_local)
             rho_displaced = mud_fluid.density_kg_m3 / 1000.0
             delta_rho = (rho - rho_displaced)  # g/cc 局部密度差
             i2 = d2dga_dispersion_I2(c_bar, m_local)
@@ -1219,7 +1291,12 @@ class AnnulusD2DGASolver:
                     cement_for_flux = np.clip(lead + tail, 0.0, 1.0)
                     # 浮力向量 f（用当前井段平均井斜）
                     beta_deg_local = float(np.mean(geom["inc_deg"])) if "inc_deg" in geom else 0.0
-                    f_phi_arr, f_xi_arr = self._buoyancy_force_vector(geom, beta_deg_local)
+                    # Task 4: F² 按 Z&F22 (2.6) 现算，与 _compute_velocity 内同一口径
+                    # （排量取最近一次有效泵注 q，速度取本步 w），量级 O(10⁻²)。
+                    f2_local = self._froude_squared_at(
+                        geom, last_pump_rate_m3s, w_prev, mud_fluid)
+                    f_phi_arr, f_xi_arr = self._buoyancy_force_vector(
+                        geom, beta_deg_local, f2_local)
                     # 顶替液粘度 eta2 + 密度差 Δρ（顶替液 - 被顶替液），kg/m³。
                     # 默认关（enable_local_i3=False）：全场均值，逐位复现基线；
                     # 开启后：eta2 透传水泥相黏度场 _eta2、Δρ 用局部混合密度场，实现 I3 局部化。

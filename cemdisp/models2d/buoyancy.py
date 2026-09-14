@@ -95,18 +95,36 @@ def buoyancy_number(rho_displacing: float, rho_displaced: float, half_gap_m: flo
 
 def froude_squared(mu_displaced: float, w0_mps: float, half_gap_m: float,
                    rho_displaced: float, gap_scale_m: float, mean_radius_m: float) -> float:
-    """Froude 数平方（Z&F22 (2.6)）。替代此前硬编码的 F2 = 1.0。
+    """Froude 数平方（Z&F22 (2.6)）。Task 4 起替代 `_buoyancy_force_vector` 内硬编码的 F2 = 1.0。
 
     ``F = √(τ̂₀/(ρ̂₁·ĝ·δ₀·r̂ₐ*))`` ⇒ ``F² = τ̂₀/(ρ̂₁·ĝ·δ₀·r̂ₐ*)``，其中
-    ``τ̂₀ = μ̂₁·ŵ₀/d̂`` 为黏性应力尺度（注意 F² 是比值 τ̂₀/(浮力尺度)，不是其倒数）。
+    ``τ̂₀ = μ̂₁·ŵ₀/d̂`` 为被顶替液中的黏性应力尺度（注意 F² 是比值 τ̂₀/(浮力尺度)，
+    不是其倒数）。
+
+    **δ₀ 与 r̂ₐ* 的取值约定**（论文出处：§2.1 与 (2.6)）：
+
+    - ``r̂ₐ*`` = 沿环空流道平均的代表性半径（论文："The mean radius ``r̂ₐ*`` is defined
+      by averaging along the annular flow path"），量纲 m，即本函数的 ``mean_radius_m``。
+    - ``δ₀`` = **无量纲**参考间隙比。论文 (2.1) 推导处定义窄间隙参数
+      ``δ = d̂/(πr̂ₐ*)``；(2.6) 中的 ``δ₀`` 是同一量的参考值，本仓由
+      ``δ₀·r̂ₐ* = d̂`` 钉定（``d̂`` 为 Z&F22 半间隙）。该取值使 (2.5b)/(2.6) 的
+      ``|b| ≈ (ρ−1)/F²``（论文 p.8："b 即浮力向量 b 的大小"）与论文 p.8 的浮力数
+      ``b = Δρ·ĝ·d̂²/(μ̂₁ŵ₀)`` 精确对齐，联立给出 ``F²·b = Δρ/ρ̂₁``（Atwood 数），
+      等价于 ``F² = μ̂₁ŵ₀/(ρ̂₁·ĝ·d̂²)``。
+      ⇒ 调用方应传 ``gap_scale_m = half_gap_m / mean_radius_m``。
+      ``gap_scale_m`` 与 ``half_gap_m`` **不是同一个量**（前者无量纲、后者长度），
+      但二者乘积恒等于 ``d̂``，故在本式分母中只以乘积 ``δ₀·r̂ₐ* = d̂`` 起作用。
 
     Args:
-        mu_displaced: 被顶替液表观黏度 μ̂₁，Pa·s。
-        w0_mps: 截面平均轴向速度 ŵ₀，m/s。
-        half_gap_m: 半间隙 d̂，m（= 全间隙/2 = (井径−外径)/4）。
+        mu_displaced: 被顶替液（钻井液）表观黏度 μ̂₁，Pa·s。
+        w0_mps: 截面平均轴向速度 ŵ₀ = q/A，m/s。
+        half_gap_m: 半间隙 d̂，m（= (r_o−r_i)/2 = (井径−外径)/4）。
         rho_displaced: 被顶替液密度 ρ̂₁，kg/m³。
-        gap_scale_m: 环空间隙尺度 δ₀，m（全间隙 = 2d̂）。
-        mean_radius_m: 平均环空半径 r̂ₐ*，m（= (井径+外径)/4）。
+        gap_scale_m: 无量纲参考间隙比 δ₀ = d̂/r̂ₐ*（= half_gap_m/mean_radius_m）。
+        mean_radius_m: 沿程平均环空半径 r̂ₐ*，m（= mean((井径+外径)/4)）。
+
+    Returns:
+        F²（无量纲）。呼101 量级 O(10⁻²)（实测约 3×10⁻²）。
     """
     d = max(float(half_gap_m), 1e-9)
     tau0 = float(mu_displaced) * max(float(w0_mps), 1e-9) / d
