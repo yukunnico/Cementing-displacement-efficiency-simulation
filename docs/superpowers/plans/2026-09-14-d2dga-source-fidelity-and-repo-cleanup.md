@@ -374,7 +374,8 @@ def test_buoyancy_force_vector_uses_froude_scale():
 
 **Interfaces:**
 - Consumes: `buoyancy.buoyancy_number`、`d2dga_flux.d2dga_dispersion_I2`
-- Produces: `_mobility_profile(c_bar, b_num, geom, i1_base, m_local, beta_deg) -> Array`（抽出的纯函数，便于单测）；`_compute_velocity` 的 `pref` 含 (4.14) 的 `I₂·(Δρ/(H·r_a))` 浮力项
+- Produces: `_mobility_profile(c_bar, b_num, geom, i1_base, m_local, beta_deg, f2) -> Array`（抽出的纯函数，便于单测）；`_compute_velocity` 的 `pref` 含 (4.14) 的 `I₂·(Δρ/(H·r_a))` 浮力项
+  ⚠️ **`f2` 必须作为形参显式透传**（controller 裁定 R26）：Task 4 刚把 `F²` 按 (2.6) 定标，若抽函数时漏掉 `f2` 通路，F² 会**二次静默消失**退化成未标定物理。验收时必须断言 `_mobility_profile` 的输出随 `f2` 变化。
 
 - [ ] **Step 1: 写失败测试**
 
