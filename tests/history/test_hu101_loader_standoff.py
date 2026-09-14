@@ -1,6 +1,9 @@
 # STATUS: history —— 本文件锁定“重构前”的历史行为契约。
 # 源模型口径重构（2026-09-14）后，相关断言预期变红；红灯不等同回归失败，
 # 需按 docs/superpowers/plans/2026-09-14-d2dga-source-fidelity-and-repo-cleanup.md 逐条复核。
+# 2026-09-15 R30 裁定（Task 10）：被锁值改变（0.80 → LEGACY 0.38–0.48），
+# 系 controller 记账裁定回退，非掩盖回归；修改理由与三代注释链见
+# cemdisp/data/loaders/hu101_loader.py 的 _ASSUMED_STANDOFF 处。
 """Task 12: hu101 实测居中度剖面可选项测试。"""
 import pytest
 
@@ -10,14 +13,15 @@ from cemdisp.data.loaders import load_hu101_tailpipe
 def test_default_standoff_is_assumed_profile():
     """默认（measured_standoff=None）剖面。
 
-    ⚠️ 2026-09-11 用户指令临时改动：默认由 legacy 名义剖面 0.38–0.48（均 0.429）
-    改为全井常数 0.80（反推情景，与现场"居中度下降"记录方向相反）。
-    LEGACY 断言：min==0.38 / max==0.48 / mean<0.50。
+    2026-09-15 R30 裁定回退 LEGACY 名义剖面 0.38–0.48（均 0.429，min 0.38 在
+    6100m、max 0.48 在 7200m），撤销 2026-09-11 临时改动 0.80（反推情景）。
+    断言恢复 LEGACY 范围：min==0.38 / max==0.48 / mean<0.50。
     """
     well, _, _, _ = load_hu101_tailpipe()
     vals = [p.value for p in well.standoff_profile]
-    assert min(vals) == pytest.approx(0.80)
-    assert max(vals) == pytest.approx(0.80)
+    assert min(vals) == pytest.approx(0.38)
+    assert max(vals) == pytest.approx(0.48)
+    assert sum(vals) / len(vals) < 0.50
 
 
 def test_measured_between_centralizers_profile():

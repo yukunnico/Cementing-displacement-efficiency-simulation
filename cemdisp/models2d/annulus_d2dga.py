@@ -321,16 +321,17 @@ class AnnulusD2DGASolver:
             cfl_number: 全局 CFL 数（半拉格朗日保守估计），默认 0.5。
                 独立于 T1-2 alpha_cfl（局部 I3 通量裁剪）。
             dt_min: 自适应时间步下限（秒），默认 0.1。防 CFL 过小步数爆炸。
-            e_clip_max: M4 偏心度 e 硬截断上限，默认 0.55（逐位复现基线）。
-                由 e = clip(1-standoff, 0.05, e_clip_max) 构造几何；
-                生产跑道（Task 13 重跑阶段）显式设 0.90 放宽截断。
-                体积校正（_build_geom 末尾 scale）每个 run 重算，half_volume 守恒。
-            enable_e_clip_ruling: e_clip 按井数据来源自动裁定开关（2026-09-06），默认 True。
-                True: well_spec.standoff_measured=True（实测居中度剖面井，如呼101实测口径）
-                时截断上限取 e_clip_measured_max=0.90，否则维持 e_clip_max（设计/代理
-                值井保持保守截断——在假设输入上放大模型响应会制造伪敏感性）；
-                False: 恒用 e_clip_max（旧口径）。
-                显式传入 e_clip_max 时该井仍按裁定选择上限（显式值覆盖设计值井路径）。
+            e_clip_max: ⚠️ 已弃用（2026-09-15 Task 10），默认 0.55。e_clip 硬截断
+                已移除，e = clip(1−standoff, 1e-6, 1−1e-6) 按 Pelipenko04 (2.1)
+                文献口径 e∈[0,1) 直取（standoff 0.35 与 0.45 不再同入 0.55 死区，
+                强偏心不再封顶）。保留形参仅为既有 runner 兼容；偏离 legacy 默认
+                （0.55）的传值触发一次性 DeprecationWarning 且不再生效。
+            e_clip_measured_max: ⚠️ 已弃用（2026-09-15 Task 10），语义同 e_clip_max
+                （legacy 默认 0.90），偏离传值触发 DeprecationWarning 且不再生效。
+            enable_e_clip_ruling: ⚠️ 已弃用（2026-09-15 Task 10），语义同 e_clip_max
+                （legacy 默认 True），偏离传值触发 DeprecationWarning 且不再生效。
+                2026-09-06 裁定（实测井放开 0.90）随截断一同退役——文献口径无
+                "按数据来源选上限"概念。
             enable_yield_gate: M3 屈服门槛开关，默认 True（2026-09-02 起物理屈服门）。
                 True 时 pump 分支用 _yield_gate_wall 重建壁面冻结层；
                 False（2026-09-07 起无 c_min 兜底轨）= wall 恒零（无壁面静止层）。
@@ -366,6 +367,24 @@ class AnnulusD2DGASolver:
                 DeprecationWarning,
                 stacklevel=2,
             )
+        # ⚠️ 2026-09-15 Task 10 弃用检查：e_clip 三形参任一偏离 legacy 默认
+        # （0.55/0.90/True）即一次性弃用警告。e_clip 硬截断已移除，e = 1−standoff
+        # 按 Pelipenko04 (2.1) 文献口径 e∈[0,1) 直取（仅 1e-6 浮点护栏）。
+        # 默认/legacy 等值传参完全静默——调用方无感获得文献口径（本 Task 目的）。
+        _e_clip_given = (
+            e_clip_max != 0.55
+            or e_clip_measured_max != 0.90
+            or enable_e_clip_ruling is not True
+        )
+        if _e_clip_given:
+            warnings.warn(
+                "AnnulusD2DGASolver 的 e_clip_max/e_clip_measured_max/enable_e_clip_ruling "
+                "形参已弃用：e_clip 硬截断已移除，e = 1−standoff 按文献口径 e∈[0,1) "
+                "（Pelipenko04 (2.1)）直取，不再按数据来源裁剪上限。"
+                "显式传值不再生效，请从调用方移除这些参数。",
+                DeprecationWarning,
+                stacklevel=2,
+            )
         self.dt = dt
         self.nz = nz
         self.ny = ny
@@ -387,6 +406,8 @@ class AnnulusD2DGASolver:
         self.enable_cfl_adaptive: bool = enable_cfl_adaptive
         self.cfl_number: float = cfl_number
         self.dt_min: float = dt_min
+        # ⚠️ 2026-09-15 Task 10：e_clip 截断已移除（Pelipenko04 (2.1) e∈[0,1)），
+        # e_clip_max 形参弃用——仅保留属性以兼容旧脚本读值，不再被 _build_geom 消费。
         self.e_clip_max: float = e_clip_max
         self.enable_yield_gate: bool = enable_yield_gate
         self.yield_gate_f_safety: float = yield_gate_f_safety
@@ -396,9 +417,10 @@ class AnnulusD2DGASolver:
         self.dispersion_azimuthal = dispersion_azimuthal
         self.dispersion_dt_ref = dispersion_dt_ref
         self.dispersion_dt_scale = dispersion_dt_scale
-        # 2026-09-06 e_clip 裁定 + 幂律缝隙律（构造参数见 docstring）
+        # 2026-09-06 e_clip 裁定已随 Task 10 截断移除一同退役（形参弃用，仅存属性）
         self.enable_e_clip_ruling = enable_e_clip_ruling
         self.e_clip_measured_max = e_clip_measured_max
+        # 幂律缝隙律（构造参数见 docstring）
         self.enable_power_law_gap_law = enable_power_law_gap_law
         # 2026-09-15 Task 9：速度场路径开关（True = (4.22) 流函数椭圆方程，
         # False = 旧代数流动度，逐位复现 76a91c1——R7 冻结锚护栏）
@@ -446,13 +468,12 @@ class AnnulusD2DGASolver:
         else:
             od_mm = np.full_like(md, float(well_spec.liner_od_mm or 0.0), dtype=float)
 
-        # 2026-09-06 e_clip 裁定：实测居中度井（standoff_measured=True）放开截断到
-        # e_clip_measured_max（默认 0.90）；设计/代理值井维持 e_clip_max（默认 0.55），
-        # 避免在假设输入上放大模型响应。enable_e_clip_ruling=False 退回旧口径。
-        e_cap = self.e_clip_max
-        if self.enable_e_clip_ruling and getattr(well_spec, "standoff_measured", False):
-            e_cap = max(self.e_clip_max, self.e_clip_measured_max)
-        e = np.clip(1.0 - standoff, 0.05, e_cap)
+        # 2026-09-15 Task 10：e_clip 硬截断移除——e = 1−standoff 按 Pelipenko04
+        # (2.1) 文献口径 e∈[0,1) 直取，仅以 1e-6 浮点护栏夹取开区间端点
+        # （standoff→0 防 e=1 退化、standoff→1 防零间隙除零）。旧口径
+        # clip(1−SO, 0.05, 0.55) 的 0.55 死区与 2026-09-06 实测井 0.90 裁定
+        # 一同退役；e_clip 三形参弃用（构造时偏离 legacy 默认即警告）。
+        e = np.clip(1.0 - standoff, 1.0e-6, 1.0 - 1.0e-6)
         clearance = (hole - od_mm) / 1000.0
         half_gap_mean = clearance / 2.0
         mean_radius = ((hole + od_mm) / 4.0) / 1000.0

@@ -123,28 +123,47 @@ class TestCompositeSpacer:
 # ---------------------------------------------------------------------------
 class TestEClipRuling:
     def test_assumed_well_keeps_default_cap(self):
-        """设计值井（standoff_measured=False）：e 上限保持 0.55。"""
+        """设计值井（standoff_measured=False）：e 上限保持 0.55。
+
+        STATUS（Task 10 预期红，2026-09-15）：e_clip 硬截断已移除（Pelipenko04
+        (2.1) e∈[0,1) 文献口径），e=1−standoff 直取 → 本井 e=0.95 ≠ 0.55。
+        截断语义由 tests/contract/test_eccentricity_no_clip.py 锁定。断言未改动。
+        """
         s = _make_solver()
         well = _toy_well(standoff_measured=False, standoff=0.05)  # e 期望 0.55
         geom = s._build_geom(well)
         assert geom["e"].max() == pytest.approx(0.55)
 
     def test_measured_well_raises_to_090(self):
-        """实测井（standoff_measured=True）：e 上限放开到 0.90。"""
+        """实测井（standoff_measured=True）：e 上限放开到 0.90。
+
+        STATUS（Task 10 预期红，2026-09-15）：截断移除后 e=0.95 ≠ 0.90；
+        2026-09-06 "实测井放开 0.90" 裁定随截断一同退役（文献口径无按数据
+        来源选上限概念）。断言未改动。
+        """
         s = _make_solver()
         well = _toy_well(standoff_measured=True, standoff=0.05)
         geom = s._build_geom(well)
         assert geom["e"].max() == pytest.approx(0.90)
 
     def test_ruling_off_falls_back(self):
-        """enable_e_clip_ruling=False：实测井也维持 0.55（旧口径）。"""
+        """enable_e_clip_ruling=False：实测井也维持 0.55（旧口径）。
+
+        STATUS（Task 10 预期红，2026-09-15）：截断移除后 e=0.95 ≠ 0.55；
+        enable_e_clip_ruling 形参弃用（偏离 legacy 默认传值仅触发
+        DeprecationWarning）。断言未改动。
+        """
         s = _make_solver(enable_e_clip_ruling=False)
         well = _toy_well(standoff_measured=True, standoff=0.05)
         geom = s._build_geom(well)
         assert geom["e"].max() == pytest.approx(0.55)
 
     def test_explicit_override_respected_for_assumed(self):
-        """显式 e_clip_max=0.90 + 设计值井：上限用显式值。"""
+        """显式 e_clip_max=0.90 + 设计值井：上限用显式值。
+
+        STATUS（Task 10 预期红，2026-09-15）：截断移除后显式 e_clip_max 不再
+        生效，e=0.95 ≠ 0.90。断言未改动。
+        """
         s = _make_solver(e_clip_max=0.90)
         well = _toy_well(standoff_measured=False, standoff=0.05)
         geom = s._build_geom(well)

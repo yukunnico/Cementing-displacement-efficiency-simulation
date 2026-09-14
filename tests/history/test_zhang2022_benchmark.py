@@ -166,7 +166,12 @@ def test_e_clip_released():
 
 
 def test_e_clip_released_geometry_keeps_eccentricity():
-    """e=0.8 算例在解锁后 geom["e"] 必须仍为 0.8（默认 0.55 会被截断）。"""
+    """e=0.8 算例在解锁后 geom["e"] 必须仍为 0.8（默认 0.55 会被截断）。
+
+    STATUS（Task 10 预期红，2026-09-15）：第二段断言（默认上限截到 0.55）随
+    e_clip 截断移除而失效——文献口径（Pelipenko04 (2.1) e∈[0,1)）下默认井
+    e=0.8 直取不截断，与显式解锁路径同值。第一段断言仍成立。断言未改动。
+    """
     case = ZHANG2022_CASE_BY_ID[1]
     ws = build_case_well_spec(case)
     released = build_case_solver(case, nz=20)._build_geom(ws)["e"][0]
