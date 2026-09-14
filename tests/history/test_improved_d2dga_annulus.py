@@ -876,7 +876,14 @@ class TestYieldGateIntegration:
         return s, s.run(well, fluids, _inlet)
 
     def test_gate_on_run_no_crash_binary_wall_summary(self):
-        """门开 run 不崩溃；wall 场 ∈ {0,1}；summary 仍为有效 dict。"""
+        """门开 run 不崩溃；wall 场 ∈ {0,1}；summary 仍为有效 dict。
+
+        STATUS（Task 11 语义退役，2026-09-15）：屈服门已连续化
+        （wall = clip(1−τw_extrap/(f·τy), 0, 1)，Pelipenko04 (2.6)-(2.8)），
+        wall 不再限于 {0,1}。本算例（q=0.02、40 s）未触发冻结，wall 全零
+        故二值断言空洞通过；连续口径契约见
+        tests/contract/test_yield_gate_continuous.py。断言未改动。
+        """
         _, res = self._run_gate_on(0.02, 40.0)
         wall = res.wall_field
         assert set(np.unique(wall)).issubset({0.0, 1.0})
@@ -884,7 +891,14 @@ class TestYieldGateIntegration:
 
     def test_gate_on_keeps_flow_channel(self):
         """开启屈服门槛后，每列流动最快的参考元永不冻结——即使低排量、泥浆有屈服，
-        也至少保留一条流动通道（wall=0），不会重演 c_min 全域冻结堵死前沿。"""
+        也至少保留一条流动通道（wall=0），不会重演 c_min 全域冻结堵死前沿。
+
+        STATUS（Task 11 预期红，2026-09-15）：第一段断言（参考元 wall≤0.5）
+        在连续口径下仍通过；第二段断言 wall ∈ {0,1} 随屈服门连续化
+        （wall = clip(1−τw_extrap/(f·τy), 0, 1)，Pelipenko04 (2.6)-(2.8)）
+        失效——连续冻结度取 (0,1) 中间值属预期行为，非回归。连续口径契约
+        见 tests/contract/test_yield_gate_continuous.py。断言未改动。
+        """
         _, res = self._run_gate_on(0.005, 80.0)
         cem = np.clip(res.lead_field + res.tail_field, 0.0, 1.0)
         cement_cells = cem > 0.0

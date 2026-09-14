@@ -125,6 +125,16 @@ class TestR7FrozenAnchorOldPathBitwise:
     """R7 护栏：enable_stream_function=False 逐位复现 HEAD 76a91c1 冻结锚。"""
 
     def test_field_like_bitwise(self):
+        """R7 冻结锚：field-like 旧路径逐位复现 HEAD 76a91c1。
+
+        STATUS（Task 11 预期红，2026-09-15）：本锚钉死的旧路径含二值屈服门
+        （wall ∈ {0,1}）。Task 11 将屈服门连续化（wall = clip(1−τw_extrap/
+        (f·τy), 0, 1)，Pelipenko04 (2.6)-(2.8)），wall 经 pref=(1−wall) 进入
+        旧路径动力学 → Bingham 流体算例的 η_E/mean_wall/wall_digest 有意
+        偏离 76a91c1 锚（旧口径被有意替换，非回归）。τy=0 的 zhang case10
+        锚（test_zhang_case10_bitwise）不受影响、仍绿——牛顿流体无停流区，
+        两口径一致。断言未改动。
+        """
         res = _run_field_like(enable_stream_function=False)
         s = res.summary["最终结果"]
         assert float(s["全井段最终有效顶替效率"]) == _A_FIELD["eta_E"]

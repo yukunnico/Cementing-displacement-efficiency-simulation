@@ -333,10 +333,13 @@ class AnnulusD2DGASolver:
                 2026-09-06 裁定（实测井放开 0.90）随截断一同退役——文献口径无
                 "按数据来源选上限"概念。
             enable_yield_gate: M3 屈服门槛开关，默认 True（2026-09-02 起物理屈服门）。
-                True 时 pump 分支用 _yield_gate_wall 重建壁面冻结层；
+                True 时 pump 分支用 _yield_gate_wall 重建壁面冻结层
+                （2026-09-15 Task 11 起为连续冻结度 wall ∈ [0,1]，非二值）；
                 False（2026-09-07 起无 c_min 兜底轨）= wall 恒零（无壁面静止层）。
             yield_gate_f_safety: 屈服门槛安全系数 f，默认 1.15。
-                immobile 判定：外推壁剪 τw_extrap ≤ f·τy。
+                连续冻结度判据（Pelipenko04 (2.6)-(2.8) 停流区判据的连续近似）：
+                wall = clip(1 − τw_extrap/(f·τy), 0, 1)；τw ≥ f·τy 可流动
+                （wall=0），τw→0 全冻（wall→1）。
             dispersion_axial: ⚠️ 已弃用（2026-09-14 Task 7），默认 None。自创拉普拉斯
                 弥散已删除（Z&F22 p.11 "we have no diffusive terms"），弥散由
                 q₀ + I₃ 分层通量闭合承载（(4.25)/(4.26)/(4.28)）。保留形参仅为
@@ -697,14 +700,27 @@ class AnnulusD2DGASolver:
     @staticmethod
     def _yield_gate_wall(w, b, mu_reg, tau_y, cement_ever, cement_local,
                          f_safety):
-        """M3 可重启屈服门槛：每深度列以该列流动最快元（|w| 最大且 w>0）为参考，
-        按平行槽流 τw=G·b/2 外推各元壁面剪应力。immobile = τw_extrap ≤ f·τy。
+        """M3 可重启屈服门槛（连续化，2026-09-15 Task 11）：每深度列以该列流动
+        最快元（|w| 最大且 w>0）为参考，按平行槽流 τw=G·b/2 外推各元壁面剪应力，
+        冻结度 ``wall = clip(1 − τw_extrap/(f·τy), 0, 1)`` 连续取值。
 
-        关键不变量：参考元（正在流动）本身永不冻结——它在定义上可流动；只有壁面
-        剪应力低于 f·τy 的更窄/更慢元才冻结。若某列完全无流动（has_flow=False），
-        且水泥已到达，则整列冻结（无法外推 G）；前锋未到列不冻结。
+        文献锚点：Pelipenko04 (2.6)-(2.8) 停流区判据 τw < f·τy 的连续近似——
+        τw→0（窄缝极限）⇒ wall→1（全冻）；τw ≥ f·τy ⇒ wall=0（可流动）。
+        **边界语义**：τw = f·τy 恰 wall=0（可流动）。旧二值判据
+        ``τw_extrap ≤ f·τy``（含等号）在阈值处 0/1 跳变（悬崖），两口径仅在
+        等号这一零测度集上不同；连续式消除悬崖，窄边冻结带对排量/浓度微扰
+        连续响应。
+
+        关键不变量（R3，连续化必须保留）：
+        ①参考元（正在流动）本身永不冻结（wall=0）——它在定义上可流动；只有
+        壁面剪应力低于 f·τy 的更窄/更慢元才部分冻结；
+        ②某列完全无流动（has_flow=False）且水泥已到达，则整列冻结（无法外推
+        G）；前锋未到列（cement_ever=0）不冻结。
+        τy=0（或 f·τy=0）零除防护语义：无屈服应力 ⇒ 无停流区，wall=0
+        （同时消除连续式 0/0 → NaN 的污染路径）。
         停泵期不调用（run() 泵注分支门控）。
-        2026-09-07 精简：c_min_residual 形参删除（B2 判据不消费）。"""
+        2026-09-07 精简：c_min_residual 形参删除（B2 判据不消费）。
+        2026-09-15 Task 11：二值 np.where(immobile,1,0) → 连续冻结度。"""
         b = np.maximum(b, 1e-12)
         gamma = 6.0 * np.abs(w) / b               # w=0 → τw=0 即真实静止，不加 floor
         tau_w_field = mu_reg * gamma
@@ -722,10 +738,22 @@ class AnnulusD2DGASolver:
         # 参考元掩码：正在流动的最快元永不冻结（它确实在流，τw 判据不能冻结参考元自身）
         ref_mask = np.zeros_like(w, dtype=bool)
         ref_mask[ref_row_safe[has_flow], col[has_flow]] = True
-        immobile = (tau_w_extrap <= f_safety * tau_y) & (~ref_mask) & (cement_ever > 0.0)
-        # 2026-09-02 删除非物理的 residual_wall 永久浓度冻结（见下行注释），静泥层只由 immobile 决定
-        wall_new = np.where(immobile, 1.0, 0.0)  # 仅可逆τw判据；残余泥膜由浓度场c<1计入ηE，不再清零速度
-        # 整列无流动且水泥已到 -> 整列冻结（无法定义参考 G）
+        # 屈服门连续化（2026-09-15 Task 11，Pelipenko04 (2.6)-(2.8) 停流区判据
+        # τw < f·τy 的连续近似）：wall = clip(1 − τw_extrap/(f·τy), 0, 1)。
+        # τw→0 ⇒ wall→1（全冻）；τw ≥ f·τy ⇒ wall=0（可流动）——阈值处连续，
+        # 消除旧二值 np.where(immobile,1,0) 的 0/1 悬崖。
+        # τy=0（或 f·τy=0）零除防护：无屈服应力 ⇒ 无冻结，wall=0
+        # （掩码外分母置 1 仅作占位，除后按掩码覆写，同时消除 0/0 → NaN）。
+        tau_ref = f_safety * tau_y
+        tau_ref_safe = np.where(tau_ref > 0.0, tau_ref, 1.0)
+        wall_raw = np.where(tau_ref > 0.0, 1.0 - tau_w_extrap / tau_ref_safe, 0.0)
+        wall_new = np.clip(wall_raw, 0.0, 1.0)  # 连续冻结度 ∈ [0,1]
+        # 前锋未到列不冻结（旧 immobile 掩码的 cement_ever 门，不变量保持）；
+        # 残余泥膜由浓度场 c<1 计入 ηE，不再清零速度（2026-09-02 裁定不变）
+        wall_new = np.where(cement_ever > 0.0, wall_new, 0.0)
+        # 参考元不变量：正在流动的最快元恒 wall=0（R3①）
+        wall_new = np.where(ref_mask, 0.0, wall_new)
+        # 整列无流动且水泥已到 -> 整列冻结（无法定义参考 G，R3②）
         col_freeze = ~has_flow & np.any(cement_ever > 0.0, axis=0)
         wall_new[:, col_freeze] = 1.0
         return wall_new.astype(float)
