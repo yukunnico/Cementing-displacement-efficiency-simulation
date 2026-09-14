@@ -197,7 +197,7 @@ git commit -m "chore(tests,results): tests 分层(contract/history) + results �
 
 # Phase 1 — 浮力道：口径统一 + 定标 + 进动力学
 
-> 文献：(4.14) `(Hv̄, Hw̄) = −I₁·G + I₂·(Δρ/(H r_a))·(−f_ξ, f_φ)`；(2.5b) `b = r_a(ρ−1)/F²·(cosβ, sinπφ sinβ)`；(2.6) `F = sqrt(τ̂₀/(ρ̂₁ĝδ₀r̂ₐ*))`，`τ̂₀ = μ̂₁ŵ₀/d̂`。
+> 文献：(4.14) `(Hv̄, Hw̄) = −I₁·G + I₂·(Δρ/(H r_a))·(−f_ξ, f_φ)`；(2.5b) `b = r_a(ρ−1)/F²·(cosβ, sinπφ sinβ)`；(2.6) `F = sqrt(τ̂₀/(ρ̂₁ĝδ₀r̂ₐ*))` ⇒ **`F² = τ̂₀/(ρ̂₁ĝδ₀r̂ₐ*)`**（不是它的倒数），`τ̂₀ = μ̂₁ŵ₀/d̂`。
 
 ### Task 3: 统一浮力口径（新建 `buoyancy.py`）
 
@@ -337,13 +337,17 @@ git commit -m "feat(buoyancy): 统一浮力口径模块——消除双口径/静
 
 ```python
 def test_buoyancy_force_vector_uses_froude_scale():
+    """f_φ 必须带 1/F² 标定。f2 的取值按 (2.6) 用呼101 实参**现算**，
+    不要硬抄——`F² = τ̂₀/(ρ̂₁ĝδ₀r̂ₐ*)`，`τ̂₀ = μ̂₁ŵ₀/d̂`，`d̂ = mean(geom["H"])`。
+    参考量级 O(1e-2)。"""
     import numpy as np
     from cemdisp.models2d.annulus_d2dga import AnnulusD2DGASolver
     s = AnnulusD2DGASolver(ny=40, nz=2)
     geom = {"phi": np.linspace(0, 1, 40), "hole_mm": np.full((1, 2), 260.0),
             "od_mm": np.full((1, 2), 168.3)}
+    f2 = 1.0e-2   # ← 用 (2.6) 现算后替换；仅作为量级示例
     f_unit, _ = s._buoyancy_force_vector(geom, 1.9, f2=1.0)
-    f_phys, _ = s._buoyancy_force_vector(geom, 1.9, f2=4.72e-3)
+    f_phys, _ = s._buoyancy_force_vector(geom, 1.9, f2=f2)
     assert f_phys.max() > 50 * f_unit.max()
 ```
 
