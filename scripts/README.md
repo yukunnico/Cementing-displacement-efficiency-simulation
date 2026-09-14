@@ -47,7 +47,7 @@
 | `run_ablation_variants.py` | runner 口径单变量变体实验（消融组，2026-09-09 裁定） | 活跃 | `results/消融变体_runner口径_2026-09-09/` | `cemdisp.{data,models2d,transport1d}`、numpy |
 | `run_gap_fill_variants.py` | 论文正文补齐变体实验（runner 口径，2026-09-10 裁定） | 活跃 | `results/正文补齐变体_runner口径_2026-09-10/` | 同上 + numpy |
 | `run_sensitivity_variants.py` | 现场杠杆单变量敏感性组实验（runner 口径，2026-09-10 裁定） | 活跃 | `results/敏感性变体_runner口径_2026-09-10/` | 同上 + numpy |
-| `smoke_all_wells.py` | 冒烟：依次调 7 井 runner 的 `*_initial` 入口，汇总成功/失败与关键指标（原 `test_all_wells.py`） | 活跃 | `results/all_wells_test_result.json` | `cemdisp.runners` |
+| `smoke_all_wells.py` | 冒烟：依次调 7 井 runner 的 `*_initial` 入口，汇总成功/失败与关键指标（原 `test_all_wells.py`）。⚠️ 指标列恒为 N/A（脚本自身解析缺陷，非 runner 问题）；2026-09-14 那次的产物已归档到 `archive/all_wells_test_result_2026-09-14.json`，再次运行会在 `results/` 下重新生成 | 活跃 | `results/all_wells_test_result.json` | `cemdisp.runners` |
 
 ## 活跃面 —— `lib/`
 

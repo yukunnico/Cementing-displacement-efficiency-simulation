@@ -20,6 +20,9 @@ eggs/
 .eggs/
 lib/
 lib64/
+# 例外：scripts/lib/ 是本仓库的脚本共享模块目录，必须入库
+# （上一条 `lib/` 无前导斜杠，会匹配任意层级的 lib 目录，静默吞掉 scripts/lib/ 下的新模块）
+!scripts/lib/
 parts/
 sdist/
 var/

@@ -1,0 +1,62 @@
+{
+  "test_time": "2026-09-14 17:49:53",
+  "total_time_s": 562.8813941478729,
+  "results": [
+    {
+      "well_name": "呼101",
+      "runner_name": "run_hu101_tailpipe_initial",
+      "success": true,
+      "run_time_s": 89.05728721618652,
+      "error_message": "",
+      "final_result": {}
+    },
+    {
+      "well_name": "呼102",
+      "runner_name": "run_hu102_tailpipe_initial",
+      "success": true,
+      "run_time_s": 154.98523259162903,
+      "error_message": "",
+      "final_result": {}
+    },
+    {
+      "well_name": "呼103",
+      "runner_name": "run_hu103_tailpipe_initial",
+      "success": true,
+      "run_time_s": 78.687979221344,
+      "error_message": "",
+      "final_result": {}
+    },
+    {
+      "well_name": "呼探1",
+      "runner_name": "run_hu1_tailpipe_initial",
+      "success": true,
+      "run_time_s": 86.00931143760681,
+      "error_message": "",
+      "final_result": {}
+    },
+    {
+      "well_name": "呼探1-002",
+      "runner_name": "run_hu2_tailpipe_initial",
+      "success": true,
+      "run_time_s": 69.54456901550293,
+      "error_message": "",
+      "final_result": {}
+    },
+    {
+      "well_name": "呼探1-001",
+      "runner_name": "run_ht1_001_tailpipe_initial",
+      "success": true,
+      "run_time_s": 43.68699407577515,
+      "error_message": "",
+      "final_result": {}
+    },
+    {
+      "well_name": "呼探1-003",
+      "runner_name": "run_ht1_003_tailpipe_initial",
+      "success": true,
+      "run_time_s": 40.90268850326538,
+      "error_message": "",
+      "final_result": {}
+    }
+  ]
+}
