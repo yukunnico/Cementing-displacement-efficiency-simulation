@@ -311,7 +311,7 @@ def froude_squared(mu_displaced: float, w0_mps: float, half_gap_m: float,
 
 - [ ] **Step 4: 跑测试确认通过** → `4 passed`
 
-- [ ] **Step 5: `annulus_d2dga.py:1412-1424` 改为调用新模块**（顶替液密度用 `displacing_density_kg_m3`；泥浆黏度用 `fluid_apparent_viscosity`；`gap_m` 改传几何半间隙而非经体积 scale 的 `mean(geom["b"])`）
+- [ ] **Step 5: `annulus_d2dga.py:1412-1424` 改为调用新模块**（顶替液密度用 `displacing_density_kg_m3`；泥浆黏度用 `fluid_apparent_viscosity`；`gap_m` 改传 **Z&F22 的 `d̂`**，**正确取法：`half_gap_m = float(np.mean(geom["H"]))`**（模型自带半间隙，`b=2H` 逐格成立；实测 hu101 = 0.022893 m，与论文 `(hole−od)/4 = 0.022441 m` 吻合在 2% 内）。⚠️ **禁止写成 `0.5*mean((hole−od)/1000)`** —— 那是 `(r_o−r_i)`，是 `d̂` 的 2 倍，会让 `b ∝ d̂²` 放大 4 倍（Task 3 首轮即因此返工）。**旧代码 `mean(geom["b"])/2` 本就等于 `d̂`，是对的。**）
 
 - [ ] **Step 6: 回归 + Commit**
 
