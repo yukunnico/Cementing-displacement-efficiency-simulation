@@ -1,6 +1,11 @@
 # STATUS: history —— 本文件锁定“重构前”的历史行为契约。
 # 源模型口径重构（2026-09-14）后，相关断言预期变红；红灯不等同回归失败，
 # 需按 docs/superpowers/plans/2026-09-14-d2dga-source-fidelity-and-repo-cleanup.md 逐条复核。
+# 2026-09-14 Task 7 裁定：自创拉普拉斯弥散已删除（Z&F22 p.11 "we have no
+# diffusive terms"），dispersion_* 形参默认置 None 并发弃用警告。自 Task 7 起
+# 本文件 3 个测试（defaults_match_baseline_constants / eff_scales_with_dt /
+# spacer_flusher_eff_coeffs_exact_at_defaults）全部预期红：断言的 0.018/0.015
+# 默认值已不存在（形参默认 None），属弥散删除的直接后果，非回归。
 """M1: 弥散系数按 dt 归一（恢复量纲正确性）。
 
 CFL 自适应使 dt 从 4.0s 降到 ~0.118s，但 _smooth_dispersion 的系数是

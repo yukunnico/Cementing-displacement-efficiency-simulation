@@ -6,7 +6,9 @@
 
 1. 偏心窄环空几何展开；
 2. 基于局部流动度的轴向/方位角平均速度场；
-3. D2DGA 通量放大修正，近似捕捉间隙尺度分散；
+3. D2DGA 通量放大修正 + I₃ 浮力通量：弥散由 q₀ + I₃ 分层通量闭合承载
+   （式 4.25/4.26/4.28）；本模型**无人工扩散项**（Z&F22 p.11
+   "we have no diffusive terms"，2026-09-14 Task 7 删除自创拉普拉斯弥散）；
 4. 仅输出求解域内的顶替效率与浓度场。
 
 出口边界条件：
@@ -21,6 +23,7 @@
 from __future__ import annotations
 
 import math
+import warnings
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Callable, Dict, Sequence, Tuple
 
@@ -203,8 +206,10 @@ class AnnulusD2DGASolver:
     实现偏心环空中水泥浆、前置/隔离液和钻井液的多相体积分数模拟。
 
     主要物理过程：
-    1. 平流输运：水泥浆与前置/隔离液随平均速度场向下游运移；
-    2. D2DGA 分散：基于 Zhang & Frigaard (2022) 的通量放大修正，近似捕捉间隙尺度分散；
+    1. 平流输运：水泥浆与前置/隔离液随平均速度场向下游运移（q₀ 平均通量层）；
+    2. 分层通量闭合：q₀ 平均平流 + I₃ 浮力通量（式 4.25 第二项 / (4.26)）。
+       Z&F22 p.11 明言 "we have no diffusive terms"——原模型无任何人工扩散项，
+       本模块同样**无人工拉普拉斯弥散**（自创弥散函数已于 2026-09-14 Task 7 删除）；
     3. 浮力相关横向再分布：以 Hele-Shaw 风格的密度差横向速度近似，保持密度差影响仍在核心层；
     4. 出口边界：支持开放边界（允许水泥浆流出到重叠段）或封闭边界（限制体积）；
     5. 仅输出求解域指标，不在 solver 内叠加现场质量惩罚或 CBL 校准。
@@ -258,10 +263,11 @@ class AnnulusD2DGASolver:
         e_clip_max: float = 0.55,
         enable_yield_gate: bool = True,  # 2026-09-02 默认启用可逆τw物理屈服门（替代非物理永久浓度冻结，结果网格收敛）
         yield_gate_f_safety: float = 1.15,
-        dispersion_axial: float = 0.018,
-        dispersion_azimuthal: float = 0.015,
-        dispersion_dt_ref: float = 4.0,
-        dispersion_dt_scale: float = 1.0,
+        # ⚠️ 2026-09-14 Task 7 弃用形参（默认 None）：自创拉普拉斯弥散已删除。
+        dispersion_axial: float | None = None,
+        dispersion_azimuthal: float | None = None,
+        dispersion_dt_ref: float | None = None,
+        dispersion_dt_scale: float | None = None,
         enable_e_clip_ruling: bool = True,
         e_clip_measured_max: float = 0.90,
         enable_power_law_gap_law: bool = True,
@@ -318,14 +324,29 @@ class AnnulusD2DGASolver:
                 False（2026-09-07 起无 c_min 兜底轨）= wall 恒零（无壁面静止层）。
             yield_gate_f_safety: 屈服门槛安全系数 f，默认 1.15。
                 immobile 判定：外推壁剪 τw_extrap ≤ f·τy。
-            dispersion_axial: D2DGA 间隙尺度弥散轴向系数（每 dt_ref 秒），默认 0.018。
-            dispersion_azimuthal: D2DGA 间隙尺度弥散方位角系数（每 dt_ref 秒），默认 0.015。
-            dispersion_dt_ref: 弥散系数的名义/参考时间步（秒），默认 4.0。
-                系数 fa44ace 引入时即 dt=4.0，故 dt_ref=4.0 使固定 dt 模式逐位复现基线。
-            dispersion_dt_scale: 弥散系数按 dt 归一开关，默认 1.0。
-                =1.0 时固定 dt 模式（dt_step==dt_ref）逐位复现基线；
-                CFL 模式下按 dt_step/dt_ref 同比缩放，使每物理秒弥散恒定。
+            dispersion_axial: ⚠️ 已弃用（2026-09-14 Task 7），默认 None。自创拉普拉斯
+                弥散已删除（Z&F22 p.11 "we have no diffusive terms"），弥散由
+                q₀ + I₃ 分层通量闭合承载（(4.25)/(4.26)/(4.28)）。保留形参仅为
+                既有 runner 兼容；非 None 传值触发 DeprecationWarning 且不再生效。
+            dispersion_azimuthal: ⚠️ 已弃用，语义同 dispersion_axial。
+            dispersion_dt_ref: ⚠️ 已弃用，语义同 dispersion_axial。
+            dispersion_dt_scale: ⚠️ 已弃用，语义同 dispersion_axial。
         """
+        # ⚠️ 2026-09-14 Task 7 弃用检查：dispersion_* 任一非 None 即弃用警告。
+        # （显式传 None 视同默认，不警告——保证未传参的 runner/脚本行为无感。）
+        _dispersion_given = (
+            dispersion_axial is not None or dispersion_azimuthal is not None
+            or dispersion_dt_ref is not None or dispersion_dt_scale is not None
+        )
+        if _dispersion_given:
+            warnings.warn(
+                "AnnulusD2DGASolver 的 dispersion_axial/azimuthal/dt_ref/dt_scale 形参已弃用："
+                "自创拉普拉斯弥散已删除（Z&F22 p.11 \"we have no diffusive terms\"），"
+                "弥散由 q₀ + I₃ 分层通量闭合承载（式 4.25/4.26/4.28）。"
+                "显式传值不再生效，请从调用方移除这些参数。",
+                DeprecationWarning,
+                stacklevel=2,
+            )
         self.dt = dt
         self.nz = nz
         self.ny = ny
@@ -350,6 +371,8 @@ class AnnulusD2DGASolver:
         self.e_clip_max: float = e_clip_max
         self.enable_yield_gate: bool = enable_yield_gate
         self.yield_gate_f_safety: float = yield_gate_f_safety
+        # ⚠️ 2026-09-14 Task 7：弥散形参已弃用——仅保留属性以兼容旧脚本读值，
+        # 不再被求解过程消费（显式传值已在上方触发 DeprecationWarning）。
         self.dispersion_axial = dispersion_axial
         self.dispersion_azimuthal = dispersion_azimuthal
         self.dispersion_dt_ref = dispersion_dt_ref
@@ -663,38 +686,6 @@ class AnnulusD2DGASolver:
         col_freeze = ~has_flow & np.any(cement_ever > 0.0, axis=0)
         wall_new[:, col_freeze] = 1.0
         return wall_new.astype(float)
-
-    def _smooth_dispersion(
-        self,
-        field: Array,
-        *,
-        axial: float = 0.018,
-        azimuthal: float = 0.015,
-    ) -> Array:
-        """显式小系数拉普拉斯平滑，模拟D2DGA间隙尺度弥散。
-
-        论文版采用显式二阶差分在轴向和方位角方向添加小系数弥散：
-        - 轴向弥散系数通常 0.012–0.020；
-        - 方位角弥散系数通常 0.012–0.018；
-        - 边界处用一阶差分保持单侧稳定性。
-
-        Args:
-            field: 二维浓度场 (ny, nz)
-            axial: 轴向弥散系数，默认 0.018
-            azimuthal: 方位角弥散系数，默认 0.015
-
-        Returns:
-            平滑后的浓度场，裁剪到 [0, 1]
-        """
-        f = field.copy()
-        # 轴向平滑（井深方向）：内部用二阶中心差分
-        f[:, 1:-1] += axial * (field[:, 2:] - 2.0 * field[:, 1:-1] + field[:, :-2])
-        # 方位角平滑（宽边→窄边方向）：内部用二阶中心差分
-        f[1:-1, :] += azimuthal * (field[2:, :] - 2.0 * field[1:-1, :] + field[:-2, :])
-        # 边界处理：用一阶差分避免越界
-        f[0, :] += azimuthal * (field[1, :] - field[0, :])
-        f[-1, :] += azimuthal * (field[-2, :] - field[-1, :])
-        return np.clip(f, 0.0, 1.0)
 
     def _compute_props(
         self,
@@ -1456,31 +1447,12 @@ class AnnulusD2DGASolver:
                 tail[overfilled] /= tracked_total[overfilled]
                 spacer[overfilled] /= tracked_total[overfilled]
 
-                # D2DGA间隙尺度弥散：在低浓度前锋更强，模拟间隙尺度分散效应。
-                # 数值弥散可能使显式相之和略超 1；后续两次 overfilled 修正将其压回可行域，
-                # 允许不超过 1e-12 的数值扩散容差。
-                # M1: 弥散系数按 dt 归一（恢复量纲正确性）。CFL 自适应使 dt 降到 ~0.118s，
-                # 旧硬编码是"每步固定幅值"→单位物理时间弥散放大 dt_ref/dt_step≈34 倍。
-                # _dt_norm = scale * dt_step/dt_ref：固定 dt 模式 dt_step==dt_ref 且 scale=1
-                # 时系数==基线硬编码（0.018/0.015/0.012），逐位复现；CFL 下每物理秒弥散恒定。
-                _dt_norm = self.dispersion_dt_scale * (dt_step / self.dispersion_dt_ref)
-                _ax = self.dispersion_axial * _dt_norm
-                _az = self.dispersion_azimuthal * _dt_norm
-                # spacer 基础弥散系数为 0.012/0.012（轴向/方位角同值，独立于 lead/tail）。
-                # 必须用字面量 0.012，而非 0.018*0.667（=0.012006）或 0.015*0.8：
-                # 默认(fixed dt=4, scale=1)下要求 0.012*1.0==0.012 与基线硬编码逐位复现。
-                _ax_sf = 0.012 * _dt_norm
-                _az_sf = 0.012 * _dt_norm
-                lead = self._smooth_dispersion(lead, axial=_ax, azimuthal=_az)
-                tail = self._smooth_dispersion(tail, axial=_ax, azimuthal=_az)
-                spacer = self._smooth_dispersion(spacer, axial=_ax_sf, azimuthal=_az_sf)
-                # T1-6: 弥散后再次执行四相过填修正，防止 _smooth_dispersion 数值扩散
-                # 使 lead+tail+spacer 再次超过 1，破坏体积分数闭合。
-                tracked_total = lead + tail + spacer
-                overfilled = tracked_total > 1.0
-                lead[overfilled] /= tracked_total[overfilled]
-                tail[overfilled] /= tracked_total[overfilled]
-                spacer[overfilled] /= tracked_total[overfilled]
+                # 2026-09-14 Task 7：自创拉普拉斯弥散已删除（Z&F22 p.11
+                # "we have no diffusive terms"）。弥散由 q₀（平均平流通量）+ I₃
+                # （浮力通量，式 4.25 第二项 / (4.26)）分层通量闭合承载。
+                # 原设计"弥散 → 再次执行四相过填修正"的修补步一并删除：
+                # 无弥散时平流后的过填修正已保证 sum≤1，第二次修正与第一次之间
+                # 无任何浓度场修改，属同一步内的重复执行（no-op）。
 
                 # R2: I3 浮力弥散通量（式 4.25 第二项）—— 仅作用于水泥相(lead+tail)
                 if self.enable_d2dga_i3_flux and self.enable_d2dga:
