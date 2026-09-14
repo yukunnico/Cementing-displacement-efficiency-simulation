@@ -239,10 +239,12 @@ def test_power_law_viscosity_not_silent_fallback():
     assert v != 0.05
 
 def test_froude_squared_matches_manual_scale():
-    f2 = froude_squared(mu_displaced=0.058, w0_mps=0.764, half_gap_m=0.0458,
-                        rho_displaced=1200.0, gap_scale_m=0.0917,
+    # ⚠️ half_gap_m 与 gap_scale_m 都必须是 Z&F22 的 d̂（半间隙），不是径向间隙。
+    # 下面用呼101 实参（d̂≈0.0229 m, r_a≈0.107 m）；δ₀ 的确切约定由实现者按论文 (2.6) 钉定并写进 docstring。
+    f2 = froude_squared(mu_displaced=0.058, w0_mps=0.345, half_gap_m=0.0229,
+                        rho_displaced=1200.0, gap_scale_m=0.0229,
                         mean_radius_m=0.1071)
-    assert 1e-4 < f2 < 1.0     # 实测量级 ~4.7e-3，绝不是 1.0
+    assert 1e-3 < f2 < 1.0     # 实测量级 O(10⁻²)，绝不是 1.0
 ```
 
 - [ ] **Step 2: 跑测试确认失败** → `ModuleNotFoundError: cemdisp.models2d.buoyancy`
@@ -345,10 +347,11 @@ def test_buoyancy_force_vector_uses_froude_scale():
     s = AnnulusD2DGASolver(ny=40, nz=2)
     geom = {"phi": np.linspace(0, 1, 40), "hole_mm": np.full((1, 2), 260.0),
             "od_mm": np.full((1, 2), 168.3)}
-    f2 = 1.0e-2   # ← 用 (2.6) 现算后替换；仅作为量级示例
     f_unit, _ = s._buoyancy_force_vector(geom, 1.9, f2=1.0)
-    f_phys, _ = s._buoyancy_force_vector(geom, 1.9, f2=f2)
-    assert f_phys.max() > 50 * f_unit.max()
+    f_phys, _ = s._buoyancy_force_vector(geom, 1.9, f2=1.0e-2)
+    # 断言**正比关系**（f ∝ 1/F²），而非任意阈值——物理 F² 取 O(10⁻²)，
+    # 固定"50×"阈值会随 F² 取值失效。
+    assert f_phys.max() == pytest.approx(f_unit.max() / 1.0e-2, rel=1e-12)
 ```
 
 - [ ] **Step 2: 跑测试确认失败** → `TypeError: unexpected keyword argument 'f2'`
