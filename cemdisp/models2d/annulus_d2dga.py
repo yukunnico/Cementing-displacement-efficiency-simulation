@@ -31,6 +31,7 @@ import pandas as pd
 from cemdisp.data.fluid_spec import FluidRole, FluidSpec, RheologyModel
 from cemdisp.data.well_spec import DepthValuePoint, WellSpec
 from cemdisp.diagnostics.displacement_metrics import _narrow_quarter_efficiency
+from cemdisp.models2d import buoyancy
 from cemdisp.models2d.boundary_bridge import AnnulusInletState
 from cemdisp.models2d.d2dga_flux import (
     d2dga_buoyancy_flux,
@@ -781,15 +782,22 @@ class AnnulusD2DGASolver:
 
     def _compute_buoyancy_number(self, rho_displacing_kg_m3: float, rho_displaced_kg_m3: float,
                                  gap_m: float, mu_displaced_pa_s: float, velocity_m_s: float) -> float:
-        """计算无量纲浮力数 b = (ρ₂-ρ₁)·g·d² / (μ₁·w₀)（Zhang & Frigaard 2022, p.8）。
+        """无量纲浮力数 b 的薄委托（2026-09-14 Task 3 起）。
 
-        b>0: 密度稳定（重顶替轻）；b<0: 不稳定（必须避免）；b 是垂直井主导参数。
-        d = gap (半间隙) 或全间隙？论文用半间隙 d̂，这里用全间隙 gap_m/2 近似。
+        公式与口径已统一搬到 :mod:`cemdisp.models2d.buoyancy`（Z&F22 p.8）：
+        ``b = (ρ_displacing − ρ_displaced)·g·d²/(μ_displaced·w₀)``，d 为半间隙。
+
+        本方法仅为兼容既有调用方/测试保留（签名不变，语义不变）：
+        ``gap_m`` 是全间隙，内部按半间隙 ``gap_m/2`` 传入。
+        新代码请直接调用 ``buoyancy.buoyancy_number``。
         """
-        g = 9.81
-        d_half = max(gap_m / 2.0, 1.0e-6)
-        denom = max(mu_displaced_pa_s * max(velocity_m_s, 1.0e-6), 1.0e-9)
-        return (rho_displacing_kg_m3 - rho_displaced_kg_m3) * g * d_half ** 2 / denom
+        return buoyancy.buoyancy_number(
+            rho_displacing=rho_displacing_kg_m3,
+            rho_displaced=rho_displaced_kg_m3,
+            half_gap_m=gap_m / 2.0,
+            mu_displaced=mu_displaced_pa_s,
+            w0_mps=velocity_m_s,
+        )
 
     def _compute_velocity(
         self,
@@ -898,15 +906,9 @@ class AnnulusD2DGASolver:
         # === 速度场流动度：偏心通道主导 + 浮力修正 ===
         # density_contrast > 0 表示顶替液更重（水泥重 vs 泥浆轻），有助于窄边推进
         # density_contrast < 0 表示顶替液更轻，加剧宽边窜流
-        if lead_fluid is not None and tail_fluid is not None:
-            # 用领浆和尾浆的加权平均密度作为顶替液密度
-            rho_disp = lead_fluid.density_kg_m3 * 0.67 + tail_fluid.density_kg_m3 * 0.33
-        elif lead_fluid is not None:
-            rho_disp = lead_fluid.density_kg_m3
-        elif tail_fluid is not None:
-            rho_disp = tail_fluid.density_kg_m3
-        else:
-            rho_disp = mud_fluid.density_kg_m3
+        # Task 3: 顶替液密度统一走 buoyancy.displacing_density_kg_m3（全仓唯一口径，
+        # 0.67×领浆 + 0.33×尾浆），消除与 summary 段浮力数口径不一致导致的 b 符号翻转。
+        rho_disp = buoyancy.displacing_density_kg_m3(lead_fluid, tail_fluid, mud_fluid)
 
         phi = geom["phi"][:, None]
         ebar = geom["e"][None, :]
@@ -1103,6 +1105,9 @@ class AnnulusD2DGASolver:
         cumulative_lead_in_m3 = 0.0
         cumulative_tail_in_m3 = 0.0
         cumulative_spacer_in_m3 = 0.0
+        # Task 3: 最近一次有效泵注排量（m³/s），供 summary 段按截面平均速度口径
+        # 计算浮力数 b 的 w₀ = q/A（不再用"最后一步"速度场均值）。
+        last_pump_rate_m3s = 0.0
 
         # T1-7: CFL 自适应 → while 循环（每步 current_time_s += dt_step），
         # 固定 dt → for 仿真（current_time_s = step_index * dt，复现基线）
@@ -1136,6 +1141,7 @@ class AnnulusD2DGASolver:
             pump_active = inlet_state.flow_rate_m3_s > 1.0e-9
 
             if pump_active:
+                last_pump_rate_m3s = float(inlet_state.flow_rate_m3_s)  # Task 3: w₀ = q/A 用
                 # === 正常泵注阶段：仅执行论文口径核心平流 + D2DGA 通量修正 ===
                 w, v, mu, rho, mud, Re, mu_turbulent, m_field, _tau_y, _eta2, _n_mix, _kappa_mix = self._compute_velocity(
                     lead,
@@ -1409,18 +1415,37 @@ class AnnulusD2DGASolver:
         mix_idx = float(final["mixing_index"])
         inst_idx = float(final["instability_index"])
 
-        # R3: 输出无量纲浮力数 b（主导参数，p.27）
-        rho_displacing = (
-            lead_fluid.density_kg_m3 if lead_fluid
-            else tail_fluid.density_kg_m3 if tail_fluid
-            else mud_fluid.density_kg_m3
+        # R3 → Task 3: 无量纲浮力数 b 统一走 cemdisp.models2d.buoyancy（全仓唯一口径，
+        # 文献锚点 Z&F22 p.8）。修复三处旧口径缺陷：
+        #   ① 顶替液密度双口径：此处旧版只用领浆，而 _compute_velocity 用
+        #      0.67×领浆+0.33×尾浆 → b 可能符号翻转；现统一 displacing_density_kg_m3。
+        #   ② 幂律/HB 泥浆被 `plastic_viscosity_pa_s or 0.05` 静默回退到 0.05 Pa·s
+        #      → 改用 fluid_apparent_viscosity（K·γ̇^(n−1)，缺参数抛错不回退）。
+        #   ③ w₀ 旧取"最后一步"速度场均值 → 改为截面平均速度 q/A（末态泵注排量/环形截面积）。
+        rho_displacing = buoyancy.displacing_density_kg_m3(lead_fluid, tail_fluid, mud_fluid)
+        # 泥浆表观黏度的剪切率约定与 _compute_props 一致：γ̇ = 6|w|/b
+        shear_rate_mud = (
+            6.0 * float(np.mean(np.abs(w_prev))) / max(float(np.mean(geom["b"])), 1e-12)
         )
-        b_number = self._compute_buoyancy_number(
-            rho_displacing_kg_m3=rho_displacing,
-            rho_displaced_kg_m3=mud_fluid.density_kg_m3,
-            gap_m=float(np.mean(geom["b"])),
-            mu_displaced_pa_s=(mud_fluid.plastic_viscosity_pa_s or 0.05),  # None guard for non-Bingham muds (power-law/HB); 0.05 Pa·s fallback
-            velocity_m_s=float(np.mean(np.abs(w_prev))),
+        mu_displaced = buoyancy.fluid_apparent_viscosity(mud_fluid, shear_rate_mud)
+        # 几何半间隙 d̂：直接用井径/外径（mm→m），不经体积 scale 校正的 geom["b"]
+        half_gap_m = 0.5 * float(np.mean((geom["hole_mm"] - geom["od_mm"]) / 1000.0))
+        # 截面平均轴向速度 w₀ = q/A（环形截面积由 hole/od 算）
+        annulus_area_m2 = float(
+            np.mean(np.pi / 4.0 * ((geom["hole_mm"] / 1000.0) ** 2
+                                   - (geom["od_mm"] / 1000.0) ** 2))
+        )
+        if last_pump_rate_m3s > 0.0 and annulus_area_m2 > 0.0:
+            w0_mps = last_pump_rate_m3s / annulus_area_m2
+        else:
+            # 退让口径：全程无泵注排量记录（异常输入）时回落到末步速度场均值
+            w0_mps = float(np.mean(np.abs(w_prev)))
+        b_number = buoyancy.buoyancy_number(
+            rho_displacing=rho_displacing,
+            rho_displaced=mud_fluid.density_kg_m3,
+            half_gap_m=half_gap_m,
+            mu_displaced=mu_displaced,
+            w0_mps=w0_mps,
         )
 
         summary: Dict[str, object] = {
