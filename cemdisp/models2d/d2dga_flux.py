@@ -1,8 +1,14 @@
-"""D2DGA 通量放大因子的独立计算函数。
+"""D2DGA 通量闭包的兼容薄层（re-export）。
 
-本模块只放置与 D2DGA 通量修正公式直接相关的纯函数，避免把公式散落在
-环空二维求解器内部，便于后续单独测试和复用。函数不读写外部状态，也不改变
-输入数组。
+I₁/I₂/I₃ 两层牛顿闭包已迁移至 :mod:`cemdisp.models2d.two_layer`（Task 6，
+迁移保逐位），本模块保留历史函数名作为**同一函数对象的别名**，避免破坏
+既有 import（``annulus_d2dga.py`` / ``muskat_regime.py`` /
+``zhang2022_benchmark.py`` / ``tests/contract/test_d2dga_flux.py``）。
+
+仍在本模块实现的两个函数：
+- ``d2dga_flux_amplification``：式 (4.28) 放大因子的裁剪包装（c̄ 裁到
+  [0.01,0.99] 后取 f；未裁剪的精确端点口径见 ``two_layer.isotropic_flux_q0``）；
+- ``d2dga_buoyancy_flux``：式 (4.25) 第二项浮力弥散通量的组装。
 """
 
 from __future__ import annotations
@@ -13,9 +19,19 @@ from typing import overload
 import numpy as np
 from numpy.typing import NDArray
 
+from cemdisp.models2d.two_layer import (
+    buoyancy_flux_distribution_i3,
+    mobility_i1,
+    mobility_i2,
+)
 
 Array = NDArray[np.float64]
 FloatOrArray = float | Array
+
+# 历史函数名 -> two_layer 新名（同一函数对象，数值行为逐位一致）
+d2dga_dispersion_I1 = mobility_i1
+d2dga_dispersion_I2 = mobility_i2
+d2dga_dispersion_function_I3 = buoyancy_flux_distribution_i3
 
 
 @overload
@@ -51,11 +67,13 @@ def d2dga_flux_amplification(
     min_amplification: float = -np.inf,
     max_amplification: float = np.inf,
 ) -> FloatOrArray:
-    """计算 D2DGA 水泥相通量放大因子。
+    """计算 D2DGA 水泥相通量放大因子（Zhang & Frigaard 2022, 式 4.28）。
 
     公式沿用当前求解器中的 Zhang & Frigaard (2022) 口径：
     ``f(c, m) = [m*c² + 1.5*(1-c²)] / [m*c³ + (1-c³)]``。
     这里仅做数值安全裁剪，不引入任何 CBL、泥饼、温度、凝胶或湍流等工程修正。
+    未裁剪、端点精确的通量函数口径（q₀ = c̄·f）见
+    :func:`cemdisp.models2d.two_layer.isotropic_flux_q0`。
 
     Args:
         cement_fraction: 水泥相局部体积分数，可以是标量或 NumPy 数组。
@@ -83,40 +101,6 @@ def d2dga_flux_amplification(
     return amplification.astype(float, copy=False)
 
 
-def d2dga_dispersion_function_I3(
-    c_bar: FloatOrArray,
-    m: float = 1.0,
-    *,
-    min_fraction: float = 0.01,
-    max_fraction: float = 0.99,
-) -> FloatOrArray:
-    """计算 D2DGA 浮力弥散函数 I3(ḉ, m)（Zhang & Frigaard 2022, 式 4.26）。
-
-    公式：I3 = ḉ²(1-ḉ)³[4m·ḉ + 3(1-ḉ)] / {2m[m·ḉ³ + 1 - ḉ³]}
-
-    性质：ḉ=0 或 ḉ=1 时 I3=0；ḉ≈0.5 附近达峰。用于 R2 浮力驱动弥散通量。
-
-    Args:
-        c_bar: 间隙平均水泥浓度（0~1），标量或数组。
-        m: 黏度比 η_displaced/η_displacing。
-        min_fraction: 计算前浓度下限，避免零浓度奇异。
-        max_fraction: 计算前浓度上限，避免充满时奇异。
-    """
-    c = np.asarray(c_bar, dtype=float)
-    c_safe = np.clip(c, min_fraction, max_fraction)
-    c2 = c_safe ** 2
-    c3 = c_safe ** 3
-    one_minus_c = 1.0 - c_safe
-    numerator = c2 * (one_minus_c ** 3) * (4.0 * m * c_safe + 3.0 * one_minus_c)
-    denominator = 2.0 * m * (m * c3 + 1.0 - c3)
-    i3 = numerator / denominator
-    # 边界处置零（c=0 或 c=1 的精确值，clip 之外）
-    i3 = np.where((c < min_fraction) | (c > max_fraction), 0.0, i3)
-    if np.isscalar(c_bar):
-        return float(i3)
-    return i3.astype(float, copy=False)
-
-
 def d2dga_buoyancy_flux(
     c_bar: FloatOrArray,
     m: float,
@@ -140,29 +124,3 @@ def d2dga_buoyancy_flux(
     q_phi = coef * i3 * np.asarray(f_phi, dtype=float)
     q_xi = -coef * i3 * np.asarray(f_xi, dtype=float)
     return q_phi, q_xi
-
-
-def d2dga_dispersion_I1(c_bar: FloatOrArray, m: float) -> FloatOrArray:
-    """牛顿平均流动度 I1(ḉ,m)（Bararpour 2025 式 2.24，H³ 归一化）。
-
-    公式：I1 = [√m·c̄³ + (1−c̄³)/√m] / 3。
-    恒正，最小值 ≥ min(√m, 1/√m)/3。
-    标量输入返回 float，数组输入返回 Array。
-    """
-    c = np.asarray(c_bar, dtype=float)
-    sq_m = math.sqrt(m)
-    out = (sq_m * c**3 + (1.0 - c**3) / sq_m) / 3.0
-    return float(out) if np.isscalar(c_bar) else out.astype(float, copy=False)
-
-
-def d2dga_dispersion_I2(c_bar: FloatOrArray, m: float) -> FloatOrArray:
-    """牛顿浮力流动度 I2(ḉ,m)（Bararpour 2025 式 2.25，H⁴ 归一化）。
-
-    公式：I2 = [2√m·c̄³(1−c̄) + c̄(1−c̄)²(1+2c̄)/√m] / 6。
-    I2(0)=I2(1)=0，在混合区为正。
-    标量输入返回 float，数组输入返回 Array。
-    """
-    c = np.asarray(c_bar, dtype=float)
-    sq_m = math.sqrt(m)
-    out = (2.0 * sq_m * c**3 * (1.0 - c) + c * (1.0 - c)**2 * (1.0 + 2.0 * c) / sq_m) / 6.0
-    return float(out) if np.isscalar(c_bar) else out.astype(float, copy=False)
