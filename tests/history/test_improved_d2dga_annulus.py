@@ -1,6 +1,8 @@
 # STATUS: history —— 本文件锁定“重构前”的历史行为契约。
 # 源模型口径重构（2026-09-14）后，相关断言预期变红；红灯不等同回归失败，
 # 需按 docs/superpowers/plans/2026-09-14-d2dga-source-fidelity-and-repo-cleanup.md 逐条复核。
+# 2026-09-14 机械补参（Task 4 修复轮 1 / R24）：`_buoyancy_force_vector` 新增必填形参 `f2`，
+# 此处传 1.0 以保持旧行为的形状断言（不涉及物理标定）。
 """改进 D2DGA 三闭包（auto-m / I3 / 真体力）求解器级测试。"""
 import numpy as np
 from cemdisp.models2d.annulus_d2dga import AnnulusD2DGASolver, _trapez2d
@@ -167,7 +169,8 @@ class TestBuoyancyForceVector:
         s = _make_solver()
         well = _toy_well()
         geom = s._build_geom(well)
-        f_phi, f_xi = s._buoyancy_force_vector(geom, beta_deg=0.0)
+        f_phi, f_xi = s._buoyancy_force_vector(geom, beta_deg=0.0, f2=1.0)
+        # f2=1.0 仅供形状断言，非物理值；物理标定见 _froude_squared_at / buoyancy.froude_squared
         assert np.allclose(f_phi, 0.0)  # sin(0)=0
         assert np.all(f_xi > 0)  # cos(0)=1 > 0
 
@@ -176,7 +179,8 @@ class TestBuoyancyForceVector:
         s = _make_solver()
         well = _toy_well()
         geom = s._build_geom(well)
-        f_phi, f_xi = s._buoyancy_force_vector(geom, beta_deg=5.0)
+        f_phi, f_xi = s._buoyancy_force_vector(geom, beta_deg=5.0, f2=1.0)
+        # f2=1.0 仅供形状断言，非物理值；物理标定见 _froude_squared_at / buoyancy.froude_squared
         assert np.any(f_phi > 0)
 
 
@@ -505,7 +509,8 @@ class TestBuoyancyForceInjection:
             enable_d2dga=True,
             enable_d2dga_i3_flux=True, enable_true_buoyancy=True,
         )
-        f_phi, _ = s_true._buoyancy_force_vector(geom, float(np.mean(geom["inc_deg"])))
+        f_phi, _ = s_true._buoyancy_force_vector(geom, float(np.mean(geom["inc_deg"])), f2=1.0)
+        # f2=1.0 仅供形状断言，非物理值；物理标定见 _froude_squared_at / buoyancy.froude_squared
         m_local = float(np.mean(m_field))
         i1 = d2dga_dispersion_I1(0.6, m_local)
         i2 = d2dga_dispersion_I2(0.6, m_local)

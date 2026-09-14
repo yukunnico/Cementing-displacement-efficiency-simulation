@@ -10,6 +10,8 @@
    以及求解器 summary 段的调用点确实按该口径传参（C1 回归锚）。
 """
 
+import inspect
+
 import numpy as np
 import pytest
 
@@ -176,16 +178,21 @@ def test_buoyancy_force_vector_uses_froude_scale():
 
 
 def test_solver_call_sites_pass_physical_f2(monkeypatch):
-    """两个调用点必须传入按 (2.6) 现算的 F²（量级 O(10⁻²)），不得硬编码 1.0。
+    """两个调用点**都**须传入按 (2.6) 现算的 F²（量级 O(10⁻³)），不得硬编码 1.0。
 
     覆盖：`_compute_velocity` 的 R3 真体力段（式 2.5b）与 run 循环的
     R2 I3 浮力弥散通量段（式 4.25 第二项）——两处共用同一浮力向量。
+
+    按**调用方函数名**（`_compute_velocity` / `run`）区分两个调用点：
+    只断言"至少被调用过一次"会漏掉"其中一个调用点被断线"的回归
+    （该场景下两处恰好给出同一个 f2，仅计数无法区分）。
     """
-    captured: list[float] = []
+    captured: list[tuple[str, float]] = []
     real = AnnulusD2DGASolver._buoyancy_force_vector
 
     def _spy(self, geom, beta_deg, f2):
-        captured.append(float(f2))
+        caller = inspect.currentframe().f_back
+        captured.append((caller.f_code.co_name, float(f2)))
         return real(self, geom, beta_deg, f2)
 
     monkeypatch.setattr(AnnulusD2DGASolver, "_buoyancy_force_vector", _spy)
@@ -201,6 +208,9 @@ def test_solver_call_sites_pass_physical_f2(monkeypatch):
     solver.run(well, fluids, _inlet)
 
     assert captured, "两个调用点都未调用 _buoyancy_force_vector"
-    for f2 in captured:
+    callers = {name for name, _ in captured}
+    assert callers == {"_compute_velocity", "run"}, (
+        f"两个调用点未都被命中（实际调用方：{sorted(callers)}）")
+    for _, f2 in captured:
         assert f2 != 1.0
         assert 1e-4 < f2 < 1.0

@@ -762,7 +762,8 @@ class AnnulusD2DGASolver:
         """计算论文式 (2.5b) 的浮力体力向量 f = (r_a·cosβ, r_a·sin(πφ)·sinβ)/F²。
 
         R2 (I3 通量) 与 R3 (真体力) 共用。**F² 必须由调用方按 Z&F22 (2.6) 现算传入**
-        （见 `_froude_squared_at`，物理量级 O(10⁻²)）：本方法原先把 ``F2 = 1.0`` 写死在
+        （见 `_froude_squared_at`，物理量级 O(10⁻³)，八井 [1.2e-3, 3.1e-2]）：
+        本方法原先把 ``F2 = 1.0`` 写死在
         内部并声称"真 F 校正在 _compute_velocity 内做"，而那次校正从未存在，导致
         方位浮力修正幅度只剩 ~4×10⁻⁵——浮力在动力学里实际缺席。2026-09-14 Task 4 废止。
 
@@ -805,12 +806,15 @@ class AnnulusD2DGASolver:
         - ``ρ̂₁ = mud_fluid.density_kg_m3``（被顶替液密度），kg/m³。
         - ``d̂ = mean(geom["H"])``：Z&F22 半间隙（``= (r_o−r_i)/2 = (井径−外径)/4``），m。
         - ``r̂ₐ* = mean((hole+od)/4)/1000``：沿程平均半径，m（论文中 ``r̂ₐ*`` 沿环空流道平均）。
-        - ``δ₀ = d̂/r̂ₐ*``：**无量纲**参考间隙比。论文 (2.1) 推导处把窄间隙参数写作
-          ``δ = d̂/(πr̂ₐ*)``；(2.6) 的 ``δ₀`` 是同一量的参考值，本实现由
-          ``δ₀·r̂ₐ* = d̂`` 钉定。该取值的依据：把 (2.5b)/(2.6) 的
+        - ``δ₀ = d̂/r̂ₐ*``：**无量纲**参考间隙比。论文 (2.1) 的窄间隙参数**本身就是**
+          ``δ = d̂/r̂ₐ*``——原文写作 ``d̂/(πr̂ₐ*) = δ/π ≪ 1``（π 只在 ``δ/π`` 的写法里，
+          不在 ``δ`` 自身上）；(2.6) 的 ``δ₀`` 取其参考值 ⇒ ``δ₀ = d̂/r̂ₐ*``。
+          该取值的依据：把 (2.5b)/(2.6) 的
           ``|b| ≈ (ρ−1)/F²``（论文 p.8"b 即浮力向量的大小"）与论文 p.8 的浮力数
           ``b = Δρ·ĝ·d̂²/(μ̂₁ŵ₀)`` 联立，得 ``F²·b = Δρ/ρ̂₁``（Atwood 数），
           即 ``F² = μ̂₁ŵ₀/(ρ̂₁·ĝ·d̂²)``，等价于 ``δ₀·r̂ₐ* = d̂``。
+          ⚠️ **不要再给 δ₀ 乘或除 π**（论文的 δ 不含 π）；该取值已用论文 Table 1/2
+          反证：复算 b = −50/100/1000/100/1000 逐例吻合，且 ``F²·b`` 与 Atwood 逐位相等。
 
         传给 `buoyancy.froude_squared` 时 ``gap_scale_m = half_gap_m / mean_radius_m``
         ——二者是**不同的量**（前者无量纲间隙比、后者长度），但乘积恰为 ``d̂``。
@@ -821,8 +825,8 @@ class AnnulusD2DGASolver:
         half_gap_m = float(np.mean(geom["H"])) if "H" in geom else 0.5 * float(np.mean(geom["b"]))
         # 退化口径：合成几何的单元测试可能只给 y/phi/b（无 hole/od/H）。
         # 因本式只以乘积 ``δ₀·r̂ₐ* = d̂`` 起作用，此时取 r̂ₐ* = d̂（即 δ₀ = 1）不影响 F²；
-        # 环形截面积改取模型自身的 ``∫ b dy``（与体积 scale 依赖的
-        # ``∫∫ b dy ds = 物理环空体积`` 恒等式同源），仍保持 ŵ₀ = q/A 的口径。
+        # 环形截面积改取模型自身的 ``∫ b dy``（模型域为**半环空**，与体积 scale 依赖的
+        # ``_trapez2d(b) = 0.5·物理环空体积`` 恒等式同源），仍保持 ŵ₀ = q/A 的口径。
         if "hole_mm" in geom and "od_mm" in geom:
             mean_radius_m = float(np.mean((geom["hole_mm"] + geom["od_mm"]) / 4.0)) / 1000.0
             annulus_area_m2 = float(
@@ -831,7 +835,11 @@ class AnnulusD2DGASolver:
             )
         else:
             mean_radius_m = half_gap_m
-            annulus_area_m2 = float(np.trapezoid(np.mean(geom["b"], axis=1), x=geom["y"]))
+            # ⚠️ 半环空面积须 ×2 才是全环空口径（与上面的真实分支同口径）：
+            # 模型域是半环空（run 循环 q_half = q/2、体积 scale 用 _trapez2d(b) =
+            # 0.5·V_phys），不乘 2 会让 ŵ₀ 大 2 倍 ⇒ F² 大 2 倍 ⇒ f_φ 小 2 倍。
+            annulus_area_m2 = 2.0 * float(
+                np.trapezoid(np.mean(geom["b"], axis=1), x=geom["y"]))
         if float(q_m3s) > 0.0 and annulus_area_m2 > 0.0:
             w0_mps = float(q_m3s) / annulus_area_m2
         else:
@@ -985,7 +993,7 @@ class AnnulusD2DGASolver:
             # T1-3b: 体力向量注入流动度（式 2.5b/4.24），替换 (2φ−1) 简化代理
             beta_deg_local = float(np.mean(geom.get("inc_deg", np.zeros(self.nz))))
             # Task 4: F² 按 Z&F22 (2.6) 现算（原先内部硬编码 1.0 → 浮力缺席动力学），
-            # 量级 O(10⁻²)；ŵ₀ = q/A、μ̂₁ 取泥浆、d̂ = mean(geom["H"])。
+            # 量级 O(10⁻³)（八井 [1.2e-3, 3.1e-2]）；ŵ₀ = q/A、μ̂₁ 取泥浆、d̂ = mean(geom["H"])。
             f2_local = self._froude_squared_at(geom, q_m3s, w_prev, mud_fluid)
             f_phi_arr, _ = self._buoyancy_force_vector(geom, beta_deg_local, f2_local)
             rho_displaced = mud_fluid.density_kg_m3 / 1000.0
@@ -1292,7 +1300,7 @@ class AnnulusD2DGASolver:
                     # 浮力向量 f（用当前井段平均井斜）
                     beta_deg_local = float(np.mean(geom["inc_deg"])) if "inc_deg" in geom else 0.0
                     # Task 4: F² 按 Z&F22 (2.6) 现算，与 _compute_velocity 内同一口径
-                    # （排量取最近一次有效泵注 q，速度取本步 w），量级 O(10⁻²)。
+                    # （排量取最近一次有效泵注 q，速度取本步 w），量级 O(10⁻³)。
                     f2_local = self._froude_squared_at(
                         geom, last_pump_rate_m3s, w_prev, mud_fluid)
                     f_phi_arr, f_xi_arr = self._buoyancy_force_vector(
@@ -1325,6 +1333,11 @@ class AnnulusD2DGASolver:
                     tail_frac = tail / cement_total
                     # T1-2: 去人工限幅 flux_strength=0.05；物理系数 ΔρH³/(6η₂)·I3 直驱（式 4.25）
                     # 局部 CFL 裁剪防单步越界（非全局限幅）
+                    # ⚠️ Task 4 警示：该裁剪是**硬非线性**，**不得成为 I3 项的实际上限**。
+                    # 当前量级下远未饱和（div_q ~ 10⁻⁵–10⁻⁴ /s ≪ step_limit ~ 40 /s，
+                    # dt_step≈2s、ds≈10m、alpha_cfl=0.5），但若后续再放大浮力向量 f
+                    # （或 dt_step 变小），I3 项会被这层 clip 吃掉，使 F² 定标在 R2 上失真；
+                    # 届时须复核 div_q 是否触及 step_limit。
                     # ds 取轴向网格最小间距，保证非均匀网格下 CFL 条件保守
                     ds = float(np.min(np.diff(geom["s"])))
                     step_limit = self.alpha_cfl * ds / max(dt_step, 1.0e-9)
