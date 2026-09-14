@@ -1,7 +1,7 @@
 """对比 hu103 重力修正开关 / 弥散开关 下尾浆跨鞋口体积，定位尾浆被截原因。"""
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import numpy as np
 from cemdisp.data.loaders import load_hu103_tailpipe
 from cemdisp.transport1d import CasingFlowSolver

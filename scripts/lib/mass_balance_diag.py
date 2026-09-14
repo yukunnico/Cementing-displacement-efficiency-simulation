@@ -32,7 +32,7 @@ from cemdisp.models2d.annulus_d2dga import AnnulusD2DGASolver, _trapez2d
 from cemdisp.models2d.boundary_bridge import build_coupled_annulus_inlet_provider
 from cemdisp.transport1d import CasingFlowSolver
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 OUT = PROJECT_ROOT / "results" / "_质量平衡取证_2026-09-02"
 OUT.mkdir(parents=True, exist_ok=True)
 

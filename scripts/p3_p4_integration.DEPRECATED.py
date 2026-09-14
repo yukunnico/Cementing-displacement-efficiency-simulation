@@ -1,7 +1,7 @@
 # DEPRECATED: 依赖已删除的 CBL 评价井段指标链路（validation/ 于 2026-07-29 删除，
 # metrics 列 cbl_eval_interval_efficiency 已不存在，运行即 KeyError），且其 M/alpha
-# 标定思路已被 M0-M4 失真修正配置取代。参见 scripts/cbl_window_comparison.py（B1 新建）
-# 或 scripts/rerun_all_wells_corrected.py（论文/正式 8 井官方口径）替代方案。
+# 标定思路已被 M0-M4 失真修正配置取代。参见 scripts/entrypoints/cbl_window_comparison.py（B1 新建）
+# 或 scripts/entrypoints/rerun_all_wells_corrected.py（论文/正式 8 井官方口径）替代方案。
 """
 P3 集成验证 + P4 参数标定脚本
 
@@ -12,9 +12,9 @@ P3 集成验证 + P4 参数标定脚本
 4. 用 hu103 做交叉验证
 
 使用方式：
-    python scripts/p3_p4_integration.py --mode compare --wells hu101 hu102
-    python scripts/p3_p4_integration.py --mode scan --wells hu102
-    python scripts/p3_p4_integration.py --mode validate --wells hu103
+    python scripts/p3_p4_integration.DEPRECATED.py --mode compare --wells hu101 hu102
+    python scripts/p3_p4_integration.DEPRECATED.py --mode scan --wells hu102
+    python scripts/p3_p4_integration.DEPRECATED.py --mode validate --wells hu103
 """
 
 from __future__ import annotations

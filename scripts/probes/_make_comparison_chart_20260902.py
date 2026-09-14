@@ -1,7 +1,7 @@
 """2026-09-02 生成八井修正前后 η_E 对比图与汇总 CSV（中文标注，遵循 AGENTS.md 图表规范）。"""
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import numpy as np
 import pandas as pd
 import matplotlib
@@ -16,7 +16,7 @@ for _f in ["Microsoft YaHei", "SimHei", "SimSun", "Arial Unicode MS"]:
         break
 plt.rcParams["axes.unicode_minus"] = False
 
-OUT = Path(__file__).resolve().parents[1] / "results" / "_质量平衡取证_2026-09-02"
+OUT = Path(__file__).resolve().parents[2] / "results" / "_质量平衡取证_2026-09-02"
 OUT.mkdir(parents=True, exist_ok=True)
 
 # nz=250，三处修复（速度归一化因子2 + 物理τw屈服门 + 双内径停止时刻）后的最终结果

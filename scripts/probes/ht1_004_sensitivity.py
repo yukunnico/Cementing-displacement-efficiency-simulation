@@ -16,9 +16,9 @@
 - 两两交互热力图 ×3
 
 使用方式：
-    python scripts/ht1_004_sensitivity.py
-    python scripts/ht1_004_sensitivity.py --resume  # 断点续跑
-    python scripts/ht1_004_sensitivity.py --plot-only  # 仅生成图表
+    python scripts/probes/ht1_004_sensitivity.py
+    python scripts/probes/ht1_004_sensitivity.py --resume  # 断点续跑
+    python scripts/probes/ht1_004_sensitivity.py --plot-only  # 仅生成图表
 """
 
 from __future__ import annotations
@@ -37,7 +37,7 @@ import pandas as pd
 from tqdm import tqdm
 
 # 确保项目根目录在 PYTHONPATH 中
-_PROJECT_ROOT = Path(__file__).resolve().parents[1]
+_PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 

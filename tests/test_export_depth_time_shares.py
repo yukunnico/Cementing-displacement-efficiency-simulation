@@ -23,7 +23,7 @@ from cemdisp.data.fluid_spec import FluidRole, FluidSpec, RheologyModel
 from cemdisp.data.pumping_schedule import PumpingSchedule, PumpingScheduleStep
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
-_SCRIPT_PATH = _REPO_ROOT / "scripts" / "export_depth_time_concentration.py"
+_SCRIPT_PATH = _REPO_ROOT / "scripts" / "entrypoints" / "export_depth_time_concentration.py"
 
 
 @pytest.fixture(scope="module")

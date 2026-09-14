@@ -19,7 +19,7 @@ verify_loader_against_field_v1.py — cemdisp loader vs 现场提取CSV 数据�
   - <well>_fluids.csv / <well>_schedule.csv / <well>_geometry.csv / <well>_cbl.csv
   - checks_all.csv（全部比对条目）/ loader_dump_汇总.md
 
-运行：PYTHONIOENCODING=utf-8 PYTHONUTF8=1 python scripts/verify_loader_against_field_v1.py
+运行：PYTHONIOENCODING=utf-8 PYTHONUTF8=1 python scripts/entrypoints/verify_loader_against_field_v1.py
 """
 
 from __future__ import annotations
@@ -29,7 +29,7 @@ import math
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 EXTRACT_ROOT = ROOT / "参考文档" / "现场资料提取"

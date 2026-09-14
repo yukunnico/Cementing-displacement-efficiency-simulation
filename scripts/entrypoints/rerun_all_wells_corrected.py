@@ -25,7 +25,7 @@ from cemdisp.models2d.boundary_bridge import build_coupled_annulus_inlet_provide
 from cemdisp.transport1d import CasingFlowSolver
 import cemdisp.data.loaders as L
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 OUT = PROJECT_ROOT / "results" / "全井修正前后"
 NZ = 250
 
@@ -143,7 +143,7 @@ def write_adopted_config(out_dir: Path, *, cfl_mode: str):
     params = inspect.signature(AnnulusD2DGASolver.__init__).parameters
     default = lambda name: params[name].default  # noqa: E731
     snapshot = {
-        "说明": "论文/正式 8 井数字采用口径（corrected 配置）快照，由 scripts/rerun_all_wells_corrected.py 自动生成",
+        "说明": "论文/正式 8 井数字采用口径（corrected 配置）快照，由 scripts/entrypoints/rerun_all_wells_corrected.py 自动生成",
         "generated_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "git_commit": _git_commit(),
         "data_state": _data_state(),

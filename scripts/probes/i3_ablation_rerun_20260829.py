@@ -10,7 +10,7 @@ HT1-004 基线消融（R0→R3，CFL off、nz=500、dt=4），确认 R2 vs R1 �
     results/i3_ablation_rerun_2026-08-29/README.md
 
 用法：
-    PYTHONIOENCODING=utf-8 PYTHONUTF8=1 python scripts/i3_ablation_rerun_20260829.py
+    PYTHONIOENCODING=utf-8 PYTHONUTF8=1 python scripts/probes/i3_ablation_rerun_20260829.py
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ import sys
 import time
 from pathlib import Path
 
-_PROJECT_ROOT = Path(__file__).resolve().parents[1]
+_PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 

@@ -19,7 +19,7 @@
   对比.csv / 域几何量化.csv / 摘要.md / 单井结果/*.json（逐井落盘，断点续跑）
 
 运行（nz=250 生产网格，16 次 2D 重跑约 1-2 小时）：
-  PYTHONIOENCODING=utf-8 PYTHONUTF8=1 python scripts/rerun_stop_fix_20260901.py
+  PYTHONIOENCODING=utf-8 PYTHONUTF8=1 python scripts/reruns/rerun_stop_fix_20260901.py
 """
 from __future__ import annotations
 
@@ -40,13 +40,13 @@ from cemdisp.models2d.boundary_bridge import build_coupled_annulus_inlet_provide
 from cemdisp.transport1d import CasingFlowSolver
 import cemdisp.data.loaders as L
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 OUT = PROJECT_ROOT / "results" / "停止标志修复与裸眼域对比_2026-09-01"
 RESULTS_DIR = OUT / "单井结果"
 NZ = 250
 BASELINE_CSV = PROJECT_ROOT / "results" / "最终基线_2026-08-29" / "cfl_on" / "汇总.csv"
 
-# corrected（adopted）口径，照抄 scripts/rerun_all_wells_corrected.py:33-39（RR）
+# corrected（adopted）口径，照抄 scripts/entrypoints/rerun_all_wells_corrected.py:33-39（RR）
 CORRECTED_KW = dict(
     dispersion_dt_scale=1.0,   # M1: 弥散 dt 归一（不再随 dt 缩放）
     enable_yield_gate=True,    # M3: 屈服门槛
@@ -457,7 +457,7 @@ def write_summary(rows, geom_rows, errors, started):
     lines = [
         "# 停止标志修复与裸眼域对比摘要（2026-09-01）",
         "",
-        f"- 生成：{started}，脚本 `scripts/rerun_stop_fix_20260901.py`，生产网格 nz={NZ}，CFL 自适应，CORRECTED 口径",
+        f"- 生成：{started}，脚本 `scripts/reruns/rerun_stop_fix_20260901.py`，生产网格 nz={NZ}，CFL 自适应，CORRECTED 口径",
         "  （M1 弥散 dt 归一 + M2 流态修正 + M3 屈服门槛 + I3 局部化 + M4 e_clip_max=0.90）。",
         "- 停止口径：修复后 `tt = cr.cement_end_time_s`（尾浆全部入库时刻，None 回退泵注结束），无 +600s 尾窗。",
         "- 旧基线对照：`results/最终基线_2026-08-29/cfl_on/汇总.csv` 的 eta_E（旧口径 tt=stop+600）。",

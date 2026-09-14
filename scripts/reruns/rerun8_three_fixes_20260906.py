@@ -18,7 +18,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT))
 
 import matplotlib  # noqa: E402
@@ -28,7 +28,7 @@ matplotlib.use("Agg")
 from cemdisp.models2d.annulus_d2dga import AnnulusD2DGASolver, _trapez2d  # noqa: E402
 from cemdisp.models2d.boundary_bridge import build_coupled_annulus_inlet_provider  # noqa: E402
 from cemdisp.transport1d import CasingFlowSolver  # noqa: E402
-from scripts._mass_balance_diag_20260902 import WELLS, build_case, integrate_injection  # noqa: E402
+from scripts.lib.mass_balance_diag import WELLS, build_case, integrate_injection  # noqa: E402
 
 OUT = PROJECT_ROOT / "results" / "三项修复重跑_2026-09-06"
 OUT.mkdir(parents=True, exist_ok=True)

@@ -22,9 +22,9 @@ spec: docs/superpowers/specs/2026-08-31-dispersion-magnitude-calibration.md
 评价（CBL 方向一致性收敛度 S、η_N/wall_frac 方向、稳定性）由分析步骤另行完成，见 spec F1。
 
 用法：
-  python scripts/calibrate_dispersion_yield.py                     # 默认矩阵全量（24 任务）
-  python scripts/calibrate_dispersion_yield.py --workers 3         # 并行进程数（默认 3）
-  python scripts/calibrate_dispersion_yield.py --wells ht1_003 --scales 0.5 --f-safeties ""
+  python scripts/entrypoints/calibrate_dispersion_yield.py                     # 默认矩阵全量（24 任务）
+  python scripts/entrypoints/calibrate_dispersion_yield.py --workers 3         # 并行进程数（默认 3）
+  python scripts/entrypoints/calibrate_dispersion_yield.py --wells ht1_003 --scales 0.5 --f-safeties ""
                                                                    # 单井冒烟（跳过 F2）
 """
 from __future__ import annotations
@@ -41,7 +41,7 @@ from typing import cast
 
 import numpy as np
 
-_SCRIPTS_DIR = Path(__file__).resolve().parent
+_SCRIPTS_DIR = Path(__file__).resolve().parents[1]
 _PROJECT_ROOT = _SCRIPTS_DIR.parent
 for _p in (str(_SCRIPTS_DIR), str(_PROJECT_ROOT)):
     if _p not in sys.path:
@@ -50,7 +50,7 @@ for _p in (str(_SCRIPTS_DIR), str(_PROJECT_ROOT)):
 from cemdisp.models2d import AnnulusD2DGASolver  # noqa: E402
 from cemdisp.models2d.boundary_bridge import build_coupled_annulus_inlet_provider  # noqa: E402
 from cemdisp.transport1d import CasingFlowSolver  # noqa: E402
-from rerun_all_wells_corrected import CORRECTED_KW, WELLS, _stop_t, _total_t  # noqa: E402
+from scripts.entrypoints.rerun_all_wells_corrected import CORRECTED_KW, WELLS, _stop_t, _total_t  # noqa: E402
 
 OUT_DIR = _PROJECT_ROOT / "results" / "弥散产额标定_2026-08-31"
 JOB_DIR = OUT_DIR / "单井结果"

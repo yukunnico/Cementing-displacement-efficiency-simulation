@@ -23,7 +23,7 @@ import pandas as pd
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from scripts._mass_balance_diag_20260902 import WELLS, build_case  # noqa: E402
+from scripts.lib.mass_balance_diag import WELLS, build_case  # noqa: E402
 from cemdisp.models2d.annulus_d2dga import AnnulusD2DGASolver, _trapez2d  # noqa: E402
 from cemdisp.data.well_spec import DepthValuePoint  # noqa: E402
 

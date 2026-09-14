@@ -4,7 +4,7 @@
 分别以 tt = stop（runner 冻结口径）与 tt = stop+600（RR 尾窗口径）跑 2D 环空求解器，
 比较 eta_E / cement_occ / 混浆指数。回答：+600s 尾窗里泵入的替浆液对 η_E 是抬高、压低还是中性。
 
-用法：PYTHONIOENCODING=utf-8 PYTHONUTF8=1 python scripts/dump_tailwindow_2d_v1.py
+用法：PYTHONIOENCODING=utf-8 PYTHONUTF8=1 python scripts/probes/dump_tailwindow_2d_v1.py
 """
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ import sys
 import time
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT))
 
 import cemdisp.data.loaders as L

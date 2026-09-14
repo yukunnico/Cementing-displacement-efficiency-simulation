@@ -46,7 +46,7 @@ plt.rcParams["figure.facecolor"] = "white"
 # ── 尝试导入求解器 ────────────────────────────────────────────
 SOLVER_AVAILABLE = False
 try:
-    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
     from cemdisp.models2d import AnnulusD2DGASolver
     from cemdisp.models2d.boundary_bridge import AnnulusInletState
     from cemdisp.data.fluid_spec import FluidRole, FluidSpec, RheologyModel

@@ -1,6 +1,6 @@
 """2026-09-08 路线 B（管内浓度剖面真解）Task 3：8 井双开关验证 + alpha 消融前置。
 
-复用 scripts/rerun8_three_fixes_20260906.py 的**纯默认 solver 口径**
+复用 scripts/reruns/rerun8_three_fixes_20260906.py 的**纯默认 solver 口径**
 （CasingFlowSolver(enable_gravity=True) + split_cement_phases provider +
 AnnulusD2DGASolver(total_t=stop, nz=250, ny=40)），勿用 _sensitivity_common 的
 CORRECTED_KW 骨架（口径不同）。变体只在 CasingFlowSolver 构造参数上开/关。
@@ -27,8 +27,8 @@ alpha 消融前置：hu103/hu102 × dispersion_alpha∈{0.04,0.12,0.25,0.50}
 幂等：输出目录已存在时覆盖重写。
 
 用法：
-  python scripts/rerun8_mixing_contact_time_20260908.py smoke   # hu2 单变体冒烟
-  python scripts/rerun8_mixing_contact_time_20260908.py full    # 全量（默认）
+  python scripts/reruns/rerun8_mixing_contact_time_20260908.py smoke   # hu2 单变体冒烟
+  python scripts/reruns/rerun8_mixing_contact_time_20260908.py full    # 全量（默认）
 """
 from __future__ import annotations
 
@@ -41,13 +41,13 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from cemdisp.models2d.annulus_d2dga import AnnulusD2DGASolver, _trapez2d  # noqa: E402
 from cemdisp.models2d.boundary_bridge import build_coupled_annulus_inlet_provider  # noqa: E402
 from cemdisp.transport1d import CasingFlowSolver  # noqa: E402
-from scripts._mass_balance_diag_20260902 import WELLS, integrate_injection  # noqa: E402
+from scripts.lib.mass_balance_diag import WELLS, integrate_injection  # noqa: E402
 
 OUT = PROJECT_ROOT / "results" / "浓度剖面真解路线B_2026-09-08"
 OUT.mkdir(parents=True, exist_ok=True)

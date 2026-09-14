@@ -15,7 +15,7 @@ from pathlib import Path
 import matplotlib; matplotlib.use("Agg")  # 防止部分导入链弹窗
 import matplotlib.font_manager as fm
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 os.chdir(ROOT)
 sys.path.insert(0, str(ROOT))
 

@@ -21,10 +21,10 @@ CBL 合格率为评价段胶结等级统计，二者存在三重结构性错配�
   5245–7660 与全域口径大面积错配，窗口对照同时输出两行。
 
 用法：
-  python scripts/cbl_window_comparison.py --well hu101            # 单井：重跑窗口指标+出表
-  python scripts/cbl_window_comparison.py --all                   # 8 井全跑（默认目标）
-  python scripts/cbl_window_comparison.py --tables-only           # 只用已落盘窗口指标重出对照表
-  python scripts/cbl_window_comparison.py --well hu101 --force    # 强制重算该井窗口指标
+  python scripts/entrypoints/cbl_window_comparison.py --well hu101            # 单井：重跑窗口指标+出表
+  python scripts/entrypoints/cbl_window_comparison.py --all                   # 8 井全跑（默认目标）
+  python scripts/entrypoints/cbl_window_comparison.py --tables-only           # 只用已落盘窗口指标重出对照表
+  python scripts/entrypoints/cbl_window_comparison.py --well hu101 --force    # 强制重算该井窗口指标
 
 输出：
   results/最终基线_2026-08-29/cfl_on/单井结果/<well>_windows.json   # 窗口指标（断点续跑）
@@ -46,7 +46,7 @@ from typing import cast
 
 import numpy as np
 
-_SCRIPTS_DIR = Path(__file__).resolve().parent
+_SCRIPTS_DIR = Path(__file__).resolve().parents[1]
 _PROJECT_ROOT = _SCRIPTS_DIR.parent
 for _p in (str(_SCRIPTS_DIR), str(_PROJECT_ROOT)):
     if _p not in sys.path:
@@ -56,7 +56,7 @@ from cemdisp.data.well_spec import DepthValuePoint, WellSpec  # noqa: E402
 from cemdisp.models2d import AnnulusD2DGASolver  # noqa: E402
 from cemdisp.models2d.boundary_bridge import build_coupled_annulus_inlet_provider  # noqa: E402
 from cemdisp.transport1d import CasingFlowSolver  # noqa: E402
-from rerun_all_wells_corrected import CORRECTED_KW, NZ, WELLS, _stop_t, _total_t  # noqa: E402
+from scripts.entrypoints.rerun_all_wells_corrected import CORRECTED_KW, NZ, WELLS, _stop_t, _total_t  # noqa: E402
 
 BASELINE_DIR = _PROJECT_ROOT / "results" / "最终基线_2026-08-29"
 CFL_ON_DIR = BASELINE_DIR / "cfl_on"

@@ -32,7 +32,7 @@ from cemdisp.reporting.plots import plot_depth_profiles
 from cemdisp.transport1d import CasingFlowResult, CasingFlowSolver
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 OUTPUT_DIR = PROJECT_ROOT / "results" / "呼101_居中度实测对比"
 
 # 模型域深度范围（米）

@@ -4,8 +4,8 @@
 人工无量纲拉普拉斯弥散只是把它糊住，且其等效扩散系数 D∝dz，加密反而趋近崩塌。"""
 import sys, json
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from scripts._mass_balance_diag_20260902 import WELLS, run_variant
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from scripts.lib.mass_balance_diag import WELLS, run_variant
 
 VARIANTS = {
     "BASE": dict(),
@@ -24,7 +24,7 @@ def main(wells, nzs):
             allr[w][nz] = {}
             for vn, kw in VARIANTS.items():
                 allr[w][nz][vn] = run_variant(f"nz{nz}_{vn}", WELLS[w], nz, **kw)
-    out = Path(__file__).resolve().parents[1]/"results"/"_质量平衡取证_2026-09-02"/"阶段5_壁面冻结网格机制.json"
+    out = Path(__file__).resolve().parents[2]/"results"/"_质量平衡取证_2026-09-02"/"阶段5_壁面冻结网格机制.json"
     out.write_text(json.dumps(allr, ensure_ascii=False, indent=2), encoding="utf-8")
 
 if __name__ == "__main__":

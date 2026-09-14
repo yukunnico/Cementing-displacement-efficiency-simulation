@@ -36,7 +36,7 @@ _setup_font()
 GRADE_C = {"良好": "#2E7D32", "合格": "#EF6C00", "不合格": "#C62828"}
 LINE_C = {"avg": "#1565C0", "wide": "#2E7D32", "narrow": "#C62828"}
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 # ============================================================

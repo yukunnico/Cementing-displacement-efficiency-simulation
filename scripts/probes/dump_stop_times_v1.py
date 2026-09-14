@@ -5,13 +5,13 @@
 - 各注入步前缘到达鞋口时刻（活塞流 vs 重力修正）
 - 末段水泥尾缘到达时刻（修正前后）
 - runner 口径 annulus_stop_time_s（复刻 cemdisp/runners/*_tailpipe.py）
-- RR 口径 tt = min(日程总时长+1200s, stop+600s)（复刻 scripts/rerun_all_wells_corrected.py:67）
+- RR 口径 tt = min(日程总时长+1200s, stop+600s)（复刻 scripts/entrypoints/rerun_all_wells_corrected.py:67）
 - F2 判定：末段水泥尾缘（修正后）是否晚于 stop（尾缘错配+重排截流判定）+ 截流体积
 - 三种评价时刻（stop / stop+600 / 日程总时长+1200）的已出鞋口水泥体积与 eta_E 采样
 - 超替检查：替浆步体积 vs 模型管容
 - hu101 停泵后浮力交换流特征时间标度锚点（量级估计，非模拟）
 
-用法：PYTHONIOENCODING=utf-8 PYTHONUTF8=1 python scripts/dump_stop_times_v1.py
+用法：PYTHONIOENCODING=utf-8 PYTHONUTF8=1 python scripts/probes/dump_stop_times_v1.py
 """
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ import math
 import sys
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT))
 
 import cemdisp.data.loaders as L

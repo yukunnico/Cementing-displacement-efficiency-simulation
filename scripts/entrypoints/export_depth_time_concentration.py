@@ -6,11 +6,11 @@
 
 用法:
     # 方式1: 从 NPZ 文件（不必重新跑求解器）
-    PYTHONIOENCODING=utf-8 PYTHONUTF8=1 python scripts/export_depth_time_concentration.py \
+    PYTHONIOENCODING=utf-8 PYTHONUTF8=1 python scripts/entrypoints/export_depth_time_concentration.py \
         results/呼1-004_1D2D耦合模型/呼1-004_1D2D耦合模型_2D场数据.npz
 
     # 方式2: 在 runner 中导入，求解完成后自动导出
-    from scripts.export_depth_time_concentration import export_depth_time_csv
+    from scripts.entrypoints.export_depth_time_concentration import export_depth_time_csv
     export_depth_time_csv(result, output_dir, well_name="呼1-004")
 """
 
@@ -656,7 +656,7 @@ def export_fullwell_depth_time_shares(
 
 # ── 全井导出：两井配置与入口 ─────────────────────────────────────
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]  # cement model/
+PROJECT_ROOT = Path(__file__).resolve().parents[2]  # cement model/
 
 _FULL_WELL_CONFIGS = {
     "ht1_003": {
@@ -721,7 +721,7 @@ if __name__ == "__main__":
         return sys.argv[sys.argv.index(name) + 1] if name in sys.argv else default
 
     if "--fullwell" in sys.argv:
-        # 全井模式：python scripts/export_depth_time_concentration.py --fullwell --well ht1_003
+        # 全井模式：python scripts/entrypoints/export_depth_time_concentration.py --fullwell --well ht1_003
         well_key = _cli_flag("--well")
         if well_key is None:
             print("用法: python export_depth_time_concentration.py --fullwell --well <ht1_003|ht1_004>")

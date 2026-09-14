@@ -18,7 +18,7 @@ from typing import cast
 import numpy as np
 
 import sys
-_SCRIPTS_DIR = Path(__file__).resolve().parent
+_SCRIPTS_DIR = Path(__file__).resolve().parents[1]
 _PROJECT_ROOT = _SCRIPTS_DIR.parent
 for _p in (str(_SCRIPTS_DIR), str(_PROJECT_ROOT)):
     if _p not in sys.path:
@@ -28,7 +28,7 @@ from cemdisp.data.well_spec import WellSpec  # noqa: E402
 from cemdisp.models2d import AnnulusD2DGASolver  # noqa: E402
 from cemdisp.models2d.boundary_bridge import build_coupled_annulus_inlet_provider  # noqa: E402
 from cemdisp.transport1d import CasingFlowSolver  # noqa: E402
-from rerun_all_wells_corrected import CORRECTED_KW, NZ, WELLS, _stop_t, _total_t  # noqa: E402
+from scripts.entrypoints.rerun_all_wells_corrected import CORRECTED_KW, NZ, WELLS, _stop_t, _total_t  # noqa: E402
 
 
 def run_case(well_id: str, *, well_override: WellSpec | None = None,

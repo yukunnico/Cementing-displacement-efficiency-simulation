@@ -3,7 +3,7 @@ from __future__ import annotations
 import csv
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 NEW = ROOT / "results" / "校准后重跑_2026-08-29" / "汇总.csv"
 OLD = ROOT / "results" / "全井修正前后" / "汇总.csv"
 CBL = {"hu101": 0.6277, "hu102": 0.6665, "hu103": 0.1206, "ht1_003": 0.787, "ht1_004": 0.003}

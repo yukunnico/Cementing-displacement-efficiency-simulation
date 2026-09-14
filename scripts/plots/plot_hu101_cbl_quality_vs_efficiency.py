@@ -44,7 +44,7 @@ else:
 
 # --------------------------- 路径设置 ---------------------------
 # 脚本位于 scripts/ 下，项目根目录为其父目录
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 MODEL_CSV = os.path.join(
     PROJECT_ROOT, 'results', '呼101尾管_1D2D耦合模型',

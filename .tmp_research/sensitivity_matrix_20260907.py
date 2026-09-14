@@ -36,7 +36,7 @@ from cemdisp.data.well_spec import DepthValuePoint  # noqa: E402
 from cemdisp.models2d.annulus_d2dga import AnnulusD2DGASolver  # noqa: E402
 from cemdisp.models2d.boundary_bridge import build_coupled_annulus_inlet_provider  # noqa: E402
 from cemdisp.transport1d import CasingFlowSolver  # noqa: E402
-from scripts._mass_balance_diag_20260902 import WELLS, build_case  # noqa: E402
+from scripts.lib.mass_balance_diag import WELLS, build_case  # noqa: E402
 
 OUT = PROJECT_ROOT / "results" / "敏感性分析_2026-09-07"
 OUT.mkdir(parents=True, exist_ok=True)

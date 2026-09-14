@@ -25,7 +25,7 @@ from cemdisp.models2d import AnnulusD2DGASolver
 from cemdisp.models2d.boundary_bridge import build_coupled_annulus_inlet_provider
 from cemdisp.transport1d import CasingFlowResult, CasingFlowSolver
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 OUTPUT_DIR = PROJECT_ROOT / "results" / "失真修正前后对比"
 TOP_MD, BOTTOM_MD = 5400.0, 7868.0
 NZ = 80  # 快速对比（设计网格为140/250；80用于快速看方向）

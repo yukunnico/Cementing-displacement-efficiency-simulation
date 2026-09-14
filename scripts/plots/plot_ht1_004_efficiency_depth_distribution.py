@@ -32,7 +32,7 @@ GRADE_C = {"良好": "#2E7D32", "合格": "#EF6C00", "不合格": "#C62828"}
 LINE_C = {"avg": "#1565C0", "wide": "#2E7D32", "narrow": "#C62828"}
 
 # ---- 路径 ----
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 CSV = os.path.join(ROOT, "results", "呼1-004_1D2D耦合模型", "呼1-004_1D2D耦合模型_深度剖面.csv")
 OUT = os.path.join(ROOT, "results", "呼1-004_1D2D耦合模型", "呼1-004_顶替效率沿深度分布图.png")
 

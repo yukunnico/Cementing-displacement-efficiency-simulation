@@ -53,7 +53,7 @@ import sys
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(_PROJECT_ROOT))
 
-from scripts.export_depth_time_concentration import export_depth_time_csv  # noqa: E402
+from scripts.entrypoints.export_depth_time_concentration import export_depth_time_csv  # noqa: E402
 from cemdisp.transport1d import CasingFlowSolver
 from cemdisp.transport1d.casing_flow import CasingFlowResult
 

@@ -14,7 +14,7 @@ from cemdisp.models2d import AnnulusD2DGASolver
 from cemdisp.models2d.boundary_bridge import build_coupled_annulus_inlet_provider
 from cemdisp.transport1d import CasingFlowResult, CasingFlowSolver
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 NZ = 80
 ASSUMED = [(5400,.45),(6100,.38),(6796,.44),(7200,.48),(7600,.42),(7868,.46)]
 

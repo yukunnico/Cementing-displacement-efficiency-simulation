@@ -1,6 +1,6 @@
 """hu101 领/尾浆主检 vs 复检双口径敏感性（2026-08-29 校准后续分析项）。
 
-复用 scripts/rerun_all_wells_corrected.py 的官方 corrected 口径 run_one（M1+M3+I3+M4+M2、
+复用 scripts/entrypoints/rerun_all_wells_corrected.py 的官方 corrected 口径 run_one（M1+M3+I3+M4+M2、
 nz=250、CFL 自适应），仅切换 load_hu101_tailpipe 的 rheology_source：
   primary = 主检 2011122.pdf（W301-22094，89C）：领 0.844/0.381、尾 0.830/0.352
   recheck = 复检 2011121.doc（93C）：领 0.719/0.815、尾 0.722/0.684
@@ -11,12 +11,12 @@ import csv
 import sys
 from pathlib import Path
 
-_PROJECT_ROOT = Path(__file__).resolve().parents[1]
+_PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
 import cemdisp.data.loaders as L
-from scripts.rerun_all_wells_corrected import PROJECT_ROOT, run_one
+from scripts.entrypoints.rerun_all_wells_corrected import PROJECT_ROOT, run_one
 
 OUT_DIR = PROJECT_ROOT / "results" / "校准后重跑_2026-08-29"
 

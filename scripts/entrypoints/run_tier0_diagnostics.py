@@ -5,9 +5,9 @@
     → AnnulusD2DGASolver.run → compute_all_tier0_diagnostics
 
 用法：
-    python scripts/run_tier0_diagnostics.py --well hu102
-    python scripts/run_tier0_diagnostics.py --well ht1_004
-    python scripts/run_tier0_diagnostics.py --well all      # 默认，两井都跑
+    python scripts/entrypoints/run_tier0_diagnostics.py --well hu102
+    python scripts/entrypoints/run_tier0_diagnostics.py --well ht1_004
+    python scripts/entrypoints/run_tier0_diagnostics.py --well all      # 默认，两井都跑
 
 输出：
     results/tier0_diagnostics/<井标识>_tier0.json  +  控制台中文摘要
@@ -21,8 +21,8 @@ import sys
 import time
 from pathlib import Path
 
-# 允许直接以脚本方式运行（python scripts/run_tier0_diagnostics.py）
-_PROJECT_ROOT = Path(__file__).resolve().parents[1]
+# 允许直接以脚本方式运行（python scripts/entrypoints/run_tier0_diagnostics.py）
+_PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 

@@ -21,7 +21,7 @@ from pathlib import Path
 
 import matplotlib; matplotlib.use("Agg")
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 os.chdir(ROOT)
 sys.path.insert(0, str(ROOT))
 

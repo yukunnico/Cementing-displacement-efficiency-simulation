@@ -22,12 +22,13 @@ import json
 import sys
 from pathlib import Path
 
-_SCRIPTS_DIR = Path(__file__).resolve().parent
+_SCRIPTS_DIR = Path(__file__).resolve().parents[1]
 _PROJECT_ROOT = _SCRIPTS_DIR.parent
-if str(_SCRIPTS_DIR) not in sys.path:
-    sys.path.insert(0, str(_SCRIPTS_DIR))
+for _p in (str(_PROJECT_ROOT), str(_SCRIPTS_DIR)):
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
 
-from _sensitivity_common import load_or_run, shift_standoff  # noqa: E402
+from scripts.lib.sensitivity_common import load_or_run, shift_standoff  # noqa: E402
 import cemdisp.data.loaders as L  # noqa: E402
 
 BASELINE_DIR = _PROJECT_ROOT / "results" / "最终基线_2026-08-29"

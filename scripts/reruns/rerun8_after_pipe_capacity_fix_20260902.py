@@ -10,7 +10,7 @@ results/守恒修复后全量重跑_2026-09-02/汇总.csv 的逐井对照列（�
 上轮stop/上轮入库水泥等）+ 前缘到位率.csv。不改 cemdisp 包内任何代码。
 
 用法：
-  PYTHONIOENCODING=utf-8 PYTHONUTF8=1 python scripts/rerun8_after_pipe_capacity_fix_20260902.py [井名逗号列表]
+  PYTHONIOENCODING=utf-8 PYTHONUTF8=1 python scripts/reruns/rerun8_after_pipe_capacity_fix_20260902.py [井名逗号列表]
 """
 from __future__ import annotations
 
@@ -23,14 +23,14 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT))
 
 import matplotlib  # noqa: E402
 
 matplotlib.use("Agg")
 
-from scripts._mass_balance_diag_20260902 import (  # noqa: E402
+from scripts.lib.mass_balance_diag import (  # noqa: E402
     WELLS,
     build_case,
     integrate_injection,

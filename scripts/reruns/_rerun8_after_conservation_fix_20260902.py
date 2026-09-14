@@ -6,10 +6,10 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from scripts._mass_balance_diag_20260902 import WELLS, build_case, integrate_injection
+from scripts.lib.mass_balance_diag import WELLS, build_case, integrate_injection
 from cemdisp.models2d.annulus_d2dga import AnnulusD2DGASolver, _trapez2d
 
 OUT = PROJECT_ROOT / "results" / "_质量平衡取证_2026-09-02"
