@@ -230,3 +230,37 @@ class TestReExportIntegrity:
         assert mobility_i2(c, 2.0).shape == c.shape
         assert buoyancy_flux_distribution_i3(c, 2.0).shape == c.shape
         assert isotropic_flux_q0(c, 2.0).shape == c.shape
+
+
+# ---------------------------------------------------------------------------
+# q₀ 参数化不变量（Task 9，controller 裁定第 4 条，2026-09-15）
+# 随机 m ∈ [1e-3, 1e4] × c̄ 网格断言 0 ≤ q₀ ≤ 1——q₀ 若接线进任何通量层，
+# 这是它的入口护栏；本 Task 未接线 q₀（半拉格朗日速度平流 + I₃ 通量层既有
+# 口径不变，见 task-9-report），护栏先行固化。
+# ---------------------------------------------------------------------------
+class TestIsotropicFluxQ0Invariants:
+    def test_q0_bounded_unit_interval_random_grid(self):
+        rng = np.random.default_rng(20260915)
+        m_values = np.exp(rng.uniform(np.log(1.0e-3), np.log(1.0e4), size=64))
+        c_grid = np.linspace(0.0, 1.0, 201)
+        for m in m_values:
+            q0 = np.asarray(isotropic_flux_q0(c_grid, float(m)), dtype=float)
+            assert np.all(q0 >= 0.0), f"m={m}: q₀ 出现负值（min={q0.min()}）"
+            assert np.all(q0 <= 1.0), f"m={m}: q₀ 超过 1（max={q0.max()}）"
+
+    def test_q0_endpoints_exact_all_m(self):
+        # q₀(0)=0、q₀(1)=1 对任意 m 精确成立（two_layer docstring 契约）
+        for m in (1.0e-3, 0.2, 1.0, 5.0, 1.0e4):
+            assert isotropic_flux_q0(0.0, m) == 0.0
+            assert isotropic_flux_q0(1.0, m) == 1.0
+
+    def test_q0_equals_c_bar_times_flux_amplification_on_interior(self):
+        # 内点 q₀ = c̄·f（d2dga_flux_amplification 的未裁剪恒等关系）
+        from cemdisp.models2d.d2dga_flux import d2dga_flux_amplification
+
+        rng = np.random.default_rng(915)
+        for m in (0.2, 1.0, 5.0):
+            c = rng.uniform(0.02, 0.98, size=32)
+            f = np.asarray(d2dga_flux_amplification(c, m), dtype=float)
+            q0 = np.asarray(isotropic_flux_q0(c, m), dtype=float)
+            assert np.allclose(q0, c * f, rtol=1e-12)

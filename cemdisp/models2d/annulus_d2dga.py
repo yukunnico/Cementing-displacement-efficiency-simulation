@@ -5,8 +5,11 @@
 收敛到 Zhang & Frigaard (2022) 所强调的环空层流顶替主过程：
 
 1. 偏心窄环空几何展开；
-2. 基于局部流动度的轴向/方位角平均速度场；
-3. D2DGA 通量放大修正 + I₃ 浮力通量：弥散由 q₀ + I₃ 分层通量闭合承载
+2. 速度场双路径（Task 9，2026-09-15）：``enable_stream_function=True``
+   （默认）由 (4.22) 流函数椭圆方程解 + (2.2) 换算给出 (w, v)，浮力完整经
+   b = (ρ − Δρ·I₂/(H·I₁))·f 向量进入（(4.22)/(4.13)/(2.5b) 字面分组）；
+   ``False`` 为旧代数流动度路径（`_mobility_profile` + 截面归一，可回退）；
+3. I₃ 浮力通量：弥散由 q₀ + I₃ 分层通量闭合承载
    （式 4.25/4.26/4.28）；本模型**无人工扩散项**（Z&F22 p.11
    "we have no diffusive terms"，2026-09-14 Task 7 删除自创拉普拉斯弥散）；
 4. 仅输出求解域内的顶替效率与浓度场。
@@ -42,6 +45,11 @@ from cemdisp.models2d.d2dga_flux import (
     d2dga_dispersion_I2,
     d2dga_flux_amplification,
 )
+from cemdisp.models2d.stream_function import (
+    solve_stream_function,
+    velocity_from_stream_function,
+)
+from cemdisp.models2d.two_layer import mobility_i1, mobility_i2
 
 if TYPE_CHECKING:  # 仅类型注解，运行时不引入 data.pumping_schedule 依赖
     from cemdisp.data.pumping_schedule import PumpingSchedule
@@ -55,6 +63,9 @@ Array = NDArray[np.float64]
 # 即 (4.14)/(4.22) 分层浮力项相对压力驱动项的相对修正 = b_num·cosβ·(I₂/I₁)/𝒢（H⁰ 读数，R28）。
 # 完整推导与 H⁰ 裁定的三重证据链见 `_mobility_profile` docstring；最终取值由 R27 八井扫描
 # 与 Task 12 基准算例裁定，**不得用 clip 兜底**。
+# ⚠️ T9（2026-09-15）：本系数仅旧代数路径（enable_stream_function=False）消费；
+# 新路径浮力经 (4.22) b 向量完整进入（通道 A+B），再叠加 K_AXIAL 即通道 B 双重计入
+# （推导见 `_velocity_stream_function` docstring）。
 K_AXIAL = 1.0 / 3.0
 
 
@@ -271,6 +282,7 @@ class AnnulusD2DGASolver:
         enable_e_clip_ruling: bool = True,
         e_clip_measured_max: float = 0.90,
         enable_power_law_gap_law: bool = True,
+        enable_stream_function: bool = True,
     ) -> None:
         """初始化环空二维求解器参数。
 
@@ -331,6 +343,13 @@ class AnnulusD2DGASolver:
             dispersion_azimuthal: ⚠️ 已弃用，语义同 dispersion_axial。
             dispersion_dt_ref: ⚠️ 已弃用，语义同 dispersion_axial。
             dispersion_dt_scale: ⚠️ 已弃用，语义同 dispersion_axial。
+            enable_stream_function: 速度场路径开关（2026-09-15 Task 9），默认 True。
+                True: (w, v) 由 Z&F22 (4.22) 流函数椭圆方程解经 (2.2) 换算得到
+                （`_velocity_stream_function`）——浮力（平均密度 ρ·f + 分层
+                −Δρ·I₂/(H·I₁)·f）完整经 (4.22) 的 b 向量进入，废止
+                ``w·f_amp`` 速度乘子（B1 缺陷，f_amp 是 (4.28) 通量函数不是速度）；
+                False: 旧代数流动度路径（`_mobility_profile`/代理 + 截面归一），
+                逐位复现 76a91c1 行为（R7 冻结锚护栏，可回退）。
         """
         # ⚠️ 2026-09-14 Task 7 弃用检查：dispersion_* 任一非 None 即弃用警告。
         # （显式传 None 视同默认，不警告——保证未传参的 runner/脚本行为无感。）
@@ -381,6 +400,9 @@ class AnnulusD2DGASolver:
         self.enable_e_clip_ruling = enable_e_clip_ruling
         self.e_clip_measured_max = e_clip_measured_max
         self.enable_power_law_gap_law = enable_power_law_gap_law
+        # 2026-09-15 Task 9：速度场路径开关（True = (4.22) 流函数椭圆方程，
+        # False = 旧代数流动度，逐位复现 76a91c1——R7 冻结锚护栏）
+        self.enable_stream_function = enable_stream_function
 
     def _build_geom(self, well_spec: WellSpec, mud_cake_thickness: Array | None = None) -> Dict[str, Array]:
         """根据井筒规格构建环空二维网格几何参数。
@@ -922,6 +944,41 @@ class AnnulusD2DGASolver:
             w0_mps=w0_mps,
         )
 
+    def _mobility_base(
+        self,
+        c_bar: Array,
+        geom: Dict[str, Array],
+        i1_base: Array | float,
+        eta1: Array | float,
+        eta2: Array | float,
+        n_mix: Array | float,
+    ) -> Array:
+        """基础流动度 base（无浮力形状）——旧代数路径与 `_mobility_profile` 共享。
+
+        幂律缝隙律（Walton & Bittleston 1991 JFM 222:39-60 槽流）：
+        ``base = (b/b̄)^(1+1/n)/η_mix · I₁(c̄,m)``，η_mix 为 (4.23) 两层闭包
+        ``1/(c̄³/η₂+(1−c̄³)/η₁)``；牛顿 n=1 退化 w ∝ b²（与 b²/μ 逐位一致）。
+
+        T9 DRY 收敛（controller 第 5 条）：此前该 ~15 行构造在
+        `_compute_velocity` 旧代数分支与 `_mobility_profile` 内逐字重复，
+        收敛到本方法；两处消费点运算顺序逐字保持（False 路径逐位不变约束）。
+        """
+        b = geom.get("effective_b", geom["b"])
+        b_mean = np.mean(b, axis=0, keepdims=True)
+        # (4.23) 两层黏度闭包
+        eta_mix = 1.0 / (c_bar ** 3 / np.maximum(eta2, 1.0e-9)
+                         + (1.0 - c_bar ** 3) / np.maximum(eta1, 1.0e-9))
+        if self.enable_power_law_gap_law:
+            # 幂律缝隙律（Walton & Bittleston 1991）：w ∝ b^(1+1/n)，与
+            # _compute_velocity 既有口径逐位一致（牛顿 n=1 → b²）
+            n_safe = np.clip(n_mix, 0.25, 1.5)
+            gap_exponent = 1.0 + 1.0 / n_safe
+            base = (b / np.maximum(b_mean, 1.0e-12)) ** gap_exponent / np.maximum(eta_mix, 1.0e-9)
+        else:
+            # 旧口径：Hele-Shaw b² 流动度
+            base = (b / np.maximum(b_mean, 1.0e-12)) ** 2 / np.maximum(eta_mix, 1.0e-9)
+        return base * i1_base  # I₁ 乘子（Z&F22 (4.21a)/(4.22) 的 S ∝ 1/(2I₁)）
+
     def _mobility_profile(
         self,
         c_bar: Array,
@@ -937,6 +994,14 @@ class AnnulusD2DGASolver:
         delta_rho: Array | float = 0.0,
     ) -> Array:
         """局部流动度 pref = 基础项 × 浮力形状（Z&F22 (4.14)/(4.22)/(4.23)）。
+
+        ⚠️ **T9（2026-09-15）起仅旧代数路径消费本方法**
+        （``enable_stream_function=False``）：新路径速度由 (4.22) 流函数椭圆
+        方程直接给出（`_velocity_stream_function`），浮力经 b 向量完整进入，
+        本方法的浮力修正是 (4.14) 第二项（通道 B 分层浮力）的代数近似——
+        新路径再叠加即双重计入（推导见 `_velocity_stream_function` docstring）。
+        保留本方法用于旧路径回退与 K_AXIAL 语义测试。
+
 
         **基础项**（幂律缝隙律，Walton & Bittleston 1991 JFM 222:39-60 槽流；
         Pelipenko & Frigaard 2004c）：
@@ -1012,21 +1077,8 @@ class AnnulusD2DGASolver:
             pref 未饱和乘积 base·buoyancy_shape（无 max/wall——调用方按
             M2/壁面分支自行施加 ``np.maximum(·, 1e-8)`` 与 ``(1−wall)``）。
         """
-        b = geom.get("effective_b", geom["b"])
-        b_mean = np.mean(b, axis=0, keepdims=True)
-        # (4.23) 两层黏度闭包
-        eta_mix = 1.0 / (c_bar ** 3 / np.maximum(eta2, 1.0e-9)
-                         + (1.0 - c_bar ** 3) / np.maximum(eta1, 1.0e-9))
-        if self.enable_power_law_gap_law:
-            # 幂律缝隙律（Walton & Bittleston 1991）：w ∝ b^(1+1/n)，与
-            # _compute_velocity 既有口径逐位一致（牛顿 n=1 → b²）
-            n_safe = np.clip(n_mix, 0.25, 1.5)
-            gap_exponent = 1.0 + 1.0 / n_safe
-            base = (b / np.maximum(b_mean, 1.0e-12)) ** gap_exponent / np.maximum(eta_mix, 1.0e-9)
-        else:
-            # 旧口径：Hele-Shaw b² 流动度
-            base = (b / np.maximum(b_mean, 1.0e-12)) ** 2 / np.maximum(eta_mix, 1.0e-9)
-        base = base * i1_base  # I₁ 乘子（Z&F22 (4.21a)/(4.22) 的 S ∝ 1/(2I₁)）
+        # T9 DRY 收敛：base 构造收敛到 `_mobility_base`（运算逐字保持，逐位等价）。
+        base = self._mobility_base(c_bar, geom, i1_base, eta1, eta2, n_mix)
 
         # --- 浮力形状 ---
         beta_rad = np.deg2rad(float(beta_deg))
@@ -1041,6 +1093,193 @@ class AnnulusD2DGASolver:
         axial_correction = K_AXIAL * float(b_num) * cos_beta * i_ratio
         buoyancy_shape = 1.0 + az_correction * f_phi_arr + axial_correction
         return base * buoyancy_shape
+
+    def _velocity_stream_function(
+        self,
+        lead: Array,
+        tail: Array,
+        geom: Dict[str, Array],
+        q_m3s: float,
+        w_prev: Array,
+        mud_fluid: FluidSpec,
+        lead_fluid: FluidSpec | None,
+        tail_fluid: FluidSpec | None,
+    ) -> Tuple[Array, Array]:
+        """新路径速度场：Z&F22 (4.22) 流函数椭圆方程 + (2.2) 换算（2026-09-15 Task 9）。
+
+        **文献结构（推导全文，controller 裁定第 2 条）**
+        ------------------------------------------------
+        Z&F22 的速度场由且仅由两个关系确定：(4.22) 椭圆方程
+        ``0 = ∇a·[S + b]``、``S = (r_a/(2I₁))∇aΨ``（(4.23)）与 (2.2) 速度换算
+        ``w̄ = ∂φΨ/(2r_aH)``、``v̄ = −∂ξΨ/(2H)``。密度**只**通过浮力向量进入流动：
+
+            b = (ρ − Δρ·I₂/(H·I₁))·f，  f = (r_a·cosβ/F², r_a·sin(πφ)·sinβ/F²)
+                （(4.22) + (4.13)；(2.5b) 概览式同分组：φ-槽配 cosβ、ξ-槽配 sinπφ·sinβ）
+
+        论文 p.A32-20 明言其两部分（(4.24) 段）："the first part of ∇a·b
+        represents changes in the mean density in the direction f. These
+        buoyancy gradients are exactly those considered in the models of
+        Bittleston et al. (2002) and Maleki & Frigaard (2017). The second
+        part results specifically from the layered flow."——即
+
+        - **通道 A（平均密度）**：``ρ·f``，ρ = (1−c̄)ρ₁ + c̄ρ₂（无量纲，ρ₁=1）。
+          它就是 (4.14) 压力槽里的 "modified with the mean static pressure
+          gradient" 项 ``∂ξp + ρf_φ/r_a``——领先阶轴向重力（cosβ 投影）经此进入；
+          源项只含其 φ/ξ-梯度（均匀密度不驱动流动，物理正确）。
+        - **通道 B（分层流动）**：``−Δρ·I₂/(H·I₁)·f``，Δρ = ρ₁−ρ₂（论文符号）。
+          它就是 (4.14) 第二项 ``I₂·(Δρ/(H·r_a))·(−f_ξ, f_φ)``。
+
+        **浮力双通道整合结论（本方法的核心设计裁定）**：旧代数路径的
+        ``_mobility_profile`` 轴向项 ``K_AXIAL·b_num·cosβ·(I₂/I₁)`` 是 (4.14)
+        第二项/**通道 B** 的代数近似（见其 docstring），通道 A 在旧路径中缺席。
+        新路径里 (4.22) 的 b 向量已**完整承载通道 A+B**，故 `_mobility_profile`
+        的浮力修正**不得再叠加**（通道 B 双重计入），新路径速度 = 纯
+        (4.22)+(2.2) 解，`_mobility_profile`/截面归一完全不消费。
+        排查论证：①若新路径再叠加 K_AXIAL 项，通道 B 以两种离散形式进入两次
+        （mobility 乘子 + 椭圆源项），而论文只有一次；②若以为 b 向量只承载
+        O(ε) 方位浮力、把领先阶轴向浮力留给 mobility，则与 (4.22) 推导矛盾——
+        压力在交叉微分中已被消去，b 是密度的唯一入口（(2.3) 是唯一动量关系），
+        轴向重力经 ρ·f（通道 A）的 φ-梯度进入竖直井机制（A32-22 页
+        "the elliptic equation ... is driven by gradients in b"，须 χ 的
+        φ-梯度即偏心前缘，均匀 c̄ 下源项为零是论文自身的机制属性）；
+        ③b_num 的幅值信息不经独立通路进入：1/F² = b_num·ρ̂₁/Δρ̂（Task 4 钉定的
+        Atwood 关系），f = r_a/F² 已内含 b_num 的量级——不再需要、也不再消费
+        K_AXIAL/b_num（K_AXIAL 仅属旧代数路径）。
+
+        **λ_op 修正（量纲→无量纲装配匹配，T9 推导 D3）**
+        ------------------------------------------------
+        (4.22) 在论文中是无量纲方程（§2/§4.1：径向标度 d̂、方位与轴向标度
+        πr̂ₐ*、黏度 μ̂₁、密度 ρ̂₁、应力 τ̂₀=μ̂₁ŵ₀/d̂，(4.5)-(4.8) 的重力项
+        ρ/F² 与压力梯度同槽平衡）。本仓 ``solve_stream_function`` 按量纲 I₁
+        （m³/(Pa·s)）、米制 r_a/ξ 装配同一形状的方程。将量纲装配算子与论文
+        无量纲算子逐槽匹配（φ-槽与 ξ-槽同时成立）：
+
+            op_模块 = λ_op·op_论文，  λ_op = μ̂₁/(d̂³·π·r̂ₐ*)，
+
+        其中 r_a^nd = r̂ₐ*/(πr̂ₐ*) = 1/π 由双槽各向异性匹配钉定（与论文
+        "azimuthal and axial lengths have been scaled with πr̂ₐ*" 一致）；
+        源项两侧逐位相等（φ-槽的 r_a 在 (1/r_a)∂φ(χ·r_a/F²) 中消去）。
+        故源项必须乘 λ_op 才保持论文的源/算子比——缺此因子浮力响应被压低
+        λ_op⁻¹·… 倍（case5 约 5×10⁶）。交叉验证：K_AXIAL 的 𝒢=Ĝd̂²/(μ̂₁ŵ₀)
+        槽流压力标度、(4.29) 的 U=3mη₂F²/(ρH³r_a) 一致性均不矛盾。
+
+        **Ψ 的物理缩放（度量换算推导，T9 推导 D2；修正 brief 字面 "Q/2"）**
+        ------------------------------------------------
+        模块单位 BC 不变量 ``∫₀¹ 2r_aH·w̄ dφ = 1`` 是 **φ-度量**通量；模型输运/
+        体积层用的是**弧长度量**（geom["y"] = 半周长弧、geom["b"] 经 _build_geom
+        体积标定），同一速度场的弧长列通量 ``∫w·b·dy = π·∫2r_aH·w̄ dφ``
+        （弧元 dy = π·r_a·dφ）——数值验证逐位列比恰为 π（task9_probe/
+        verify_pi_scaling.py，2026-09-15）。故物理半环空通量 = Q/2 要求
+
+            w = w̄_unit·(Q/2)/π = w̄_unit·q_half/π。
+
+        同理模块 (w,v) 对满足 ``π·∂y(bv) + ∂s(bw) = 0`` 而非物理连续性
+        ``∂y(bv) + ∂s(bw) = 0``（同一 ξ 量纲混用：论文 ξ 以 πr̂ₐ* 标定、模块
+        ξ 用米）——v 需再乘 π 方与 w 构成物理连续对，即
+
+            v = v̄_unit·q_half。
+
+        两缩放联立后数值验证：列通量逐位 = q_half、物理连续性残差 ~8e-15
+        （同上探针脚本 [4][5] 段）。stream_function 模块 docstring 的
+        "整体乘以 Q_half" 表述已按本推导修正（T9，注释级改动）。
+
+        **旧路径差异声明（新路径不承载的旧机制）**：①屈服门 wall/`f_safety`
+        （两层牛顿闭包无屈服项，壁面带慢速由闭包自身体现——documented
+        deviation）；②M2 流态修正（默认关）；③幂律缝隙律 (b/b̄)^(1+1/n)
+        （新路径为牛顿两层闭包 (4.21)，流变经标量表观黏度 η₁/η₂/m 进入，
+        m 无 clip——论文无 clip）；④f_amp 速度乘子（B1 缺陷，见 run()）。
+        均可经 ``enable_stream_function=False`` 回退到旧路径。
+
+        Args:
+            lead/tail: 相浓度场 (ny,nz)。
+            geom: 几何字典（`_build_geom` 产物，含 phi/H/s/y/hole_mm/od_mm）。
+            q_m3s: 全环空排量（m³/s）；≤0（泵停）直接返回零场——与旧路径
+                q_half=0 的零场逐位等价，且省一次椭圆解。
+            w_prev: 上一步轴向速度场（代表性剪切率与 F² 口径的输入）。
+            mud_fluid: 被顶替液（ρ̂₁/μ̂₁ 口径流体）。
+            lead_fluid/tail_fluid: 顶替液（水泥）——η₂ 取 lead（缺则 tail）的
+                表观黏度；ρ̂₂ 取全仓唯一口径 ``displacing_density_kg_m3``
+                （0.67×领浆+0.33×尾浆，与 b_num/summary 一致）。
+
+        Returns:
+            (w, v)：物理量纲速度场 (ny,nz)，轴向/方位间隙平均速度（m/s）。
+        """
+        ny, nz = self.ny, self.nz
+        if not (float(q_m3s) > 0.0):
+            # 泵停：旧代数路径在 q_half=0 时 w=v=0（精确零场），逐位等价。
+            return (np.zeros((ny, nz)), np.zeros((ny, nz)))
+        if "H" not in geom:
+            raise ValueError(
+                "enable_stream_function=True 需要 geom['H']（Z&F22 半隙场，"
+                "(4.22)/(2.2) 的核心几何）；生产 _build_geom 恒提供。合成测试几何"
+                "请按 H = b/2 补齐，或改用 enable_stream_function=False。"
+            )
+
+        c_bar = np.clip(lead + tail, 0.0, 1.0)
+
+        # ---- 标量黏度口径（与 F²/b_num 同一 Representative 剪切率）------------
+        # γ̇ = 6⟨|w|⟩/⟨b⟩：_froude_squared_at/_buoyancy_number_at/_compute_props 同约定。
+        shear_rate = (6.0 * float(np.mean(np.abs(w_prev)))
+                      / max(float(np.mean(geom["b"])), 1e-12))
+        eta1 = buoyancy.fluid_apparent_viscosity(mud_fluid, shear_rate)
+        cement_fluid = lead_fluid if lead_fluid is not None else tail_fluid
+        if cement_fluid is not None:
+            eta2 = buoyancy.fluid_apparent_viscosity(cement_fluid, shear_rate)
+        else:
+            eta2 = eta1  # 无水泥相：两层退化为均一（m=1，χ 的 φ-梯度仍在）
+        m_ratio = eta1 / eta2
+
+        # ---- F²（(2.6)，与旧路径同口径现算）-----------------------------------
+        f2 = self._froude_squared_at(geom, q_m3s, w_prev, mud_fluid)
+        beta_deg_local = float(np.mean(geom.get("inc_deg", np.zeros(nz))))
+        # _buoyancy_force_vector 返回序 = 代码口径 (方位形状, 轴向形状)；
+        # (4.13) 的 f_φ=轴向(r_a·cosβ/F²) 进 b 的 φ-槽、f_ξ=方位(sinπφ·sinβ/F²)
+        # 进 ξ-槽（(2.5b)/(4.22) 字面分组，R29）。命名陷阱：代码 f_phi=方位，
+        # 论文 f_φ=轴向——此处按形状显式重命名防错位。
+        f_azimuthal, f_axial = self._buoyancy_force_vector(geom, beta_deg_local, f2)
+
+        # ---- χ = ρ − Δρ·I₂/(H·I₁)（(4.22) 浮力向量的标量因子，(ny,nz) 场）------
+        # ρ₁ = 1（被顶替液密度标定）、ρ₂ = ρ̂₂/ρ̂₁（无量纲顶替液密度）；
+        # Δρ = ρ₁ − ρ₂（论文符号，重顶替轻时为负）；I₁/I₂ 用全量纲闭式 (4.21a,b)
+        # （I₂∝H⁴、I₁·H∝H⁴ ⇒ I₂/(H·I₁) 为 H⁰ 无量纲场，R28 同款消去）。
+        rho1_kg_m3 = float(mud_fluid.density_kg_m3)
+        rho2_kg_m3 = float(buoyancy.displacing_density_kg_m3(lead_fluid, tail_fluid, mud_fluid))
+        rho2_nd = rho2_kg_m3 / rho1_kg_m3
+        rho_nd = 1.0 + c_bar * (rho2_nd - 1.0)                     # (1−c̄)·ρ₁ + c̄·ρ₂
+        i1_field = np.asarray(mobility_i1(c_bar, m_ratio, eta1=eta1, eta2=eta2,
+                                          H=geom["H"]), dtype=float)
+        i2_field = np.asarray(mobility_i2(c_bar, m_ratio, eta1=eta1, eta2=eta2,
+                                          H=geom["H"]), dtype=float)
+        chi = rho_nd + (rho2_nd - 1.0) * i2_field / np.maximum(geom["H"] * i1_field, 1.0e-30)
+
+        # ---- b 向量装配（(2,ny,nz)，(4.22) 字面分组唯一口径，R29）--------------
+        b_field = np.empty((2, ny, nz), dtype=float)
+        b_field[0] = chi * f_axial       # φ-槽：(4.13) f_φ = r_a·cosβ/F²（轴向重力）
+        b_field[1] = chi * f_azimuthal   # ξ-槽：(4.13) f_ξ = r_a·sinπφ·sinβ/F²（方位重力）
+
+        # ---- λ_op 修正（T9 推导 D3，2026-09-15）--------------------------------
+        # 论文 (4.22) 是**无量纲**方程（径向标度 d̂、方位/轴向标度 πr̂ₐ*、黏度 μ̂₁、
+        # 应力 τ̂₀=μ̂₁ŵ₀/d̂，Z&F22 §2/§4.1 (4.4)-(4.8)）；本仓 solve_stream_function
+        # 按量纲 I₁（m³/(Pa·s)）与米制 r_a/ξ 装配。把量纲装配式与论文无量纲式逐槽
+        # 匹配（φ-槽与 ξ-槽**同时**成立，r_a^nd = r̂ₐ*/(πr̂ₐ*) = 1/π 由双槽各向异性
+        # 匹配钉定），得 op_模块 = λ_op·op_论文、src_模块 = src_论文，故源项须乘
+        #     λ_op = μ̂₁/(d̂³·π·r̂ₐ*)
+        # 才等价于论文无量纲源/算子比。缺此因子浮力响应被压低 ~μ̂₁/(d̂³πr̂ₐ*) 倍
+        # （基准算例 ~5×10⁶——2026-09-15 首跑实测 case1/case2 t_br 差仅 0.004，
+        # 论文 0.51，即此根因）。推导全文见 task-9-report 与本方法 docstring。
+        half_gap_m = float(np.mean(geom["H"]))            # d̂（R20 口径）
+        r_a_m = float(np.mean((geom["hole_mm"] + geom["od_mm"]) / 4.0)) / 1000.0
+        lambda_op = eta1 / (half_gap_m ** 3 * np.pi * r_a_m)
+        b_field = b_field * lambda_op
+
+        # ---- 椭圆解 + (2.2) 换算 + 物理缩放（推导见 docstring）-----------------
+        psi = solve_stream_function(geom, c_bar, eta1, eta2, m_ratio, b_field,
+                                    ny=ny, nz=nz)
+        w_unit, v_unit = velocity_from_stream_function(psi, geom)
+        q_half = float(q_m3s) / 2.0
+        w = w_unit * (q_half / np.pi)
+        v = v_unit * q_half
+        return w, v
 
     def _compute_velocity(
         self,
@@ -1058,18 +1297,24 @@ class AnnulusD2DGASolver:
     ) -> Tuple[Array, Array, Array, Array, Array, Array, Array, Array, Array, Array, Array, Array]:
         """计算环空速度场（论文D2DGA口径）。
 
-        采用 Zhang & Frigaard (2022) 的Hele-Shaw风格速度场：
-        1. 计算局部混合流体的表观粘度与密度；
-        2. 以幂律缝隙律 ``(b/b̄)^(1+1/n)/η_mix·I₁`` 构造偏心通道主导局部流动度
-           （Task 5 起封装在 `_mobility_profile`）；
-        3. 根据密度差（顶替液 vs 被顶替液）与浮力数 b 计算浮力修正项
-           （方位式 2.5b/4.24 + 轴向式 4.14/4.22，Task 5 起 b 首次进动力学）；
-        4. 用浮力修正项调整宽边/窄边速度分配；
-        5. 由截面排量约束得到轴向速度 ``w``。
+        双路径（Task 9，2026-09-15）：
+
+        - ``enable_stream_function=True``（默认）：速度 (w, v) 由 Z&F22 (4.22)
+          流函数椭圆方程解经 (2.2) 换算（`_velocity_stream_function`，含浮力
+          双通道推导与 Ψ 物理缩放的度量换算推导）；
+        - ``enable_stream_function=False``：旧代数流动度路径——
+          1. 计算局部混合流体的表观粘度与密度；
+          2. 以幂律缝隙律 ``(b/b̄)^(1+1/n)/η_mix·I₁`` 构造偏心通道主导局部流动度
+             （Task 5 起封装在 `_mobility_profile`/`_mobility_base`）；
+          3. 根据密度差（顶替液 vs 被顶替液）与浮力数 b 计算浮力修正项
+             （方位式 2.5b/4.24 + 轴向式 4.14/4.22）；
+          4. 用浮力修正项调整宽边/窄边速度分配；
+          5. 由截面排量约束得到轴向速度 ``w``。
 
         2026-09-07 精简：flusher 形参删除（相降级，见 _compute_props 注）。
-        Task 5（2026-09-14）：流动度构造抽为 `_mobility_profile` 纯函数；
-        返回签名（12 元组）不变。
+        Task 5（2026-09-14）：流动度构造抽为 `_mobility_profile` 纯函数。
+        Task 9（2026-09-15）：新路径接入流函数；base 构造 DRY 收敛到
+        `_mobility_base`；返回签名（12 元组）不变。
 
         Returns:
             w: 井深方向速度（轴向速度）
@@ -1120,10 +1365,20 @@ class AnnulusD2DGASolver:
 
         # === 论文D2DGA口径速度场：偏心通道主导 + 浮力修正 ===
         # T1-4: 两层黏度闭包 1/η_mix = c̄³/η₂ + (1−c̄³)/η₁（式 4.23）替换单相 μ_reg
-        # 基础流动度：偏心通道主导 (b/mean(b))^(1+1/n) / η_mix
-        #（Task 5 起幂律缝隙律 base 构造移入 _mobility_profile，旧口径分支保留在下方）
         # mu_reg 保留用于 Re 诊断
         c_bar = np.clip(lead + tail, 0.0, 1.0)  # 局部水泥浓度
+
+        # === T9 新路径（enable_stream_function=True，默认）：(4.22) 椭圆方程 ===
+        # 浮力（平均密度 ρ·f + 分层 −Δρ·I₂/(H·I₁)·f）完整经 (4.22) 的 b 向量进入
+        # （推导与双重计入排查见 `_velocity_stream_function` docstring）；
+        # _mobility_profile/K_AXIAL/f_amp 速度乘子均不消费（旧代数近似废止）。
+        if self.enable_stream_function:
+            w, v = self._velocity_stream_function(
+                lead, tail, geom, q_m3s, w_prev, mud_fluid, lead_fluid, tail_fluid,
+            )
+            return w, v, mu_reg, rho, mud, Re, mu_turbulent, m_field, tau_y, eta2, n_mix, kappa_mix
+
+        # === 旧代数路径（enable_stream_function=False；逐位复现 76a91c1，可回退）===
         # T1-3b: I₁(c̄,m) 乘子（Zhang 2022 式 4.22，S ∝ 1/(2I₁)）
         # 牛顿极限 m→1 时 I₁=1/3，不改变 base 形状；m≠1 时修正方位分布
         # 2026-09-07 R0 分支删除：m 恒由 _compute_props 自动计算（enable_d2dga_auto_m
@@ -1138,8 +1393,6 @@ class AnnulusD2DGASolver:
         # 0.67×领浆 + 0.33×尾浆），消除与 summary 段浮力数口径不一致导致的 b 符号翻转。
         rho_disp = buoyancy.displacing_density_kg_m3(lead_fluid, tail_fluid, mud_fluid)
 
-        phi = geom["phi"][:, None]
-        ebar = geom["e"][None, :]
         if self.enable_true_buoyancy and self.enable_d2dga:
             # T1-3b: 体力向量注入流动度（式 2.5b/4.24），替换 (2φ−1) 简化代理
             beta_deg_local = float(np.mean(geom.get("inc_deg", np.zeros(self.nz))))
@@ -1161,26 +1414,10 @@ class AnnulusD2DGASolver:
             )
         else:
             # R0/R1/R2: 保留 buoyancy_shape 代理（旧论文状态）；base 构造保持原样
-            b_mean = np.mean(b, axis=0, keepdims=True)
-            eta_mix = 1.0 / (c_bar**3 / np.maximum(eta2, 1.0e-9)
-                             + (1.0 - c_bar**3) / np.maximum(eta1, 1.0e-9))
-            if self.enable_power_law_gap_law:
-                # 2026-09-06 幂律缝隙律修正：层流偏心环空各通道流量份额
-                # q ∝ b^(2+1/n)·G^(1/n)（Walton & Bittleston 1991 JFM 222:39-60 窄隙
-                #   Bingham/幂律槽流；Pelipenko & Frigaard 2004c JFM 520:343-377；
-                #   Maleki & Frigaard 2017 式60-61 闭式）。
-                # 速度场取缝隙平均速度口径 w = q/b ∝ b^(1+1/n)：
-                #   牛顿 n=1 → w ∝ b²、通量 w·b ∝ b³（Poiseuille，与旧口径逐位一致）；
-                #   剪切变稀 n<1 → 指数 1+1/n > 2，窄边分流比 b³ 更极端（b³ 低估通道化）。
-                # 压降梯度项 G^(1/n) 全截面同值，被归一化分母吸收，不影响方位分配。
-                # 混合物 n 用 _compute_props 的 n_mix 场（体积分数加权，Bingham→n=1）。
-                n_safe = np.clip(n_mix, 0.25, 1.5)
-                gap_exponent = 1.0 + 1.0 / n_safe
-                base = (b / np.maximum(b_mean, 1.0e-12)) ** gap_exponent / np.maximum(eta_mix, 1.0e-9)
-            else:
-                # 旧口径：Hele-Shaw b² 流动度（逐位复现基线）
-                base = (b / np.maximum(b_mean, 1.0e-12)) ** 2 / np.maximum(eta_mix, 1.0e-9)
-            base = base * i1_base  # I₁ 乘子
+            # T9 DRY 收敛：base 构造收敛到 `_mobility_base`（运算逐字保持，逐位等价）
+            base = self._mobility_base(c_bar, geom, i1_base, eta1, eta2, n_mix)
+            phi = geom["phi"][:, None]
+            ebar = geom["e"][None, :]
             density_contrast = (rho_disp - mud_fluid.density_kg_m3) / mud_fluid.density_kg_m3
             stable = float(np.clip(8.0 * density_contrast, -0.35, 0.45))
             buoyancy_shape = 1.0 + stable * ebar * (2.0 * phi - 1.0)
@@ -1424,14 +1661,23 @@ class AnnulusD2DGASolver:
                     dt_step = self.dt
 
                 cement = np.clip(lead + tail, 0.0, 1.0)
-                if self.enable_d2dga:
-                    # 2026-09-07 R0 分支删除：m 恒用 auto-m 场
-                    f_amp = d2dga_flux_amplification(cement, m_field)
+                if self.enable_stream_function:
+                    # T9 新路径：半拉格朗日平流用真实间隙平均速度——Z&F22 的输运
+                    # (2.1) 以 (v̄,w̄) 输运浓度；(4.25) 通量形式里的 f_amp 是
+                    # (4.28) 的**通量**函数而非速度乘子（把通量放大当速度乘子
+                    # = B1 缺陷：模型凭空造水泥 27-35%，2026-09-10 取证）。
+                    # f_amp 的速度层消费在新路径废止；f_amp 本身不再计算
+                    # （新路径无消费点；q₀/I₃ 通量层不经此变量）。
+                    # 旧路径（enable_stream_function=False）保留原行为逐位复现。
+                    w_d2dga, v_d2dga = w, v
                 else:
-                    f_amp = 1.0
-
-                w_d2dga = w * f_amp
-                v_d2dga = v * f_amp
+                    if self.enable_d2dga:
+                        # 2026-09-07 R0 分支删除：m 恒用 auto-m 场
+                        f_amp = d2dga_flux_amplification(cement, m_field)
+                    else:
+                        f_amp = 1.0
+                    w_d2dga = w * f_amp
+                    v_d2dga = v * f_amp
                 ysrc = ygrid - v_d2dga * dt_step
                 ssrc = sgrid - w_d2dga * dt_step
                 lead_adv = _bilinear_interp(lead, ysrc, ssrc, geom, inlet_lead_fraction)

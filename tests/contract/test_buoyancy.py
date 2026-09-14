@@ -178,15 +178,22 @@ def test_buoyancy_force_vector_uses_froude_scale():
     assert f_phys.max() == pytest.approx(f_unit.max() / 1.0e-2, rel=1e-12)
 
 
-def test_solver_call_sites_pass_physical_f2(monkeypatch):
+@pytest.mark.parametrize("enable_stream_function,expected_callers", [
+    (True, {"_velocity_stream_function", "run"}),   # T9 新路径：速度场经 (4.22)
+    (False, {"_mobility_profile", "run"}),          # 旧代数路径：流动度浮力修正
+])
+def test_solver_call_sites_pass_physical_f2(monkeypatch, enable_stream_function,
+                                            expected_callers):
     """两个调用点**都**须传入按 (2.6) 现算的 F²（量级 O(10⁻³)），不得硬编码 1.0。
 
-    覆盖：`_compute_velocity` 的 R3 真体力段（式 2.5b）与 run 循环的
+    覆盖：速度场路径（式 2.5b 浮力向量消费）与 run 循环的
     R2 I3 浮力弥散通量段（式 4.25 第二项）——两处共用同一浮力向量。
-    Task 5 起 R3 段的流动度构造抽入 `_mobility_profile`，该调用点的
-    直接调用方随之变为 `_mobility_profile`（仍由 `_compute_velocity` 传入 f2）。
 
-    按**调用方函数名**（`_mobility_profile` / `run`）区分两个调用点：
+    T9（2026-09-15）起速度场双路径：新路径（enable_stream_function=True，默认）
+    的消费方为 `_velocity_stream_function`，旧代数路径为 `_mobility_profile`；
+    两条路径各自与 `run`（I3 段）构成两个调用点。
+
+    按**调用方函数名**区分两个调用点：
     只断言"至少被调用过一次"会漏掉"其中一个调用点被断线"的回归
     （该场景下两处恰好给出同一个 f2，仅计数无法区分）。
     """
@@ -207,12 +214,13 @@ def test_solver_call_sites_pass_physical_f2(monkeypatch):
         return AnnulusInletState(time_s=t, flow_rate_m3_s=q_m3s, stage_name="pump",
                                  phase_fractions=(("cement", 1.0), ("tail", 1.0)))
 
-    solver = AnnulusD2DGASolver(dt=4.0, nz=20, ny=8, total_t=40.0)
+    solver = AnnulusD2DGASolver(dt=4.0, nz=20, ny=8, total_t=40.0,
+                                enable_stream_function=enable_stream_function)
     solver.run(well, fluids, _inlet)
 
     assert captured, "两个调用点都未调用 _buoyancy_force_vector"
     callers = {name for name, _ in captured}
-    assert callers == {"_mobility_profile", "run"}, (
+    assert callers == expected_callers, (
         f"两个调用点未都被命中（实际调用方：{sorted(callers)}）")
     for _, f2 in captured:
         assert f2 != 1.0

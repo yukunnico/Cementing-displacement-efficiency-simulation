@@ -6,6 +6,11 @@ from cemdisp.data.well_spec import WellSpec, DepthValuePoint, EvaluationWindow
 
 
 def _regime_solver(**kw) -> AnnulusD2DGASolver:
+    # T9（2026-09-15）：M2 流态修正与 wall 屈服门是旧代数路径
+    # （enable_stream_function=False）的机制——新路径 (4.22) 两层牛顿闭包
+    # 不含流态修正/屈服门（documented deviation，见 task-9-report）。
+    # 本文件锁旧路径行为，钉 False；断言未改动。
+    kw.setdefault("enable_stream_function", False)
     return AnnulusD2DGASolver(dt=4.0, nz=20, ny=10, total_t=40.0, **kw)
 
 

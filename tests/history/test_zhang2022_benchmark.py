@@ -246,6 +246,13 @@ def test_mass_conservation_is_violated_by_d2dga_flux_amplification(case10_run):
 
     本测试锁定当前实测量级（characterization test），不是"通过"的断言；
     D2DGA 通量实现一旦修好，此测试会失败并提示更新。
+
+    STATUS（Task 9 预期红，2026-09-15）：**红灯即本测试自我声明的修复信号**。
+    T9 新路径（enable_stream_function=True，默认）废止 f_amp 速度乘子
+    （Z&F22 (2.1) 输运以真实 (v̄,w̄) 平流，f_amp 是 (4.28) 通量函数非速度乘子），
+    case10 实测 mass_conservation_error 0.335 → 0.068、体积创造峰值 1.318 → 1.055
+    ——断言 err_on > 0.1 / peak_on > 1.2 不再成立。旧路径行为由
+    enable_stream_function=False 保留（R7 冻结锚逐位复现）。断言未改动。
     """
     case = ZHANG2022_CASE_BY_ID[10]
     res, ws = case10_run["_result"], case10_run["_well_spec"]
@@ -267,7 +274,14 @@ def test_mass_conservation_is_violated_by_d2dga_flux_amplification(case10_run):
 
 
 def test_clip_instrument_works_and_never_triggers(case10_run):
-    """式 4.24 的 ±0.5 硬裁剪：插桩生效（每步一次调用）且 10 个算例均未触发。"""
+    """式 4.24 的 ±0.5 硬裁剪：插桩生效（每步一次调用）且 10 个算例均未触发。
+
+    STATUS（Task 9 预期红，2026-09-15）：±0.5 裁剪只存在于旧代数路径的
+    `_mobility_profile` 方位项（T1-3b 稳定性护栏）；T9 新路径速度场由 (4.22)
+    椭圆解给出，不消费 `_mobility_profile` ⇒ clip_调用次数 = 0，断言 >100 不再
+    成立。论文 (4.22)/(4.24) 本身无此裁剪——红灯反映的是新路径更贴源文献。
+    断言未改动。
+    """
     assert case10_run["clip_调用次数"] > 100
     assert case10_run["clip_triggered"] == 0
     assert case10_run["clip_最大绝对值"] < 0.5
@@ -278,6 +292,11 @@ def test_case5_eta_e_within_prior_tolerance(case5_run):
 
     η_E 命中先验容差 ±0.05；t_br 超出先验容差 ±0.10（模型 0.58 vs 论文 0.95）。
     整表命中率见 results/基准算例对照_2026-09-10/对照明细.csv。
+
+    STATUS（Task 9 预期红，2026-09-15）：旧路径锁定的是"t_br 超容差"的旧模型
+    缺口（0.58 vs 0.95）。T9 新路径下 case5 实测 η_E = 0.9959、t_br = 0.9933
+    ——|t_br − 0.95| = 0.043 落入先验容差内，断言 "|t_br−0.95| > 0.10"
+    （锁定偏离）不再成立。红灯是**改进信号**。断言未改动。
     """
     assert abs(case5_run["eta_E_模型"] - 0.97) < 0.05
     assert abs(case5_run["t_br_模型"] - 0.95) > 0.10
@@ -329,6 +348,14 @@ def test_vertical_well_buoyancy_number_does_not_change_breakthrough(monkeypatch)
     t_br 有意分离（实测 |Δ| ≈ 0.33）。本测试属"重构前"行为契约，故在测试内把
     K_AXIAL 钉回 0（= Task 4 状态）继续锁定旧路径，**断言未改动**；
     新行为（b 分离突破时间）的契约由 tests/contract/test_buoyancy_axial.py 锁定。
+
+    STATUS（Task 9 预期红，2026-09-15）：T9 新路径（默认）的浮力经 (4.22) b 向量
+    完整进入，**不消费 K_AXIAL**——测试内的 monkeypatch 钉零无法再关闭浮力，
+    case 1/2 的 t_br 在新路径下真实分离（nz=140 实测 0.119 vs 0.978，论文 0.44 vs
+    0.95，方向与论文一致）⇒ 断言 |Δ|<0.05 不再成立。红灯 = 本测试锁定的
+    "结构性缺口"已被 (4.22) 接线修复。旧路径行为由 enable_stream_function=False
+    保留；新路径契约由 tests/contract/test_stream_function_solver_integration.py::
+    TestStreamFunctionPathPhysics 锁定。断言未改动。
     """
     monkeypatch.setattr(_ann_mod, "K_AXIAL", 0.0)
     r1 = run_case(ZHANG2022_CASE_BY_ID[1], nz=140, ny=40)

@@ -163,6 +163,10 @@ class TestNarrowSideDeadzoneEffect(unittest.TestCase):
             ny=10,
             total_t=100.0,
             yield_regularization_M=100.0,
+            # T9（2026-09-15）：Papanastasiou 正则化死区经 μ_reg 进旧代数流动度
+            # （η_mix 闭包）；新路径 (4.22) 为标量黏度两层闭包，不含该机制
+            # （documented deviation）。本测试锁旧路径行为，断言未改动。
+            enable_stream_function=False,
         )
 
         # Bingham 泥浆有屈服应力

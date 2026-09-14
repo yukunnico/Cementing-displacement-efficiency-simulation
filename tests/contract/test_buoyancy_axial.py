@@ -95,6 +95,13 @@ def test_buoyancy_shape_stays_positive_over_field_b_range():
 def test_compute_velocity_passthrough_uses_buoyancy_number(monkeypatch):
     """_compute_velocity 必须以 summary 同口径把 b_num 传入 _mobility_profile（接线锚）。
 
+    T9（2026-09-15）钉旧代数路径（enable_stream_function=False）：b_num→
+    `_mobility_profile` 是旧路径的 (4.14) 分层浮力接线；新路径（默认）浮力经
+    (4.22) b 向量完整进入、不消费 b_num（双重计入排查见
+    `_velocity_stream_function` docstring），其接线由
+    tests/contract/test_stream_function_solver_integration.py 锁定。
+    断言未改动。
+
     spy `buoyancy.buoyancy_number` 并检查**调用栈链**：Task 5 前它只在 run() 末尾的
     summary 块被调用；接线后动力学时间步（`_compute_velocity` → `_buoyancy_number_at`）
     也必须调用（浮力数进动力学而非只进 summary）。按调用栈断言，避免"只数次数"对步数敏感。
@@ -133,7 +140,8 @@ def test_compute_velocity_passthrough_uses_buoyancy_number(monkeypatch):
         return AnnulusInletState(time_s=t, flow_rate_m3_s=q_m3s, stage_name="pump",
                                  phase_fractions=(("cement", 1.0), ("tail", 1.0)))
 
-    solver = AnnulusD2DGASolver(dt=4.0, nz=20, ny=8, total_t=40.0)
+    solver = AnnulusD2DGASolver(dt=4.0, nz=20, ny=8, total_t=40.0,
+                                enable_stream_function=False)
     solver.run(well, (mud, tail), _inlet)
 
     assert any(from_dynamics), (

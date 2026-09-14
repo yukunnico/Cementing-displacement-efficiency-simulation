@@ -186,7 +186,15 @@ class TestPowerLawGapLaw:
         return geom, lead, tail, w_prev, mud_f, lead_f, n_mix
 
     def test_shear_thinning_steepens_profile(self):
-        """剪切变稀（n_mix<1）：窄边/宽边速度比应低于旧口径（b²）。"""
+        """剪切变稀（n_mix<1）：窄边/宽边速度比应低于旧口径（b²）。
+
+        STATUS（Task 9 预期红，2026-09-15）：幂律缝隙律 (b/b̄)^(1+1/n) 是旧代数
+        路径的 base 构造（`_mobility_base`，enable_power_law_gap_law 消费）；
+        T9 新路径（默认）为 Z&F22 (4.21) 牛顿两层闭包——流变经标量表观黏度
+        η₁/η₂/m 进入，幂律指数不进椭圆算子 ⇒ 两侧都走新路径时 ratio_new 与
+        ratio_old 相同，断言 ratio_new < ratio_old 不再成立。旧路径行为由
+        enable_stream_function=False 保留（幂律缝隙律语义不变）。断言未改动。
+        """
         well = _toy_well(standoff=0.45)
         s_new = _make_solver()
         s_old = _make_solver(enable_power_law_gap_law=False)
@@ -205,7 +213,17 @@ class TestPowerLawGapLaw:
         assert ratio_new < ratio_old
 
     def test_flux_conservation_preserved(self):
-        """幂律缝隙律下每深度截面通量仍守恒（B1 口径：每列 Σw·b·dy = q_half）。"""
+        """幂律缝隙律下每深度截面通量仍守恒（B1 口径：每列 Σw·b·dy = q_half）。
+
+        STATUS（Task 9 预期红，2026-09-15）：旧路径按构造使矩形和
+        Σw·b·dy = q_half 逐位成立；T9 新路径的列通量在**梯形求积**下精确
+        = q_half（差分-梯形恒等式，与模型体积核算 _trapez2d 同口径），矩形和
+        与梯形积差 O(边界半权) —— 本测试用 np.sum（矩形）+ rtol=1e-9 断言在
+        新路径下不成立。新路径守恒契约由
+        tests/contract/test_stream_function_solver_integration.py::
+        TestStreamFunctionPathWiring::test_new_path_column_flux_conservation
+        锁定。断言未改动。
+        """
         well = _toy_well()
         s_new = _make_solver()
         geom, lead, tail, w_prev, mud_f, lead_f, _ = self._fields_with_lead(s_new, well, 0.54)

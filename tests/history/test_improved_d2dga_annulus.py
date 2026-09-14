@@ -538,7 +538,15 @@ class TestBuoyancyForceInjection:
         )
 
     def test_false_buoyancy_falls_back_to_simplified(self):
-        """enable_true_buoyancy=False 时，pref 形状恢复为 (2φ−1) 简化代理。"""
+        """enable_true_buoyancy=False 时，pref 形状恢复为 (2φ−1) 简化代理。
+
+        STATUS（Task 9 预期红，2026-09-15）：(2φ−1) 代理回退是旧代数路径
+        （enable_true_buoyancy=False 且 enable_stream_function=False）的机制；
+        T9 新路径（默认 True）速度场由 (4.22) 椭圆解给出，enable_true_buoyancy
+        只对旧路径生效（新路径的浮力在 b 向量中完整存在、无"代理回退"概念）
+        ⇒ 从 w 反解的 shape 不再等于代理形。旧路径行为由
+        enable_stream_function=False 保留。断言未改动。
+        """
         s = AnnulusD2DGASolver(
             dt=4.0, nz=20, ny=10, total_t=40.0,
             enable_d2dga=True,
