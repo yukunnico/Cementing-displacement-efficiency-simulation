@@ -23,6 +23,7 @@
 - 已确认正确的实现**不得改动**：`I₁/I₂` 闭式、`I₃` 用 **Z&F22 (4.26)**、`q₀` 放大因子 (4.28)、半环空 + `sinπφ` 方位浮力、`η_E/η_N` 定义、`b^{1+1/n}` 幂律缝隙律（出处 Walton & Bittleston 1991，**不是** Z&F22）。
 - **权威结果目录 `results/<井名>_1D2D耦合模型/` 在 Task 13 之前不得改动**；其余 results 子目录只做归档。
 - **删除一律改为归档**（用户裁定）：移到 `archive/` 或 obsidian，不做 `rm`。
+- **禁用 `scripts/entrypoints/smoke_all_wells.py` 作为冒烟手段**（controller 裁定 R8）：该脚本会写入 `results/<井名>_1D2D耦合模型/`（权威目录），触碰「Task 13 前不得改动权威目录」。冒烟统一改用只读的 `PYTHONIOENCODING=utf-8 PYTHONUTF8=1 python -m pytest tests/test_six_well_integration.py -q`（Task 2 完成后路径变为 `tests/contract/test_six_well_integration.py`）。
 - 测试基线：**396 passed**（2026-09-14 实测 69.44s）。任何任务结束必须保持全绿（`tests/history/` 的"预期变红"除外，须逐条标注）。
 - 每完成一个 Task 提交一次 commit（conventional commits，中文正文）。
 - **不引入新第三方依赖**（scipy 已在环境中）。
@@ -140,8 +141,9 @@ print('语法错误:', bad or '无')
 - [ ] **Step 6: 冒烟 + Commit**
 
 ```bash
-PYTHONIOENCODING=utf-8 PYTHONUTF8=1 python scripts/entrypoints/smoke_all_wells.py 2>&1 | tail -5
-git add -A scripts/ archive/
+PYTHONIOENCODING=utf-8 PYTHONUTF8=1 python -m pytest tests/test_six_well_integration.py -q 2>&1 | tail -5
+# 注意：禁用 smoke_all_wells.py（R8：它会覆写权威结果目录）
+git add -A scripts/ archive/ .gitignore
 git commit -m "chore(scripts): 归档为 entrypoints/probes/reruns/plots/lib + README 索引"
 ```
 
@@ -618,7 +620,7 @@ PYTHONIOENCODING=utf-8 PYTHONUTF8=1 python -m pytest tests/history/test_zhang202
 ### Task 12: 基准算例复现（数值正确性）
 
 **Files:**
-- Modify: `cemdisp/runners/zhang2022_benchmark.py`
+- Modify: `cemdisp/runners/zhang2022_benchmark.py` —— ⚠️ **该文件从未被 git 跟踪**（2026-09-14 核实），Task 2 已随自洽性提交补入版本控制；若仍为未跟踪，Task 12 须先 `git add`
 - Create: `results/基准算例对照_2026-09-14/对照表.csv`
 
 - [ ] **Step 1: 重跑 10 算例**
