@@ -1,0 +1,144 @@
+{
+  "description": "呼101井居中度微调探针（标靶=现场CBL合格率62.77%）",
+  "caliber": "cemdisp/runners/hu101_tailpipe.py 生产口径（T1三开关+annulus_stop_time+nz=250+schedule）",
+  "cbl_window": {
+    "name": "CBL评价井段(单层套管可评价段)",
+    "depth_m": [
+      5699.8,
+      7810.0
+    ],
+    "cbl_pass_rate": 0.6277
+  },
+  "baseline_reproduction_check": {
+    "eta_E_well": 0.49194279093047893,
+    "eta_E_cbl": 0.5034653062957734,
+    "expected_from_runner": {
+      "eta_E_well": 0.49194279093047893,
+      "eta_E_cbl": 0.5034653062957734
+    }
+  },
+  "stop_time_s": 13742.727272727272,
+  "cases": [
+    {
+      "case": "legacy假设(0.38-0.48)",
+      "kind": "existing",
+      "mean_standoff": 0.4295,
+      "eta_E_well": 0.49194279093047893,
+      "eta_N_well": 0.0313783859619479,
+      "eta_E_cbl": 0.5034653062957734,
+      "eta_N_cbl": 0.013772951531564666,
+      "channeling_index": 0.9799196787144625,
+      "mixing_index": 0.34880318355904844,
+      "instability_index": 1.0,
+      "elapsed_s": 53.3
+    },
+    {
+      "case": "检测图-扶正器间",
+      "kind": "existing",
+      "mean_standoff": 0.5155,
+      "eta_E_well": 0.4814306711890485,
+      "eta_N_well": 0.014275179127453715,
+      "eta_E_cbl": 0.4941020062498771,
+      "eta_N_cbl": 0.006509391082314002,
+      "channeling_index": 0.9839357429714889,
+      "mixing_index": 0.3351774105104567,
+      "instability_index": 1.0,
+      "elapsed_s": 51.0
+    },
+    {
+      "case": "检测图-扶正器处",
+      "kind": "existing",
+      "mean_standoff": 0.7342,
+      "eta_E_well": 0.5370789898234569,
+      "eta_N_well": 0.08013635434293136,
+      "eta_E_cbl": 0.5538567573778391,
+      "eta_N_cbl": 0.07100743909988044,
+      "channeling_index": 0.951807228915277,
+      "mixing_index": 0.3162668535007288,
+      "instability_index": 0.9999999999999495,
+      "elapsed_s": 52.5
+    },
+    {
+      "case": "均匀SO=0.50",
+      "kind": "sweep",
+      "mean_standoff": 0.5,
+      "eta_E_well": 0.48316355307817865,
+      "eta_N_well": 0.03404425830830317,
+      "eta_E_cbl": 0.49375267528443767,
+      "eta_N_cbl": 0.01553162695417338,
+      "channeling_index": 0.9759036144574358,
+      "mixing_index": 0.3461299884720307,
+      "instability_index": 1.0,
+      "elapsed_s": 51.6
+    },
+    {
+      "case": "均匀SO=0.60",
+      "kind": "sweep",
+      "mean_standoff": 0.6,
+      "eta_E_well": 0.47405092209492383,
+      "eta_N_well": 0.04946556791847549,
+      "eta_E_cbl": 0.48284465087985057,
+      "eta_N_cbl": 0.02890061138979596,
+      "channeling_index": 0.9598393574293299,
+      "mixing_index": 0.3425916597830796,
+      "instability_index": 1.0,
+      "elapsed_s": 54.9
+    },
+    {
+      "case": "均匀SO=0.70",
+      "kind": "sweep",
+      "mean_standoff": 0.7,
+      "eta_E_well": 0.5964962290597686,
+      "eta_N_well": 0.20323161100093776,
+      "eta_E_cbl": 0.6245948959172258,
+      "eta_N_cbl": 0.210877134824176,
+      "channeling_index": 0.8232931726904295,
+      "mixing_index": 0.27674209435740016,
+      "instability_index": 0.9999841347460714,
+      "elapsed_s": 52.3
+    },
+    {
+      "case": "均匀SO=0.80",
+      "kind": "sweep",
+      "mean_standoff": 0.8,
+      "eta_E_well": 0.6805413605115335,
+      "eta_N_well": 0.4111438950369535,
+      "eta_E_cbl": 0.7182561201959985,
+      "eta_N_cbl": 0.45725314501061276,
+      "channeling_index": 0.5421686746985755,
+      "mixing_index": 0.22255322611323536,
+      "instability_index": 0.7296170240402935,
+      "elapsed_s": 49.5
+    },
+    {
+      "case": "均匀SO=0.90",
+      "kind": "sweep",
+      "mean_standoff": 0.9,
+      "eta_E_well": 0.9361198118517371,
+      "eta_N_well": 0.8464745004595592,
+      "eta_E_cbl": 0.9836150371613757,
+      "eta_N_cbl": 0.9598446717392648,
+      "channeling_index": 0.1606425702810593,
+      "mixing_index": 0.08448307665533915,
+      "instability_index": 0.044920511550825326,
+      "elapsed_s": 32.5
+    },
+    {
+      "case": "均匀SO=0.95",
+      "kind": "sweep",
+      "mean_standoff": 0.95,
+      "eta_E_well": 0.9974887324370943,
+      "eta_N_well": 0.9932955447373358,
+      "eta_E_cbl": 0.9999192933123435,
+      "eta_N_cbl": 0.9997224688648052,
+      "channeling_index": 0.0,
+      "mixing_index": 0.00946595854265571,
+      "instability_index": 0.0,
+      "elapsed_s": 27.3
+    }
+  ],
+  "required_mean_standoff_for_target": {
+    "by_cbl_window_eta_E": 0.7033152503682123,
+    "by_well_eta_E": 0.7371273985788693
+  }
+}

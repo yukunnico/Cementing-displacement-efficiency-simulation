@@ -19,3 +19,9 @@ dependencies = [
 
 [tool.setuptools.packages.find]
 include = ["cemdisp*"]
+
+[tool.pytest.ini_options]
+# 测试分层后固定默认收集范围（tests/contract = 契约测试，tests/history = 历史锁定测试）。
+# 不加 testpaths 时，裸 `pytest` 会递归到 scripts/probes/ 与 archive/ 下的
+# test_*.py 探针脚本（当前恰好不产生用例，但属隐式依赖）。
+testpaths = ["tests"]

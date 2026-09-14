@@ -1,0 +1,204 @@
+{
+  "description": "呼101 居中度口径 × 温度口径 全场景",
+  "warning": "grade 标 [反推场景] 的行不得作为验证数字引用",
+  "rheology_extrapolation_audit": {
+    "100C": {
+      "measured_temps_c": [
+        40.0,
+        50.0,
+        60.0,
+        70.0,
+        80.0
+      ],
+      "measured_pv_mPas": [
+        121.0,
+        92.0,
+        73.0,
+        58.0,
+        48.0
+      ],
+      "measured_yp_lb100ft2": [
+        28.0,
+        34.0,
+        29.0,
+        24.0,
+        22.0
+      ],
+      "fit": {
+        "pv_intercept": 5.694251298577887,
+        "pv_slope_per_C": -0.023105246358803205,
+        "yp_intercept": 3.797369914438015,
+        "yp_slope_per_C": -0.008306308079019921
+      },
+      "PV_mPas_at_T": 29.48043027483719,
+      "YP_Pa_at_T": 9.30234762628923,
+      "extrapolated_beyond_measured_range": true
+    },
+    "130C": {
+      "measured_temps_c": [
+        40.0,
+        50.0,
+        60.0,
+        70.0,
+        80.0
+      ],
+      "measured_pv_mPas": [
+        121.0,
+        92.0,
+        73.0,
+        58.0,
+        48.0
+      ],
+      "measured_yp_lb100ft2": [
+        28.0,
+        34.0,
+        29.0,
+        24.0,
+        22.0
+      ],
+      "fit": {
+        "pv_intercept": 5.694251298577887,
+        "pv_slope_per_C": -0.023105246358803205,
+        "yp_intercept": 3.797369914438015,
+        "yp_slope_per_C": -0.008306308079019921
+      },
+      "PV_mPas_at_T": 14.740064637581128,
+      "YP_Pa_at_T": 7.250551673491944,
+      "extrapolated_beyond_measured_range": true
+    }
+  },
+  "cases": [
+    {
+      "case": "A1_legacy假设(0.38-0.48)",
+      "grade": "基线(model_assumption)",
+      "mean_standoff": 0.429,
+      "eta_E_well": 0.4919,
+      "eta_E_cbl": 0.5035,
+      "front_narrow_m": 50.0,
+      "source": "前一轮"
+    },
+    {
+      "case": "A2_检测图-扶正器间(eclip0.90)",
+      "grade": "可辩护(设计软件)",
+      "mean_standoff": 0.515,
+      "eta_E_well": 0.4814,
+      "eta_E_cbl": 0.4941,
+      "front_narrow_m": 40.0,
+      "source": "前一轮"
+    },
+    {
+      "case": "A3_检测图-扶正器处(eclip0.90)",
+      "grade": "可辩护(设计软件)",
+      "mean_standoff": 0.734,
+      "eta_E_well": 0.5371,
+      "eta_E_cbl": 0.5539,
+      "front_narrow_m": 119.0,
+      "source": "前一轮"
+    },
+    {
+      "case": "A4_均匀SO=0.80",
+      "grade": "[反推场景]",
+      "mean_standoff": 0.8,
+      "eta_E_well": 0.6805,
+      "eta_E_cbl": 0.7183,
+      "front_narrow_m": 1130.0,
+      "source": "前一轮"
+    },
+    {
+      "case": "A5_扶正器处保形到均0.80",
+      "grade": "[反推场景]",
+      "mean_standoff": 0.8,
+      "eta_E_well": 0.6333,
+      "eta_E_cbl": 0.6534,
+      "front_narrow_m": 337.0,
+      "source": "前一轮"
+    },
+    {
+      "case": "A5b_扶正器间保形到均0.765(上限卡住)",
+      "grade": "[反推场景]",
+      "mean_standoff": 0.765,
+      "eta_E_well": 0.5349,
+      "eta_E_cbl": 0.5341,
+      "front_narrow_m": 40.0,
+      "source": "前一轮"
+    },
+    {
+      "case": "A'_检测图-扶正器间_eclip0.55",
+      "grade": "口径裁定对照",
+      "mean_standoff": 0.5155,
+      "mud_PV_mPas": 58.0,
+      "mud_YP_Pa": 9.2,
+      "eta_E_well": 0.4815793480195602,
+      "eta_E_cbl": 0.4946448607170246,
+      "elapsed_s": 56.3,
+      "source": "本轮",
+      "starved_vol_frac": 0.5244255743166399,
+      "front_narrow_m": 49.55823293172691
+    },
+    {
+      "case": "A'_检测图-扶正器处_eclip0.55",
+      "grade": "口径裁定对照",
+      "mean_standoff": 0.7342,
+      "mud_PV_mPas": 58.0,
+      "mud_YP_Pa": 9.2,
+      "eta_E_well": 0.5370789898234569,
+      "eta_E_cbl": 0.5538567573778391,
+      "elapsed_s": 57.3,
+      "source": "本轮",
+      "starved_vol_frac": 0.4692894639875225,
+      "front_narrow_m": 118.93975903614458
+    },
+    {
+      "case": "B_钻井液@100C",
+      "grade": "可辩护(外推100℃)",
+      "mean_standoff": 0.4295,
+      "mud_PV_mPas": 29.48,
+      "mud_YP_Pa": 9.3,
+      "eta_E_well": 0.4671039477690136,
+      "eta_E_cbl": 0.4780079934469941,
+      "elapsed_s": 60.4,
+      "source": "本轮",
+      "starved_vol_frac": 0.5422523839057258,
+      "front_narrow_m": 49.55823293172691
+    },
+    {
+      "case": "B_钻井液@130C",
+      "grade": "可辩护(外推130℃)",
+      "mean_standoff": 0.4295,
+      "mud_PV_mPas": 14.74,
+      "mud_YP_Pa": 7.25,
+      "eta_E_well": 0.42279277701456086,
+      "eta_E_cbl": 0.42905040085187907,
+      "elapsed_s": 74.0,
+      "source": "本轮",
+      "starved_vol_frac": 0.5961938777151943,
+      "front_narrow_m": 49.55823293172691
+    },
+    {
+      "case": "C_均0.80+钻井液@100C",
+      "grade": "[反推场景]",
+      "mean_standoff": 0.8,
+      "mud_PV_mPas": 29.48,
+      "mud_YP_Pa": 9.3,
+      "eta_E_well": 0.599203219518662,
+      "eta_E_cbl": 0.6340526246623851,
+      "elapsed_s": 70.5,
+      "source": "本轮",
+      "starved_vol_frac": 0.40701480573890386,
+      "front_narrow_m": 1020.8995983935744
+    },
+    {
+      "case": "C_均0.80+钻井液@130C",
+      "grade": "[反推场景]",
+      "mean_standoff": 0.8,
+      "mud_PV_mPas": 14.74,
+      "mud_YP_Pa": 7.25,
+      "eta_E_well": 0.4060418168625038,
+      "eta_E_cbl": 0.4120334199803497,
+      "elapsed_s": 98.0,
+      "source": "本轮",
+      "starved_vol_frac": 0.615528812392498,
+      "front_narrow_m": 267.6144578313253
+    }
+  ]
+}
