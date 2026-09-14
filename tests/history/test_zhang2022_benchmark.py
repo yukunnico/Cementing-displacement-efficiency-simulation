@@ -20,6 +20,7 @@ import math
 import numpy as np
 import pytest
 
+import cemdisp.models2d.annulus_d2dga as _ann_mod
 from cemdisp.runners.zhang2022_benchmark import (
     ZHANG2022_CASES,
     ZHANG2022_CASE_BY_ID,
@@ -282,15 +283,23 @@ def test_case5_eta_e_within_prior_tolerance(case5_run):
     assert abs(case5_run["t_br_模型"] - 0.95) > 0.10
 
 
-def test_grid_convergence_nz_140_to_500(case10_run):
+def test_grid_convergence_nz_140_to_500(case10_run, monkeypatch):
     """网格收敛（任务目标）：nz 140 → 500 时 η_E 变化必须 < 0.02。
 
     CFL 自适应使 dt 随 ds 同步细化（case 10：dt 中位 0.033 s → 0.020 s），
     故该检验同时覆盖网格与时间步收敛。
+
+    STATUS（Task 5 机械适配，2026-09-14）：轴向浮力数接线（K_AXIAL，Z&F22 (4.14)）
+    改变了 t_br 的网格敏感度（nz 140→500 的 |Δt_br| 由 <0.10 变 ~0.12）。本测试属
+    "重构前"行为契约，故在测试内把 K_AXIAL 钉回 0（= Task 4 状态），并在本测试内
+    重跑 nz=140 基准（共享 fixture case10_run 现为新物理口径，不能跨物理比较），
+    **断言未改动**；新行为的网格收敛由 Task 12 基准算例重跑复核。
     """
+    monkeypatch.setattr(_ann_mod, "K_AXIAL", 0.0)
+    base = run_case(ZHANG2022_CASE_BY_ID[10], nz=140, ny=40)
     coarse = run_case(ZHANG2022_CASE_BY_ID[10], nz=500, ny=40)
-    assert abs(coarse["eta_E_模型"] - case10_run["eta_E_模型"]) < 0.02
-    assert abs(coarse["t_br_模型"] - case10_run["t_br_模型"]) < 0.10
+    assert abs(coarse["eta_E_模型"] - base["eta_E_模型"]) < 0.02
+    assert abs(coarse["t_br_模型"] - base["t_br_模型"]) < 0.10
 
 
 def test_breakthrough_time_is_reported(case10_run):
@@ -303,7 +312,7 @@ def test_breakthrough_time_is_reported(case10_run):
     assert t_br_dimensionless == pytest.approx(t_br_raw * w0 / ZHANG2022_L_M, rel=1e-12)
 
 
-def test_vertical_well_buoyancy_number_does_not_change_breakthrough():
+def test_vertical_well_buoyancy_number_does_not_change_breakthrough(monkeypatch):
     """结构性缺口（characterization test）：竖直井 + 默认 ``enable_true_buoyancy=True`` 时
     ``_buoyancy_force_vector`` 的方位分量 ``f_phi ∝ sinβ ≡ 0``（β = 井斜 = 0），
     于是 ``buoyancy_shape ≡ 1``，b 完全不进入方位速度分布——case 1（b = −50）与
@@ -314,7 +323,14 @@ def test_vertical_well_buoyancy_number_does_not_change_breakthrough():
     对照实验：切到旧代理路径 ``enable_true_buoyancy=False``
     （``buoyancy_shape = 1 + stable·e·(2φ−1)``）后模型恢复对 b 符号的区分能力
     （0.51 vs 0.64），但仍远弱于论文 ⇒ 缺口定位到 R3 真浮力路径在竖直井上的退化。
+
+    STATUS（Task 5 机械适配，2026-09-14）：本测试钉住的"结构性缺口"（b 不进动力学）
+    正是 Task 5 按 Z&F22 (4.14)/(4.22) 接线轴向浮力数所要修复的——接线后 case 1/2 的
+    t_br 有意分离（实测 |Δ| ≈ 0.33）。本测试属"重构前"行为契约，故在测试内把
+    K_AXIAL 钉回 0（= Task 4 状态）继续锁定旧路径，**断言未改动**；
+    新行为（b 分离突破时间）的契约由 tests/contract/test_buoyancy_axial.py 锁定。
     """
+    monkeypatch.setattr(_ann_mod, "K_AXIAL", 0.0)
     r1 = run_case(ZHANG2022_CASE_BY_ID[1], nz=140, ny=40)
     r2 = run_case(ZHANG2022_CASE_BY_ID[2], nz=140, ny=40)
     assert abs(r2["t_br_模型"] - r1["t_br_模型"]) < 0.05, (r1["t_br_模型"], r2["t_br_模型"])

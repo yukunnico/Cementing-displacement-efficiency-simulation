@@ -172,7 +172,8 @@ def test_buoyancy_force_vector_uses_froude_scale():
             "od_mm": np.full((1, 2), 168.3)}
     f_unit, _ = s._buoyancy_force_vector(geom, 1.9, f2=1.0)
     f_phys, _ = s._buoyancy_force_vector(geom, 1.9, f2=1.0e-2)
-    # 断言**正比关系**（f ∝ 1/F²），而非任意阈值——物理 F² 取 O(10⁻²)，
+    # 断言**正比关系**（f ∝ 1/F²），而非任意阈值——物理 F² 取 O(10⁻³)
+    #（呼101 实测 2.0×10⁻³~5.5×10⁻³，八井 [1.2×10⁻³, 3.1×10⁻²]），
     # 固定"50×"阈值会随 F² 取值失效。
     assert f_phys.max() == pytest.approx(f_unit.max() / 1.0e-2, rel=1e-12)
 
@@ -182,8 +183,10 @@ def test_solver_call_sites_pass_physical_f2(monkeypatch):
 
     覆盖：`_compute_velocity` 的 R3 真体力段（式 2.5b）与 run 循环的
     R2 I3 浮力弥散通量段（式 4.25 第二项）——两处共用同一浮力向量。
+    Task 5 起 R3 段的流动度构造抽入 `_mobility_profile`，该调用点的
+    直接调用方随之变为 `_mobility_profile`（仍由 `_compute_velocity` 传入 f2）。
 
-    按**调用方函数名**（`_compute_velocity` / `run`）区分两个调用点：
+    按**调用方函数名**（`_mobility_profile` / `run`）区分两个调用点：
     只断言"至少被调用过一次"会漏掉"其中一个调用点被断线"的回归
     （该场景下两处恰好给出同一个 f2，仅计数无法区分）。
     """
@@ -209,7 +212,7 @@ def test_solver_call_sites_pass_physical_f2(monkeypatch):
 
     assert captured, "两个调用点都未调用 _buoyancy_force_vector"
     callers = {name for name, _ in captured}
-    assert callers == {"_compute_velocity", "run"}, (
+    assert callers == {"_mobility_profile", "run"}, (
         f"两个调用点未都被命中（实际调用方：{sorted(callers)}）")
     for _, f2 in captured:
         assert f2 != 1.0

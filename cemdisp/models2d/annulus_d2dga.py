@@ -46,6 +46,14 @@ if TYPE_CHECKING:  # 仅类型注解，运行时不引入 data.pumping_schedule 
 
 Array = NDArray[np.float64]
 
+# Task 5 (R2/R27，provisional)：轴向浮力修正的幅值系数 K_AXIAL = 1/𝒢。
+# 𝒢 为 (4.6) 无量纲修正压力梯度的参考量级：把 ∂p/∂ξ 用 τ̂₀/d̂ = μ̂₁ŵ₀/d̂² 无量纲化后，
+# 牛顿参考缝隙流（半间隙 d̂、平均速度 ŵ₀ 标度）w̄ = Ĝd̂²/(3μ̂₁) 给出 𝒢 = Ĝd̂²/(μ̂₁ŵ₀) = 3。
+# 即 (4.14)/(4.22) 分层浮力项相对压力驱动项的相对修正 = b_num·cosβ·(I₂/I₁)/(𝒢·H̃)。
+# 完整推导与 1/H̃ 读数说明见 `_mobility_profile` docstring；最终取值由 R27 八井扫描
+# 与 Task 12 基准算例裁定，**不得用 clip 兜底**。
+K_AXIAL = 1.0 / 3.0
+
 
 def _profile_to_arrays(points: Tuple[DepthValuePoint, ...]) -> Tuple[Array, Array]:
     """将剖面数据点列表转换为NumPy数组。"""
@@ -876,6 +884,168 @@ class AnnulusD2DGASolver:
             w0_mps=velocity_m_s,
         )
 
+    def _buoyancy_number_at(self, geom: Dict[str, Array], q_m3s: float, w_field: Array,
+                            mud_fluid: FluidSpec,
+                            lead_fluid: FluidSpec | None,
+                            tail_fluid: FluidSpec | None) -> float:
+        """按 summary 段同口径现算当前时间步的无量纲浮力数 b（Z&F22 p.8）。
+
+        Task 5 起 ``_compute_velocity`` 逐时间步调用它，把领先阶轴向浮力数接进
+        (4.14) 动力学；run() 末尾 summary 块亦复用本方法，保证两处口径**逐位一致**：
+
+        - 顶替液密度 ρ̂₂ = ``buoyancy.displacing_density_kg_m3``（0.67×领浆+0.33×尾浆，
+          全仓唯一口径）；
+        - 被顶替液黏度 μ̂₁ = ``fluid_apparent_viscosity(泥浆, γ̇ = 6⟨|w|⟩/⟨b⟩)``，
+          剪切率约定与 `_compute_props` 一致；缺参数抛错不静默回退；
+        - 半间隙 d̂ = ``mean(geom["H"])``（R20 口径，b=2H 逐格自洽）；
+        - ŵ₀ = q/A（截面平均速度；环形截面积由 hole/od 计算，退化几何回退 ∫b dy×2）。
+        """
+        rho_displacing = buoyancy.displacing_density_kg_m3(lead_fluid, tail_fluid, mud_fluid)
+        # 泥浆表观黏度的剪切率约定与 _compute_props 一致：γ̇ = 6|w|/b
+        shear_rate_mud = (
+            6.0 * float(np.mean(np.abs(w_field))) / max(float(np.mean(geom["b"])), 1e-12)
+        )
+        mu_displaced = buoyancy.fluid_apparent_viscosity(mud_fluid, shear_rate_mud)
+        # 几何半间隙 d̂ = (r_o−r_i)/2 = (hole−od)/4，直接取模型自己的半间隙场 geom["H"]
+        half_gap_m = float(np.mean(geom["H"])) if "H" in geom else 0.5 * float(np.mean(geom["b"]))
+        # 截面平均轴向速度 w₀ = q/A（环形截面积由 hole/od 算）
+        if "hole_mm" in geom and "od_mm" in geom:
+            annulus_area_m2 = float(
+                np.mean(np.pi / 4.0 * ((geom["hole_mm"] / 1000.0) ** 2
+                                       - (geom["od_mm"] / 1000.0) ** 2))
+            )
+        else:
+            # 退化口径（合成几何单元测试）：半环空面积 ×2 与真实分支同口径
+            annulus_area_m2 = 2.0 * float(
+                np.trapezoid(np.mean(geom["b"], axis=1), x=geom["y"]))
+        if float(q_m3s) > 0.0 and annulus_area_m2 > 0.0:
+            w0_mps = float(q_m3s) / annulus_area_m2
+        else:
+            # 退让口径：无泵注排量记录（异常输入）时回落到速度场均值
+            w0_mps = float(np.mean(np.abs(w_field)))
+        return buoyancy.buoyancy_number(
+            rho_displacing=rho_displacing,
+            rho_displaced=float(mud_fluid.density_kg_m3),
+            half_gap_m=half_gap_m,
+            mu_displaced=mu_displaced,
+            w0_mps=w0_mps,
+        )
+
+    def _mobility_profile(
+        self,
+        c_bar: Array,
+        b_num: float,
+        geom: Dict[str, Array],
+        i1_base: Array | float,
+        m_local: float,
+        beta_deg: float,
+        f2: float,
+        eta1: Array | float = 1.0,
+        eta2: Array | float = 1.0,
+        n_mix: Array | float = 1.0,
+        delta_rho: Array | float = 0.0,
+    ) -> Array:
+        """局部流动度 pref = 基础项 × 浮力形状（Z&F22 (4.14)/(4.22)/(4.23)）。
+
+        **基础项**（幂律缝隙律，Walton & Bittleston 1991 JFM 222:39-60 槽流；
+        Pelipenko & Frigaard 2004c）：
+        ``base = (b/b̄)^(1+1/n) / η_mix · I₁(c̄,m)``，η_mix 为 (4.23) 两层闭包
+        ``1/(c̄³/η₂+(1−c̄³)/η₁)``；牛顿 n=1 退化 w ∝ b²（与 b²/μ 逐位一致）。
+
+        **浮力形状** = 方位项（既有，T1-3b/Task 4）+ 轴向项（Task 5 新增）：
+
+        - 方位项（式 2.5b/4.24）：``clip(Δρ·(I₂/I₁), ±0.5)·f_φ``，
+          ``f_φ = r_a·sin(πφ)·sinβ/F²`` 由 `_buoyancy_force_vector` 按 (2.6) 的
+          F² 现算（``f2`` 形参透传，R26）。
+        - 轴向项（式 (4.14) 第二项 + (4.22) 浮力向量的分层部分）：
+
+          ``(4.14)``: ``(H v̄, H w̄) = −I₁(·, ·) + I₂·Δρ/(H·r_a)·(−f_ξ, f_φ)``，
+          轴向分量的浮力通量 = ``I₂·Δρ·f_φ/(H·r_a)``；``(4.13)`` 给
+          ``f_φ = r_a·cosβ/F²``，故该项 = ``I₂·Δρ·cosβ/(H·F²)``。
+          论文的 Δρ 取 ρ₁−ρ₂（被顶替−顶替），本项目 buoyancy 模块全仓口径为
+          Δρ ≡ ρ̂₂−ρ̂₁（顶替−被顶替，b_num 与之同号），两者差一个符号；
+          (4.22) 把同一物理写成浮力向量 ``b = (ρ − Δρ_paper·I₂/(H·I₁))·f``，
+          其分层部分 ``−Δρ_paper·(I₂/(H·I₁))·f_φ`` 在本项目口径下恰为
+          ``+Δρ·(I₂/(H·I₁))·f_φ``。代入 ``F²·b_num = Δρ/ρ̂₁``（Task 4 钉定的
+          Atwood 关系，Δρ 无量纲化）与 f_φ，F²、r_a 恰好消去：
+
+            轴向浮力通量 ∝ b_num·cosβ·I₂/(H·I₁)（b>0 重顶替轻 ⇒ 正）。
+
+          以压力驱动项 ``I₁·𝒢`` 为基准的相对修正（𝒢 = 无量纲修正压力梯度）：
+
+            correction(φ) = K_AXIAL·b_num·cosβ·(I₂/I₁)/H̃(φ)，
+            H̃(φ) = H(φ)/d̂。
+
+          **K_AXIAL 的量纲推导（R2，provisional）**：pref 与 correction 同为
+          无量纲场，量纲只约束到"K_AXIAL 无量纲"；其数值由压力驱动基准给出——
+          把 (4.6) 的 ∂p/∂ξ 用 τ̂₀/d̂ = μ̂₁ŵ₀/d̂² 无量纲化后，牛顿参考缝隙流
+          （半间隙 d̂、截面平均速度 ŵ₀ 标度）``w̄ = Ĝd̂²/(3μ̂₁)`` 给
+          ``𝒢 = Ĝd̂²/(μ̂₁ŵ₀) = 3``，故 ``K_AXIAL = 1/𝒢 = 1/3``（模块常量）。
+          局部黏度比使 𝒢 在水泥富集通道自动增大、修正自我衰减；剩余不确定性
+          O(1) 由 R27 八井扫描（shape>0）与 Task 12 基准算例裁定，**禁止 clip**。
+
+          **1/H̃ 读数说明**：I₂/I₁ 采用 H³/H⁴ 归一化闭式（`d2dga_dispersion_I1/I2`），
+          (4.22) 分组 I₂/(H·I₁) 中的局部半间隙 H(φ) 因此以 H̃ = H/d̂ 显式保留。
+          若用全量纲 I₁∝H³、I₂∝H⁴ 直接计算，H 恰好消去、修正只随 c̄ 变化（牛顿
+          情形）；本文取 1/H̃ 读数，因它保留了 (4.14) 逐通道 H 分母的窄边放大，
+          与论文 §5 大 b>0 界面展平（case 4 对比 case 7）的定性结果一致。
+
+        ``b_num=0`` 时轴向项恒为 0，输出与不含浮力项的基础流动度逐位一致（重构锚）。
+
+        Args:
+            c_bar: 局部水泥浓度场 c̄ = clip(lead+tail, 0, 1)，(ny, nz)。
+            b_num: 无量纲浮力数 b（Z&F22 p.8，`_buoyancy_number_at` 同口径现算）。
+            geom: 几何字典（用 ``b``/``H``；b=2H 逐格）。
+            i1_base: I₁(c̄,m) 闭式场（Z&F22 (4.21a) 的 H³ 归一化形状）。
+            m_local: 黏度比 m = μ_displaced/μ_displacing（标量，R1 auto-m 口径）。
+            beta_deg: 井斜角 β（度）；轴向投影 cosβ 来自 (4.13) 的 f_φ = r_a·cosβ/F²。
+            f2: Froude 数平方 F²（Z&F22 (2.6)，R26 透传，供方位 f_φ 使用）。
+            eta1: 泥浆相黏度场 η₁（(4.23) 闭包输入；默认 1 供纯函数单测）。
+            eta2: 水泥相黏度场 η₂（默认 1）。
+            n_mix: 混合物幂律指数场（缝隙律 1+1/n；默认 1 = 牛顿）。
+            delta_rho: 局部密度差场（g/cc，rho − ρ̂₁/1000；默认 0 关闭方位项）。
+
+        Returns:
+            pref 未饱和乘积 base·buoyancy_shape（无 max/wall——调用方按
+            M2/壁面分支自行施加 ``np.maximum(·, 1e-8)`` 与 ``(1−wall)``）。
+        """
+        b = geom.get("effective_b", geom["b"])
+        b_mean = np.mean(b, axis=0, keepdims=True)
+        # (4.23) 两层黏度闭包
+        eta_mix = 1.0 / (c_bar ** 3 / np.maximum(eta2, 1.0e-9)
+                         + (1.0 - c_bar ** 3) / np.maximum(eta1, 1.0e-9))
+        if self.enable_power_law_gap_law:
+            # 幂律缝隙律（Walton & Bittleston 1991）：w ∝ b^(1+1/n)，与
+            # _compute_velocity 既有口径逐位一致（牛顿 n=1 → b²）
+            n_safe = np.clip(n_mix, 0.25, 1.5)
+            gap_exponent = 1.0 + 1.0 / n_safe
+            base = (b / np.maximum(b_mean, 1.0e-12)) ** gap_exponent / np.maximum(eta_mix, 1.0e-9)
+        else:
+            # 旧口径：Hele-Shaw b² 流动度
+            base = (b / np.maximum(b_mean, 1.0e-12)) ** 2 / np.maximum(eta_mix, 1.0e-9)
+        base = base * i1_base  # I₁ 乘子（Z&F22 (4.21a)/(4.22) 的 S ∝ 1/(2I₁)）
+
+        # --- 浮力形状 ---
+        beta_rad = np.deg2rad(float(beta_deg))
+        cos_beta = float(np.cos(beta_rad))
+        i_ratio = d2dga_dispersion_I2(c_bar, m_local) / np.maximum(i1_base, 1.0e-12)
+        # 方位项（T1-3b/Task 4 既有路径，式 2.5b/4.24）：f_φ 带 1/F² 标定（R26 通路）
+        f_phi_arr, _ = self._buoyancy_force_vector(geom, beta_deg, f2)
+        az_correction = np.clip(delta_rho * i_ratio, -0.5, 0.5)
+        # 轴向项（Task 5 新增，式 (4.14) 第二项/(4.22) 分层部分）：
+        # correction = K_AXIAL·b_num·cosβ·(I₂/I₁)/H̃，H̃ = H/d̂（d̂ = mean(geom["H"])）
+        if "H" in geom:
+            h_field = geom["H"]
+            d_hat = max(float(np.mean(h_field)), 1.0e-12)
+        else:
+            # 退化口径（合成几何）：b = 2H 逐格 ⇒ H = b/2
+            h_field = geom["b"] / 2.0
+            d_hat = max(float(np.mean(h_field)), 1.0e-12)
+        inv_h_tilde = d_hat / np.maximum(h_field, 1.0e-12)
+        axial_correction = K_AXIAL * float(b_num) * cos_beta * i_ratio * inv_h_tilde
+        buoyancy_shape = 1.0 + az_correction * f_phi_arr + axial_correction
+        return base * buoyancy_shape
+
     def _compute_velocity(
         self,
         lead: Array,
@@ -894,12 +1064,16 @@ class AnnulusD2DGASolver:
 
         采用 Zhang & Frigaard (2022) 的Hele-Shaw风格速度场：
         1. 计算局部混合流体的表观粘度与密度；
-        2. 以 ``b²/μ`` 构造偏心通道主导局部流动度；
-        3. 根据密度差（顶替液 vs 被顶替液）计算浮力稳定系数；
+        2. 以幂律缝隙律 ``(b/b̄)^(1+1/n)/η_mix·I₁`` 构造偏心通道主导局部流动度
+           （Task 5 起封装在 `_mobility_profile`）；
+        3. 根据密度差（顶替液 vs 被顶替液）与浮力数 b 计算浮力修正项
+           （方位式 2.5b/4.24 + 轴向式 4.14/4.22，Task 5 起 b 首次进动力学）；
         4. 用浮力修正项调整宽边/窄边速度分配；
         5. 由截面排量约束得到轴向速度 ``w``。
 
         2026-09-07 精简：flusher 形参删除（相降级，见 _compute_props 注）。
+        Task 5（2026-09-14）：流动度构造抽为 `_mobility_profile` 纯函数；
+        返回签名（12 元组）不变。
 
         Returns:
             w: 井深方向速度（轴向速度）
@@ -950,35 +1124,16 @@ class AnnulusD2DGASolver:
 
         # === 论文D2DGA口径速度场：偏心通道主导 + 浮力修正 ===
         # T1-4: 两层黏度闭包 1/η_mix = c̄³/η₂ + (1−c̄³)/η₁（式 4.23）替换单相 μ_reg
-        # 基础流动度：偏心通道主导 (b/mean(b))^2 / η_mix
+        # 基础流动度：偏心通道主导 (b/mean(b))^(1+1/n) / η_mix
+        #（Task 5 起幂律缝隙律 base 构造移入 _mobility_profile，旧口径分支保留在下方）
         # mu_reg 保留用于 Re 诊断
-        b_mean = np.mean(b, axis=0, keepdims=True)
         c_bar = np.clip(lead + tail, 0.0, 1.0)  # 局部水泥浓度
-        eta_mix = 1.0 / (c_bar**3 / np.maximum(eta2, 1.0e-9)
-                         + (1.0 - c_bar**3) / np.maximum(eta1, 1.0e-9))
         # T1-3b: I₁(c̄,m) 乘子（Zhang 2022 式 4.22，S ∝ 1/(2I₁)）
         # 牛顿极限 m→1 时 I₁=1/3，不改变 base 形状；m≠1 时修正方位分布
         # 2026-09-07 R0 分支删除：m 恒由 _compute_props 自动计算（enable_d2dga_auto_m
         # 恒 True，标量 d2dga_viscosity_ratio 路径为旧论文 R0 状态已移除）。
         m_local = float(np.mean(m_field))
         i1_base = d2dga_dispersion_I1(c_bar, m_local)
-        if self.enable_power_law_gap_law:
-            # 2026-09-06 幂律缝隙律修正：层流偏心环空各通道流量份额
-            # q ∝ b^(2+1/n)·G^(1/n)（Walton & Bittleston 1991 JFM 222:39-60 窄隙
-            #   Bingham/幂律槽流；Pelipenko & Frigaard 2004c JFM 520:343-377；
-            #   Maleki & Frigaard 2017 式60-61 闭式）。
-            # 速度场取缝隙平均速度口径 w = q/b ∝ b^(1+1/n)：
-            #   牛顿 n=1 → w ∝ b²、通量 w·b ∝ b³（Poiseuille，与旧口径逐位一致）；
-            #   剪切变稀 n<1 → 指数 1+1/n > 2，窄边分流比 b³ 更极端（b³ 低估通道化）。
-            # 压降梯度项 G^(1/n) 全截面同值，被归一化分母吸收，不影响方位分配。
-            # 混合物 n 用 _compute_props 的 n_mix 场（体积分数加权，Bingham→n=1）。
-            n_safe = np.clip(n_mix, 0.25, 1.5)
-            gap_exponent = 1.0 + 1.0 / n_safe
-            base = (b / np.maximum(b_mean, 1.0e-12)) ** gap_exponent / np.maximum(eta_mix, 1.0e-9)
-        else:
-            # 旧口径：Hele-Shaw b² 流动度（逐位复现基线）
-            base = (b / np.maximum(b_mean, 1.0e-12)) ** 2 / np.maximum(eta_mix, 1.0e-9)
-        base = base * i1_base  # I₁ 乘子
 
         # === 速度场流动度：偏心通道主导 + 浮力修正 ===
         # density_contrast > 0 表示顶替液更重（水泥重 vs 泥浆轻），有助于窄边推进
@@ -995,19 +1150,46 @@ class AnnulusD2DGASolver:
             # Task 4: F² 按 Z&F22 (2.6) 现算（原先内部硬编码 1.0 → 浮力缺席动力学），
             # 量级 O(10⁻³)（八井 [1.2e-3, 3.1e-2]）；ŵ₀ = q/A、μ̂₁ 取泥浆、d̂ = mean(geom["H"])。
             f2_local = self._froude_squared_at(geom, q_m3s, w_prev, mud_fluid)
-            f_phi_arr, _ = self._buoyancy_force_vector(geom, beta_deg_local, f2_local)
+            # Task 5: 领先阶轴向浮力数 b（Z&F22 p.8）按 summary 同口径现算（`_buoyancy_number_at`），
+            # 经 `_mobility_profile` 接进 (4.14)/(4.22) 动力学——浮力第一次以 b 幅值参与 pref；
+            # b>0（重顶替轻）⇒ 轴向浮力项抬高窄边流动度份额。
+            b_num_local = self._buoyancy_number_at(geom, q_m3s, w_prev, mud_fluid,
+                                                   lead_fluid, tail_fluid)
             rho_displaced = mud_fluid.density_kg_m3 / 1000.0
             delta_rho = (rho - rho_displaced)  # g/cc 局部密度差
-            i2 = d2dga_dispersion_I2(c_bar, m_local)
-            # 式 4.24: 方位修正 = Δρ·f_phi·(I2/I1)；重顶替轻→窄边(f_phi 大) pref 提升
-            correction = np.clip(delta_rho * (i2 / np.maximum(i1_base, 1.0e-12)), -0.5, 0.5)
-            buoyancy_shape = 1.0 + correction * f_phi_arr
+            # Task 5: 流动度构造（幂律缝隙律 base + (4.23) 闭包 + (4.14)/(4.22) 浮力形状）
+            # 抽为纯函数，便于单测；返回未饱和乘积 base·buoyancy_shape。
+            mobility = self._mobility_profile(
+                c_bar, b_num_local, geom, i1_base, m_local, beta_deg_local, f2_local,
+                eta1=eta1, eta2=eta2, n_mix=n_mix, delta_rho=delta_rho,
+            )
         else:
-            # R0/R1/R2: 保留 buoyancy_shape 代理（旧论文状态）
+            # R0/R1/R2: 保留 buoyancy_shape 代理（旧论文状态）；base 构造保持原样
+            b_mean = np.mean(b, axis=0, keepdims=True)
+            eta_mix = 1.0 / (c_bar**3 / np.maximum(eta2, 1.0e-9)
+                             + (1.0 - c_bar**3) / np.maximum(eta1, 1.0e-9))
+            if self.enable_power_law_gap_law:
+                # 2026-09-06 幂律缝隙律修正：层流偏心环空各通道流量份额
+                # q ∝ b^(2+1/n)·G^(1/n)（Walton & Bittleston 1991 JFM 222:39-60 窄隙
+                #   Bingham/幂律槽流；Pelipenko & Frigaard 2004c JFM 520:343-377；
+                #   Maleki & Frigaard 2017 式60-61 闭式）。
+                # 速度场取缝隙平均速度口径 w = q/b ∝ b^(1+1/n)：
+                #   牛顿 n=1 → w ∝ b²、通量 w·b ∝ b³（Poiseuille，与旧口径逐位一致）；
+                #   剪切变稀 n<1 → 指数 1+1/n > 2，窄边分流比 b³ 更极端（b³ 低估通道化）。
+                # 压降梯度项 G^(1/n) 全截面同值，被归一化分母吸收，不影响方位分配。
+                # 混合物 n 用 _compute_props 的 n_mix 场（体积分数加权，Bingham→n=1）。
+                n_safe = np.clip(n_mix, 0.25, 1.5)
+                gap_exponent = 1.0 + 1.0 / n_safe
+                base = (b / np.maximum(b_mean, 1.0e-12)) ** gap_exponent / np.maximum(eta_mix, 1.0e-9)
+            else:
+                # 旧口径：Hele-Shaw b² 流动度（逐位复现基线）
+                base = (b / np.maximum(b_mean, 1.0e-12)) ** 2 / np.maximum(eta_mix, 1.0e-9)
+            base = base * i1_base  # I₁ 乘子
             density_contrast = (rho_disp - mud_fluid.density_kg_m3) / mud_fluid.density_kg_m3
             stable = float(np.clip(8.0 * density_contrast, -0.35, 0.45))
             buoyancy_shape = 1.0 + stable * ebar * (2.0 * phi - 1.0)
-        pref = np.maximum(base * buoyancy_shape, 1.0e-8)
+            mobility = base * buoyancy_shape
+        pref = np.maximum(mobility, 1.0e-8)
         # T1-5: wall=1 处壁面静止层，流动度归零（式 2.35-2.41）
         if wall is not None:
             pref = pref * (1.0 - wall)
@@ -1017,11 +1199,11 @@ class AnnulusD2DGASolver:
         dy = np.gradient(geom["y"])[:, None]
         if self.enable_regime_split:
             # M2: 局部流态修正固定点迭代（Maleki & Frigaard 2017 式58-66）
-            # 浓度相关量（base/buoyancy_shape/wall/黏度/密度/b）在迭代外缓存；
+            # 浓度相关量（mobility=base·buoyancy_shape/wall/黏度/密度/b）在迭代外缓存；
             # 黏度场保持 w_prev 一步滞后（既有约定），迭代只重算 Re_p/R/pref/area_weight/w。
             # rho_kg_m3 与 kappa_mix(Pa·s^n)/tau_y(Pa) 同单位系，保证 Re_p/He 无量纲正确。
             from cemdisp.models2d import regime_closure as rc
-            wall_factor = np.ones_like(base) if wall is None else (1.0 - wall)
+            wall_factor = np.ones_like(mobility) if wall is None else (1.0 - wall)
             he = rc.hedstrom_number(tau_y, rho_kg_m3, n_mix, kappa_mix, b)
             # ⚠️ 未标定（临时公式）：re_crit = 2100(1+0.1·He) 为 provisional 标定钮（屈服推迟转捩）。
             # 启用 enable_regime_split 前须三重回归锚定（Walton&Bittleston / Z22 Table3 / Foolad 定性）。
@@ -1032,7 +1214,8 @@ class AnnulusD2DGASolver:
             for _ in range(self.regime_max_iter):
                 re_p = rc.metzner_reed_re(w_k, rho_kg_m3, n_mix, kappa_mix, b)
                 R_new, _ = rc.drag_weight(re_p, he, n_mix, re_crit, self.regime_re_turb_ratio)
-                pref_k = np.maximum(base * buoyancy_shape * R_new, 1.0e-8) * wall_factor
+                # Task 5: base·buoyancy_shape 由 _mobility_profile 的返回值 mobility 承载
+                pref_k = np.maximum(mobility * R_new, 1.0e-8) * wall_factor
                 area_w = np.sum(pref_k * b * dy, axis=0, keepdims=True)
                 w_raw = q_half * pref_k / np.maximum(area_w, 1.0e-12)
                 w_new = self.regime_relax_alpha * w_raw + (1.0 - self.regime_relax_alpha) * w_k
@@ -1046,7 +1229,7 @@ class AnnulusD2DGASolver:
             # 欠松弛只是求解 R 的迭代手段；报告的 w 必须是以最终 R 直接归一的结果，
             # 使全环空通量 2·Σw·b·dy = 2·q_half = Q 精确成立（2026-09-02 守恒修正口径）。
             # 消除欠松弛迭代返回 w_k 时 ~1.6% 的瞬态守恒误差。
-            pref_final = np.maximum(base * buoyancy_shape * R, 1.0e-8) * wall_factor
+            pref_final = np.maximum(mobility * R, 1.0e-8) * wall_factor
             area_final = np.sum(pref_final * b * dy, axis=0, keepdims=True)
             w = q_half * pref_final / np.maximum(area_final, 1.0e-12)
             # area_weight 与最终 w 构成一致配对（同一 area_final）
@@ -1512,33 +1695,10 @@ class AnnulusD2DGASolver:
         #   ② 幂律/HB 泥浆被 `plastic_viscosity_pa_s or 0.05` 静默回退到 0.05 Pa·s
         #      → 改用 fluid_apparent_viscosity（K·γ̇^(n−1)，缺参数抛错不回退）。
         #   ③ w₀ 旧取"最后一步"速度场均值 → 改为截面平均速度 q/A（末态泵注排量/环形截面积）。
-        rho_displacing = buoyancy.displacing_density_kg_m3(lead_fluid, tail_fluid, mud_fluid)
-        # 泥浆表观黏度的剪切率约定与 _compute_props 一致：γ̇ = 6|w|/b
-        shear_rate_mud = (
-            6.0 * float(np.mean(np.abs(w_prev))) / max(float(np.mean(geom["b"])), 1e-12)
-        )
-        mu_displaced = buoyancy.fluid_apparent_viscosity(mud_fluid, shear_rate_mud)
-        # 几何半间隙 d̂ = (r_o−r_i)/2 = (hole−od)/4，直接取模型自己的半间隙场
-        # geom["H"]（`_build_geom` 中 H=2b 一半，与输运用的 geom["b"]=2d̂ 严格自洽：
-        # b=2H 逐格成立，故 mean(b)/2 ≡ mean(H)）。用 hole/od 手推 (hole−od)/4 亦可，
-        # 但会引入 ≤2% 的体积 scale 残差差异，故以 geom["H"] 为准。
-        half_gap_m = float(np.mean(geom["H"]))
-        # 截面平均轴向速度 w₀ = q/A（环形截面积由 hole/od 算）
-        annulus_area_m2 = float(
-            np.mean(np.pi / 4.0 * ((geom["hole_mm"] / 1000.0) ** 2
-                                   - (geom["od_mm"] / 1000.0) ** 2))
-        )
-        if last_pump_rate_m3s > 0.0 and annulus_area_m2 > 0.0:
-            w0_mps = last_pump_rate_m3s / annulus_area_m2
-        else:
-            # 退让口径：全程无泵注排量记录（异常输入）时回落到末步速度场均值
-            w0_mps = float(np.mean(np.abs(w_prev)))
-        b_number = buoyancy.buoyancy_number(
-            rho_displacing=rho_displacing,
-            rho_displaced=mud_fluid.density_kg_m3,
-            half_gap_m=half_gap_m,
-            mu_displaced=mu_displaced,
-            w0_mps=w0_mps,
+        # Task 5: 口径实现下沉到 `_buoyancy_number_at`（动力学逐时间步与 summary 共用，
+        # 保证 b 的两处口径逐位一致）；半间隙 d̂ = mean(geom["H"])（R20 口径，b=2H 自洽）。
+        b_number = self._buoyancy_number_at(
+            geom, last_pump_rate_m3s, w_prev, mud_fluid, lead_fluid, tail_fluid,
         )
 
         summary: Dict[str, object] = {
