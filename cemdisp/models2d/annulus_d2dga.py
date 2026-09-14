@@ -46,11 +46,11 @@ if TYPE_CHECKING:  # 仅类型注解，运行时不引入 data.pumping_schedule 
 
 Array = NDArray[np.float64]
 
-# Task 5 (R2/R27，provisional)：轴向浮力修正的幅值系数 K_AXIAL = 1/𝒢。
+# Task 5 (R2/R27/R28，provisional)：轴向浮力修正的幅值系数 K_AXIAL = 1/𝒢。
 # 𝒢 为 (4.6) 无量纲修正压力梯度的参考量级：把 ∂p/∂ξ 用 τ̂₀/d̂ = μ̂₁ŵ₀/d̂² 无量纲化后，
 # 牛顿参考缝隙流（半间隙 d̂、平均速度 ŵ₀ 标度）w̄ = Ĝd̂²/(3μ̂₁) 给出 𝒢 = Ĝd̂²/(μ̂₁ŵ₀) = 3。
-# 即 (4.14)/(4.22) 分层浮力项相对压力驱动项的相对修正 = b_num·cosβ·(I₂/I₁)/(𝒢·H̃)。
-# 完整推导与 1/H̃ 读数说明见 `_mobility_profile` docstring；最终取值由 R27 八井扫描
+# 即 (4.14)/(4.22) 分层浮力项相对压力驱动项的相对修正 = b_num·cosβ·(I₂/I₁)/𝒢（H⁰ 读数，R28）。
+# 完整推导与 H⁰ 裁定的三重证据链见 `_mobility_profile` docstring；最终取值由 R27 八井扫描
 # 与 Task 12 基准算例裁定，**不得用 clip 兜底**。
 K_AXIAL = 1.0 / 3.0
 
@@ -973,8 +973,7 @@ class AnnulusD2DGASolver:
 
           以压力驱动项 ``I₁·𝒢`` 为基准的相对修正（𝒢 = 无量纲修正压力梯度）：
 
-            correction(φ) = K_AXIAL·b_num·cosβ·(I₂/I₁)/H̃(φ)，
-            H̃(φ) = H(φ)/d̂。
+            correction(φ) = K_AXIAL·b_num·cosβ·(I₂/I₁)(c̄,m)　—— **H⁰ 形状（R28 裁定）**。
 
           **K_AXIAL 的量纲推导（R2，provisional）**：pref 与 correction 同为
           无量纲场，量纲只约束到"K_AXIAL 无量纲"；其数值由压力驱动基准给出——
@@ -984,18 +983,31 @@ class AnnulusD2DGASolver:
           局部黏度比使 𝒢 在水泥富集通道自动增大、修正自我衰减；剩余不确定性
           O(1) 由 R27 八井扫描（shape>0）与 Task 12 基准算例裁定，**禁止 clip**。
 
-          **1/H̃ 读数说明**：I₂/I₁ 采用 H³/H⁴ 归一化闭式（`d2dga_dispersion_I1/I2`），
-          (4.22) 分组 I₂/(H·I₁) 中的局部半间隙 H(φ) 因此以 H̃ = H/d̂ 显式保留。
-          若用全量纲 I₁∝H³、I₂∝H⁴ 直接计算，H 恰好消去、修正只随 c̄ 变化（牛顿
-          情形）；本文取 1/H̃ 读数，因它保留了 (4.14) 逐通道 H 分母的窄边放大，
-          与论文 §5 大 b>0 界面展平（case 4 对比 case 7）的定性结果一致。
+          **H⁰ 读数（controller 裁定 R28，2026-09-14 fix round 1；documented
+          deviation）**：计划 brief 字面 ``I₂·(Δρ/(H·r_a))`` 中的 1/H 判为文本滞后于
+          文献分组——首版实现曾按字面乘 ``1/H̃ = d̂/H(φ)``（窄边放大），审查发现三重
+          矛盾后裁定删除：
+
+          1. **量纲闭合**：两个闭式 ``d2dga_dispersion_I1/I2(c̄, m)`` 只吃 (c̄, m)、
+             不含几何，是 H³/H⁴ 归一化形状；论文 (4.22) 分组 ``I₂/(H·I₁)`` 用全量纲
+             闭式（I₁∝H³、I₂∝H⁴）求值时 H⁴/H³ 恰与字面 1/H 相消 ⇒ **H⁰**——修正
+             只随 c̄（界面位置）变化，与 H(φ) 无关。
+          2. **兄弟项一致**：同一函数、同一 (4.14) 通量结构的方位项（式 2.5b/4.24，
+             Task 4 已验收形态）不乘任何 H 因子；轴向项独加 1/H̃ 构成兄弟项间不一致。
+          3. **通量归一化**：乘性结构下 base 的 (b/b̄)^(1+1/n) 已把浮力速度恢复到
+             论文的 H² 标度；且 ``w = q·pref/Σ(pref·b·dy)`` 使 pref 绝对量级消去、
+             只有 φ/z 形状起作用——1/H̃ 是纯形状失真（窄边响应被 d̂/H(φ) 虚假放大，
+             并经 H(z) 剖面污染 z 向再分配）。
+
+          方向不受影响（b>0 重顶替轻 ⇒ 正，窄边流动度份额仍被抬高——经 c̄(φ) 与
+          通量重分配；只是幅值不再被 1/H̃ 虚假放大）。
 
         ``b_num=0`` 时轴向项恒为 0，输出与不含浮力项的基础流动度逐位一致（重构锚）。
 
         Args:
             c_bar: 局部水泥浓度场 c̄ = clip(lead+tail, 0, 1)，(ny, nz)。
             b_num: 无量纲浮力数 b（Z&F22 p.8，`_buoyancy_number_at` 同口径现算）。
-            geom: 几何字典（用 ``b``/``H``；b=2H 逐格）。
+            geom: 几何字典（用 ``b``/``effective_b``；H⁰ 读数下轴向项不用 H，R28）。
             i1_base: I₁(c̄,m) 闭式场（Z&F22 (4.21a) 的 H³ 归一化形状）。
             m_local: 黏度比 m = μ_displaced/μ_displacing（标量，R1 auto-m 口径）。
             beta_deg: 井斜角 β（度）；轴向投影 cosβ 来自 (4.13) 的 f_φ = r_a·cosβ/F²。
@@ -1033,16 +1045,9 @@ class AnnulusD2DGASolver:
         f_phi_arr, _ = self._buoyancy_force_vector(geom, beta_deg, f2)
         az_correction = np.clip(delta_rho * i_ratio, -0.5, 0.5)
         # 轴向项（Task 5 新增，式 (4.14) 第二项/(4.22) 分层部分）：
-        # correction = K_AXIAL·b_num·cosβ·(I₂/I₁)/H̃，H̃ = H/d̂（d̂ = mean(geom["H"])）
-        if "H" in geom:
-            h_field = geom["H"]
-            d_hat = max(float(np.mean(h_field)), 1.0e-12)
-        else:
-            # 退化口径（合成几何）：b = 2H 逐格 ⇒ H = b/2
-            h_field = geom["b"] / 2.0
-            d_hat = max(float(np.mean(h_field)), 1.0e-12)
-        inv_h_tilde = d_hat / np.maximum(h_field, 1.0e-12)
-        axial_correction = K_AXIAL * float(b_num) * cos_beta * i_ratio * inv_h_tilde
+        # correction = K_AXIAL·b_num·cosβ·(I₂/I₁)——H⁰ 形状（R28 裁定：闭式 H⁴/H³
+        # 与字面 1/H 相消；首版的 1/H̃ = d̂/H 因子已删，见 docstring 三重证据链）。
+        axial_correction = K_AXIAL * float(b_num) * cos_beta * i_ratio
         buoyancy_shape = 1.0 + az_correction * f_phi_arr + axial_correction
         return base * buoyancy_shape
 
