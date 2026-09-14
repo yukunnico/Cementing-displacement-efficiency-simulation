@@ -1428,8 +1428,11 @@ class AnnulusD2DGASolver:
             6.0 * float(np.mean(np.abs(w_prev))) / max(float(np.mean(geom["b"])), 1e-12)
         )
         mu_displaced = buoyancy.fluid_apparent_viscosity(mud_fluid, shear_rate_mud)
-        # 几何半间隙 d̂：直接用井径/外径（mm→m），不经体积 scale 校正的 geom["b"]
-        half_gap_m = 0.5 * float(np.mean((geom["hole_mm"] - geom["od_mm"]) / 1000.0))
+        # 几何半间隙 d̂ = (r_o−r_i)/2 = (hole−od)/4，直接取模型自己的半间隙场
+        # geom["H"]（`_build_geom` 中 H=2b 一半，与输运用的 geom["b"]=2d̂ 严格自洽：
+        # b=2H 逐格成立，故 mean(b)/2 ≡ mean(H)）。用 hole/od 手推 (hole−od)/4 亦可，
+        # 但会引入 ≤2% 的体积 scale 残差差异，故以 geom["H"] 为准。
+        half_gap_m = float(np.mean(geom["H"]))
         # 截面平均轴向速度 w₀ = q/A（环形截面积由 hole/od 算）
         annulus_area_m2 = float(
             np.mean(np.pi / 4.0 * ((geom["hole_mm"] / 1000.0) ** 2
