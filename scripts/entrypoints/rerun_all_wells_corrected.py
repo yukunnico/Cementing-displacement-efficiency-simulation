@@ -3,9 +3,11 @@
 本脚本是论文/正式 8 井数字的官方入口（A2 裁定口径 (b)）：各 runner 保持默认基线口径，
 正式数字一律以本脚本 corrected 配置为准。
 
-corrected 配置：M1弥散dt归一 + M3屈服门槛 + I3局部化 + M4 e=0.90；M2流态修正统一开启
-（层流元 R=1 不改变结果，对高Re/低黏井才生效）。输出 results/全井修正前后/汇总.csv，
-并同步导出 adopted_config.json（solver 开关快照 + git_commit + data_state 数据状态 + 生成时间）。
+corrected 配置：M3屈服门槛 + I3局部化 + M2流态修正统一开启（层流元 R=1 不改变结果，
+对高Re/低黏井才生效）。M1 弥散 dt 归一 / M4 e=0.90 两项已随 Task 7 / Task 10 弃用
+（对应形参 2026-09-15 Task 13 从 CORRECTED_KW 删除，零数值影响）。输出
+results/全井修正前后/汇总.csv，并同步导出 adopted_config.json（solver 开关快照 +
+git_commit + data_state 数据状态 + 生成时间）。
 nz=250+M2迭代，单井约3-10分钟。
 
 Task A1/A3（2026-08-29）扩展：新增命令行参数，默认行为不变——
@@ -30,12 +32,14 @@ OUT = PROJECT_ROOT / "results" / "全井修正前后"
 NZ = 250
 
 # corrected（adopted）口径唯一来源：run_one 与 adopted_config.json 快照共用，防止漂移。
+# ⚠️ 2026-09-15 Task 13 死参清理：原 e_clip_max=0.90（Task 10 弃用，e_clip 截断已移除）、
+# dispersion_dt_scale=1.0（Task 7 弃用，自创弥散已删除）两形参删除——传值仅触发
+# DeprecationWarning 且不再生效；删除零数值影响（hu101 nz=60 前后 η_E/η_N 逐位一致，
+# .tmp_research/task13_probe/zero_impact_check.py）。
 CORRECTED_KW = dict(
-    dispersion_dt_scale=1.0,   # M1: 弥散 dt 归一（不再随 dt 缩放）
     enable_yield_gate=True,    # M3: 屈服门槛
     enable_regime_split=True,  # M2: 局部流态修正（层流元 R=1，中性）
     enable_local_i3=True,      # I3: 浮力弥散通量局部化
-    e_clip_max=0.90,           # M4: 效率截断上限 0.55 -> 0.90
 )
 
 WELLS = [

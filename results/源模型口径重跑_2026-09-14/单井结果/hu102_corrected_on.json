@@ -1,0 +1,13 @@
+{
+  "well": "hu102",
+  "corrected": true,
+  "cfl_mode": "on",
+  "eta_E": 0.9852780614926238,
+  "eta_N": 0.8860267038476698,
+  "mixing": 0.03613238889823037,
+  "channeling": 0.2570281124495173,
+  "instability": 0.6506441066662383,
+  "cement_occ": 0.9852780614926238,
+  "wall_frac": 0.0,
+  "elapsed_s": 409.4
+}

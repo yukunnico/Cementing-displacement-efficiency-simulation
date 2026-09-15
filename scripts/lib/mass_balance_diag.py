@@ -145,18 +145,23 @@ def run_variant(name, loader, nz, **solver_kw):
 def stage2(well_names, nz):
     all_res = {}
     # 消融配置：逐项关闭可疑通道
+    # ⚠️ 2026-09-15 Task 13 死参清理：e_clip_max 传参已删（Task 10 弃用，e_clip 硬截断
+    # 移除后传值不生效），dispersion_* 同理（Task 7 弃用）——"近同心e0.05"与
+    # "生产口径e0.90"两变体因此与 BASE基线 等效（仅保留键名供历史 JSON 结构对比）。
+    # c_min 形参已于 2026-09-07（B2）从 solver 删除："无壁面冻结"改用活参数
+    # enable_yield_gate=False 表达同一意图（wall 恒零，见 solver __init__ docstring）。
     variants = {
         "BASE基线": dict(),
-        "无壁面冻结": dict(c_min=0.0),
-        "近同心e0.05": dict(e_clip_max=0.05),
-        "无弥散": dict(dispersion_axial=0.0, dispersion_azimuthal=0.0),
+        "无壁面冻结": dict(enable_yield_gate=False),
+        "近同心e0.05": dict(),
+        "无弥散": dict(),
         "无I3浮力通量": dict(enable_d2dga_i3_flux=False),
         "无D2DGA放大": dict(enable_d2dga=False, enable_true_buoyancy=False),
         "理想活塞_同心无壁无弥散无I3无放大": dict(
-            e_clip_max=0.05, c_min=0.0, dispersion_axial=0.0,
-            dispersion_azimuthal=0.0, enable_d2dga_i3_flux=False,
+            enable_yield_gate=False,
+            enable_d2dga_i3_flux=False,
             enable_d2dga=False, enable_true_buoyancy=False),
-        "生产口径e0.90": dict(e_clip_max=0.90),
+        "生产口径e0.90": dict(),
     }
     for wname in well_names:
         loader = WELLS[wname]

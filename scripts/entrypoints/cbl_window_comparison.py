@@ -24,7 +24,11 @@ CBL 合格率为评价段胶结等级统计，二者存在三重结构性错配�
   python scripts/entrypoints/cbl_window_comparison.py --well hu101            # 单井：重跑窗口指标+出表
   python scripts/entrypoints/cbl_window_comparison.py --all                   # 8 井全跑（默认目标）
   python scripts/entrypoints/cbl_window_comparison.py --tables-only           # 只用已落盘窗口指标重出对照表
-  python scripts/entrypoints/cbl_window_comparison.py --well hu101 --force    # 强制重算该井窗口指标
+  python scripts/entrypoints/cbl_window_comparison.py --well hu101 --force    # 强制重算窗口指标
+  python scripts/entrypoints/cbl_window_comparison.py --results <目录> --all  # 输出到指定重跑目录（Task 13）
+      #（--results 指向 rerun_all_wells_corrected --out-dir 的同一目录：
+      #  窗口指标写 <目录>/单井结果/<well>_windows.json（与 8 井重跑落盘同层），
+      #  matches 校验自动比对同目录 <well>_corrected_on.json）
 
 输出：
   results/最终基线_2026-08-29/cfl_on/单井结果/<well>_windows.json   # 窗口指标（断点续跑）
@@ -65,6 +69,26 @@ COMP_DIR = BASELINE_DIR / "CBL窗口对照"
 FIELD_DIR = _PROJECT_ROOT / "参考文档" / "现场资料提取"
 TOTAL_CSV = BASELINE_DIR / "CBL窗口对照总表.csv"
 
+
+def set_result_dirs(results: "Path | None") -> None:
+    """Task 13：把窗口指标/对照表输出重定向到指定重跑目录（--results）。
+
+    results 目录结构 = rerun_all_wells_corrected --out-dir 的结构：
+      <results>/单井结果/<well>_corrected_on.json   （8 井重跑已落盘）
+      <results>/单井结果/<well>_windows.json        （本脚本窗口指标）
+      <results>/CBL窗口对照/<well>_窗口对照.csv
+      <results>/CBL窗口对照总表.csv
+    None（默认）保持 最终基线_2026-08-29 既有行为不变。
+    """
+    if results is None:
+        return
+    global BASELINE_DIR, CFL_ON_DIR, RESULTS_DIR, COMP_DIR, TOTAL_CSV
+    BASELINE_DIR = results
+    CFL_ON_DIR = results
+    RESULTS_DIR = results / "单井结果"
+    COMP_DIR = results / "CBL窗口对照"
+    TOTAL_CSV = results / "CBL窗口对照总表.csv"
+
 WELL_NAME_CN = {
     "hu101": "呼101", "hu102": "呼102", "hu103": "呼103", "hu1": "呼探1",
     "hu2": "呼探1-002", "ht1_001": "呼探1-001", "ht1_003": "呼1-003", "ht1_004": "呼1-004",
@@ -85,7 +109,9 @@ def run_well_windows(well_id: str) -> dict:
     cr = CasingFlowSolver(enable_gravity=True).run(well, fluids, schedule)
     inlet = build_coupled_annulus_inlet_provider(
         cr, CasingFlowSolver(enable_gravity=True), fluids, split_cement_phases=True)
-    tt = min(_total_t(schedule) + 1200.0, _stop_t(cr, fluids) + 600.0)
+    # Task 13 口径对齐：与 rerun_all_wells_corrected.run_one 同款停止时刻（F2 修复已裁定去掉
+    # +600s 尾窗，实测尾窗压低 η_E −1.9~−7.1pp；窗口脚本此前未同步）。
+    tt = min(_total_t(schedule) + 1200.0, _stop_t(cr, fluids))
     res = AnnulusD2DGASolver(
         total_t=tt, nz=NZ, enable_cfl_adaptive=True, **CORRECTED_KW
     ).run(well, fluids, inlet)
@@ -352,7 +378,13 @@ def main() -> None:
     ap.add_argument("--tables-only", action="store_true",
                     help="只用已落盘 <well>_windows.json 重出对照表（不重跑）")
     ap.add_argument("--force", action="store_true", help="强制重算窗口指标")
+    ap.add_argument("--results", type=Path, default=None,
+                    help="窗口指标/对照表输出目录（Task 13：指向 8 井重跑 out-dir，"
+                         "默认仍为 最终基线_2026-08-29）")
     args = ap.parse_args()
+    if args.results is not None:
+        set_result_dirs(args.results if args.results.is_absolute()
+                        else _PROJECT_ROOT / args.results)
 
     wells = [args.well] if args.well else ([w for w, _ in WELLS] if args.all or args.tables_only
                                            else None)

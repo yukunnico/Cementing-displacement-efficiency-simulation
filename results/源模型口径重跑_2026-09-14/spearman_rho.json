@@ -1,0 +1,10 @@
+{
+  "n": 5,
+  "rho_window_eta_E": -0.5,
+  "p_window_eta_E": 0.391,
+  "rho_window_eta_N": -0.3,
+  "p_window_eta_N": 0.624,
+  "rho_full_eta_E": -0.3,
+  "p_full_eta_E": 0.624,
+  "口径说明": "窗口口径=与 CBL 靶值段完全重合的可比行（CBL窗口对照总表.csv）；呼103 靶值取 brief 钉定的 139.7mm 段 12.06%（168.3mm 段 0.04% 口径见总表）"
+}

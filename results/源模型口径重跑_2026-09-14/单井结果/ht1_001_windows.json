@@ -1,0 +1,73 @@
+{
+  "well": "ht1_001",
+  "well_name_cn": "呼探1-001",
+  "eta_E": 0.9472202951518585,
+  "eta_N": 0.9339682245569021,
+  "model_domain_md": [
+    5469.711,
+    7746.0
+  ],
+  "windows": {
+    "CBL对比窗(模型假设,现场无CBL定量)": {
+      "window_type": "model_focus",
+      "eta_E": 0.9472202951518585,
+      "eta_N": 0.933968224556902,
+      "top_md_m": 5469.711,
+      "bottom_md_m": 7746.0
+    },
+    "K1q差气层1(录井显示)": {
+      "window_type": "formation_target",
+      "eta_E": 0.0,
+      "eta_N": 0.9999999999999999,
+      "top_md_m": 7409.0,
+      "bottom_md_m": 7423.0
+    },
+    "K1q油气同层(录井显示)": {
+      "window_type": "formation_target",
+      "eta_E": 0.9999999999999999,
+      "eta_N": 1.0,
+      "top_md_m": 7504.0,
+      "bottom_md_m": 7566.0
+    },
+    "J3k3气层(录井显示)": {
+      "window_type": "formation_target",
+      "eta_E": 0.9999999999999997,
+      "eta_N": 1.0,
+      "top_md_m": 7642.0,
+      "bottom_md_m": 7661.0
+    },
+    "K1s水层1(录井解释)": {
+      "window_type": "formation_target",
+      "eta_E": 0.0,
+      "eta_N": 0.9904700729042306,
+      "top_md_m": 6060.0,
+      "bottom_md_m": 6064.0
+    },
+    "K1q+J3k2主要目的层": {
+      "window_type": "formation_target",
+      "eta_E": 0.9987829778411892,
+      "eta_N": 0.9988198290985233,
+      "top_md_m": 6828.0,
+      "bottom_md_m": 7746.0
+    },
+    "模型关注窗(替浆/掺混分析)": {
+      "window_type": "model_focus",
+      "eta_E": 0.9999999999999999,
+      "eta_N": 1.0,
+      "top_md_m": 7400.0,
+      "bottom_md_m": 7500.0
+    }
+  },
+  "matches_baseline": true,
+  "baseline_eta_E": 0.9472202951518585,
+  "config": {
+    "corrected": true,
+    "cfl_mode": "on",
+    "nz": 250,
+    "enable_yield_gate": true,
+    "enable_regime_split": true,
+    "enable_local_i3": true
+  },
+  "git_commit": "98ab924535f7cc44007f1a4ef61b16e37d385b25",
+  "elapsed_s": 91.4
+}

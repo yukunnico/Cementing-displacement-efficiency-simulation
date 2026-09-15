@@ -1,0 +1,31 @@
+{
+  "说明": "论文/正式 8 井数字采用口径（corrected 配置）快照，由 scripts/entrypoints/rerun_all_wells_corrected.py 自动生成",
+  "generated_at_utc": "2026-09-15T04:56:04Z",
+  "git_commit": "98ab924535f7cc44007f1a4ef61b16e37d385b25",
+  "data_state": {
+    "git_commit": "98ab924535f7cc44007f1a4ef61b16e37d385b25",
+    "说明": "重跑消费的工作区数据状态：以下 loader/现场资料改动存在于工作区但未必已提交，复现数字需同时核对 commit 与这些未提交改动（hash 为 git hash-object 内容指纹）",
+    "uncommitted_or_modified": [],
+    "modified_file_hashes": {}
+  },
+  "grid": {
+    "nz": 250,
+    "ny": 40
+  },
+  "cfl": {
+    "mode": "on",
+    "enable_cfl_adaptive": true,
+    "cfl_number": 0.5,
+    "dt_fixed_s": null
+  },
+  "solver": {
+    "enable_yield_gate": true,
+    "enable_regime_split": true,
+    "enable_local_i3": true,
+    "enable_cfl_adaptive_default": true
+  },
+  "boundary": {
+    "split_cement_phases": true,
+    "casing_enable_gravity": true
+  }
+}
