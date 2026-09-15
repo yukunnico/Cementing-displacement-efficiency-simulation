@@ -31,9 +31,15 @@ CBL 合格率为评价段胶结等级统计，二者存在三重结构性错配�
       #  matches 校验自动比对同目录 <well>_corrected_on.json）
 
 输出：
-  results/最终基线_2026-08-29/cfl_on/单井结果/<well>_windows.json   # 窗口指标（断点续跑）
-  results/最终基线_2026-08-29/CBL窗口对照/<well>_窗口对照.csv        # 每井窗口对照表
-  results/最终基线_2026-08-29/CBL窗口对照总表.csv                    # 8 井汇总
+  默认（无 --results）：写 results/最终基线_2026-08-29/（旧口径数字所在目录），
+    窗口重算 tt 保留 legacy +600s 尾窗（与该目录既有数字同口径，I-3 门控）；
+  --results <目录>：写 <目录>/单井结果/<well>_windows.json（与 rerun_all_wells_corrected
+    落盘同层）、<目录>/CBL窗口对照/<well>_窗口对照.csv、<目录>/CBL窗口对照总表.csv，
+    窗口重算 tt 用新口径（无尾窗，与 run_one 一致），matches 校验比对同目录
+    <well>_corrected_on.json。
+  窗口指标: <输出>/…/单井结果/<well>_windows.json   # 断点续跑
+  每井对照表: <输出>/CBL窗口对照/<well>_窗口对照.csv
+  8 井汇总:   <输出>/CBL窗口对照总表.csv
 """
 from __future__ import annotations
 
@@ -70,6 +76,13 @@ FIELD_DIR = _PROJECT_ROOT / "参考文档" / "现场资料提取"
 TOTAL_CSV = BASELINE_DIR / "CBL窗口对照总表.csv"
 
 
+# Task 13 Fix round 1（I-3）：窗口重算的停止时刻口径跟随输出目录——
+# 默认路径（最终基线_2026-08-29）保留旧 tt（+600s 尾窗，与该目录既有数字同口径，
+# matches 校验才有意义）；显式 --results（重跑目录）用新 tt（与 run_one F2 口径一致）。
+# 防止以冻结命名目录之名写入新口径数字（口径分裂防护）。
+_USE_LEGACY_TAIL_WINDOW = True
+
+
 def set_result_dirs(results: "Path | None") -> None:
     """Task 13：把窗口指标/对照表输出重定向到指定重跑目录（--results）。
 
@@ -83,6 +96,8 @@ def set_result_dirs(results: "Path | None") -> None:
     if results is None:
         return
     global BASELINE_DIR, CFL_ON_DIR, RESULTS_DIR, COMP_DIR, TOTAL_CSV
+    global _USE_LEGACY_TAIL_WINDOW
+    _USE_LEGACY_TAIL_WINDOW = False  # --results：新重跑目录用新 tt（与 run_one 一致）
     BASELINE_DIR = results
     CFL_ON_DIR = results
     RESULTS_DIR = results / "单井结果"
@@ -109,9 +124,14 @@ def run_well_windows(well_id: str) -> dict:
     cr = CasingFlowSolver(enable_gravity=True).run(well, fluids, schedule)
     inlet = build_coupled_annulus_inlet_provider(
         cr, CasingFlowSolver(enable_gravity=True), fluids, split_cement_phases=True)
-    # Task 13 口径对齐：与 rerun_all_wells_corrected.run_one 同款停止时刻（F2 修复已裁定去掉
-    # +600s 尾窗，实测尾窗压低 η_E −1.9~−7.1pp；窗口脚本此前未同步）。
-    tt = min(_total_t(schedule) + 1200.0, _stop_t(cr, fluids))
+    # 停止时刻口径跟随输出目录（I-3 门控）：--results（重跑目录）与
+    # rerun_all_wells_corrected.run_one 同款（F2 修复已裁定去掉 +600s 尾窗，实测尾窗
+    # 压低 η_E −1.9~−7.1pp；窗口脚本此前未同步）；默认路径保留 legacy +600s 尾窗
+    # （与 最终基线_2026-08-29 既有数字同口径）。
+    if _USE_LEGACY_TAIL_WINDOW:
+        tt = min(_total_t(schedule) + 1200.0, _stop_t(cr, fluids) + 600.0)
+    else:
+        tt = min(_total_t(schedule) + 1200.0, _stop_t(cr, fluids))
     res = AnnulusD2DGASolver(
         total_t=tt, nz=NZ, enable_cfl_adaptive=True, **CORRECTED_KW
     ).run(well, fluids, inlet)
