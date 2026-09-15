@@ -49,7 +49,7 @@ from cemdisp.models2d.stream_function import (
     solve_stream_function,
     velocity_from_stream_function,
 )
-from cemdisp.models2d.two_layer import mobility_i1, mobility_i2
+from cemdisp.models2d.two_layer import isotropic_flux_q0, mobility_i1, mobility_i2
 
 if TYPE_CHECKING:  # 仅类型注解，运行时不引入 data.pumping_schedule 依赖
     from cemdisp.data.pumping_schedule import PumpingSchedule
@@ -283,6 +283,7 @@ class AnnulusD2DGASolver:
         e_clip_measured_max: float = 0.90,
         enable_power_law_gap_law: bool = True,
         enable_stream_function: bool = True,
+        enable_q0_flux: bool = True,
     ) -> None:
         """初始化环空二维求解器参数。
 
@@ -354,6 +355,12 @@ class AnnulusD2DGASolver:
                 ``w·f_amp`` 速度乘子（B1 缺陷，f_amp 是 (4.28) 通量函数不是速度）；
                 False: 旧代数流动度路径（`_mobility_profile`/代理 + 截面归一），
                 逐位复现 76a91c1 行为（R7 冻结锚护栏，可回退）。
+            enable_q0_flux: q₀ 修正通量步开关（R32 迭代 1，2026-09-15），默认 True。
+                True: 在半拉格朗日平流（线性部分 U·c̄）之上，以守恒 donor-cell
+                通量补 (4.25) 第一项的非线性部分 U·(q₀(c̄,m)−c̄)——q₀'(0)=1.5 的
+                前缘稀疏波（Z&F22 (4.25)/(4.27)/(4.28)，Yang & Yortsos 1997 TFE）；
+                仅新路径消费（与 enable_stream_function=True 联合生效），
+                False 回到 Task 9 状态（纯速度形式平流，可回退）。
         """
         # ⚠️ 2026-09-14 Task 7 弃用检查：dispersion_* 任一非 None 即弃用警告。
         # （显式传 None 视同默认，不警告——保证未传参的 runner/脚本行为无感。）
@@ -428,6 +435,8 @@ class AnnulusD2DGASolver:
         # 2026-09-15 Task 9：速度场路径开关（True = (4.22) 流函数椭圆方程，
         # False = 旧代数流动度，逐位复现 76a91c1——R7 冻结锚护栏）
         self.enable_stream_function = enable_stream_function
+        # R32 迭代 1（2026-09-15）：q₀ 修正通量步（仅新路径消费，见 docstring）
+        self.enable_q0_flux = enable_q0_flux
 
     def _build_geom(self, well_spec: WellSpec, mud_cake_thickness: Array | None = None) -> Dict[str, Array]:
         """根据井筒规格构建环空二维网格几何参数。
@@ -1533,6 +1542,114 @@ class AnnulusD2DGASolver:
         # 返回正则化后的黏度 mu_reg，确保下游 mobility 指标反映屈服死区效应
         return w, v, mu_reg, rho, mud, Re, mu_turbulent, m_field, tau_y, eta2, n_mix, kappa_mix
 
+    def _transport_flux_form(
+        self,
+        lead: Array,
+        tail: Array,
+        spacer: Array,
+        w: Array,
+        v: Array,
+        geom: Dict[str, Array],
+        dt_step: float,
+        m_ratio: float,
+        inlet_lead_fraction: float,
+        inlet_tail_fraction: float,
+        inlet_spacer_fraction: float,
+    ) -> Tuple[Array, Array, Array]:
+        """新路径输运：(4.25) 守恒通量形式（donor-cell；R32 迭代 1，2026-09-15）。
+
+        论文输运（(2.1)/(4.9) + (4.25) 第一项）::
+
+            ∂t c̄ + (1/b)∂y(b·v̄·q₀(c̄,m)) + (1/b)∂s(b·w̄·q₀(c̄,m)) = 0
+
+        q₀ = c̄·f_amp（(4.25)/(4.27)/(4.28)；two_layer.isotropic_flux_q0 端点精确）。
+        donor-cell 上风离散，(y,s) 度量守恒律两支对称带 b。相分解：q₀ 通量作用于
+        水泥相浓度 c̄=lead+tail，按体积份额拆回 lead/tail（与 I₃ 通量同一模式）；
+        spacer 为论文两流体模型外的扩展相，取 (4.27) 线性平流（G=c_spacer）。
+
+        **机制归因（Phase A，task-12-iteration1-report.md）**：
+        - **构造性守恒**：散度形式 ⇒ 域内 Σb·c̄ 只被边界通量改变——点插值
+          半拉格朗日的 b-失配（Σb_i·w_ij=b(x̃)≠b(x)，按目标成立的 partition of
+          unity 不给按源胞的守恒）造成的持续造体积（case1 r_end=1.686、
+          case4 残余 13.5%）被消除；
+        - **入口 = 边界通量**：入口面通量 = b·w·q₀(c̄_inlet)·相份额 = 每步精确
+          q_half·dt·入口分数——整格置入口值的启动过填（Task 12 Group A 8 例的
+          mass 伪缺口）被消除；
+        - **q₀ 特征速度进入动力学**：q₀'(0)=1.5（所有 m）前缘稀疏波——
+          case3/6/7/8 t_br 偏晚 +0.15~0.20 的前缘机制（实验 A1）由此修复；
+        - **稳定性**：donor-cell CFL = dt·(|w|/Δs+|v|/Δy) ≤ 1，既有 CFL 控制器
+          （cfl_number=0.5）直接覆盖；一阶上风数值扩散较半拉格朗日强（论文
+          FCT 同为通量形式，口径声明见迭代报告）。
+        仅新路径消费（enable_stream_function 且 enable_q0_flux）；后者 False 时
+        新路径回退到半拉格朗日速度形式平流（Task 9 状态）。
+
+        Args:
+            lead/tail/spacer: 相浓度场。
+            w/v: 新路径 (4.22)+(2.2) 速度场（m/s）。
+            geom: 几何（b/y/s）。
+            dt_step: 本步时长（s）。
+            m_ratio: 两层黏度比标量（m = mean(m_field)，与旧路径 m_local 同口径）。
+            inlet_*_fraction: 入口相份额（入口边界通量用）。
+
+        Returns:
+            (lead, tail, spacer)：更新后的相浓度场（clip 到 [0,1]）。
+        """
+        b = geom["b"]
+        dy = float(geom["y"][1] - geom["y"][0])   # 均匀弧长网格（_build_geom linspace）
+        ds = float(geom["s"][1] - geom["s"][0])   # 均匀 s 网格
+        ny, nz = b.shape
+        b_safe = np.maximum(b, 1.0e-12)
+
+        cement = np.clip(lead + tail, 0.0, 1.0)
+        q0_cement = np.asarray(isotropic_flux_q0(cement, float(m_ratio)), dtype=float)
+        cement_total = np.maximum(cement, 1.0e-6)
+        g_lead = q0_cement * (lead / cement_total)
+        g_tail = q0_cement * (tail / cement_total)
+        g_spacer = spacer
+
+        # 面几何与面速度（donor-cell）：y-面两端 v=0 对称 ⇒ 零通量；
+        # s-面入口（j=0）用入口态、出口（j=nz）上风外推
+        v_face = np.zeros((ny + 1, nz))
+        v_face[1:ny] = 0.5 * (v[:-1, :] + v[1:, :])
+        b_face_y = np.zeros((ny + 1, nz))
+        b_face_y[1:ny] = 0.5 * (b[:-1, :] + b[1:, :])
+        w_face = np.zeros((ny, nz + 1))
+        w_face[:, 1:nz] = 0.5 * (w[:, :-1] + w[:, 1:])
+        w_face[:, 0] = w[:, 0]
+        w_face[:, nz] = w[:, -1]
+        b_face_s = np.zeros((ny, nz + 1))
+        b_face_s[:, 1:nz] = 0.5 * (b[:, :-1] + b[:, 1:])
+        b_face_s[:, 0] = b[:, 0]
+        b_face_s[:, nz] = b[:, -1]
+
+        cement_inlet = min(1.0, inlet_lead_fraction + inlet_tail_fraction)
+        q0_inlet = float(isotropic_flux_q0(cement_inlet, float(m_ratio)))
+
+        dc_all = []
+        for gp, phase_inlet_frac, is_cement in (
+            (g_lead, inlet_lead_fraction, True),
+            (g_tail, inlet_tail_fraction, True),
+            (g_spacer, inlet_spacer_fraction, False),
+        ):
+            gp_y = np.zeros((ny + 1, nz))
+            gp_y[1:ny] = np.where(v_face[1:ny] >= 0.0, gp[:-1, :], gp[1:, :])
+            gp_s = np.zeros((ny, nz + 1))
+            gp_s[:, 1:nz] = np.where(w_face[:, 1:nz] >= 0.0, gp[:, :-1], gp[:, 1:])
+            gp_s[:, nz] = gp[:, -1]                      # 出口上风外推
+            if is_cement:
+                gp_s[:, 0] = q0_inlet * phase_inlet_frac  # 入口：q₀(c̄_inlet)·相份额
+            else:
+                gp_s[:, 0] = phase_inlet_frac             # spacer 线性入口
+            Fy = b_face_y * v_face * gp_y                 # (ny+1, nz)
+            Fs = b_face_s * w_face * gp_s                 # (ny, nz+1)
+            dc_all.append(-dt_step * (
+                (Fy[1:, :] - Fy[:-1, :]) / (dy * b_safe)
+                + (Fs[:, 1:] - Fs[:, :-1]) / (ds * b_safe)
+            ))
+        dc_lead, dc_tail, dc_sp = dc_all
+        return (np.clip(lead + dc_lead, 0.0, 1.0),
+                np.clip(tail + dc_tail, 0.0, 1.0),
+                np.clip(spacer + dc_sp, 0.0, 1.0))
     def _compute_cfl_dt_step(self, w: Array, v: Array, geom: Dict[str, Array], current_time_s: float) -> float:
         """根据 CFL 条件计算自适应时间步长。
 
@@ -1729,12 +1846,30 @@ class AnnulusD2DGASolver:
                     v_d2dga = v * f_amp
                 ysrc = ygrid - v_d2dga * dt_step
                 ssrc = sgrid - w_d2dga * dt_step
-                lead_adv = _bilinear_interp(lead, ysrc, ssrc, geom, inlet_lead_fraction)
-                tail_adv = _bilinear_interp(tail, ysrc, ssrc, geom, inlet_tail_fraction)
-                spacer_adv = _bilinear_interp(spacer, ysrc, ssrc, geom, inlet_spacer_fraction)
-                lead = np.clip(lead_adv, 0.0, 1.0)
-                tail = np.clip(tail_adv, 0.0, 1.0)
-                spacer = np.clip(spacer_adv, 0.0, 1.0)
+                if self.enable_stream_function and self.enable_q0_flux:
+                    # R32 迭代 1（2026-09-15）：新路径输运 = (4.25) 守恒通量形式
+                    # （donor-cell；半拉格朗日仅旧路径/回退态保留，逐位复现 76a91c1）。
+                    # 机制归因见 task-12-iteration1-report.md Phase A：
+                    # ① 持续造体积（case1 r_end=1.686 / case4 13.5%）：点插值 SL 的
+                    #    b-失配 ∑b_i·w_ij=b(x̃)≠b(x)——通量形式构造性守恒；
+                    # ② 入口启动过填（Group A 8 例）：整格置入口值 → 入口变为
+                    #    边界通量（每步精确 q_half·dt·入口分数）；
+                    # ③ q₀ 非线性（case3/6/7/8 t_br 偏晚+η_E 偏高）：通量函数
+                    #    q₀(c̄,m) 含 (4.28) 全乘子，q₀'(0)=1.5 前缘稀疏波进入动力学。
+                    lead, tail, spacer = self._transport_flux_form(
+                        lead, tail, spacer, w, v, geom, dt_step,
+                        float(np.mean(m_field)),
+                        inlet_lead_fraction, inlet_tail_fraction, inlet_spacer_fraction,
+                    )
+                else:
+                    # 半拉格朗日（旧路径行为；enable_q0_flux=False 的新路径回退到
+                    # Task 9 状态——纯速度形式平流）
+                    lead_adv = _bilinear_interp(lead, ysrc, ssrc, geom, inlet_lead_fraction)
+                    tail_adv = _bilinear_interp(tail, ysrc, ssrc, geom, inlet_tail_fraction)
+                    spacer_adv = _bilinear_interp(spacer, ysrc, ssrc, geom, inlet_spacer_fraction)
+                    lead = np.clip(lead_adv, 0.0, 1.0)
+                    tail = np.clip(tail_adv, 0.0, 1.0)
+                    spacer = np.clip(spacer_adv, 0.0, 1.0)
                 # 数值扩散可能使显式相之和略超1；按比例压回可行域，保持泥浆分数非负。
                 tracked_total = lead + tail + spacer  # 四相过填修正（flusher 相已降级）
                 overfilled = tracked_total > 1.0
