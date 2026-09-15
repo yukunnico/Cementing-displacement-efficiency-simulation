@@ -77,7 +77,8 @@ tests/
 ## 运行
 
 ```bash
-# 全量（基线：396 passed）
+# 全量（数据在位基线：532 passed + 16 failed——16 条全部为逐条标注的预期红，
+# 清单见下节；干净检出另有 30 条数据缺失失败，见"干净检出限制"）
 PYTHONIOENCODING=utf-8 PYTHONUTF8=1 python -m pytest tests/ -q
 
 # 只跑守护层（重构期间应保持全绿）
@@ -93,6 +94,38 @@ PYTHONIOENCODING=utf-8 PYTHONUTF8=1 python -m pytest tests/history/ -q
 ```bash
 PYTHONIOENCODING=utf-8 PYTHONUTF8=1 python -m pytest tests/contract/test_six_well_integration.py -q
 ```
+
+## 干净检出限制（2026-09-15 终审 I-4 补记）
+
+`参考文档/`（约 716MB 现场资料）**不入库**。其中 7 口井（hu101/hu102/hu1/hu2/
+ht1_001/ht1_003/ht1_004）的 `caliper_profile.csv` 缺失（loader 的 `DEFAULT_CALIPER_CSV`
+指向 `参考文档/现场资料提取/<井>/`），使干净检出下全量测试**另有 30 条 loader 类
+失败**——数据缺失，非回归。hu103 井径/井斜自含（`cemdisp/data/loaders/
+hu103_tail_caliper_inclination.csv`），但其 CBL/评价窗等参考文件同样不在库，
+故 hu103 相关测试也在列。
+
+受影响 30 条（现场数据放回后逐条复绿）：
+
+| 测试文件 | 条数 | 涉及井 |
+|---|---|---|
+| `tests/contract/test_evaluation_windows.py` | 7 | 八井 loader 级 |
+| `tests/contract/test_six_well_integration.py` | 1 | 六井端到端 |
+| `tests/contract/test_sync_cards.py` | 1 | hu102 |
+| `tests/contract/test_well_spec.py` | 4 | hu102 / ht1_004 |
+| `tests/history/test_casing_mixing_contact_time.py` | 4 | hu103 / ht1_003 / hu102 |
+| `tests/history/test_hu101_loader_standoff.py` | 4 | hu101 |
+| `tests/history/test_pipe_capacity_chain_fix.py` | 6 | hu101 / hu102 |
+| `tests/history/test_plug_semantics_restart.py` | 1 | hu102 |
+| `tests/history/test_three_fixes_20260906.py` | 2 | hu101（EClipRuling flagged 两条） |
+
+补数据方法：把现场数据放回 loader 约定路径，代表文件为
+`参考文档/现场资料提取/<井>/caliper_profile.csv`（各井另有 inclination_profile.csv、
+CBL/评价窗等参考文件，逐井目录见各 loader 的 `DEFAULT_REFERENCE_ROOT`）。
+
+数据在位的工作机上，全量基线 = **532 passed + 16 failed**，16 条全部为逐条标注的
+预期红（2026-09-15 实测）：`test_m1_dispersion` 3 + `test_three_fixes_20260906` 6
+（4 条 Task 10 e_clip + 2 条 Task 9 幂律缝隙律）+ `test_zhang2022_benchmark` 5 +
+`test_improved_d2dga_annulus` 2（屈服门连续化/浮力注入旧路径）。
 
 ## 新增测试放哪一层？
 
