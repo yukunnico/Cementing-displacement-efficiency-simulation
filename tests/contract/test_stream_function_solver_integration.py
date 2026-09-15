@@ -4,10 +4,12 @@
 三组契约：
 
 1. **R7 冻结锚**（controller 裁定第 1 条）：``enable_stream_function=False``
-   的输出与改动前 HEAD 76a91c1 的冻结锚**逐位一致**（float repr 往返精确 +
-   float64 位级 sha256 摘要）。锚值出处：``.tmp_research/task9_probe/
-   anchor_head76a91c1.json``（HEAD 76a91c1，refactor/d2dga-source-fidelity，
-   Python 3.13.5 / numpy 2.1.3，2026-09-15 采集——改动前、任何 T9 编辑之前）。
+   的输出与冻结锚**逐位一致**（float repr 往返精确 + float64 位级 sha256
+   摘要）。锚值出处：``.tmp_research/task11_probe/collect_anchor_r31.py``
+   ——**Task 11 连续化后重锚（R31，2026-09-15），护栏语义从"逐位复现
+   重构前"演进为"回退路径防漂移"；旧锚 76a91c1 见 git 历史**（HEAD
+   9448572 采集，Python 3.13.5 / numpy 2.1.3；初版锚 76a91c1 出
+   ``.tmp_research/task9_probe/anchor_head76a91c1.json``）。
 2. **新路径接线与守恒**：默认 enable_stream_function=True；(4.22) 椭圆解在
    动力学时间步被消费；每列弧长通量 = q_half（T9 度量换算 D2）。
 3. **新路径浮力判别与性能**：b 符号判别（论文 Table 3 机制，Z&F22 A32-22
@@ -39,24 +41,27 @@ from cemdisp.runners.zhang2022_benchmark import (
 # R7 冻结锚（出处见模块 docstring；逐位 = float64 位级）
 # ---------------------------------------------------------------------------
 _ANCHOR_PROVENANCE = (
-    "HEAD 76a91c1 (refactor/d2dga-source-fidelity), 2026-09-15 采集于任何 T9 编辑前；"
-    "Python 3.13.5 / numpy 2.1.3；脚本 .tmp_research/task9_probe/collect_anchor.py"
+    "HEAD 9448572 (refactor/d2dga-source-fidelity), 2026-09-15 重采；"
+    "Python 3.13.5 / numpy 2.1.3；脚本 .tmp_research/task11_probe/collect_anchor_r31.py。"
+    "Task 11 连续化后重锚（R31，2026-09-15），护栏语义从'逐位复现重构前'演进为"
+    "'回退路径防漂移'；旧锚 76a91c1 见 git 历史"
 )
-# field_like_nz48（合成现场级：井斜 6°、standoff 0.75→0.55、Bingham 四相、屈服门开）
+# field_like_nz48（合成现场级：井斜 6°、standoff 0.75→0.55、Bingham 四相、屈服门开）；
+# Task 11 连续化后重锚（R31，2026-09-15）——屈服门 wall 连续取值进旧路径 pref
 _A_FIELD = {
-    "eta_E": 0.10383284754023875,
-    "eta_N": 0.014260352660175562,
-    "cement_occ": 0.10383284754023875,
-    "channeling": 0.9999999999966667,
-    "mixing": 0.12922583337920518,
+    "eta_E": 0.09670452384942796,
+    "eta_N": 0.02623668287136209,
+    "cement_occ": 0.09670452384942796,
+    "channeling": 0.9787234042520567,
+    "mixing": 0.08219947117755315,
     "b_number": 10280.49171010473,
     "front_wide": 300.0,
-    "front_narrow": 0.0,
+    "front_narrow": 6.382978723404255,
     "front_mid": 6.382978723404255,
-    "mean_wall": 0.19791666666666666,
-    "cement_digest": "040eeffb4babc4d0",
-    "spacer_digest": "c92ae788e3118928",
-    "wall_digest": "93ca9c3502653840",
+    "mean_wall": 0.017923613912377494,
+    "cement_digest": "8cd9aab475fcb2ef",
+    "spacer_digest": "0256085d0ac397d1",
+    "wall_digest": "ff088ffeabb5855d",
 }
 # zhang_case10_nz140（runner 标准口径）
 _A_CASE10 = {
@@ -122,18 +127,25 @@ def _run_field_like(enable_stream_function: bool):
 
 
 class TestR7FrozenAnchorOldPathBitwise:
-    """R7 护栏：enable_stream_function=False 逐位复现 HEAD 76a91c1 冻结锚。"""
+    """R7 护栏：enable_stream_function=False 逐位复现冻结锚（回退路径防漂移）。
+
+    Task 11 连续化后重锚（R31，2026-09-15）：护栏语义从"逐位复现重构前
+    （76a91c1）"演进为"旧代数回退路径防漂移"——T12–T14 期间旧路径作为
+    回退通道保留，其行为在本锚上必须逐位稳定；旧锚 76a91c1 见 git 历史。
+    """
 
     def test_field_like_bitwise(self):
-        """R7 冻结锚：field-like 旧路径逐位复现 HEAD 76a91c1。
+        """R7 冻结锚：field-like 旧路径逐位复现 R31 重锚（HEAD 9448572）。
 
-        STATUS（Task 11 预期红，2026-09-15）：本锚钉死的旧路径含二值屈服门
-        （wall ∈ {0,1}）。Task 11 将屈服门连续化（wall = clip(1−τw_extrap/
-        (f·τy), 0, 1)，Pelipenko04 (2.6)-(2.8)），wall 经 pref=(1−wall) 进入
-        旧路径动力学 → Bingham 流体算例的 η_E/mean_wall/wall_digest 有意
-        偏离 76a91c1 锚（旧口径被有意替换，非回归）。τy=0 的 zhang case10
-        锚（test_zhang_case10_bitwise）不受影响、仍绿——牛顿流体无停流区，
-        两口径一致。断言未改动。
+        STATUS（R31 重锚，2026-09-15）：Task 11 屈服门连续化
+        （wall = clip(1−τw_extrap/(f·τy), 0, 1)，Pelipenko04 (2.6)-(2.8)）
+        后，wall 经 pref=(1−wall) 进入旧路径动力学，Bingham 算例的
+        η_E/mean_wall/wall_digest 相对 76a91c1 旧锚有意偏离——本锚已按
+        连续门新基线重采（采集脚本 .tmp_research/task11_probe/
+        collect_anchor_r31.py，η_E 与当时红灯实测值逐位一致）。护栏语义
+        演进为"回退路径防漂移"，旧锚 76a91c1 见 git 历史。τy=0 的 zhang
+        case10 锚（test_zhang_case10_bitwise）不受影响未重采——牛顿流体
+        无停流区，两口径一致。断言结构未改动，仅常量随重锚更新。
         """
         res = _run_field_like(enable_stream_function=False)
         s = res.summary["最终结果"]
