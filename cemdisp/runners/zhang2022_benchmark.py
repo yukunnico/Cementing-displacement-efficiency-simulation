@@ -24,9 +24,10 @@ DOI: 10.1017/jfm.2022.626
 
 额外记录项（论文未有的实现差异）
 --------------------------------
-1. ``e_clip`` 硬截断：``annulus_d2dga.py:401`` 默认 ``e = clip(1−standoff, 0.05, 0.55)``。
-   本基准显式传 ``e_clip_max=1.0`` 解锁，否则 10 个算例中 e ≥ 0.6 的 4 个（case 1-4）
-   几何被篡改、对照失效。
+1. 偏心度口径：``e = 1 − standoff`` 按文献口径 e∈[0,1) 直取（Pelipenko04 (2.1)）。
+   旧 ``e_clip`` 硬截断已于 2026-09-15 Task 10 移除，本 runner 不再传弃用形参
+   ``e_clip_max``（Task 12 起，构造零弃用警告），e ≥ 0.6 的 case 1-4 几何按
+   论文原值进入求解器。
 2. ``annulus_d2dga.py:921`` ``correction = np.clip(Δρ·I2/I1, −0.5, 0.5)``：论文式 4.24
    无此裁剪。本 runner 用透明 numpy 代理统计其触发情况（见 ``_clip_probe``），
    并把计数写入结果表 ``clip_triggered`` 列。
@@ -228,9 +229,12 @@ def build_case_solver(
     """构造基准算例求解器。
 
     显式设置：
-    * ``e_clip_max = 1.0``：解除 M4 偏心度 0.55 硬截断（论文算例 e 最大 0.8）；
     * ``dt_min = 0.02``：基准速度尺度下让 CFL 而非 dt_min 控制步长；
     * ``total_t = 2·L/ŵ0``：论文"泵注两个环空体积"的停止时刻。
+
+    偏心度不再传 ``e_clip_max``（Task 10 已移除 e_clip 硬截断，e = 1−standoff 按
+    Pelipenko04 (2.1) 文献口径 e∈[0,1) 直取；Task 12 起停止传该弃用形参，
+    构造零弃用警告，论文算例 e 最大 0.8 按原值进入几何）。
     """
     c = _coerce(case)
     if total_t is None:
@@ -239,7 +243,6 @@ def build_case_solver(
         "nz": nz,
         "ny": ny,
         "total_t": total_t,
-        "e_clip_max": 1.0,
         "dt_min": _BENCHMARK_DT_MIN,
     }
     kwargs.update(overrides)
@@ -535,11 +538,13 @@ def run_case(
     return row
 
 
+# 对照表列（Task 12 验收口径）：case, e, m, b, η_E 模型/论文, Δη_E,
+# t_br 模型/论文, Δt_br, mass_err。更全的诊断字段见 DETAIL_COLUMNS（对照明细.csv）。
 COMPARISON_COLUMNS: tuple[str, ...] = (
-    "case_id", "e", "Re", "m", "b",
-    "t_br_模型", "t_br_论文D2DGA", "t_br_论文3D",
-    "eta_E_模型", "eta_E_论文D2DGA",
-    "mass_conservation_error", "clip_triggered",
+    "case_id", "e", "m", "b",
+    "eta_E_模型", "eta_E_论文D2DGA", "eta_E_偏差_vs_D2DGA",
+    "t_br_模型", "t_br_论文D2DGA", "t_br_偏差_vs_D2DGA",
+    "mass_conservation_error",
 )
 
 DETAIL_COLUMNS: tuple[str, ...] = (
@@ -641,9 +646,25 @@ def format_report(rows: list[Mapping[str, Any]]) -> str:
     return "\n".join(lines)
 
 
-def main() -> None:
-    """命令行入口：跑 10 个算例并写出对照表。"""
-    output_dir = DEFAULT_OUTPUT_DIR
+def main(argv: list[str] | None = None) -> None:
+    """命令行入口：跑 10 个算例并写出对照表。
+
+    用法：``python -m cemdisp.runners.zhang2022_benchmark [--out-dir DIR]``。
+    ⚠️ 默认 out-dir 即权威目录 ``results/基准算例对照_2026-09-10``（R18 不许覆写）——
+    验收重跑必须显式传 ``--out-dir`` 指向新目录。
+    """
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="Zhang & Frigaard (2022, JFM 947:A32) 基准算例对照运行器",
+    )
+    parser.add_argument(
+        "--out-dir", type=Path, default=None,
+        help="输出目录（默认 DEFAULT_OUTPUT_DIR=results/基准算例对照_2026-09-10，"
+             "为权威目录——验收重跑请显式传新目录以免覆写）",
+    )
+    args = parser.parse_args(argv)
+    output_dir = args.out_dir if args.out_dir is not None else DEFAULT_OUTPUT_DIR
     rows = run_all_cases(output_dir=output_dir)
     print()
     print(format_report(rows))

@@ -157,12 +157,25 @@ def test_geometry_vertical_and_eccentricity():
 
 
 # --------------------------------------------------------------------------
-# e_clip 解锁
+# 偏心度口径（原 e_clip 解锁）
 # --------------------------------------------------------------------------
 def test_e_clip_released():
-    """基准算例必须解除 e_clip 0.55 截断，否则 e>=0.6 的算例几何被篡改。"""
-    solver = build_case_solver(ZHANG2022_CASES[0])
-    assert solver.e_clip_max == 1.0
+    """基准算例 e≥0.6 的几何必须按论文原值进入求解器（不被偏心度截断篡改）。
+
+    STATUS（Task 12 更新，2026-09-15）：Task 10 已移除 e_clip 硬截断
+    （Pelipenko04 (2.1) 文献口径 e∈[0,1)），Task 12 起本 runner 停止传弃用
+    形参 e_clip_max。原断言 ``solver.e_clip_max == 1.0`` 随该形参退役而失效，
+    更新为：构造零弃用警告 + e=0.8 直取不截断（语义等价，新口径）。
+    """
+    import warnings as _warnings
+
+    case = ZHANG2022_CASES[0]  # e=0.8
+    with _warnings.catch_warnings():
+        _warnings.simplefilter("error", DeprecationWarning)  # 构造必须零弃用警告
+        solver = build_case_solver(case)
+    ws = build_case_well_spec(case)
+    e = solver._build_geom(ws)["e"][0]
+    assert np.isclose(e, 0.8, atol=1e-12)
 
 
 def test_e_clip_released_geometry_keeps_eccentricity():

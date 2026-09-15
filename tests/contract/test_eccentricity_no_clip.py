@@ -11,7 +11,8 @@ e=0.55 死区（standoff 0.35 与 0.45 逐位同几何），并人为封顶强�
 3. ``e_clip_max``/``e_clip_measured_max``/``enable_e_clip_ruling`` 三形参保留但
    失效——偏离 legacy 默认（0.55/0.90/True）的传值触发一次性 DeprecationWarning
    （中文消息，含 Pelipenko04 (2.1) 引文），legacy 等值传参与默认传参静默；
-4. 基准算例 runner 显式 ``e_clip_max=1.0`` 路径仍正常工作（警告非异常）。
+4. 基准算例 runner 不再传 ``e_clip_max``（Task 12 起完成弃用形参退役迁移）：
+   构造零弃用警告，e=0.8 算例几何按论文原值直取。
 """
 from __future__ import annotations
 
@@ -152,17 +153,21 @@ class TestDeprecatedEClipParams:
 
 
 # ---------------------------------------------------------------------------
-# 4. 基准算例 runner 路径：显式 e_clip_max=1.0 仍正常工作
+# 4. 基准算例 runner 路径：不再传弃用形参 e_clip_max（Task 12 迁移完成）
 # ---------------------------------------------------------------------------
 class TestBenchmarkRunnerPath:
-    def test_explicit_e_clip_max_1p0_warns_but_works(self):
-        """runner 显式传 e_clip_max=1.0：收 DeprecationWarning（非异常）且几何正确。"""
+    def test_runner_no_longer_passes_e_clip_max(self):
+        """runner 停止传 e_clip_max：零弃用警告且 e=0.8 几何正确。
+
+        （Task 10 迁移期契约"显式传 1.0 收警告仍工作"已随 Task 12 runner 停传
+        而升级为"零警告"口径；几何不变性断言保持。）
+        """
         case = ZHANG2022_CASE_BY_ID[1]  # e=0.8 算例
         with warnings.catch_warnings(record=True) as caught:
             warnings.simplefilter("always")
             solver = build_case_solver(case, nz=20)
         dep = [w for w in caught if issubclass(w.category, DeprecationWarning)]
-        assert len(dep) == 1, "e_clip_max=1.0 偏离 legacy 默认应恰一次弃用警告"
+        assert not dep, f"runner 不应再触发 e_clip 弃用警告：{[str(w.message) for w in dep]}"
         ws = build_case_well_spec(case)
         e = solver._build_geom(ws)["e"][0]
         assert np.isclose(e, 0.8, atol=1e-12), f"e=0.8 算例几何应保持 0.8，得到 {e}"
