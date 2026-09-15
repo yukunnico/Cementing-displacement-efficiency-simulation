@@ -1578,8 +1578,24 @@ class AnnulusD2DGASolver:
         - **q₀ 特征速度进入动力学**：q₀'(0)=1.5（所有 m）前缘稀疏波——
           case3/6/7/8 t_br 偏晚 +0.15~0.20 的前缘机制（实验 A1）由此修复；
         - **稳定性**：donor-cell CFL = dt·(|w|/Δs+|v|/Δy) ≤ 1，既有 CFL 控制器
-          （cfl_number=0.5）直接覆盖；一阶上风数值扩散较半拉格朗日强（论文
-          FCT 同为通量形式，口径声明见迭代报告）。
+          （cfl_number=0.5）直接覆盖。
+
+        **R33 迭代 2 / FCT 反扩散级（2026-09-15）**：迭代 1 判定数据显示纯
+        donor-cell 修复了 t_br 但 η_E 跌破论文 0.13–0.33——一阶数值扩散过度
+        展宽前缘。本版在两面通量上加 **minmod TVD 通量限制器**（Boris & Book
+        1973 / Zalesak 1979 FCT 谱系；Sweby 1984 φ(r)=max(0,min(1,r))——TVD
+        单调保持、不产生新极值的最保守二阶选择），面通量 = donor + φ·(中心−donor)。
+        **定性：纯数值离散选择**——一阶数值扩散非物理，反扩散级只回收被其抹平的
+        前缘/稀疏波结构，不添加物理项（对照论文 FCT 的通量校正级）。
+
+        **R33 迭代 2 / 顶点中心控制体（2026-09-15，case1 入口缺陷正解）**：
+        迭代 1 新发现 case1 缺陷——入口面矩形采样欠解析的宽边 w 尖峰
+        （0.45 m/s = 14×ŵ0）⇒ 注入 ≫ q_half（mass 1.41/峰值 2.414）。首版
+        κ 归一与内部 rectangular 记账冲突（入口行亏缺）；正解 = y 向体积测度
+        取**顶点中心**（边缘行 h/2、内部 h）：入口注入 ΣF·h_i·ds·dt 自动
+        = trapezoid = q_half·dt（差分-梯形恒等式，任意剖面含尖峰、无需归一），
+        且与模型体积核算（_trapez2d/bulk_fill）的 trapezoid 测度逐位一致。
+
         仅新路径消费（enable_stream_function 且 enable_q0_flux）；后者 False 时
         新路径回退到半拉格朗日速度形式平流（Task 9 状态）。
 
@@ -1625,25 +1641,68 @@ class AnnulusD2DGASolver:
         cement_inlet = min(1.0, inlet_lead_fraction + inlet_tail_fraction)
         q0_inlet = float(isotropic_flux_q0(cement_inlet, float(m_ratio)))
 
+        # ---- R33 迭代 2 / 顶点中心控制体（case1 入口缺陷的正解）----------------
+        # 迭代 1 首版用"入口面通量乘 κ=q_half/矩形和"归一，与内部 rectangular
+        # 体积记账冲突（入口行亏缺 1−κ）。正解：y 向体积测度取**顶点中心**——
+        # 边缘行 h/2、内部 h——则 (i) 入口注入 Σ F·h_i·ds·dt 自动 = trapezoid
+        # = q_half·dt（差分-梯形恒等式，任意 b/w 剖面含欠解析尖峰，无需归一）；
+        # (ii) y-散度在边缘行除以 h/2（控制体减半）；(iii) s-散度的 h_i 在面
+        # 面积与体积间相消、公式不变。模型体积核算（_trapez2d/bulk_fill）同用
+        # trapezoid 测度 ⇒ 守恒与度量逐位一致。
+        h_meas = np.full(ny, dy)
+        h_meas[0] = h_meas[-1] = 0.5 * dy
+
         dc_all = []
+        # ---- R33 迭代 2 / FCT 反扩散（minmod TVD 通量限制器）-------------------
+        # Boris & Book (1973) / Zalesak (1979) FCT 谱系；限制器取 Sweby (1984)
+        # 的 minmod（φ(r)=max(0,min(1,r))，TVD 单调保持、不产生新极值的最保守
+        # 二阶选择）。定性：纯数值离散选择——一阶 donor-cell 的数值扩散不是物理，
+        # 反扩散级只回收被其抹平的前缘/稀疏波结构，不添加任何物理项。
+        # 实现：每面通量 = donor + φ·(中心 − donor)，φ 由上风侧相邻梯度比定。
+        def _phi_minmod(d_up: Array, d_dn: Array) -> Array:
+            # r = 梯度比（上风侧/本地），φ(r) = max(0, min(1, r))；分母保护
+            r = np.where(np.abs(d_dn) > 1e-30, d_up / np.where(np.abs(d_dn) > 1e-30, d_dn, 1.0), 0.0)
+            return np.maximum(0.0, np.minimum(1.0, r))
+
         for gp, phase_inlet_frac, is_cement in (
             (g_lead, inlet_lead_fraction, True),
             (g_tail, inlet_tail_fraction, True),
             (g_spacer, inlet_spacer_fraction, False),
         ):
-            gp_y = np.zeros((ny + 1, nz))
-            gp_y[1:ny] = np.where(v_face[1:ny] >= 0.0, gp[:-1, :], gp[1:, :])
+            # y-面（v_face[1:ny] 方向的上风胞 i_up 与下风胞 i_dn）
+            v_y = v_face[1:ny]
+            up_y = np.where(v_y >= 0.0, gp[:-1, :], gp[1:, :])
+            dn_y = np.where(v_y >= 0.0, gp[1:, :], gp[:-1, :])
+            upup_y = np.where(v_y >= 0.0,
+                              np.vstack([gp[0:1, :], gp[:-2, :]]) if ny > 2 else gp[:-1, :],
+                              np.vstack([gp[2:, :], gp[-1:, :]]) if ny > 2 else gp[1:, :])
+            phi_y = np.zeros((ny + 1, nz))
+            phi_y[1:ny] = _phi_minmod(up_y - upup_y, dn_y - up_y)
+            gp_y = up_y + 0.5 * phi_y[1:ny] * (dn_y - up_y)
+            gp_y_ext = np.zeros((ny + 1, nz))
+            gp_y_ext[1:ny] = gp_y                        # 两端 v=0 对称 ⇒ 零通量
+
+            # s-面（w_face[:,1:nz]）
+            w_s = w_face[:, 1:nz]
+            up_s = np.where(w_s >= 0.0, gp[:, :-1], gp[:, 1:])
+            dn_s = np.where(w_s >= 0.0, gp[:, 1:], gp[:, :-1])
+            upup_s = np.where(w_s >= 0.0,
+                              np.hstack([gp[:, 0:1], gp[:, :-2]]),
+                              np.hstack([gp[:, 2:], gp[:, -1:]]))
+            phi_s = np.zeros((ny, nz + 1))
+            phi_s[:, 1:nz] = _phi_minmod(up_s - upup_s, dn_s - up_s)
+            gp_s_int = up_s + 0.5 * phi_s[:, 1:nz] * (dn_s - up_s)
             gp_s = np.zeros((ny, nz + 1))
-            gp_s[:, 1:nz] = np.where(w_face[:, 1:nz] >= 0.0, gp[:, :-1], gp[:, 1:])
+            gp_s[:, 1:nz] = gp_s_int
             gp_s[:, nz] = gp[:, -1]                      # 出口上风外推
             if is_cement:
-                gp_s[:, 0] = q0_inlet * phase_inlet_frac  # 入口：q₀(c̄_inlet)·相份额
+                gp_s[:, 0] = q0_inlet * phase_inlet_frac
             else:
-                gp_s[:, 0] = phase_inlet_frac             # spacer 线性入口
-            Fy = b_face_y * v_face * gp_y                 # (ny+1, nz)
-            Fs = b_face_s * w_face * gp_s                 # (ny, nz+1)
+                gp_s[:, 0] = phase_inlet_frac
+            Fy = b_face_y * v_face * gp_y_ext            # (ny+1, nz)
+            Fs = b_face_s * w_face * gp_s                # (ny, nz+1)
             dc_all.append(-dt_step * (
-                (Fy[1:, :] - Fy[:-1, :]) / (dy * b_safe)
+                (Fy[1:, :] - Fy[:-1, :]) / (h_meas[:, None] * b_safe)
                 + (Fs[:, 1:] - Fs[:, :-1]) / (ds * b_safe)
             ))
         dc_lead, dc_tail, dc_sp = dc_all
