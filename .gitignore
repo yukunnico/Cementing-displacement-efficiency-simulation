@@ -1,4 +1,5 @@
 **/*.xlsx
+# results/ 下口径说明类 sidecar 一律用 .md/.json，**/*.txt 会吞掉它们（如 口径说明.md）
 **/*.txt
 **/*.doc
 **/*.docx
