@@ -330,9 +330,10 @@ def load_hu101_tailpipe(
         hole_diameter_profile=_depth_points(_build_hole_profile(caliper_rows)),
         inclination_profile=_depth_points(_build_inclination_profile(incl_rows)),
         standoff_profile=_depth_points(standoff_points),
-        # e_clip 裁定（2026-09-06）：仅当使用实测居中度剖面时标记 standoff_measured=True，
-        # 2D 求解器据此放开 e 截断上限（实测输入才允许放大模型响应）。
-        # 名义剖面（measured_standoff=None）保持 model_assumption 属性。
+        # 输入溯源标注（2026-09-06 设立）：仅当使用实测居中度剖面时标记
+        # standoff_measured=True。⚠️ 2026-09-15 Task 10 起 e_clip 截断已移除，
+        # 本标记不再影响求解，仅作输入溯源/报告标注（名义剖面
+        # measured_standoff=None 保持 model_assumption 属性）。
         standoff_measured=(measured_standoff is not None),
         evaluation_windows=(
             # 正式 CBL 解释测量段 5390–7810m（100312.PDF，cbl_pass_rate=0.6277 对应整测量段口径，field_measured）；

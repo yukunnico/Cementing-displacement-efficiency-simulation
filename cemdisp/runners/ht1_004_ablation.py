@@ -10,6 +10,10 @@ run_one_level 另支持透传求解器修正配置开关（I3 局部化 enable_l
 M1 弥散 dt 归一 dispersion_dt_scale、M2 流态修正 enable_regime_split、
 M3 屈服门槛 enable_yield_gate、M4 e 截断 e_clip_max），默认值与求解器
 默认一致，不改变基线消融行为（R0→R3 逐位复现历史口径）。
+⚠️ 2026-09-15 Task 7/10 起 M1（dispersion_dt_scale）与 M4（e_clip_max）已弃用
+为无效果死参：自创弥散与 e_clip 硬截断均已从求解器移除（弥散改由 q₀+I₃
+闭包承载、e 按文献口径 e∈[0,1) 直取），legacy 默认传值静默透传，偏离默认
+传值仅触发 DeprecationWarning。
 """
 from __future__ import annotations
 
@@ -144,14 +148,17 @@ def run_one_level(
         I3 通量局部化开关，默认 False（基线全场均值口径）。
         True 时 eta2/Δρ 用局部场（透传水泥相黏度场与局部密度差）。
     e_clip_max : float
-        M4 偏心度 e 硬截断上限，默认 0.55（逐位复现基线）；
-        生产跑道显式设 0.90 放宽截断。
+        ⚠️ 已弃用（2026-09-15 Task 10），无效果死参：e_clip 硬截断已从求解器
+        移除，e 按 Pelipenko04 (2.1) 文献口径 e∈[0,1) 直取。保留形参仅为调用
+        兼容，legacy 默认 0.55 静默透传；偏离默认传值仅触发 DeprecationWarning。
     enable_yield_gate : bool
         M3 屈服门槛开关，默认 False。
     enable_regime_split : bool
         M2 局部流态修正固定点迭代开关，默认 False。
     dispersion_dt_scale : float
-        M1 弥散系数按 dt 归一开关，默认 1.0（固定 dt 模式逐位复现基线）。
+        ⚠️ 已弃用（2026-09-14 Task 7），无效果死参：自创拉普拉斯弥散已从求解器
+        删除（弥散由 q₀ + I₃ 分层通量闭包承载），legacy 默认 1.0 静默透传；
+        偏离默认传值仅触发 DeprecationWarning。
     """
     loaded_well, fluids, schedule, _ = load_ht1_004_tailpipe()
     well_spec = well_spec_override if well_spec_override is not None else loaded_well
