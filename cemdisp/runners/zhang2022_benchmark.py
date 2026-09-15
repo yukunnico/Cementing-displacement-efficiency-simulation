@@ -649,9 +649,10 @@ def format_report(rows: list[Mapping[str, Any]]) -> str:
 def main(argv: list[str] | None = None) -> None:
     """命令行入口：跑 10 个算例并写出对照表。
 
-    用法：``python -m cemdisp.runners.zhang2022_benchmark [--out-dir DIR]``。
-    ⚠️ 默认 out-dir 即权威目录 ``results/基准算例对照_2026-09-10``（R18 不许覆写）——
-    验收重跑必须显式传 ``--out-dir`` 指向新目录。
+    用法：``python -m cemdisp.runners.zhang2022_benchmark --out-dir DIR``。
+    ⚠️ ``--out-dir`` 必填：缺省时一律报错退出，绝不回落权威目录
+    ``results/基准算例对照_2026-09-10``（R18 权威目录不许覆写；终审 I-2 修复，
+    2026-09-15）。如确需覆写权威目录，须显式传 ``--force-authoritative-dir``。
     """
     import argparse
 
@@ -660,11 +661,26 @@ def main(argv: list[str] | None = None) -> None:
     )
     parser.add_argument(
         "--out-dir", type=Path, default=None,
-        help="输出目录（默认 DEFAULT_OUTPUT_DIR=results/基准算例对照_2026-09-10，"
-             "为权威目录——验收重跑请显式传新目录以免覆写）",
+        help="输出目录（必填。权威目录 results/基准算例对照_2026-09-10 默认拒写，"
+             "验收重跑请显式传新目录）",
+    )
+    parser.add_argument(
+        "--force-authoritative-dir", action="store_true",
+        help="显式豁免：允许在未传 --out-dir 时写权威目录 "
+             "results/基准算例对照_2026-09-10（自担覆写责任）",
     )
     args = parser.parse_args(argv)
-    output_dir = args.out_dir if args.out_dir is not None else DEFAULT_OUTPUT_DIR
+    if args.out_dir is not None:
+        output_dir = args.out_dir
+    elif args.force_authoritative_dir:
+        output_dir = DEFAULT_OUTPUT_DIR
+    else:
+        parser.error(
+            "必须显式传 --out-dir 指定输出目录：缺省会回落覆写权威目录 "
+            f"{DEFAULT_OUTPUT_DIR}（R18 不许覆写）。如确需写权威目录，"
+            "请加 --force-authoritative-dir。"
+        )
+        return  # 不可达：parser.error 抛 SystemExit(2)
     rows = run_all_cases(output_dir=output_dir)
     print()
     print(format_report(rows))
