@@ -948,7 +948,6 @@ def solve_fixed_G_batch(
         ValueError: 形状不一致或取值越界。
         RuntimeError: 有有效格点发散或未在 ``max_iter`` 内收敛（消息含点数与最差残差）。
     """
-    _validate_bs = (ny, r, max_iter)
     ctx = _batch_inputs(c_bar, n, kappa, tau_y, G, Gb, H, ny=ny, r=r, max_iter=max_iter)
     I1_t, I2_t, q0 = _closure_integrals_batch(
         ctx["c"], ctx["n"], ctx["kappa_t"], ctx["tau_y"], ctx["Gt"], ctx["Gbt"], ctx["axial"]
