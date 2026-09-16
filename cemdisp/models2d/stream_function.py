@@ -125,7 +125,6 @@ import scipy.sparse.linalg as spla
 from numpy.typing import NDArray
 
 from cemdisp.models2d.hb_closure import ClosureProvider, NewtonianClosure
-from cemdisp.models2d.two_layer import mobility_i1
 
 Array = NDArray[np.float64]
 

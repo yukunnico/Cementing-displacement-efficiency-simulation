@@ -81,13 +81,13 @@
 - 冻结区 mobility→0 的**椭圆兼容**实现：`I₁_eff = I₁·max(1−wall, 1e-6)`，cell 系数取 `a_cell = 1/(2I₁_eff)`（`c_cell = r_a/(2I₁_eff)`）。
   - ⚠️ **方向警示（2026-09-16 Task 2 实测订正）**：**不是**把 `(1−wall)` 乘到 `a_cell` 上。`a_cell = 1/(2I₁)` 是**导度**，冻结须**放大**它（∵ 冻结 ⇒ I₁→0 ⇒ a_cell→∞ ⇒ 该区 Ψ 趋于平直 ⇒ w→0）。初版规格误写为 `a_cell=1/(2I₁)·(1−wall)`，实测冻结区速度反而升到基线 2.4–3.2 倍、窄边份额上升（一维解析同理：`a` 越小，`Ψ'=J/a` 越大）。计划自带的验收测试 `mean|w1|<mean|w0|` 正是正确物理，挡下了这一错误。
 - `annulus_d2dga._velocity_stream_function` 消费 `wall`（当前丢弃）。
-- 默认 `enable_yield_gate` 保持 True；提供 `enable_yield_gate_in_stream=False` 回退（逐位退回 HEAD）。
+- 默认 `enable_yield_gate` 保持 True；提供 `enable_stream_yield_gate=False` 回退（逐位退回 HEAD）。
 - **验收**：`wall` 全零时逐位=HEAD；`wall>0` 时窄边速度与 η_N 下降、且守恒仍成立。
 
 **B-3 幂律一阶线性化（近似，明确标注）**
 - **指数推导（B&F25 (2.14) + 幂律槽流）**：单流体幂律 `ū ∝ H^{1+1/n}G^{1/n}` ⇒ `I₁ = Hū/G ∝ H^{2+1/n}G^{1/n−1}`；相对牛顿 `H³` 的**场修正因子 = `(H/H̄)^{1/n−1}`**（n=1 时恰为 1，退化为牛顿）。
 - **G 依赖可消**：椭圆解按 Q 归一（BC Ψ(0)=0/Ψ(1)=1），`G^{1/n−1}` 为纯标量因子 ⇒ 在 flux 归一化中消去；**唯一进入算子形状的是 H 依赖**。故一阶近似 = 把 `I₁` 乘上 `(H/H̄)^{1/n−1}`（在上一步 G 代表值处线性化）。
-- 严格仅在 `n<1` 时生效，`n=1` 逐位退回。
+- `n≠1` 时生效（`n=1` 逐位退回）；`n>1`（剪切增稠）反向削弱间隙反差；8 井实际 n∈[0.585,0.886] 全 <1。
 - **标注**：`docs/源模型口径与适用域声明.md` 增补声明——此为一阶近似，**不是** B&F25 闭包口径，不得引 B&F25 声称方法学。
 - **验收**：n=1 逐位=HEAD；n=0.7（因子 `(H/H̄)^{+0.43}`，注意指数为**正**）时宽/窄流动度比增大 ⇒ 偏心更陡。
   - 依据：**单流体幂律槽流积分** `I₁ ∝ H^{2+1/n}`（Task 3 评审独立数值核验：n=1/0.7/0.4 → H 指数 3.000000/3.428571/4.500000，与解析 `2+1/n` 6 位小数全等）。
@@ -132,8 +132,8 @@ models2d/
 **接口契约（B-1 冻结，A 不得改）**：
 ```python
 class ClosureProvider(Protocol):
-    def mobility(self, c_bar, eta1, eta2, H, *, wall=None) -> Array: ...      # → I₁
-    def buoyant_mobility(self, c_bar, eta1, eta2, H, *, wall=None) -> Array: ...  # → I₂
+    def mobility(self, c_bar, m: float, eta1: float, eta2: float, H) -> Array: ...      # → I₁
+    def buoyant_mobility(self, c_bar, m: float, eta1: float, eta2: float, H) -> Array: ...  # → I₂
 ```
 - 牛顿实现：`I₁ = H³·n₁(c̄,m)/√(η₁η₂)`（逐位=现 `mobility_i1`）。
 - HB 实现（A）：由 (2.14) 数值积分 + 查表给出，**额外依赖 G**（G 由外迭代提供）。
