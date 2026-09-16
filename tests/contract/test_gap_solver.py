@@ -17,6 +17,8 @@
 "matches_slot_solution" 落成逐位断言。
 """
 
+import warnings
+
 import numpy as np
 import pytest
 
@@ -113,3 +115,19 @@ def test_failure_paths_are_loud():
     with pytest.raises(ValueError, match="未屈服"):
         solve_fixed_G(c_bar=0.0, n=(1.0, 1.0), kappa=(1.0, 1.0),
                       tau_y=(100.0, 100.0), G=(1.0, 0.0))
+
+
+def test_divergence_guard_raises_runtimeerror_and_leaks_no_warning():
+    """``r≲0.5`` 数值发散：必须**先**抛 ``RuntimeError``，且不泄漏 numpy 运行时告警。
+
+    发散机制：λ̃ 模态的收缩因子 ~``|1−1/r|``（r=0.2 ⇒ ~4 倍/步）。
+    未加护栏时实测先是 `RuntimeWarning: overflow encountered in reduce` 逃逸
+    ——在 `-W error::RuntimeWarning` 下会把本意的 RuntimeError 变成 RuntimeWarning，
+    破坏"响亮但干净"的契约（下游 Task 2/3 会看到错误的异常类型）。
+    """
+    args = dict(c_bar=0.0, n=(1.0, 1.0), kappa=(1.0, 1.0), tau_y=(0.0, 0.0),
+                G=(1.0, 0.0), r=0.2, max_iter=2000)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", RuntimeWarning)
+        with pytest.raises(RuntimeError, match="发散"):
+            solve_fixed_G(**args)

@@ -247,7 +247,12 @@ def _stress_slopes(c_bar: float, G_t: float, Gb_t: float) -> tuple[float, float]
 
 
 def _uzawa_fixed_G(c_bar, n, kappa_t, tau_y, G_t, Gb_t, ny, r, tol, max_iter):
-    """(A16)—(A21) 的 Uzawa 迭代（ρ=r=1），返回 ``(y, u, iters)``。"""
+    """(A16)—(A21) 的 Uzawa 迭代（ρ=r=1），返回 ``(y, u, iters)``。
+
+    收敛快慢由 ``r`` 决定：``q`` 模态收缩因子 ``r/(κ̃+r)``（r≈1 最快，r>1 更慢），
+    ``λ̃`` 模态因子 ~``|1−1/r|``（r≲0.5 不收敛）⇒ 不收敛时的补救方向是
+    **r≈1 + 增大 max_iter**（不是增大 r）。
+    """
     n_cell = ny - 1
     h = 1.0 / n_cell
     y_edge = np.linspace(0.0, 1.0, ny)
@@ -265,37 +270,47 @@ def _uzawa_fixed_G(c_bar, n, kappa_t, tau_y, G_t, Gb_t, ny, r, tol, max_iter):
     q = np.zeros(n_cell)
     lam_t = np.zeros(n_cell)  # λ̃^k（λ^k = λ₀ + λ̃^k）
     u = np.zeros(ny)
-    for iters in range(1, max_iter + 1):
-        # ① (A19)/(A20)：q^{k+1}（局部极小化；|m|≤τ_Y ⇒ q=0）
-        m = lam0 + r * q
-        abs_m = np.abs(m)
-        q_new = np.zeros(n_cell)
-        yielded = abs_m > tauy_c
-        if np.any(yielded):
-            theta = _bisect_theta(
-                abs_m[yielded], kappa_c[yielded], n_c[yielded], tauy_c[yielded], r
-            )
-            q_new[yielded] = theta * m[yielded]
+    with np.errstate(over="ignore", invalid="ignore"):
+        for iters in range(1, max_iter + 1):
+            # ① (A19)/(A20)：q^{k+1}（局部极小化；|m|≤τ_Y ⇒ q=0）
+            m = lam0 + r * q
+            abs_m = np.abs(m)
+            q_new = np.zeros(n_cell)
+            yielded = abs_m > tauy_c
+            if np.any(yielded):
+                theta = _bisect_theta(
+                    abs_m[yielded], kappa_c[yielded], n_c[yielded], tauy_c[yielded], r
+                )
+                q_new[yielded] = theta * m[yielded]
 
-        # ② (A18)：dũ^{k+1}/d|_格心 = q^k − λ̃^k/r（对称面在 ỹ=0 ⇒ C=0），
-        #    由壁面 ũ(1)=0 向回累积（中点求积；与格心处的向后差分逐位一致）
-        du_dy = q - lam_t / r
-        u_new = np.concatenate([h * np.cumsum(du_dy[::-1])[::-1], np.zeros(1)])
+            # ② (A18)：dũ^{k+1}/d|_格心 = q^k − λ̃^k/r（对称面在 ỹ=0 ⇒ C=0），
+            #    由壁面 ũ(1)=0 向回累积（中点求积；与格心处的向后差分逐位一致）
+            du_dy = q - lam_t / r
+            u_new = np.concatenate([h * np.cumsum(du_dy[::-1])[::-1], np.zeros(1)])
 
-        # ③ (A21)：λ̃^{k+1} = λ̃^k + ρ(dũ^{k+1}/dỹ − q^{k+1})，ρ=1
-        lam_new = lam_t + (du_dy - q_new)
+            # ③ (A21)：λ̃^{k+1} = λ̃^k + ρ(dũ^{k+1}/dỹ − q^{k+1})，ρ=1
+            lam_new = lam_t + (du_dy - q_new)
 
-        res_u = _pnorm(u_new - u, p_norm)
-        res_q = _pnorm(q_new - q, p_norm)
-        res_lam = _pnorm(lam_new, p_norm)
-        u, q, lam_t = u_new, q_new, lam_new
-        if res_u < tol and res_q < tol and res_lam < tol:
-            return y_edge, u, iters
+            res_u = _pnorm(u_new - u, p_norm)
+            res_q = _pnorm(q_new - q, p_norm)
+            res_lam = _pnorm(lam_new, p_norm)
+
+            if not (np.isfinite(res_u) and np.isfinite(res_q) and np.isfinite(res_lam)):
+                raise RuntimeError(
+                    f"Uzawa（定 G）数值发散（溢出/NaN，第 {iters} 步）："
+                    f"‖Δũ‖_p={res_u:.3e}, ‖Δq‖_p={res_q:.3e}, ‖λ̃‖_p={res_lam:.3e}。"
+                    f"r={r!r} 过小（λ̃ 模态收缩因子 ~|1−1/r|，r≲0.5 不收敛）；"
+                    "补救方向：取 r≈1（r>1 反而更慢）并增大 max_iter。"
+                )
+            u, q, lam_t = u_new, q_new, lam_new
+            if res_u < tol and res_q < tol and res_lam < tol:
+                return y_edge, u, iters
 
     raise RuntimeError(
         f"Uzawa（定 G）在 max_iter={max_iter} 步内未收敛："
         f"‖Δũ‖_p={res_u:.3e}, ‖Δq‖_p={res_q:.3e}, ‖λ̃‖_p={res_lam:.3e}, tol={tol:.1e}"
-        "（三分量须同时低于 tol；可增大 max_iter 或 r）"
+        f"（三分量须同时低于 tol。收敛快慢由 r 决定：q 模态收缩因子 r/(κ̃+r) ⇒ r≈1 最快，"
+        "r>1 反而更慢，r≲0.5 不收敛 ⇒ 补救方向是取 r≈1 并增大 max_iter，不是增大 r）"
     )
 
 
