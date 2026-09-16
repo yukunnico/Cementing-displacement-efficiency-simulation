@@ -124,6 +124,7 @@ import scipy.sparse as sp
 import scipy.sparse.linalg as spla
 from numpy.typing import NDArray
 
+from cemdisp.models2d.hb_closure import ClosureProvider, NewtonianClosure
 from cemdisp.models2d.two_layer import mobility_i1
 
 Array = NDArray[np.float64]
@@ -167,7 +168,9 @@ def _scalar_viscosity(eta, name: str) -> float:
 
 
 def solve_stream_function(geom: Dict, c_bar, eta1, eta2, m: float, b_field,
-                          *, ny=None, nz=None) -> Array:
+                          *, closure: ClosureProvider | None = None,
+                          wall: Array | None = None,
+                          ny=None, nz=None) -> Array:
     """解 (4.22) 流函数椭圆方程，返回 Ψ 场 ``(ny, nz)``（单位通量口径）。
 
     Args:
@@ -182,6 +185,13 @@ def solve_stream_function(geom: Dict, c_bar, eta1, eta2, m: float, b_field,
             竖直井装配 b_φ = χ·r_a·cosβ/F²、b_ξ = χ·r_a·sin(πφ)·sinβ/F²。
             均匀幅值输入源项为零——浮力响应须由 χ 的 φ-/ξ-梯度携带，
             约定与 R29 裁定记录见模块 docstring。
+        closure: 闭包提供者（B-1，``ClosureProvider``）。``None`` ⇒
+            ``NewtonianClosure()``，逐位等于 HEAD 的 ``two_layer.mobility_i1``。
+            Phase A 的 HB 查表闭包实现同一协议后从此注入。
+        wall: (ny,nz) 屈服门冻结度 ∈ [0,1]（B-2，Pelipenko04 (2.6)-(2.8) 口径）。
+            ``None`` ⇒ 不施加（逐位 = HEAD）。非 ``None`` 时在算子系数上乘
+            ``max(1−wall, _WALL_CONDUCTANCE_FLOOR)``：冻结区流动度→0，Ψ 局部
+            趋于常数 ⇒ 该处速度→0（static wall layer），且保持椭圆结构。
         ny: 可选形状自校验（与 geom["H"].shape[0] 不符即抛错）。
         nz: 可选形状自校验（与 geom["H"].shape[1] 不符即抛错）。
 
@@ -221,8 +231,11 @@ def solve_stream_function(geom: Dict, c_bar, eta1, eta2, m: float, b_field,
     if not m > 0.0:
         raise ValueError("m = η₁/η₂ 必须为正")
 
-    # I₁ 闭包（Z&F22 (4.21a)；c̄/H 传场、η 传标量，见 two_layer.mobility_i1）
-    I1 = np.asarray(mobility_i1(c, m, eta1=e1, eta2=e2, H=H), dtype=float)
+    # I₁ 闭包（Z&F22 (4.21a)；c̄/H 传场、η 传标量）。B-1：经 ClosureProvider 注入；
+    # 缺省 NewtonianClosure 逐位等于 two_layer.mobility_i1（L1 硬约束）。
+    if closure is None:
+        closure = NewtonianClosure()
+    I1 = np.asarray(closure.mobility(c, m, e1, e2, H), dtype=float)
 
     # ---- b 场入口（(4.22) 字面分组全向量，唯一口径，R29）----------------
     b = np.asarray(b_field, dtype=float)
