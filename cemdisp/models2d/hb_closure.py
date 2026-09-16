@@ -60,3 +60,30 @@ class NewtonianClosure:
 
     def buoyant_mobility(self, c_bar, m: float, eta1: float, eta2: float, H) -> Array:
         return np.asarray(mobility_i2(c_bar, m, eta1=eta1, eta2=eta2, H=H), dtype=float)
+
+
+class PowerLawGapClosure:
+    """牛顿闭包 + 幂律间隙一阶修正（B-3，**近似**，非 B&F25 闭包口径）。
+
+    I₁ → I₁ · (H/H̄)^{1/n − 1}（H̄ = 全场均值）。依据：单流体幂律槽流
+    ū ∝ H^{1+1/n}G^{1/n} ⇒ I₁ = Hū/G ∝ H^{2+1/n}G^{1/n−1}；相对牛顿 H³ 的
+    场修正即 (H/H̄)^{1/n−1}。G 的纯标量因子在椭圆解 flux 归一化中消去，
+    故只有 H 依赖进入算子形状。n=1 时因子恒为 1（逐位退化为牛顿）。
+
+    ⚠️ 适用域：一阶近似，不得引 B&F25 作为方法学依据（见设计规格 §1.5）。
+    """
+
+    def __init__(self, n: float, base: "ClosureProvider | None" = None) -> None:
+        self._n = float(n)
+        self._base = base if base is not None else NewtonianClosure()
+
+    def mobility(self, c_bar, m: float, eta1: float, eta2: float, H) -> Array:
+        I1 = np.asarray(self._base.mobility(c_bar, m, eta1, eta2, H), dtype=float)
+        if abs(self._n - 1.0) < 1e-12:
+            return I1
+        Harr = np.asarray(H, dtype=float)
+        Hbar = float(np.mean(Harr))
+        return I1 * (Harr / Hbar) ** (1.0 / self._n - 1.0)
+
+    def buoyant_mobility(self, c_bar, m: float, eta1: float, eta2: float, H) -> Array:
+        return self._base.buoyant_mobility(c_bar, m, eta1, eta2, H)

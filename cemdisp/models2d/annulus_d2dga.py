@@ -23,8 +23,10 @@ Zhang & Frigaard (2022)（JFM 947 A32）源模型重构完成（2026-09-14/15，
    移除 e_clip 硬截断 0.55/0.90，弃用警告见 `__init__`）；
 6. 屈服门（M3）连续化（Task 11，Pelipenko04 (2.6)-(2.8) 停流判据连续近似
    wall = clip(1−τw/(f·τy), 0, 1)，`_yield_gate_wall`）：新旧路径统一计算，
-   但仅**旧代数路径**的 mobility 消费 wall（新路径牛顿两层闭包无屈服项，
-   见 `_velocity_stream_function` 旧路径差异声明）；
+   旧**代数路径**的 mobility 直接消费 wall；**流函数新路径**（Task 9）的
+   两层闭包自身无屈服项，但可经 ``enable_stream_yield_gate=True``（B-2，
+   默认关）把 wall 送进 ``solve_stream_function`` 的算子（见
+   `_velocity_stream_function` 旧路径差异声明）；
 7. 仅输出求解域内的顶替效率与浓度场。
 
 出口边界条件：
@@ -296,6 +298,7 @@ class AnnulusD2DGASolver:
         e_clip_measured_max: float = 0.90,
         enable_power_law_gap_law: bool = True,
         enable_stream_yield_gate: bool = False,  # B-2 opt-in：屈服门进流函数算子（默认关=HEAD 逐位）
+        enable_power_law_gap_correction: bool = False,  # B-3 opt-in：幂律间隙一阶修正（默认关）
         enable_stream_function: bool = True,
     ) -> None:
         """初始化环空二维求解器参数。
@@ -363,10 +366,18 @@ class AnnulusD2DGASolver:
             dispersion_dt_scale: ⚠️ 已弃用，语义同 dispersion_axial。
             enable_stream_yield_gate: B-2 opt-in 开关，默认 False。
                 True 且 enable_stream_function=True 时，把 `_yield_gate_wall` 的
-                连续冻结度 wall 传进 `solve_stream_function`（I₁_eff = I₁·(1−wall)）
+                连续冻结度 wall 传进 `solve_stream_function`
+                （I₁_eff = I₁·max(1−wall, 1e-6)，地板防 wall≡1 矩阵奇异）
                 ——冻结区流动度→0、Ψ 局部趋于常数 ⇒ 该处轴向速度→0（static wall
                 layer，Pelipenko04 (2.6)-(2.8)），总通量守恒、只重新分配到活跃区。
                 False（默认）= 不传 wall，逐位等于 HEAD（B-1 的 L1 硬约束）。
+                需 enable_yield_gate=True 才会算出非零 wall（否则静默无效，见构造告警）。
+            enable_power_law_gap_correction: B-3 opt-in 开关，默认 False。
+                True 且 enable_stream_function=True 时，把 `PowerLawGapClosure`
+                注入 `solve_stream_function` 的 closure 形参：I₁ → I₁·(H/H̄)^{1/n−1}
+                （n = 水泥相 power_law_n，缺省 1.0），使剪切变稀的偏心间隙放大
+                进入 2D 速度场。⚠️ 一阶近似，非 B&F25 闭包口径，不得作方法学依据。
+                False（默认）= closure 不注入，逐位等于 HEAD（B-1 的 L1 硬约束）。
             enable_stream_function: 速度场路径开关（2026-09-15 Task 9），默认 True。
                 True: (w, v) 由 Z&F22 (4.22) 流函数椭圆方程解经 (2.2) 换算得到
                 （`_velocity_stream_function`）——浮力（平均密度 ρ·f + 分层
@@ -448,9 +459,34 @@ class AnnulusD2DGASolver:
         # 2026-09-16 B-2：屈服门进流函数算子（opt-in，默认 False ⇒ 逐位=HEAD）。
         # 仅 enable_stream_function=True 路径消费（见 _compute_velocity/_velocity_stream_function）。
         self.enable_stream_yield_gate = enable_stream_yield_gate
+        # 2026-09-16 B-3：幂律间隙一阶修正（opt-in，默认 False ⇒ 逐位=HEAD）。
+        # 仅 enable_stream_function=True 路径消费（PowerLawGapClosure 注入
+        # solve_stream_function 的 closure 形参）。
+        self.enable_power_law_gap_correction = enable_power_law_gap_correction
         # 2026-09-15 Task 9：速度场路径开关（True = (4.22) 流函数椭圆方程，
         # False = 旧代数流动度，逐位复现 76a91c1——R7 冻结锚护栏）
         self.enable_stream_function = enable_stream_function
+
+        # ⚠️ 2026-09-16 A3（Task 2 评审）：静默无效开关告警。``enable_stream_yield_gate``
+        # 与 ``enable_power_law_gap_correction`` 均只被新路径（``enable_stream_function=True``）
+        # 消费；此外屈服门还需 ``enable_yield_gate=True`` 才会算出非零 wall。置真却
+        # 无可消费路径时开关静默失效——按项目惯例一次性告警，防「死开关被当活杠杆」。
+        _stream_switches = {
+            "enable_stream_yield_gate": enable_stream_yield_gate,
+            "enable_power_law_gap_correction": enable_power_law_gap_correction,
+        }
+        _dead = [name for name, on in _stream_switches.items() if on and not enable_stream_function]
+        if enable_stream_yield_gate and enable_stream_function and not enable_yield_gate:
+            _dead.append("enable_stream_yield_gate(enable_yield_gate=False)")
+        if _dead:
+            warnings.warn(
+                f"AnnulusD2DGASolver 的开关 {', '.join(_dead)} 在当前配置下无效："
+                "流函数新路径开关（enable_stream_yield_gate/enable_power_law_gap_correction）"
+                "仅在 enable_stream_function=True 时被消费；enable_stream_yield_gate 还需 "
+                "enable_yield_gate=True 才会算出非零冻结度 wall。请修正配置或移除这些开关。",
+                UserWarning,
+                stacklevel=2,
+            )
 
     def _build_geom(self, well_spec: WellSpec, mud_cake_thickness: Array | None = None) -> Dict[str, Array]:
         """根据井筒规格构建环空二维网格几何参数。
@@ -1260,8 +1296,10 @@ class AnnulusD2DGASolver:
         （两层牛顿闭包无屈服项，壁面带慢速由闭包自身体现——documented
         deviation；B-2 起可经 ``enable_stream_yield_gate=True`` 把 wall 送进
         本路径的算子，默认关）；②M2 流态修正（默认关）；③幂律缝隙律 (b/b̄)^(1+1/n)
-        （新路径为牛顿两层闭包 (4.21)，流变经标量表观黏度 η₁/η₂/m 进入，
-        m 无 clip——论文无 clip）；④f_amp 速度乘子（B1 缺陷，见 run()）。
+        （新路径默认牛顿两层闭包 (4.21)，流变经标量表观黏度 η₁/η₂/m 进入，
+        m 无 clip——论文无 clip；B-3 起可经 ``enable_power_law_gap_correction=True``
+        叠加一阶间隙修正 I₁·(H/H̄)^{1/n−1}，默认关）；④f_amp 速度乘子（B1 缺陷，
+        见 run()）。
         均可经 ``enable_stream_function=False`` 回退到旧路径。
 
         Args:
@@ -1352,8 +1390,20 @@ class AnnulusD2DGASolver:
         b_field = b_field * lambda_op
 
         # ---- 椭圆解 + (2.2) 换算 + 物理缩放（推导见 docstring）-----------------
+        # B-3（opt-in，默认关）：代表幂律指数取自水泥相（lead 优先，缺则 tail）；
+        # 非幂律/HB 或指数未给时 n_rep=1.0 ⇒ PowerLawGapClosure 因子恒 1、
+        # mobility 逐位退化为 NewtonianClosure（默认关时 closure=None，
+        # solve_stream_function 内部同样落到 NewtonianClosure ⇒ 逐位=HEAD）。
+        if self.enable_power_law_gap_correction:
+            n_rep = 1.0
+            if cement_fluid is not None and getattr(cement_fluid, "power_law_n", None):
+                n_rep = float(cement_fluid.power_law_n)
+            from cemdisp.models2d.hb_closure import PowerLawGapClosure
+            closure = PowerLawGapClosure(n_rep)
+        else:
+            closure = None
         psi = solve_stream_function(geom, c_bar, eta1, eta2, m_ratio, b_field,
-                                    wall=wall, ny=ny, nz=nz)
+                                    closure=closure, wall=wall, ny=ny, nz=nz)
         w_unit, v_unit = velocity_from_stream_function(psi, geom)
         q_half = float(q_m3s) / 2.0
         w = w_unit * (q_half / np.pi)
