@@ -219,7 +219,7 @@ def test_buoyancy_term_enters_closures_when_gb_nonzero():
     # 结构性：闭包仍为正、无滑移仍成立（Gb≠0 无独立文献闭式 ⇒ 不钉数字）
     assert dense.I1 > 0.0 and dense.I2 > 0.0
     assert buoy.I1 > 0.0 and buoy.I2 > 0.0
-    assert buoy.u[-1] == 0.0
+    assert buoy.u[..., -1] == 0.0   # 壁面值一律用 u[..., -1]（两种形状下语义相同）
     # R-T2-1：上面的 I₁ 断言只钉**闭包侧**接线；这条钉 **Uzawa 侧**——若
     # `_uzawa_fixed_G` 收到的 Gb_t 被写成 0，整条测试仍会全绿（实测 max|Δu|=0.0366）。
     assert not np.array_equal(buoy.u, dense.u)
@@ -317,7 +317,8 @@ def test_non_collinear_GGb_supported_and_rotation_equivariant():
     base = solve_fixed_G(G=G, Gb=Gb, **args)
     assert base.converged
     assert base.u.shape == (2, 201)          # 非共线 ⇒ (2, ny) 向量剖面
-    assert not np.allclose(base.u[1], 0.0)   # ξ 分量被驱动
+    # 语义判定：这里断的是"ξ 分量**通道**被浮力驱动"（整条剖面），不是"第 1 个元素"
+    assert not np.allclose(base.u[1, :], 0.0)   # 显式写成 [分量, :]
     th = 0.7
     R = np.array([[math.cos(th), -math.sin(th)], [math.sin(th), math.cos(th)]])
     rot = solve_fixed_G(G=R @ G, Gb=R @ Gb, **args)
@@ -375,3 +376,24 @@ def test_q0_with_buoyancy_is_the_flux_ratio_of_the_solution():
         sol = solve_fixed_G(c_bar=c, n=(0.7, 0.7), kappa=(1.0, 1.0), tau_y=(0.2, 0.2),
                             G=(1.0, 0.0), Gb=(0.3, 0.0))
         assert sol.q0 == c
+
+def test_u_shape_contract_and_wall_index():
+    """形状契约：共线 ⇒ ``u`` 是 ``(ny,)``、非共线 ⇒ ``(2, ny)``；壁面值一律 ``u[..., -1]``。
+
+    钉住两个静默陷阱（reviewer R-T3-2）：2 维时 ``u[-1]`` 是 **ξ 分量的整条剖面**
+    （不是壁面值）、``u.mean()`` 返回**标量**（不是 ū）；同时防止未来有人改掉形状
+    而无人察觉。无滑移 ``u(1)=0`` 在两种形状下都必须成立。
+    """
+    args = dict(c_bar=0.4, n=(0.7, 0.7), kappa=(1.0, 1.0), tau_y=(0.05, 0.05))
+    axial = solve_fixed_G(G=(1.0, 0.0), Gb=(0.2, 0.0), **args)      # Gb 与 G 共线
+    assert axial.u.shape == (201,)
+    assert axial.u[..., -1] == 0.0
+    assert np.ndim(axial.u_bar) == 0                               # 标量 ū
+
+    vec = solve_fixed_G(G=(1.0, 0.0), Gb=(0.0, 0.4), **args)        # 非共线
+    assert vec.u.shape == (2, 201)
+    assert vec.u[..., -1].shape == (2,)                            # 壁面值 = 逐分量
+    assert np.all(vec.u[..., -1] == 0.0)                           # 无滑移两个分量都成立
+    assert vec.u[-1].shape == (201,)                               # ⚠️ 不是壁面值（陷阱示例）
+    assert np.any(vec.u[-1] != 0.0)
+    assert vec.u_bar.shape == (2,)                                 # 逐分量 ū
