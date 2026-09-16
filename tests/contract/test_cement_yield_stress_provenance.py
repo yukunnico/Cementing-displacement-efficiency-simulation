@@ -119,10 +119,10 @@ _FROZEN_PROVENANCE: dict[tuple[str, str], tuple[str, str, bool]] = {
     ("hu103", "tail"): ("2\\203\\2031\\20311\\203111.docx", "Table7", True),
     ("hu1", "lead"): (
         "2/204/2041/20413/204131.doc",
-        "油井水泥浆物理性能试验结果·第1个浆体块·流变性能", False),
+        "油井水泥浆物理性能试验结果·第1个浆体块·流变性能", True),
     ("hu1", "tail"): (
         "2/204/2041/20413/204131.doc",
-        "油井水泥浆物理性能试验结果·第2个浆体块·流变性能", False),
+        "油井水泥浆物理性能试验结果·第2个浆体块·流变性能", True),
     ("hu2", "lead"): ("化验报告 Table7", "化验报告 Table7", True),
     ("hu2", "intermediate"): ("化验报告 Table7", "化验报告 Table7", True),
     ("hu2", "tail"): ("化验报告 Table7", "化验报告 Table7", True),
@@ -692,6 +692,13 @@ def test_ht1_004_cement_stays_bingham():
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
+_WELL_DIRS: dict[str, str] = {
+    "hu101": "hu101_呼101", "hu102": "hu102_呼102", "hu103": "hu103_呼103",
+    "hu1": "hu1_呼探1", "hu2": "ht1_002_呼探1-002", "ht1_001": "ht1_001_呼探1-001",
+    "ht1_003": "ht1_003_呼1-003", "ht1_004": "ht1_004_呼1-004",
+}
+
+
 @pytest.mark.parametrize("well_dir", [
     "hu101_呼101", "hu102_呼102", "hu103_呼103", "hu1_呼探1",
     "ht1_002_呼探1-002", "ht1_001_呼探1-001", "ht1_003_呼1-003", "ht1_004_呼1-004",
@@ -707,3 +714,31 @@ def test_rheometer_csv_is_present_and_has_the_promised_cement_rows(well_dir):
         pytest.skip(f"现场提取包不在本地：{csv_path}")
     text = csv_path.read_text(encoding="utf-8-sig")
     assert "领浆" in text or "尾浆" in text, f"{well_dir} CSV 里没有水泥行"
+
+
+def test_in_rheometer_csv_flag_is_backed_by_the_actual_csv():
+    """`in_rheometer_csv=True` 的记录，其 `source_file` 必须**真的**能在对应 CSV 里查到。
+
+    这是 2026-09-16 hu1 回填的护栏（用户裁定：把 204131.doc 两块纯净浆体补录进
+    `hu1_呼探1/rheometer_readings.csv`，`notes` 标『报告原文补录（2026-09-16）』）：
+    若后人删掉回填行、或把某条记录的 `in_rheometer_csv` 从 False 改成 True 却没补数据，
+    此测试立刻变红。CSV 目录被 gitignore，故文件缺失时整条**跳过**。
+    """
+    checked = 0
+    for well_key, phase in _ALL_KEYS:
+        record = CEMENT_YIELD_STRESS[well_key][phase]
+        if not record.in_rheometer_csv:
+            continue
+        csv_path = (_PROJECT_ROOT / "参考文档" / "现场资料提取"
+                    / _WELL_DIRS[well_key] / "rheometer_readings.csv")
+        if not csv_path.exists():
+            pytest.skip(f"现场提取包不在本地：{csv_path}")
+        text = csv_path.read_text(encoding="utf-8-sig")
+        assert record.source_file in text, (
+            f"{well_key}/{phase} 标了 in_rheometer_csv=True，但 {record.source_file!r} "
+            f"在 {csv_path.name} 里查不到")
+        checked += 1
+    assert checked >= 19, f"被 CSV 背书核对的记录数异常偏少：{checked}"
+    # hu1 两相必须是"已回填"状态（回填前是 False，若被回退则此断言变红）
+    assert CEMENT_YIELD_STRESS["hu1"]["lead"].in_rheometer_csv is True
+    assert CEMENT_YIELD_STRESS["hu1"]["tail"].in_rheometer_csv is True

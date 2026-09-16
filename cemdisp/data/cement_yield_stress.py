@@ -61,7 +61,9 @@ Fann 35 换算（全篇统一；另一常见口径 0.4788 不得混用）：
 5 点 Fann 读数跨 100:1 剪切速率，HB 三参数**不可辨识**：
 - 绝对残差（τ）与相对残差（ln τ）两种度量给出的 τ_y 相差 0–3 Pa；
 - 严格三点恰定解的 τ_y 在 −70…+50 Pa 之间跳变；
-- 21 条记录里有 **8 条**落在 τ_y = 0 边界（数据支持纯幂律）；
+- 21 条记录里有 **12 条**落在 τ_y = 0 边界（数据支持纯幂律）：
+  hu102 lead/tail、hu103 lead、hu1 lead、hu2 lead/intermediate/tail、
+  ht1_001 lead/intermediate/tail、ht1_004 lead/tail；
 - 读数 ±0.5 格量化扰动下，HB 的 τ_y 标准差均值 0.075 Pa、最大 0.157 Pa。
 
 未经外部验证
@@ -242,9 +244,14 @@ def fann_power_law(readings: Readings) -> tuple[float, float, float]:
     故 **K = 0.511·exp(b)** [Pa·sⁿ]；返回 (n, K, r_squared)。
 
     实测锚（2026-09-16）：本口径逐位复现化验报告给定 K（hu101 复检
-    0.8147→0.815 等），也复现现场固井工程计算表 `2061144.xls` 尾浆（0.416927）
-    与钻井液（0.397529）两列。该表**领浆列的 k 少了 0.511 因子**（属工作簿
-    内部不一致，见契约测试），不是本函数的口径问题。
+    0.8147→0.815 等），也**逐位复现**现场固井工程计算表 `2061144.xls / 流变曲线1`
+    的全部三列——领浆 0.9744824296、尾浆 0.4169271535、钻井液 0.3975288753
+    （契约测试按 rel=1e-9 断言，见
+    `test_toolkit_yield_stress_convention_is_bitwise_reproduced`）。
+
+    订正留痕：本篇曾一度称"该表领浆列漏乘 0.511、属工作簿内部不一致"——
+    经复核为**手工换算口误**，三列实为全部一致；**不要**据此改动本函数口径
+    （改成不带 0.511 会立刻复现不出任何一条化验给定 K，并把测试搞红）。
     """
     gamma, _ = _to_si(readings)
     theta = np.array([value for _, value in readings], dtype=float)
@@ -495,13 +502,15 @@ CEMENT_YIELD_STRESS: Final[Mapping[str, Mapping[str, CementYieldStress]]] = {
             readings=((300, 171), (200, 132), (100, 81), (6, 10), (3, 6)),
             source_file=_SOURCE_HU1,
             source_location="油井水泥浆物理性能试验结果·第1个浆体块·流变性能",
-            in_rheometer_csv=False,
+            in_rheometer_csv=True,
             report_given=MISSING,
             report_given_note=(
                 _A_NO_CEMENT_YS.format(table="204131.doc 第1个浆体块『流变性能』")
-                + " ⚠️ 该读数本身**不在 hu1 的 rheometer_readings.csv 内**：该 CSV 的 hu1"
-                  "水泥行只有污染实验/密度高点/温度高点三类，无纯净水泥样六速。"
-                  "本行取自 loader 既有 n/K（0.732/0.933）所引用的同一份化验报告"
+                + " 补录留痕（2026-09-16 用户裁定）：该读数原**不在** hu1 的"
+                  " rheometer_readings.csv 内（该 CSV 的 hu1 水泥行只有污染实验/密度高点/"
+                  "温度高点三类），已按报告原文回填进该 CSV（`notes` 标『报告原文补录"
+                  "（2026-09-16）』），故 `in_rheometer_csv` 已由 False 翻为 True。"
+                  "出处为 loader 既有 n/K（0.732/0.933）所引用的同一份化验报告"
                   "204131.doc（签发 2020-10-24）原文浆体块，属同一出处链、非新数据源。"
             ),
             fitted=HU1_LEAD_YIELD_STRESS_FITTED_PA,
@@ -512,11 +521,12 @@ CEMENT_YIELD_STRESS: Final[Mapping[str, Mapping[str, CementYieldStress]]] = {
             readings=((300, 117), (200, 86), (100, 52), (6, 9), (3, 5)),
             source_file=_SOURCE_HU1,
             source_location="油井水泥浆物理性能试验结果·第2个浆体块·流变性能",
-            in_rheometer_csv=False,
+            in_rheometer_csv=True,
             report_given=MISSING,
             report_given_note=(
                 _A_NO_CEMENT_YS.format(table="204131.doc 第2个浆体块『流变性能』")
-                + " 取证受限说明同领浆：该读数不在 rheometer_readings.csv 内。"
+                + " 补录留痕同领浆（2026-09-16 用户裁定）：已按报告原文回填进"
+                  " rheometer_readings.csv，`in_rheometer_csv` 由 False 翻为 True。"
             ),
             fitted=HU1_TAIL_YIELD_STRESS_FITTED_PA,
             note="取自 204131.doc（loader n/K=0.666/0.906 的同一出处）；θ600 未记录。",
