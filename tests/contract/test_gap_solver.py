@@ -28,7 +28,7 @@ import warnings
 import numpy as np
 import pytest
 
-from cemdisp.models2d.gap_solver import solve_fixed_G
+from cemdisp.models2d.gap_solver import solve_fixed_G, solve_fixed_mean_velocity
 
 
 def test_newtonian_single_fluid_matches_slot_solution():
@@ -114,15 +114,16 @@ def test_newtonian_two_layer_i2_and_q0_match_two_layer_closed_forms():
 
 
 def test_failure_paths_are_loud():
-    """不收敛抛 ``RuntimeError``；非共线 G/Gb、全场未屈服抛 ``ValueError``。
+    """不收敛抛 ``RuntimeError``；G/Gb 同时为零、全场未屈服抛 ``ValueError``。
 
     设计规格 §3 A-1：“超时/不收敛**抛错**（不静默回退）”。
+    ️ A-1c（Task 3）起 ``G``/``Gb`` **非共线**不再抛错（向量版已实现，见本节末）。
     """
     base = dict(c_bar=0.0, n=(0.5, 0.5), kappa=(1.0, 1.0), tau_y=(0.0, 0.0))
     with pytest.raises(RuntimeError, match="未收敛"):
         solve_fixed_G(G=(1.0, 0.0), max_iter=3, **base)
-    with pytest.raises(ValueError, match="不共线"):
-        solve_fixed_G(G=(1.0, 0.0), Gb=(0.0, 1.0), **base)
+    with pytest.raises(ValueError, match="不能同时为零"):
+        solve_fixed_G(G=(0.0, 0.0), Gb=(0.0, 0.0), **base)
     with pytest.raises(ValueError, match="未屈服"):
         solve_fixed_G(c_bar=0.0, n=(1.0, 1.0), kappa=(1.0, 1.0),
                       tau_y=(100.0, 100.0), G=(1.0, 0.0))
@@ -219,3 +220,158 @@ def test_buoyancy_term_enters_closures_when_gb_nonzero():
     assert dense.I1 > 0.0 and dense.I2 > 0.0
     assert buoy.I1 > 0.0 and buoy.I2 > 0.0
     assert buoy.u[-1] == 0.0
+    # R-T2-1：上面的 I₁ 断言只钉**闭包侧**接线；这条钉 **Uzawa 侧**——若
+    # `_uzawa_fixed_G` 收到的 Gb_t 被写成 0，整条测试仍会全绿（实测 max|Δu|=0.0366）。
+    assert not np.array_equal(buoy.u, dense.u)
+
+
+# --------------------------------------------------------------------------- #
+# A-1c（Task 3）：定均速模式（A.2.2）、向量版应力场（R-T1-3）、ū 口径（R-T1-5）、
+# q₀ 通量比（R-T1-8）
+# --------------------------------------------------------------------------- #
+
+
+def test_u_bar_uses_trapezoid_not_mean():
+    """ū 的口径是 :attr:`GapSolution.u_bar`（``np.trapezoid``），不是 ``u.mean()``。
+
+    牛顿槽流 ``u=(1−ỹ²)/(2η)``：解析 ``ū = 1/(3η)``；格边网格含两端点 ⇒
+    ``mean`` 是 O(h) 偏差、``trapezoid`` 是 O(h²)（ny=201 实测 1.3e-3 vs 2.1e-5）。
+    """
+    sol = solve_fixed_G(c_bar=0.0, n=(1.0, 1.0), kappa=(1.0, 1.0),
+                        tau_y=(0.0, 0.0), G=(1.0, 0.0), ny=201)
+    exact = 1.0 / 3.0
+    assert sol.u_bar == np.trapezoid(sol.u, sol.y)
+    assert abs(sol.u_bar - exact) < 1e-4
+    assert abs(sol.u.mean() - exact) > 10.0 * abs(sol.u_bar - exact)   # mean 明显更差
+
+
+def test_fixed_mean_velocity_newtonian_single_fluid_analytic():
+    """定均速牛顿单流体（解析锚）：ū*=0.3、η=2 ⇒ G=3ηū*=1.8，u=G(1−ỹ²)/(2η)。
+
+    这条同时钉三件事：解出的 G 的**量纲/符号**（G>0、与 ū* 同向）、剖面、
+    以及约束在 ``u_bar`` 口径上被精确满足（不是 mean 口径）。
+    """
+    # 网格加密 ⇒ 误差按 O(h²) 收敛（实测 ny=201 相对误差 6.2e-6、ny=801 为 3.9e-7）
+    for ny, rel in ((201, 1e-5), (801, 1e-6)):
+        sol = solve_fixed_mean_velocity(c_bar=0.0, n=(1.0, 1.0), kappa=(2.0, 2.0),
+                                        tau_y=(0.0, 0.0), u_bar=(0.3, 0.0), ny=ny)
+        assert sol.converged
+        assert sol.G[0] == pytest.approx(1.8, rel=rel)
+        assert sol.G[1] == 0.0
+        assert sol.u_bar == pytest.approx(0.3, rel=1e-10)   # 约束在 u_bar 口径上精确满足
+        y = sol.y
+        assert np.allclose(sol.u, sol.G[0] * (1.0 - y**2) / (2.0 * 2.0),
+                           rtol=1e-5, atol=1e-8)
+
+
+@pytest.mark.parametrize("tau_y,star", [((2.0, 0.5), 0.30), ((0.5, 0.2), 0.30),
+                                         ((0.5, 0.2), 1.0), ((0.5, 0.2), 0.05)])
+def test_fixed_mean_velocity_is_self_consistent(tau_y, star):
+    """给定 ū* 反求 G，再用 G 正算 ū 必须回到 ū*（brief 的往返测试，口径改 u_bar）。
+
+    第一组参数就是 brief 原文的 ``tau_y=(2.0, 0.5)``（实测 G=3.755、达 tol=1e-10）；
+    后三组扫 ū* 大小（弱/强驱动）。实测往返残差全部 ≤5.6e-10（相对）。
+    """
+    args = dict(c_bar=0.45, n=(0.7, 0.8), kappa=(1.4, 0.9), tau_y=tau_y)
+    s = solve_fixed_mean_velocity(u_bar=(star, 0.0), **args)
+    assert s.converged
+    assert abs(s.u_bar - star) <= 1e-12 * star + 1e-15   # 约束在 u_bar 口径上精确
+    chk = solve_fixed_G(G=s.G, **args)
+    assert chk.u_bar == pytest.approx(star, rel=1e-6)
+
+
+def test_fixed_mean_velocity_is_discriminative_wrt_buoyancy():
+    """Gb≠0：解出的 G 与等密度不同，且 ξ 分量被浮力激发（判别性交叉检查）。"""
+    args = dict(c_bar=0.4, n=(0.8, 0.8), kappa=(1.0, 1.0), tau_y=(0.1, 0.1))
+    dense = solve_fixed_mean_velocity(u_bar=(0.5, 0.0), Gb=(0.0, 0.0), **args)
+    buoy = solve_fixed_mean_velocity(u_bar=(0.5, 0.0), Gb=(0.0, 0.3), **args)
+    assert abs(dense.G[1]) == 0.0
+    assert not math.isclose(dense.G[0], buoy.G[0])
+    assert abs(buoy.G[1]) > 1e-3            # ξ 向被浮力驱动
+    assert np.allclose(buoy.u_bar, (0.5, 0.0), atol=1e-9)   # 约束在两个分量上都成立
+
+
+def test_fixed_mean_velocity_failure_paths_are_loud():
+    """定均速：``max_iter`` 用尽抛 ``RuntimeError``；``u_bar`` 与 ``Gb`` 同时为零/形状非法抛 ``ValueError``。"""
+    base = dict(c_bar=0.3, n=(0.6, 0.6), kappa=(1.0, 1.0), tau_y=(0.1, 0.1),
+                u_bar=(0.5, 0.0))
+    with pytest.raises(RuntimeError, match="未收敛"):
+        solve_fixed_mean_velocity(max_iter=3, **base)
+    with pytest.raises(ValueError, match="不能同时为零"):
+        solve_fixed_mean_velocity(c_bar=0.3, n=(1.0, 1.0), kappa=(1.0, 1.0),
+                                  tau_y=(0.0, 0.0), u_bar=(0.0, 0.0), Gb=(0.0, 0.0))
+    with pytest.raises(ValueError, match="u_bar"):
+        solve_fixed_mean_velocity(c_bar=0.3, n=(1.0, 1.0), kappa=(1.0, 1.0),
+                                  tau_y=(0.0, 0.0), u_bar=(1.0, 2.0, 3.0))
+
+
+def test_non_collinear_GGb_supported_and_rotation_equivariant():
+    """向量版应力场（R-T1-3）：非共线 ``G``/``Gb`` 可解，且解对坐标系旋转**协变**。
+
+    各向同性（HB 本构 + ``|m|`` 模）⇒ 把 ``(G, Gb)`` 整体旋转 R 应得 R·u；``I₁/q₀``
+    是不变量。这条同时钉住"截距 d ≠ 0"的实现（共线时 d ∥ c，标量式也能过）。
+    """
+    args = dict(c_bar=0.4, n=(0.7, 0.7), kappa=(1.0, 1.0), tau_y=(0.05, 0.05))
+    G = np.array([1.0, 0.0])
+    Gb = np.array([0.0, 0.4])
+    base = solve_fixed_G(G=G, Gb=Gb, **args)
+    assert base.converged
+    assert base.u.shape == (2, 201)          # 非共线 ⇒ (2, ny) 向量剖面
+    assert not np.allclose(base.u[1], 0.0)   # ξ 分量被驱动
+    th = 0.7
+    R = np.array([[math.cos(th), -math.sin(th)], [math.sin(th), math.cos(th)]])
+    rot = solve_fixed_G(G=R @ G, Gb=R @ Gb, **args)
+    assert np.allclose(rot.u, R @ base.u, rtol=1e-6, atol=1e-9)
+    assert rot.I1 == pytest.approx(base.I1, rel=1e-9)
+    assert rot.I2 == pytest.approx(base.I2, rel=1e-9)
+    assert rot.q0 == pytest.approx(base.q0, rel=1e-9)
+
+
+def test_q0_flux_ratio_matches_isodense_closed_form():
+    """q₀ 通量比口径在 Gb=0 时退回 Z&F22 (4.25)/(4.28) 等密度闭式（回归锚）+ 端点。
+
+    牛顿 两层 与 ``two_layer.isotropic_flux_q0`` 逐位/rel≤e-12；幂律无独立闭式 ⇒
+    只钉端点（``q₀(0)=0``、``q₀(1)=1`` 精确）与严格单调。
+    """
+    from cemdisp.models2d.two_layer import isotropic_flux_q0
+    e1, e2, m = 3.0, 1.0, 3.0
+    for c in (0.0, 0.1, 0.4, 0.7, 0.9, 1.0):
+        for H in (1.0, 3.0):
+            sol = solve_fixed_G(c_bar=c, n=(1.0, 1.0), kappa=(e1, e2),
+                                tau_y=(0.0, 0.0), G=(1.0, 0.0), H=H)
+            assert sol.q0 == pytest.approx(float(isotropic_flux_q0(c, m)),
+                                           rel=1e-12, abs=1e-15)
+    qs = [solve_fixed_G(c_bar=c, n=(0.6, 0.6), kappa=(1.0, 1.0), tau_y=(0.0, 0.0),
+                        G=(1.0, 0.0)).q0
+          for c in (0.0, 0.25, 0.5, 0.75, 1.0)]
+    assert qs[0] == 0.0 and qs[-1] == 1.0
+    assert all(a < b for a, b in zip(qs, qs[1:]))
+
+
+def _partial_trapz(u, y, c):
+    """``∫_0^c u dy`` 的梯形口径（末段用线性插值补齐），与 ``np.trapezoid(u, y)`` 同族。"""
+    mask = y < c
+    yy = np.append(y[mask], c)
+    uu = np.append(u[mask], np.interp(c, y, u))
+    return np.trapezoid(uu, yy)
+
+
+def test_q0_with_buoyancy_is_the_flux_ratio_of_the_solution():
+    """Gb≠0（无独立文献闭式）：结构断言 + 与**离散解**通量比交叉核对。
+
+    交叉核对用 Uzawa 剖面本身算 ``∫_0^c u/∫_0^1 u``（解析求积 vs 离散解），
+    两者只差离散误差 ⇒ 非恒真断言；niters/网格对得上说明 q₀ 确实是"顶替液通量份额"。
+    """
+    args = dict(c_bar=0.45, n=(0.7, 0.8), kappa=(1.4, 0.9), tau_y=(0.5, 0.2))
+    dense = solve_fixed_G(G=(1.0, 0.0), Gb=(0.0, 0.0), **args)
+    buoy = solve_fixed_G(G=(1.0, 0.0), Gb=(0.4, 0.0), ny=801, **args)
+    assert 0.0 < buoy.q0 < 1.0
+    assert not math.isclose(buoy.q0, dense.q0)     # 与等密度值不同
+    num = _partial_trapz(buoy.u, buoy.y, args["c_bar"])
+    den = float(np.trapezoid(buoy.u, buoy.y))
+    assert buoy.q0 == pytest.approx(num / den, rel=1e-3)
+    # 端点精确（分子是空积分 / 分子分母是同一浮点和）
+    for c in (0.0, 1.0):
+        sol = solve_fixed_G(c_bar=c, n=(0.7, 0.7), kappa=(1.0, 1.0), tau_y=(0.2, 0.2),
+                            G=(1.0, 0.0), Gb=(0.3, 0.0))
+        assert sol.q0 == c
