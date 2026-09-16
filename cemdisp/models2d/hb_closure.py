@@ -26,7 +26,7 @@ from typing import Protocol, runtime_checkable
 import numpy as np
 from numpy.typing import NDArray
 
-from cemdisp.models2d.gap_solver import solve_fixed_G
+from cemdisp.models2d.gap_solver import closure_integrals_batch
 from cemdisp.models2d.two_layer import mobility_i1, mobility_i2
 
 Array = NDArray[np.float64]
@@ -146,6 +146,13 @@ class HBClosure:
     真实计算」）。构造期传入的 ``m``/``B`` 只是 (2.32)/(2.33) 的**无量纲参数化**
     （论文报告 / 表索引），**不参与**运行时求值。
 
+    ⚠️ **本类不求解 ``u``**（Task 4.5）：只需 ``I₁/I₂``，而闭包量由**解析应力场**
+    求积得到（见 ``gap_solver`` 模块 docstring：与 Uzawa 解无关）⇒ 4.5 起改走
+    ``closure_integrals_batch``，**不再**跑 Uzawa。语义影响只有一处：Task 4 的逐点版
+    会把 ``gap_solver`` 的 ``RuntimeError``（Uzawa 不收敛/发散）传播出来，现已不会
+    发生（不再迭代）；``I₁/I₂`` 的取值、缓存计数、告警与地板行为**逐位/逐语义不变**
+    （同场实测 10000/10000 点逐位相同，见 task-4-report.md §10）。
+
     ️ 为何用**定 G** 而非定均速模式求值（controller 接口澄清的偏差，已上报）：
     注入量就是 ``G``，定 G 模式无需任何**任意的**参考均速 ``ū*`` 来定尺度；而
     两模式的不动点逐式相同（见 ``solve_fixed_mean_velocity`` docstring）⇒ 在注入
@@ -195,14 +202,18 @@ class HBClosure:
     时全命中）。键含 ``G`` 是必需的（同 ``c̄`` 不同 ``G`` 必须重解）；``G`` 场均匀
     时该缓存自动退化为"按唯一 ``c̄`` 值缓存"。缓存生命周期 = 一次
     ``set_pressure_gradient`` 注入（那里清空），因此规模被钉在单个场（≈``ny·nz``
-    条），长跑不会无界增长。计数见 :attr:`cache_stats`。
+    条），长跑不会无界增长。计数见 :attr:`cache_stats`（``misses`` = 未被缓存覆盖的
+    **格点数**；这些键先去重再整批送 ``closure_integrals_batch``，故实际求解的唯一键数
+    ≤ ``misses``；同一次调用内重复键算命中，与逐点版时序等价）。
     ⚠️ 缓存只存**原始闭包值**：地板在每次调用时按**当次**传入的 ``m``/``η₁``/``η₂``
     现算（改 ``m`` 不会命中旧地板）。
-    ️ 代价量级（实测，呼101 真实场 ``cement_final`` ``(40,250)``=10000 点、
-    ``ny_gap=201``）：单次解 6.7–20.6 ms（随机器负载）⇒ **每个格点一次解**；
-    均匀 ``G`` 时命中率 **33.5%**（唯一 ``c̄``=6647）⇒ 一次 ``mobility()`` **82 s**；
-    非均匀 ``G`` 时命中率 26.1% ⇒ **116 s**。这是 Task 5/6 接线前必须先裁的代价
-    问题（见 ``task-4-report.md`` §4.2/§8.2）。
+    ⚠️ 代价量级（实测，呼101 真实场 ``cement_final`` ``(40,250)``=10000 点、
+    ``ny_gap=201``、唯一 ``c̄``=6647）：Task 4.5 起闭包值走
+    :func:`gap_solver.closure_integrals_batch`（**批量**；闭包量由解析应力场求积、
+    与 Uzawa 解无关 ⇒ 本类不需要 ``u``）⇒ 一次 ``mobility()`` **0.339 s**、
+    ``buoyant_mobility()`` 0.013 s（Task 4 逐点版同场 **72.9 s** ⇒ **215×**），
+    且输出与逐点版**逐位相同**（10000/10000 点，见 task-4-report.md §10）。
+    （Task 4 的历史实测：均匀 ``G`` 82 s / 命中 33.5%；非均匀 ``G`` 116 s / 26.1%。）
 
     ⚠️ 适用域
     ----------
@@ -310,7 +321,7 @@ class HBClosure:
     def buoyant_mobility(self, c_bar, m: float, eta1: float, eta2: float, H) -> Array:
         """浮力流动度 ``I₂``（量纲；(2.15) 的一维间隙弱解求积）。
 
-        与 :meth:`mobility` 共用一次间隙解（缓存）⇒ 紧随其后调用时全命中。
+        与 :meth:`mobility` 共用同一批闭包求积（缓存）⇒ 紧随其后调用时全命中。
         地板格点返回精确值 ``0``（``1/η̃≡0`` ⇒ ``Ĩ₂`` 恒 0，见类 docstring）。
         """
         if self._newtonian is not None:
@@ -343,42 +354,56 @@ class HBClosure:
             raise ValueError(f"注入的 G/Gb 须为有限值，得到 G={self._G!r}、Gb={self._Gb!r}")
 
         n_pts = c.size
-        i1 = np.empty(n_pts, dtype=float)
-        i2 = np.empty(n_pts, dtype=float)
-        floored = np.zeros(n_pts, dtype=bool)
-        first_err: str | None = None
         cf, Hflat = c.reshape(-1), Hf.reshape(-1)
         gxf, gyf = gx.reshape(-1), gy.reshape(-1)
         gbxf, gbyf = gbx.reshape(-1), gby.reshape(-1)
+        i1 = np.empty(n_pts, dtype=float)
+        i2 = np.empty(n_pts, dtype=float)
+        floored = np.zeros(n_pts, dtype=bool)
+
+        # Task 4.5：先按精确键查缓存，未命中的键**去重**后整批送
+        # ``closure_integrals_batch``（闭包量由解析应力场求积，与 Uzawa 解无关 ⇒
+        # HBClosure 不需要解流速剖面，省掉迭代）。计数口径与逐点版逐字相同：
+        # 同一次调用内重复出现的键算**命中**（等价于逐点缓存时的时序）。
+        results: list = [_MISSING] * n_pts
+        pending: dict = {}
         for i in range(n_pts):
             key = (cf[i], gxf[i], gyf[i], gbxf[i], gbyf[i], Hflat[i])
             got = self._cache.get(key, _MISSING)
-            if got is _MISSING:
-                self._misses += 1
-                try:
-                    sol = solve_fixed_G(
-                        c_bar=float(cf[i]), n=self.n, kappa=self.kappa, tau_y=self.tau_y,
-                        G=(float(gxf[i]), float(gyf[i])),
-                        Gb=(float(gbxf[i]), float(gbyf[i])),
-                        H=float(Hflat[i]), ny=self.ny_gap,
-                    )
-                    got = (sol.I1, sol.I2)
-                except ValueError as exc:
-                    # 退化格点（全场未屈服 / G=Gb=0）：闭包无定义 ⇒ 地板化。
-                    # ⚠️ 其余 ValueError 已被本方法上方的输入校验挡掉 ⇒ 不会吞真错误。
-                    got = None
-                    if first_err is None:
-                        first_err = str(exc)
-                self._cache[key] = got
-            else:
+            if got is not _MISSING:
                 self._hits += 1
+                results[i] = got
+            elif key in pending:
+                self._hits += 1
+                pending[key].append(i)
+            else:
+                self._misses += 1
+                pending[key] = [i]
+        if pending:
+            uniq = np.array(list(pending), dtype=float)          # (n_unique, 6)
+            cb = closure_integrals_batch(
+                uniq[:, 0], self.n, self.kappa, self.tau_y,
+                uniq[:, 1:3], Gb=uniq[:, 3:5], H=uniq[:, 5],
+            )
+            for j in range(uniq.shape[0]):
+                # 无定义（全场未屈服 / G=Gb=0）⇒ 缓存 None，由下方地板处置
+                got = None if cb.undefined[j] else (float(cb.I1[j]), float(cb.I2[j]))
+                self._cache[tuple(uniq[j])] = got
+                for i in pending[tuple(uniq[j])]:
+                    results[i] = got
+        for i in range(n_pts):
+            got = results[i]
             if got is None:
-                i1[i], i2[i], floored[i] = 0.0, 0.0, True
+                floored[i] = True
             else:
                 i1[i], i2[i] = got
 
         n_static = int(np.count_nonzero(floored))
         self.n_static_wall_points = n_static
+        # 成因拆分（诊断用）：复算标量路径的两条 ValueError 判据
+        zero_drive = (np.hypot(gxf, gyf) == 0.0) & (np.hypot(gbxf, gbyf) == 0.0) & floored
+        n_zero = int(np.count_nonzero(zero_drive))
+        n_unyield = n_static - n_zero
         if n_static:
             i1_ref = np.broadcast_to(
                 np.asarray(mobility_i1(c, float(m), eta1=eta1, eta2=eta2, H=Hf), dtype=float),
@@ -391,7 +416,8 @@ class HBClosure:
                 warnings.warn(
                     f"HBClosure：{n_static} 个格点闭包无定义（全场未屈服 ⇒ static wall "
                     f"layer，或 G=Gb=0），已取 I₁ 地板 = {_STATIC_WALL_MOBILITY_FLOOR:g}"
-                    f"×I₁_牛顿、I₂=0。首个原因：{first_err}。地板是算子适定性正则化"
+                    f"×I₁_牛顿、I₂=0。成因拆分：全场未屈服 {n_unyield} 个、"
+                    f"G 与 Gb 不能同时为零的零驱动 {n_zero} 个。地板是算子适定性正则化"
                     "（先例 stream_function._WALL_CONDUCTANCE_FLOOR），不是物理值"
                     "（真实物理值为 I₁=0、I₂=0）。每实例只告警一次；"
                     "计数见 n_static_wall_points。",

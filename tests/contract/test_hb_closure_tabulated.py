@@ -135,9 +135,9 @@ def test_hb_closure_newtonian_limit():
 def test_hb_closure_newtonian_limit_never_calls_gap_solver(monkeypatch):
     """R2 的结构性证明：短路路径**不调用** ``gap_solver``（未注入 G 也照常工作）。
 
-    牛顿极限的逐位要求不可能由"进 gap_solver 再算回来"满足（Uzawa 解与解析闭式
-    差 ~1e-9 量级）；本条用 monkeypatch 把 ``gap_solver`` 入口打哑，短路若被改回
-    数值路径即红。
+    牛顿极限的逐位要求不可能由"进 gap_solver 再算回来"满足（数值解与解析闭式
+    差 ~1e-9 量级）；本条用 monkeypatch 把 ``gap_solver`` 的批量闭包入口打哑
+    （Task 4.5 起非牛顿路径走 ``closure_integrals_batch``），短路若被改回数值路径即红。
     """
     import cemdisp.models2d.hb_closure as hbc
 
@@ -150,7 +150,7 @@ def test_hb_closure_newtonian_limit_never_calls_gap_solver(monkeypatch):
     H = np.full(5, 0.01)
     expect = NewtonianClosure().mobility(c, 0.34, 0.058, 0.171, H)   # 打哑前先取期望
 
-    monkeypatch.setattr(hbc, "solve_fixed_G", _boom)
+    monkeypatch.setattr(hbc, "closure_integrals_batch", _boom)
 
     # 未注入 G：短路路径不需要（也不会去找）压力梯度
     assert np.array_equal(hb.mobility(c, 0.34, 0.058, 0.171, H), expect)
