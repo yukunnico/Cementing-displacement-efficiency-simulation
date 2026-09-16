@@ -27,10 +27,20 @@ Task 8/9（两层闭包接线）统一消费。函数均为纯函数：不读写
 ------
 - ``buoyancy_flux_distribution_i3`` **必须**用 Z&F22 (4.26)；B&F25 (2.27)
   的印刷式（括号 ``3(1−c̄²)``）已核实不自洽，禁止替换。
+- ``mobility_i1``/``mobility_i2``/``isotropic_flux_q0`` 为牛顿闭式（阶段 B 逐位
+  护栏的锚），HB 相关改动只做**纯增量**（新增 :func:`hb_groups`）。
+
+非牛顿增量与适用域
+------------------
+:func:`hb_groups` 实现 B&F25 (2.29)—(2.34) 的 HB 无量纲群换算（供论文报告与制表
+索引；真实闭包值由 ``hb_closure.HBClosure`` 在注入的局部 G 上现算）。该推广属
+**扩展应用，未获外部验证**；Z&F22/23 的判据与结论仅严格适用于**竖直井 + 牛顿
+流体**，不得引其作 HB 依据（见 ``docs/源模型口径与适用域声明.md``）。
 
 References
 ----------
 Zhang & Frigaard (2022), JFM 947 A32：式 (4.21a,b)、(4.25)、(4.26)、(4.28)。
+Bararpour & Frigaard (2025), JFM 1022 A15：(2.29)—(2.34)（``hb_groups``）。
 """
 
 from __future__ import annotations
@@ -208,3 +218,83 @@ def layer_thickness_fraction(c_bar) -> float:
         界面厚度分数 y_i/H（= c̄）。
     """
     return float(c_bar)
+
+
+def hb_groups(
+    kappa1: float,
+    kappa2: float,
+    n1: float,
+    n2: float,
+    tauY1: float,
+    tauY2: float,
+    gamma0: float,
+) -> dict:
+    """HB 无量纲群换算（Bararpour & Frigaard 2025 式 (2.29)—(2.34)）。
+
+    下标约定与 :func:`mobility_i1` 一致：``1`` = 被顶替液（壁面带）、``2`` = 顶替液
+    （水泥，中线带）；``κ̂_k/n_k/τ̂_{Y,k}`` 为量纲稠度系数/幂律指数/屈服应力。
+
+    公式（逐式对照文献，``γ̇₀`` 为**调用方给定的参考剪切率**）::
+
+        μ̂e = [κ̂₁γ̇₀^{n₁−1}·κ̂₂γ̇₀^{n₂−1}]^{1/2}      (2.29)
+        τ̂₀ = μ̂eγ̇₀ + max{τ̂_Y,1, τ̂_Y,2}                (2.30)
+        m  = κ̂₁γ̇₀^{n₁−n₂}/κ̂₂                            (2.32)
+        B  = max{τ̂_Y,1, τ̂_Y,2}/(μ̂eγ̇₀)                    (2.33)
+        κ_k = κ̂_kγ̇₀^{n_k}/τ̂₀ = m^{1/2}/(1+B)           (2.32)
+        τ_{Y,k} = τ̂_{Y,k}/τ̂₀                              (2.32)
+
+    ``μ̂e`` 是 γ̇₀ 处的有效黏度尺度（= ``√(η₁η₂)``，``η_k = κ̂_kγ̇₀^{n_k−1}`` 为表观
+    黏度），故 ``m`` 就是 γ̇₀ 处的**表观黏度比**——与牛顿 ``η₁/η₂`` 同一意义的推广。
+    用 ``max{τ̂_Y}``（而非逐相）是为了让缩放屈服应力落在 ``[0,1)``（``max τ_{Y,k}
+    = B/(1+B)``），便于数值求值与制表。
+
+    ⚠️ **``γ̇₀`` 的选择决定整组数**（文献口径 ``γ̇₀ = ŵ₀/d̂*``：速度尺度/长度尺度），
+    且 ``B`` 里的 ``γ̇₀`` 与**局部应力尺度**绑定（``B`` 大 ⇒ 屈服项重要）。本函数
+    只做代数换算、不选 ``γ̇₀``；D2DGA 的真实闭包值**不**由这些群决定，而由
+    ``hb_closure.HBClosure`` 在**注入的局部 G** 上现算（``(c̄, B)`` 表只在固定 ``G``
+    下自洽）。本组数的用途是**论文报告与制表索引**。
+    ⚠️ 本推广属**扩展应用，未获外部验证**（B&F25 自述无外部验证）；Z&F22/23 的判据
+    与结论仅严格适用于**竖直井 + 牛顿流体**，不得引其作 HB 依据。
+
+    Args:
+        kappa1, kappa2: 稠度系数 κ̂₁/κ̂₂（> 0）。
+        n1, n2: 幂律指数 n₁/n₂（> 0）。
+        tauY1, tauY2: 屈服应力 τ̂_{Y,1}/τ̂_{Y,2}（≥ 0）。
+        gamma0: 参考剪切率 γ̇₀（> 0），口径见上（文献 ``ŵ₀/d̂*``）。
+
+    Returns:
+        dict：``mu_e``（μ̂e）、``tau_0``（τ̂₀）、``m``、``B``、``kappa_k``（2-元组，
+        逐相缩放稠度系数）、``tau_Yk``（2-元组，逐相缩放屈服应力）。
+        牛顿退化 ``n₁=n₂=1, τ̂_Y≡0`` ⇒ ``B=0``、``m=κ̂₁/κ̂₂``、
+        ``kappa_k=(√m, 1/√m)``、``tau_Yk=(0, 0)``。
+
+    Raises:
+        ValueError: κ̂ ≤ 0、n ≤ 0、τ̂_Y < 0 或 γ̇₀ ≤ 0（含 NaN/非有限值）。
+    """
+    for name, val, positive in (("kappa1", kappa1, True), ("kappa2", kappa2, True),
+                                ("n1", n1, True), ("n2", n2, True),
+                                ("gamma0", gamma0, True)):
+        v = float(val)
+        if not (math.isfinite(v) and (v > 0.0 if positive else v >= 0.0)):
+            raise ValueError(f"HB 群换算：{name} 须为正的有限值，得到 {val!r}")
+    tau_max = 0.0
+    for name, val in (("tauY1", tauY1), ("tauY2", tauY2)):
+        v = float(val)
+        if not (math.isfinite(v) and v >= 0.0):
+            raise ValueError(f"HB 群换算：{name} 须为非负的有限值，得到 {val!r}")
+        tau_max = max(tau_max, v)
+
+    k1, k2, e1, e2, g = float(kappa1), float(kappa2), float(n1), float(n2), float(gamma0)
+    # (2.29)：μ̂e 用表观黏度 η_k = κ̂_kγ̇₀^{n_k−1} 的几何平均（等价于文献乘积式）
+    mu_e = math.sqrt((k1 * g ** (e1 - 1.0)) * (k2 * g ** (e2 - 1.0)))
+    tau_0 = mu_e * g + tau_max                                   # (2.30)
+    m = k1 * g ** (e1 - e2) / k2                                 # (2.32)
+    B = tau_max / (mu_e * g)                                     # (2.33)
+    return {
+        "mu_e": mu_e,
+        "tau_0": tau_0,
+        "m": m,
+        "B": B,
+        "kappa_k": (k1 * g ** e1 / tau_0, k2 * g ** e2 / tau_0),  # (2.32) 左式
+        "tau_Yk": (float(tauY1) / tau_0, float(tauY2) / tau_0),   # (2.32) 末式
+    }
