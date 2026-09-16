@@ -15,8 +15,14 @@
 壁面屈服带（``|du/dỹ| = (Gỹ−τY)/κ ∈ [4,7]``，见 ``task-1-report.md``）。本测试
 按 (A1)/(A2) 与 ① 修正为 ``y_plug = τY/|G|``，并把 brief 标题里的
 "matches_slot_solution" 落成逐位断言。
+
+A-1b（Task 2）追加：⑤ ``τ_Y>0`` 的闭包**值**断言（解析求积闭包是 Phase A 的全部
+要点，之前无任何测试钉住它）；⑥ H 标度 ``I₁ ∝ H^{2+1/n}``；⑦ Uzawa 收敛性
+（步数有限 + 幂律指数越大越快，B&F25 图 18 的定性趋势）；⑧ ``Gb≠0`` 的判别性
+交叉检查（三条锚全部 ``Gb=0`` ⇒ 实现里的界面项与两处 Gb 拆分恒为零，有 bug 也看不见）。
 """
 
+import math
 import warnings
 
 import numpy as np
@@ -65,6 +71,11 @@ def test_bingham_plug_exists_and_matches_slot_solution():
     mask_yield = sol.y > y_plug + 1e-6
     u_exact = (G / (2.0 * kappa)) * (1.0 - sol.y**2) - (tauY / kappa) * (1.0 - sol.y)
     assert np.allclose(sol.u[mask_yield], u_exact[mask_yield], rtol=1e-6, atol=1e-8)
+    # 闭包值也钉住（τ_Y>0 ⇒ 解析求积闭包，正是 Phase A 的要点）：
+    #   I₁ = ∫_0^1 ỹ²·(γ/|τ̃|) d = ∫_{τY/G}^1 (ỹ² − (τY/G)·ỹ) dỹ
+    #      = [ỹ³/3 − (τY/G)ỹ²/2]_{τY/G}^{1}；G=10、τY=3 ⇒ 1/3 − 0.15 − 0.009 + 0.0135
+    #      = 0.1878333…
+    assert sol.I1 == pytest.approx(0.1878333333333333, rel=1e-10)
 
 
 def test_newtonian_two_layer_identity_holds_at_H_not_one():
@@ -131,3 +142,80 @@ def test_divergence_guard_raises_runtimeerror_and_leaks_no_warning():
         warnings.simplefilter("error", RuntimeWarning)
         with pytest.raises(RuntimeError, match="发散"):
             solve_fixed_G(**args)
+
+
+# --------------------------------------------------------------------------- #
+# A-1b（Task 2）：H 标度、τ_Y>0 闭包值、Gb≠0 判别性、Uzawa 收敛性
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize("n_exp,expect", [(1.0, 3.0), (0.7, 2 + 1/0.7), (0.4, 2 + 1/0.4)])
+def test_single_fluid_power_law_I1_scales_as_H_pow_2_plus_1_over_n(n_exp, expect):
+    """阶段 B 已数值核验：I₁ ∝ H^{2+1/n}（**固定量纲 G** 扫 H，直接看 ``sol.I1``）。
+
+    单流体幂律用 (2.14) + 幂律流变有闭式 ``Ĩ₁ = κ̃^{−1/n}G̃^{1/n−1}/(2+1/n)``；
+    代入 (A4)（``κ̃=κ/Hⁿ``、``G̃=H·G``）⇒ ``I₁ = H^{2+1/n}·κ^{−1/n}G^{1/n−1}/(2+1/n)``。
+
+    ⚠️ brief 原文写 ``solve_fixed_G(..., G=(1.0/H, 0.0)).I1 * H**3``：它**同时**改了
+    量纲 G（⇒ ``G̃=H·G≡1`` ⇒ 只测出 ``I₁ = H³/(2+1/n)``，斜率 ``4−1/n``）。实测
+    n=1 偶然为 3.0（假绿）、n=0.7 为 2.5714（应 3.4286）、n=0.4 因 ``G̃/κ̃`` 过大
+    在 ``max_iter=2000`` 内不收敛（RuntimeError）⇒ 三种失败。故按裁定改为本条。
+    """
+    Hs = np.array([0.006, 0.008, 0.010, 0.012, 0.014])
+    sols = [solve_fixed_G(c_bar=0.0, n=(n_exp, n_exp), kappa=(1.0, 1.0),
+                          tau_y=(0.0, 0.0), G=(1.0, 0.0), H=float(H)) for H in Hs]
+    assert all(sol.converged for sol in sols)
+    I1s = np.array([sol.I1 for sol in sols])
+    slope = np.polyfit(np.log(Hs), np.log(I1s), 1)[0]
+    assert slope == pytest.approx(expect, abs=1e-3)
+    # 加固（brief 之外）：纯幂律斜率对"与 H 无关的常数错误"不敏感 ⇒ 再钉解析前因子
+    # （κ=1、G=1 ⇒ I₁ = H^{2+1/n}/(2+1/n)；实测偏差 ≤2.3e-9，为分段 GL-16 求积误差）
+    assert I1s == pytest.approx(Hs**(2.0 + 1.0 / n_exp) / (2.0 + 1.0 / n_exp), rel=1e-6)
+
+
+def test_uzawa_converges_and_reports_iters():
+    sol = solve_fixed_G(0.5, (0.7, 0.7), (1.0, 1.0), (0.0, 0.0), G=(5.0, 0.0))
+    assert sol.converged and 0 < sol.iters <= 2000
+
+
+def test_uzawa_iters_decrease_with_power_law_index():
+    """幂律指数越大收敛越快（B&F25 §A.2.3 图 18 的定性趋势）。
+
+    参数按图 18 的题注：「two identical fluids … isodense flows (b = 0) at
+    ``κ₁ = κ₂ = 1``, ``c̄ = 0.5``」——两种相同流体（等 κ、等 n、τ_Y=0 的
+    shear-thinning 族）、等密度（Gb=0）、H=1。实测步数 n=0.2→1.0：
+    ``96 / 58 / 44 / 37 / 33``（牛顿最快，与论文「increasing the power-law index
+    (n) improves the convergence as does reducing the yield stress」一致）。
+
+    ⚠️ **定 G 口径的依赖**：同一组参数下该趋势随 ``G`` 变化（单位参数 G=1 时
+    单调下降如上，G=0.5 时反转为 ``14/25/30/32/32``，G=2 时为 ``1440/150/66/43/34``）。
+    图 18 的原始口径是**定均速**（A.2.2，``solve_fixed_mean_velocity``，Task 3），
+    在那里比的是同一 ``w̄`` 下的 n 族。故本条只钉「G=1 单位参数下 n 越大越快」。
+    """
+    iters = {}
+    for n_exp in (0.2, 0.4, 0.6, 0.8, 1.0):
+        sol = solve_fixed_G(c_bar=0.5, n=(n_exp, n_exp), kappa=(1.0, 1.0),
+                            tau_y=(0.0, 0.0), G=(1.0, 0.0), H=1.0)
+        iters[n_exp] = sol.iters
+    assert iters[1.0] <= iters[0.2]
+
+
+def test_buoyancy_term_enters_closures_when_gb_nonzero():
+    """``Gb`` 真的进入闭包（判别性交叉检查）。
+
+    三条解析锚全部 ``Gb=0``——此时实现里 ``a₂≡a₁``、界面项 ``(a₂−a₁)c̄`` 与两处
+    Gb 拆分恒等于零，Gb 路径有 bug 也看不见。本条取 ``τ_Y>0``（牛顿且 ``τ_Y=0``
+    时 ``1/η̃≡1/κ`` 与应力场无关、对 Gb 完全盲），并要求 ``Gb`` 沿 ``G`` 共线。
+    """
+    args = dict(c_bar=0.5, n=(1.0, 1.0), kappa=(1.0, 1.0), tau_y=(0.1, 0.1),
+                G=(1.0, 0.0), H=1.0)
+    dense = solve_fixed_G(Gb=(0.0, 0.0), **args)
+    buoy = solve_fixed_G(Gb=(0.3, 0.0), **args)
+    assert buoy.converged
+    # 判别性：I₁ 与等密度情形不同（且非浮点噪声量级 ⇒ 实测差 ~1.5%）
+    assert not math.isclose(dense.I1, buoy.I1)
+    assert abs(buoy.I1 / dense.I1 - 1.0) > 1e-3
+    # 结构性：闭包仍为正、无滑移仍成立（Gb≠0 无独立文献闭式 ⇒ 不钉数字）
+    assert dense.I1 > 0.0 and dense.I2 > 0.0
+    assert buoy.I1 > 0.0 and buoy.I2 > 0.0
+    assert buoy.u[-1] == 0.0
