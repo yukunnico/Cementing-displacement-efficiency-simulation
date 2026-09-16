@@ -75,6 +75,9 @@ class PowerLawGapClosure:
 
     def __init__(self, n: float, base: "ClosureProvider | None" = None) -> None:
         self._n = float(n)
+        if not (self._n > 0.0):
+            # n ≤ 0（含 0.0/NaN）会使 1/n 无定义或非物理——构造即拒绝。
+            raise ValueError(f"幂律指数 n 必须为正（1/n 需有定义），得到 n={n!r}")
         self._base = base if base is not None else NewtonianClosure()
 
     def mobility(self, c_bar, m: float, eta1: float, eta2: float, H) -> Array:
@@ -86,4 +89,11 @@ class PowerLawGapClosure:
         return I1 * (Harr / Hbar) ** (1.0 / self._n - 1.0)
 
     def buoyant_mobility(self, c_bar, m: float, eta1: float, eta2: float, H) -> Array:
+        """浮力流动度 I₂ —— **故意不修正**。
+
+        本类只覆盖 I₁ 的 H 依赖（I₁ ∝ H^{2+1/n}）；I₂ = H⁴ 的幂律标度未推导，
+        故直接委托 base（牛顿闭包）。当前 solver 只调 :meth:`mobility`（I₂ 经
+        ``χ`` 的 ``i2_field`` 另有牛顿闭式路径消费），该口子暂无影响；若未来
+        I₂ 也进算子，须先补幂律标度推导。
+        """
         return self._base.buoyant_mobility(c_bar, m, eta1, eta2, H)

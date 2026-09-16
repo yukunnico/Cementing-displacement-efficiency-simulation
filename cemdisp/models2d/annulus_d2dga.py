@@ -367,7 +367,8 @@ class AnnulusD2DGASolver:
             enable_stream_yield_gate: B-2 opt-in 开关，默认 False。
                 True 且 enable_stream_function=True 时，把 `_yield_gate_wall` 的
                 连续冻结度 wall 传进 `solve_stream_function`
-                （I₁_eff = I₁·max(1−wall, 1e-6)，地板防 wall≡1 矩阵奇异）
+                （I₁_eff = I₁·max(1−wall, _WALL_CONDUCTANCE_FLOOR)，地板防
+                wall≡1 矩阵奇异；该常量定义于 `stream_function`，勿在此处硬编码）
                 ——冻结区流动度→0、Ψ 局部趋于常数 ⇒ 该处轴向速度→0（static wall
                 layer，Pelipenko04 (2.6)-(2.8)），总通量守恒、只重新分配到活跃区。
                 False（默认）= 不传 wall，逐位等于 HEAD（B-1 的 L1 硬约束）。
@@ -466,6 +467,9 @@ class AnnulusD2DGASolver:
         # 2026-09-15 Task 9：速度场路径开关（True = (4.22) 流函数椭圆方程，
         # False = 旧代数流动度，逐位复现 76a91c1——R7 冻结锚护栏）
         self.enable_stream_function = enable_stream_function
+        # B-3 I-1：运行时一次性告警标志（水泥相非幂律时开关静默空转，见
+        # _velocity_stream_function）。__init__ 拿不到 fluids，故不能在此判定。
+        self._power_law_gap_correction_warned = False
 
         # ⚠️ 2026-09-16 A3（Task 2 评审）：静默无效开关告警。``enable_stream_yield_gate``
         # 与 ``enable_power_law_gap_correction`` 均只被新路径（``enable_stream_function=True``）
@@ -1394,10 +1398,30 @@ class AnnulusD2DGASolver:
         # 非幂律/HB 或指数未给时 n_rep=1.0 ⇒ PowerLawGapClosure 因子恒 1、
         # mobility 逐位退化为 NewtonianClosure（默认关时 closure=None，
         # solve_stream_function 内部同样落到 NewtonianClosure ⇒ 逐位=HEAD）。
+        # ⚠️ M-2 已知不一致（一阶近似包络内）：上方 χ 的 i2_field/i1_field 与
+        # solve_stream_function 的 b 场装配用的是**未修正**牛顿闭式 I₁/I₂
+        # （I₂/(H·I₁) 为 H⁰ 的 H 幂消去）；B-3 开启时椭圆算子用**已修正** I₁，
+        # 两者口径不同。属一阶近似包络内的已知不一致，不单独修正。
         if self.enable_power_law_gap_correction:
             n_rep = 1.0
-            if cement_fluid is not None and getattr(cement_fluid, "power_law_n", None):
-                n_rep = float(cement_fluid.power_law_n)
+            n_cement = getattr(cement_fluid, "power_law_n", None) if cement_fluid is not None else None
+            if n_cement:
+                n_rep = float(n_cement)
+            elif not self._power_law_gap_correction_warned:
+                # I-1：开关置真但水泥相非幂律（power_law_n is None，如 Bingham/牛顿）
+                # ⇒ n_rep 回落 1.0、因子恒 1、**静默空转**——一次性告警，防下游
+                # （如 Task 4 变体矩阵）把 Δη=0 误读成「物理中性」。__init__ 拿不到
+                # fluids，故判据只能落在运行时（本处），这是唯一能精确定位流体之处。
+                self._power_law_gap_correction_warned = True
+                warnings.warn(
+                    "enable_power_law_gap_correction=True 但水泥相非幂律"
+                    f"（power_law_n is None，流体={getattr(cement_fluid, 'name', None)!r}）："
+                    "幂律间隙修正静默空转（n_rep 回落 1.0、因子恒 1）。"
+                    "若本井 LEAD/TAIL 为 Bingham/牛顿，该开关不产生任何效应——"
+                    "勿把由此得到的零差异读作「物理中性」。",
+                    UserWarning,
+                    stacklevel=2,
+                )
             from cemdisp.models2d.hb_closure import PowerLawGapClosure
             closure = PowerLawGapClosure(n_rep)
         else:
