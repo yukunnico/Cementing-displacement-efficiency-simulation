@@ -31,6 +31,7 @@ import math
 from pathlib import Path
 
 from cemdisp.data.fluid_spec import FluidRole, FluidSpec, RheologyModel
+
 from cemdisp.data.pumping_schedule import PumpingSchedule, PumpingScheduleStep
 from cemdisp.data.validation_data import ValidationData
 from cemdisp.data.well_spec import DepthValuePoint, EvaluationWindow, WellSpec
@@ -255,6 +256,25 @@ HT1_003_LEAD_POWER_LAW_N = 0.597  # 领浆 流性指数 n（化验报告）
 HT1_003_LEAD_CONSISTENCY_K = 1.622  # 领浆 稠度系数 K（化验报告）
 HT1_003_TAIL_POWER_LAW_N = 0.585  # 尾浆 流性指数 n（化验报告）
 HT1_003_TAIL_CONSISTENCY_K = 1.673  # 尾浆 稠度系数 K（化验报告）
+
+# 水泥屈服应力 τ_y — 两路线并列取证（2026-09-16 Phase A Task 0）。
+# **不改 FluidSpec、不进默认求解**（R7）；哪一套被生产消费由 controller 裁定，本文件不预设。
+#   路线 A `..._YIELD_STRESS_REPORT_GIVEN_PA`：化验报告**原文直接给出的**屈服应力。
+#       8 井化验报告『流变性能』表对水泥浆**只给 n/K**（『流变模式：幂律模式』），
+#       设计书/施工记录表里的『屈服值』全在钻井液/前置液行 → 本井 A 路线登记 MISSING。
+#   路线 B `..._YIELD_STRESS_FITTED_PA`：从 Fann 35 六速读数**新推导**（γ=1.703·RPM、
+#       τ=0.511·θ；HB 三参数 τ=τy+K·γⁿ 的 τy，τy≥0 约束）。**与报告给定 n/K 口径不自洽**
+#       （报告 n/K 不可复现，见报告 Step 1），不得冒充化验给定值。
+#       ⚠️ 0.0000 = HB 拟合落在 τy=0 边界（数据支持纯幂律），是**取值**不是缺失。
+# 出处/温度/读数/两路线复算见 `cemdisp/data/cement_yield_stress.py`；
+# 契约测试 `tests/contract/test_cement_yield_stress_provenance.py`。
+# 缺项哨兵（与汇总模块 MISSING 同字面值；取不到即登记，不许静默 None、不许跨路线借值）：
+MISSING = "MISSING"
+# 读数（HT1-003 油层尾管化验报告 表7，129℃↓93℃（θ600=207/196 为**真实读数**，唯一含 600 的井）：｜300/200/100/6/3（ht1_003 含 600）：
+HT1_003_LEAD_YIELD_STRESS_REPORT_GIVEN_PA = MISSING  # 路线A：报告未给定（只给 n/K）
+HT1_003_LEAD_YIELD_STRESS_FITTED_PA = 4.0132  # 路线B 新推导：领浆 HB τy（读数 207/121/93/60/15/9，θ600 真实读数）
+HT1_003_TAIL_YIELD_STRESS_REPORT_GIVEN_PA = MISSING  # 路线A：报告未给定（只给 n/K）
+HT1_003_TAIL_YIELD_STRESS_FITTED_PA = 3.8722  # 路线B 新推导：尾浆 HB τy（读数 196/118/89/56/14/10，θ600 真实读数）
 HT1_003_SPACER_POWER_LAW_N = 0.668  # 隔离液 流性指数 n（化验报告）
 HT1_003_SPACER_CONSISTENCY_K = 1.245  # 隔离液 稠度系数 K（化验报告）
 # LEGACY(2026-08-16 前): 钻井液/领浆/尾浆/隔离液 Bingham 代理（untitled(1).m miu/tau 参数）

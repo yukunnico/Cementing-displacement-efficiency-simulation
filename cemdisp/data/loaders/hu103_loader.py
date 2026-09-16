@@ -43,6 +43,7 @@ from collections.abc import Callable, Iterable
 from pathlib import Path
 
 from cemdisp.data.fluid_spec import FluidRole, FluidSpec, RheologyModel
+
 from cemdisp.data.pumping_schedule import PumpingSchedule, PumpingScheduleStep
 from cemdisp.data.validation_data import ValidationData
 from cemdisp.data.well_spec import DepthValuePoint, EvaluationWindow, WellSpec
@@ -139,6 +140,27 @@ HU103_INTERMEDIATE_K_PA_S_N = 1.11           # 中间浆幂律稠度系数
 HU103_TAIL_DENSITY_KG_M3 = 2050.0            # 尾浆密度 2.05g/cm³
 HU103_TAIL_N = 0.76                          # 尾浆幂律流性指数
 HU103_TAIL_K_PA_S_N = 1.14                   # 尾浆幂律稠度系数
+
+# 水泥屈服应力 τ_y — 两路线并列取证（2026-09-16 Phase A Task 0）。
+# **不改 FluidSpec、不进默认求解**（R7）；哪一套被生产消费由 controller 裁定，本文件不预设。
+#   路线 A `..._YIELD_STRESS_REPORT_GIVEN_PA`：化验报告**原文直接给出的**屈服应力。
+#       8 井化验报告『流变性能』表对水泥浆**只给 n/K**（『流变模式：幂律模式』），
+#       设计书/施工记录表里的『屈服值』全在钻井液/前置液行 → 本井 A 路线登记 MISSING。
+#   路线 B `..._YIELD_STRESS_FITTED_PA`：从 Fann 35 六速读数**新推导**（γ=1.703·RPM、
+#       τ=0.511·θ；HB 三参数 τ=τy+K·γⁿ 的 τy，τy≥0 约束）。**与报告给定 n/K 口径不自洽**
+#       （报告 n/K 不可复现，见报告 Step 1），不得冒充化验给定值。
+#       ⚠️ 0.0000 = HB 拟合落在 τy=0 边界（数据支持纯幂律），是**取值**不是缺失。
+# 出处/温度/读数/两路线复算见 `cemdisp/data/cement_yield_stress.py`；
+# 契约测试 `tests/contract/test_cement_yield_stress_provenance.py`。
+# 缺项哨兵（与汇总模块 MISSING 同字面值；取不到即登记，不许静默 None、不许跨路线借值）：
+MISSING = "MISSING"
+# 读数（203111.docx 表7（θ600 原文记 `/` 未记录）｜300/200/100/6/3（ht1_003 含 600）：
+HU103_LEAD_YIELD_STRESS_REPORT_GIVEN_PA = MISSING  # 路线A：报告未给定（只给 n/K）
+HU103_LEAD_YIELD_STRESS_FITTED_PA = 0.0000  # 路线B 新推导：领浆 HB τy（读数 224/158/93/9/5，θ600 未记录）
+HU103_INTERMEDIATE_YIELD_STRESS_REPORT_GIVEN_PA = MISSING  # 路线A：报告未给定（只给 n/K）
+HU103_INTERMEDIATE_YIELD_STRESS_FITTED_PA = 0.4961  # 路线B 新推导：中间浆 HB τy（读数 254/179/112/14/7，θ600 未记录）
+HU103_TAIL_YIELD_STRESS_REPORT_GIVEN_PA = MISSING  # 路线A：报告未给定（只给 n/K）
+HU103_TAIL_YIELD_STRESS_FITTED_PA = 0.8967  # 路线B 新推导：尾浆 HB τy（读数 265/186/115/15/7，θ600 未记录）
 
 # 呼103流变参数 — 压塞液/替浆液（2026-08 按现场密度重建；流变复用钻井液 proxy）
 HU103_PLUG_DENSITY_KG_M3 = 2100.0            # 压塞液密度 2.10（设计 20313.doc 7.1.3）；LEGACY: 1500
