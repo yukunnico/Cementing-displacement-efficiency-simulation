@@ -131,6 +131,9 @@ Array = NDArray[np.float64]
 
 __all__ = ["solve_stream_function", "velocity_from_stream_function"]
 
+# B-2：屈服门冻结区的电导地板——防止 wall≡1 时系数全零导致矩阵奇异。
+_WALL_CONDUCTANCE_FLOOR = 1.0e-6
+
 
 def _mean_radius_m(geom: Dict) -> float:
     """环空平均半径 r_a（米）= mean((hole_mm+od_mm)/4)/1000。
@@ -189,9 +192,13 @@ def solve_stream_function(geom: Dict, c_bar, eta1, eta2, m: float, b_field,
             ``NewtonianClosure()``，逐位等于 HEAD 的 ``two_layer.mobility_i1``。
             Phase A 的 HB 查表闭包实现同一协议后从此注入。
         wall: (ny,nz) 屈服门冻结度 ∈ [0,1]（B-2，Pelipenko04 (2.6)-(2.8) 口径）。
-            ``None`` ⇒ 不施加（逐位 = HEAD）。非 ``None`` 时在算子系数上乘
-            ``max(1−wall, _WALL_CONDUCTANCE_FLOOR)``：冻结区流动度→0，Ψ 局部
-            趋于常数 ⇒ 该处速度→0（static wall layer），且保持椭圆结构。
+            ``None`` ⇒ 不施加（逐位 = HEAD）。非 ``None`` 时把有效流动度取为
+            ``I₁_eff = I₁·max(1−wall, _WALL_CONDUCTANCE_FLOOR)``（算子 cell 系数
+            1/(2I₁_eff) 随之放大，地板防止 wall≡1 时矩阵奇异）：冻结区流动度→0，
+            Ψ 局部趋于常数 ⇒ 该处速度→0（static wall layer），且保持椭圆结构。
+            注意方向：I₁ 是流动度、1/(2I₁) 是阻力——(1−wall) 必须作用在 I₁ 上。
+            冻结不改变总通量（BC 单位通量口径仍是 Ψ(1)−Ψ(0)=1），只把通量从冻结
+            区重新分配到活跃区（窄边冻结 ⇒ 宽边流速上升）。
         ny: 可选形状自校验（与 geom["H"].shape[0] 不符即抛错）。
         nz: 可选形状自校验（与 geom["H"].shape[1] 不符即抛错）。
 
@@ -250,8 +257,24 @@ def solve_stream_function(geom: Dict, c_bar, eta1, eta2, m: float, b_field,
     bphi_face = 0.5 * (b_phi[:-1] + b_phi[1:])
 
     # ---- 面迁移率（调和平均，面通量守恒）--------------------------------
-    a_cell = 1.0 / (2.0 * I1)        # φ-槽系数 1/(2I₁)
-    c_cell = r_a / (2.0 * I1)        # ξ-槽系数 r_a/(2I₁)
+    # B-2：屈服门冻结度 → 有效流动度 I₁_eff = I₁·max(1−wall, 地板)。
+    # 物理：冻结层不可流动 ⇔ 该处流动度 I₁→0。Z&F22 (4.22) 的 S_φ = ∂φΨ/(2I₁)
+    # = −r_a·∂ξp 为压力梯度、轴向流密度 ∂φΨ/r_a = 2·I₁·S_φ ∝ I₁ ⇒ I₁→0 处流密度
+    # →0、Ψ 趋于常数 ⇒ w = ∂φΨ/(2r_aH) → 0（static wall layer），且椭圆结构不变。
+    # ⚠️ 方向警示：a_cell = 1/(2I₁) 是 **阻力的倒数**——若把 (1−wall) 乘到 a_cell
+    # 上（brief 字面式），冻结区反而变成 Ψ-方程的高阻区，Ψ 落差被挤进冻结带、
+    # 该处速度不降反升（与窄边冻结物理及本设计验收判据「窄边速度下降」相反）。
+    # 实测对照见 .tmp_research/task2_probe/probe_wall_direction.py。
+    if wall is None:
+        I1_eff = I1                       # 逐位无扰（不参与任何算术）
+    else:
+        w_arr = np.asarray(wall, dtype=float)
+        if w_arr.shape != H.shape:
+            raise ValueError("wall 形状须与 geom['H'] 相同 (ny,nz)")
+        conductance = np.maximum(1.0 - w_arr, _WALL_CONDUCTANCE_FLOOR)
+        I1_eff = I1 * conductance
+    a_cell = 1.0 / (2.0 * I1_eff)        # φ-槽系数 1/(2I₁_eff)
+    c_cell = r_a / (2.0 * I1_eff)        # ξ-槽系数 r_a/(2I₁_eff)
     a_face = 2.0 * a_cell[:-1] * a_cell[1:] / (a_cell[:-1] + a_cell[1:])       # (ny-1, nz)
     c_face = 2.0 * c_cell[:, :-1] * c_cell[:, 1:] / (c_cell[:, :-1] + c_cell[:, 1:])  # (ny, nz-1)
 

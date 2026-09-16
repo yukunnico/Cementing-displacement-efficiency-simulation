@@ -295,6 +295,7 @@ class AnnulusD2DGASolver:
         enable_e_clip_ruling: bool = True,
         e_clip_measured_max: float = 0.90,
         enable_power_law_gap_law: bool = True,
+        enable_stream_yield_gate: bool = False,  # B-2 opt-in：屈服门进流函数算子（默认关=HEAD 逐位）
         enable_stream_function: bool = True,
     ) -> None:
         """初始化环空二维求解器参数。
@@ -360,6 +361,12 @@ class AnnulusD2DGASolver:
             dispersion_azimuthal: ⚠️ 已弃用，语义同 dispersion_axial。
             dispersion_dt_ref: ⚠️ 已弃用，语义同 dispersion_axial。
             dispersion_dt_scale: ⚠️ 已弃用，语义同 dispersion_axial。
+            enable_stream_yield_gate: B-2 opt-in 开关，默认 False。
+                True 且 enable_stream_function=True 时，把 `_yield_gate_wall` 的
+                连续冻结度 wall 传进 `solve_stream_function`（I₁_eff = I₁·(1−wall)）
+                ——冻结区流动度→0、Ψ 局部趋于常数 ⇒ 该处轴向速度→0（static wall
+                layer，Pelipenko04 (2.6)-(2.8)），总通量守恒、只重新分配到活跃区。
+                False（默认）= 不传 wall，逐位等于 HEAD（B-1 的 L1 硬约束）。
             enable_stream_function: 速度场路径开关（2026-09-15 Task 9），默认 True。
                 True: (w, v) 由 Z&F22 (4.22) 流函数椭圆方程解经 (2.2) 换算得到
                 （`_velocity_stream_function`）——浮力（平均密度 ρ·f + 分层
@@ -438,6 +445,9 @@ class AnnulusD2DGASolver:
         self.e_clip_measured_max = e_clip_measured_max
         # 幂律缝隙律（构造参数见 docstring）
         self.enable_power_law_gap_law = enable_power_law_gap_law
+        # 2026-09-16 B-2：屈服门进流函数算子（opt-in，默认 False ⇒ 逐位=HEAD）。
+        # 仅 enable_stream_function=True 路径消费（见 _compute_velocity/_velocity_stream_function）。
+        self.enable_stream_yield_gate = enable_stream_yield_gate
         # 2026-09-15 Task 9：速度场路径开关（True = (4.22) 流函数椭圆方程，
         # False = 旧代数流动度，逐位复现 76a91c1——R7 冻结锚护栏）
         self.enable_stream_function = enable_stream_function
@@ -1166,6 +1176,7 @@ class AnnulusD2DGASolver:
         mud_fluid: FluidSpec,
         lead_fluid: FluidSpec | None,
         tail_fluid: FluidSpec | None,
+        wall: Array | None = None,
     ) -> Tuple[Array, Array]:
         """新路径速度场：Z&F22 (4.22) 流函数椭圆方程 + (2.2) 换算（2026-09-15 Task 9）。
 
@@ -1247,7 +1258,8 @@ class AnnulusD2DGASolver:
 
         **旧路径差异声明（新路径不承载的旧机制）**：①屈服门 wall/`f_safety`
         （两层牛顿闭包无屈服项，壁面带慢速由闭包自身体现——documented
-        deviation）；②M2 流态修正（默认关）；③幂律缝隙律 (b/b̄)^(1+1/n)
+        deviation；B-2 起可经 ``enable_stream_yield_gate=True`` 把 wall 送进
+        本路径的算子，默认关）；②M2 流态修正（默认关）；③幂律缝隙律 (b/b̄)^(1+1/n)
         （新路径为牛顿两层闭包 (4.21)，流变经标量表观黏度 η₁/η₂/m 进入，
         m 无 clip——论文无 clip）；④f_amp 速度乘子（B1 缺陷，见 run()）。
         均可经 ``enable_stream_function=False`` 回退到旧路径。
@@ -1262,6 +1274,11 @@ class AnnulusD2DGASolver:
             lead_fluid/tail_fluid: 顶替液（水泥）——η₂ 取 lead（缺则 tail）的
                 表观黏度；ρ̂₂ 取全仓唯一口径 ``displacing_density_kg_m3``
                 （0.67×领浆+0.33×尾浆，与 b_num/summary 一致）。
+            wall: (ny,nz) 屈服门冻结度 ∈ [0,1]（B-2 opt-in，Pelipenko04
+                (2.6)-(2.8)），``None`` ⇒ 不进算子（逐位=HEAD）。非 None 时经
+                ``solve_stream_function(wall=...)`` 把冻结区流动度压向 0 ⇒ 该处
+                速度→0、通量重分配到活跃区。调用点由
+                ``enable_stream_yield_gate`` 门控（默认 False）。
 
         Returns:
             (w, v)：物理量纲速度场 (ny,nz)，轴向/方位间隙平均速度（m/s）。
@@ -1336,7 +1353,7 @@ class AnnulusD2DGASolver:
 
         # ---- 椭圆解 + (2.2) 换算 + 物理缩放（推导见 docstring）-----------------
         psi = solve_stream_function(geom, c_bar, eta1, eta2, m_ratio, b_field,
-                                    ny=ny, nz=nz)
+                                    wall=wall, ny=ny, nz=nz)
         w_unit, v_unit = velocity_from_stream_function(psi, geom)
         q_half = float(q_m3s) / 2.0
         w = w_unit * (q_half / np.pi)
@@ -1437,6 +1454,7 @@ class AnnulusD2DGASolver:
         if self.enable_stream_function:
             w, v = self._velocity_stream_function(
                 lead, tail, geom, q_m3s, w_prev, mud_fluid, lead_fluid, tail_fluid,
+                wall=(wall if self.enable_stream_yield_gate else None),
             )
             return w, v, mu_reg, rho, mud, Re, mu_turbulent, m_field, tau_y, eta2, n_mix, kappa_mix
 
