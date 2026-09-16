@@ -238,8 +238,11 @@ _WALL_CONDUCTANCE_FLOOR = 1.0e-6
         if w_arr.shape != H.shape:
             raise ValueError("wall 形状须与 geom['H'] 相同 (ny,nz)")
         conductance = np.maximum(1.0 - w_arr, _WALL_CONDUCTANCE_FLOOR)
-    a_cell = conductance / (2.0 * I1)        # φ-槽系数 1/(2I₁)·(1−wall)
-    c_cell = conductance * r_a / (2.0 * I1)  # ξ-槽系数 r_a/(2I₁)·(1−wall)
+    # ⚠️ 方向（2026-09-16 Task 2 实测订正）：a_cell=1/(2I₁) 是导度，冻结须放大它
+    # （I₁_eff→0 ⇒ a_cell→∞ ⇒ Ψ 平直 ⇒ w→0）。严禁写成 a_cell*(1−wall)。
+    I1_eff = I1 * conductance
+    a_cell = 1.0 / (2.0 * I1_eff)        # φ-槽系数 1/(2I₁_eff)
+    c_cell = r_a / (2.0 * I1_eff)        # ξ-槽系数 r_a/(2I₁_eff)
 ```
 
 `annulus_d2dga.py`：

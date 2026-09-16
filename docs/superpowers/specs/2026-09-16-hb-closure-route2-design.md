@@ -78,7 +78,8 @@
 - **验收**：全量测试逐位通过，基准 10 算例 η_E/t_br 与 HEAD 逐位一致。
 
 **B-2 屈服门接入椭圆算子（真物理增益）**
-- 冻结区 mobility→0 的**椭圆兼容**实现：在 `S` 的 cell 系数上乘 `(1−wall)`（`a_cell=1/(2I₁)·(1−wall)`），使冻结区 Ψ 解自然趋于零、且**保持椭圆结构**（对比旧路径的事后 `pref*(1−wall)` 归一）。
+- 冻结区 mobility→0 的**椭圆兼容**实现：`I₁_eff = I₁·max(1−wall, 1e-6)`，cell 系数取 `a_cell = 1/(2I₁_eff)`（`c_cell = r_a/(2I₁_eff)`）。
+  - ⚠️ **方向警示（2026-09-16 Task 2 实测订正）**：**不是**把 `(1−wall)` 乘到 `a_cell` 上。`a_cell = 1/(2I₁)` 是**导度**，冻结须**放大**它（∵ 冻结 ⇒ I₁→0 ⇒ a_cell→∞ ⇒ 该区 Ψ 趋于平直 ⇒ w→0）。初版规格误写为 `a_cell=1/(2I₁)·(1−wall)`，实测冻结区速度反而升到基线 2.4–3.2 倍、窄边份额上升（一维解析同理：`a` 越小，`Ψ'=J/a` 越大）。计划自带的验收测试 `mean|w1|<mean|w0|` 正是正确物理，挡下了这一错误。
 - `annulus_d2dga._velocity_stream_function` 消费 `wall`（当前丢弃）。
 - 默认 `enable_yield_gate` 保持 True；提供 `enable_yield_gate_in_stream=False` 回退（逐位退回 HEAD）。
 - **验收**：`wall` 全零时逐位=HEAD；`wall>0` 时窄边速度与 η_N 下降、且守恒仍成立。
