@@ -113,6 +113,32 @@ w、v）整体乘以**半环空物理通量 Q_half = Q/2**（Q 为全环空排�
 πr̂ₐ* 标定、模块 ξ 用米）而非物理连续性 ``∂y(bv)+∂s(bw) = 0``——v×(Q/2)
 后物理连续性残差 ~8e-15（.tmp_research/task9_probe/verify_pi_scaling.py
 [1]-[5] 段，2026-09-15）。本模块代码不变，仅订正本契约表述。
+
+非线性外迭代（A-3a，Task 5）
+----------------------------
+HB 流体下 ``I₁`` 依赖局部应力尺度 ⇒ (4.22) 不再线性，须外迭代：
+:func:`solve_stream_function_nonlinear` 以"冻结 Ī₁ → 解线性 Ψ → 由 Ψ 取局部均速 →
+逐格反求 G（闭包 (2.13) 的反演）→ 更新 Ī₁ → 欠松弛 → 重解"的循环逼近不动点。
+**线性路径（:func:`solve_stream_function`）一字未动**，外迭代首轮即原样复用它
+（R2）：牛顿极限下 Ī₁ 与 G 无关 ⇒ 首轮检测到 ``ΔĪ₁ ≡ 0`` 即刻返回该首轮 Ψ，
+与线性调用**逐位一致**（硬验收）。
+
+⚠️ **标度口径（Task 6 接线必须裁定；本函数未引入标度参数）**：外迭代的反求与闭包
+求值都在本模块的**单位通量 Ψ 口径**内自洽（``ū`` 由 (2.2) 同口径给出、``G`` 由
+``H·ū = I₁·G`` 反算）。闭包参数（``κ``/``τ_Y``）的**绝对应力标度**因此由该口径决定：
+若按生产装配（``annulus_d2dga._velocity_stream_function``）在求解后把速度按
+``ŵ = q_half/π``（T9 推导）缩放到物理量纲，则闭包求值处的应力标度偏离物理量纲
+``ŵ`` 倍（HB 屈服效应被系统性削弱——**静默的物理偏差**）。
+
+闭包关系的**正确不变性**（本仓数值核验 rel ≤ 1.2e-14，见 ``tests/contract/``
+``test_flow_curve_scale_covariance``；速度缩放 ``s``、应力缩放 ``σ``）::
+
+    κ' = κ·sⁿ/σ,   τ_Y' = τ_Y/σ,   ū' = ū/s  ⇒  G' = G/σ,  I₁' = (σ/s)·I₁
+
+⇒ **单一标度无法同时满足"算子要物理 I₁"与"反求要 -口径速度"**（前者要求闭包参数
+为物理值、后者要求 ū 乘 ŵ）⇒ 本仓推荐的做法是给本函数一个**显式速度标度**
+（``ū_phys = ŵ·ū_module``，默认 1.0 = 模块口径），但签名冻结，**未引入**——
+须由 controller 裁定后接线（见 task-5-report.md 的"标度口径"节）。
 """
 
 from __future__ import annotations
@@ -124,14 +150,20 @@ import scipy.sparse as sp
 import scipy.sparse.linalg as spla
 from numpy.typing import NDArray
 
+from cemdisp.models2d.gap_solver import solve_g_from_mean_velocity_batch
 from cemdisp.models2d.hb_closure import ClosureProvider, NewtonianClosure
 
 Array = NDArray[np.float64]
 
-__all__ = ["solve_stream_function", "velocity_from_stream_function"]
+__all__ = ["solve_stream_function", "solve_stream_function_nonlinear",
+           "velocity_from_stream_function"]
 
 # B-2：屈服门冻结区的电导地板——防止 wall≡1 时系数全零导致矩阵奇异。
 _WALL_CONDUCTANCE_FLOOR = 1.0e-6
+
+# A-3a 外迭代的量级常量（与 gap_solver 的求根容差/上限；见其 docstring）
+_INVERSE_RTOL = 1.0e-12
+_INVERSE_MAX_ITER = 200
 
 
 def _mean_radius_m(geom: Dict) -> float:
@@ -377,3 +409,194 @@ def velocity_from_stream_function(psi, geom: Dict) -> Tuple[Array, Array]:
     dpsi_dxi[:, -1] = (psi[:, -1] - psi[:, -2]) / dxi
     v = -dpsi_dxi / (2.0 * H)                # (2.2) 第二式：方位
     return w, v
+
+
+# --------------------------------------------------------------------------- #
+# A-3a（Task 5）：HB 闭包的非线性外迭代
+# --------------------------------------------------------------------------- #
+
+
+class _FrozenMobilityClosure:
+    """把"冻结的 I₁ 场"适配到 :class:`ClosureProvider`（外迭代的线性化步）。
+
+    外迭代把 Ī₁ 冻结（上一轮欠松弛后的场）后解一次变系数线性 Poisson；本适配器
+    就是那个冻结场：``mobility`` 逐字返回缓存场（**量纲** I₁，与求解器消费的口径
+    相同），``buoyant_mobility`` 委托底层闭包（(4.22) 的算子只消费 I₁，I₂ 走
+    闭包自身的 χ/b 通路，不经本适配器）。
+    """
+
+    def __init__(self, I1_field: Array, base: ClosureProvider) -> None:
+        self._I1 = np.asarray(I1_field, dtype=float)
+        self._base = base
+
+    def mobility(self, c_bar, m: float, eta1: float, eta2: float, H) -> Array:
+        out_shape = np.broadcast_shapes(np.shape(c_bar), np.shape(H))
+        if self._I1.shape != out_shape:
+            raise ValueError(
+                f"冻结流动度场形状 {self._I1.shape} 与闭包调用形状 {out_shape} 不符"
+            )
+        return self._I1
+
+    def buoyant_mobility(self, c_bar, m: float, eta1: float, eta2: float, H) -> Array:
+        return self._base.buoyant_mobility(c_bar, m, eta1, eta2, H)
+
+
+def _rheology_from_closure(closure) -> Tuple[float, float, float]:
+    """从 HB 闭包对象取线性求解器需要的 ``(η₁, η₂, m)``（供 A-3a 复用线性求解器）。
+
+    ``solve_stream_function`` 的每个闭包调用都要 ``(m, η₁, η₂)``。对 HB 闭包而言：
+
+    - **非牛顿路径**：这三个量只进 R-T1-6 的**地板口径参照**（``1e-6·I₁_牛顿``），
+      HB 的真实黏度由 ``κ``/``n`` 携带 ⇒ 取 ``η₁ = κ₁``、``η₂ = κ₂``（牛顿极限下
+      ``κ = η`` 精确，非牛顿下只作地板量级参照——地板是算子适定性正则化，
+      见 ``hb_closure`` 模块 docstring）。
+    - **牛顿极限路径**（``n ≡ 1、τ_y ≡ 0``）：闭包结构性短路到 ``NewtonianClosure``，
+      此时 ``(η₁, η₂, m)`` **完整决定闭包值**，故必须取真实黏度口径——而
+      ``n=1 ⇔ κ = η`` 恰使其可从闭包的 ``kappa`` 精确还原（``m`` 取闭包的 ``m``
+      属性，缺省用 ``κ₁/κ₂``，二者在牛顿极限下相等）。
+    """
+    kappa = getattr(closure, "kappa", None)
+    m_attr = getattr(closure, "m", None)
+    if kappa is not None:
+        try:
+            k0, k1 = float(kappa[0]), float(kappa[1])
+            if k0 > 0.0 and k1 > 0.0:
+                return k0, k1, (float(m_attr) if m_attr is not None else k0 / k1)
+        except (TypeError, IndexError, ValueError):
+            pass
+    if m_attr is not None and float(m_attr) > 0.0:
+        return 1.0, 1.0, float(m_attr)
+    return 1.0, 1.0, 1.0
+
+
+def solve_stream_function_nonlinear(geom: Dict, c_bar, hb_closure, b_field, *,
+                                    omega: float = 0.5, tol: float = 1e-6,
+                                    max_outer: int = 50) -> Array:
+    """解 HB 流体 (4.22) 流函数椭圆方程——**非线性外迭代**（A-3a）。
+
+    算法（brief 的五步，controller 裁定的路径）
+    -------------------------------------------
+    1. **首轮原样复用线性求解器**（R2）：``solve_stream_function(..., closure=hb_closure)``
+       ——闭包取调用方当前注入的 G 状态（``HBClosure`` 未注入 G 时牛顿极限短路仍
+       可用；非牛顿闭包未注入会按 ``hb_closure`` 的规定抛 ``RuntimeError``）。
+    2. 由 ``∇aΨ`` 经 (2.2) 取局部**间隙平均速度模** ``ū = |(w̄, v̄)|``。
+    3. **逐格独立反求** ``G``：解 1 维闭包方程 ``F(g̃) ≡ Ī₁(g̃)·g̃ −  = 0``
+       （Gb=0 的生产口径；``Ī₁`` 走 :func:`gap_solver.solve_g_from_mean_velocity_batch`
+       的批量闭包 + 标量求根，**不**逐格跑定均速 Uzawa）。无正根的格（``ū=0`` 或
+       全场未屈服）注入 ``G=0`` ⇒ 交由闭包自身的 **R-T1-6 地板**（单次告警），
+       整场不失败。
+    4. 在反求的 G 处重取闭包 ``I₁``（**同一函数/同一口径**：闭包内部即
+       ``closure_integrals_batch``；R-T4-4 要求反求与更新同口径）。
+    5. **收敛判定 → 欠松弛 → 重解**：``ΔĪ₁ ≡ 0``（逐位，牛顿极限）⇒ 立即返回首轮 Ψ；
+       否则以 ``‖ΔI₁‖_∞/‖I₁‖_∞ < tol`` 判定，欠松弛
+       ``I₁ ← (1−ω)·I₁ + ω·I₁_new`` 后用**冻结流动度**重解线性 Poisson。
+       收敛（非逐位分支）后再做一次终解，使返回的 Ψ 与闭包当前状态严格对应。
+    6. ``max_outer`` 轮内不收敛 ⇒ **``RuntimeError``**（不静默回退牛顿闭包——回退会
+       静默改变物理；调用方若想回退，须显式捕获并自行告警）。
+
+    ⚠️ **适用域**：HB 闭包属**扩展应用，未获外部验证**（B&F25 自述尚无外部验证）；
+    Z&F22/23 的判据与结论仅严格适用于**竖直井 + 牛顿流体**，不得引其作 HB/斜井依据。
+
+    ⚠️ **G 反求的量/方向口径**：``Gb=0`` 时闭包各向同性 ⇒ ``I₁`` 只依赖 ``|G|``，
+    故本函数注入的是**量值场**（第 1 分量为正的标量场，``gap_solver._as_2vec`` 口径）；
+    方向/符号不进闭包、也不进算子（算子只消费标量 I₁），故不作符号判决。若下游
+    需要带方向/符号的 G，须另立口径（本函数不支持）。
+
+    ⚠️ **标度口径**（见模块 docstring 的"非线性外迭代"段）：反求与闭包求值都在
+    ``solve_stream_function`` 的**单位通量 Ψ 口径**内自洽；闭包参数（``κ``/``τ_Y``）
+    的绝对应力标度必须与该口径匹配。生产装配在求解后按 ``ŵ = q_half/π`` 缩放速度，
+    此时闭包处在偏离物理量纲 ``ŵ`` 倍的应力标度上（本函数**未引入**标度参数，
+    须由接线方裁定；正确的不变性换算见模块 docstring 的 ``κ' = κ·sⁿ/σ`` 段）。
+
+    Args:
+        geom: 几何字典（同 :func:`solve_stream_function`）。
+        c_bar: (ny,nz) 间隙平均水泥体积分数。
+        hb_closure: HB 闭包提供者——须带 ``n``/``kappa``/``tau_y`` 属性
+            （如 :class:`hb_closure.HBClosure`）且实现 ``set_pressure_gradient``。
+        b_field: (2,ny,nz) 浮力全向量（(4.22) 字面分组，唯一口径）。
+        omega: 欠松弛因子 ∈ (0,1]（``1`` ⇒ 不松弛）。
+        tol: 外迭代收敛容差（``Ī₁`` 场的 ∞-范数相对变化；``0`` ⇒ 只认逐位相等）。
+        max_outer: 最大外迭代轮数（含首轮）≥1。
+
+    Returns:
+        Ψ 场 (ny,nz)（单位通量口径，同 :func:`solve_stream_function`）；收敛后与
+        闭包**当前**状态的线性解逐位一致。
+
+    Raises:
+        ValueError: 形状/取值非法；闭包缺少 ``n``/``kappa``/``tau_y`` 属性。
+        RuntimeError: ``max_outer`` 轮内未收敛（消息含残差轨迹与补救方向）。
+    """
+    H = np.asarray(geom["H"], dtype=float)
+    if H.ndim != 2:
+        raise ValueError("geom['H'] 必须是 (ny,nz) 二维数组")
+    ny, nz = H.shape
+    c = np.asarray(c_bar, dtype=float)
+    if c.shape != H.shape:
+        raise ValueError("c_bar 形状须与 geom['H'] 相同 (ny,nz)")
+    omega = float(omega)
+    if not (0.0 < omega <= 1.0):
+        raise ValueError(f"omega 须在 (0,1] 内（欠松弛因子），得到 omega={omega!r}")
+    tol = float(tol)
+    if not (tol >= 0.0):
+        raise ValueError(f"tol 须为非负（相对收敛容差），得到 tol={tol!r}")
+    if not isinstance(max_outer, int) or isinstance(max_outer, bool) or max_outer < 1:
+        raise ValueError(f"max_outer 须为 ≥1 的整数，得到 max_outer={max_outer!r}")
+
+    n_hb = getattr(hb_closure, "n", None)
+    kappa_hb = getattr(hb_closure, "kappa", None)
+    tau_y_hb = getattr(hb_closure, "tau_y", None)
+    if n_hb is None or kappa_hb is None or tau_y_hb is None:
+        raise ValueError(
+            "solve_stream_function_nonlinear 需要 HB 闭包参数（对象属性 n/kappa/tau_y）"
+            "做逐格反求 G，当前闭包缺少这些属性（非 HBClosure？）。若闭包的 I₁ 与 G "
+            "无关（NewtonianClosure/PowerLawGapClosure 等），线性解即精确解——"
+            "请直接调用 solve_stream_function。"
+        )
+    eta1, eta2, m = _rheology_from_closure(hb_closure)
+
+    def _solve_linear(closure) -> Array:
+        return solve_stream_function(geom, c, eta1, eta2, m, b_field,
+                                     closure=closure, ny=ny, nz=nz)
+
+    def _mobility_now() -> Array:
+        I1 = np.asarray(hb_closure.mobility(c, m, eta1, eta2, H), dtype=float)
+        if I1.shape != H.shape:
+            raise ValueError(
+                f"闭包返回的 I₁ 形状 {I1.shape} 与 c̄/H 形状 {H.shape} 不符"
+            )
+        return I1
+
+    # ---- 第 1 轮：原样复用线性求解器（R2）--------------------------------
+    psi = _solve_linear(hb_closure)
+    I1_cur = _mobility_now()                 # 与本轮 Ψ 同口径的 Ī₁ 场
+    rel = np.inf
+    for _round in range(1, int(max_outer) + 1):
+        # ① (2.2) 局部间隙平均速度模（同口径；hypot 对 v 的符号不敏感）
+        w, v = velocity_from_stream_function(psi, geom)
+        u_mag = np.hypot(w, v)
+        # ② 逐格反求 G（批量闭包 + 标量求根；Gb=0 生产口径）
+        inv = solve_g_from_mean_velocity_batch(
+            c.reshape(-1), n_hb, kappa_hb, tau_y_hb, u_mag.reshape(-1),
+            H=H.reshape(-1), rtol=_INVERSE_RTOL, max_iter=_INVERSE_MAX_ITER,
+        )
+        # ③ 注入（无正根格 G=0 ⇒ 闭包侧 R-T1-6 地板 + 单次告警）
+        hb_closure.set_pressure_gradient(inv.G.reshape(H.shape))
+        I1_new = _mobility_now()
+        # ④ 收敛判定：ΔĪ₁ ≡ 0（逐位短路，牛顿极限 R2）→ 直接返回首轮 Ψ
+        if np.array_equal(I1_new, I1_cur):
+            return psi
+        den = max(float(np.max(np.abs(I1_new))), np.finfo(float).tiny)
+        rel = float(np.max(np.abs(I1_new - I1_cur))) / den
+        if rel < tol:
+            # 终解：返回的 Ψ 与闭包**当前**状态严格对应（多一次线性求解）
+            I1_cur = I1_new
+            return _solve_linear(_FrozenMobilityClosure(I1_cur, hb_closure))
+        # ⑤ 欠松弛 + 冻结流动度重解
+        I1_cur = (1.0 - omega) * I1_cur + omega * I1_new
+        psi = _solve_linear(_FrozenMobilityClosure(I1_cur, hb_closure))
+    raise RuntimeError(
+        f"非线性外迭代在 max_outer={max_outer} 轮内未收敛：₁ 场 ∞-范数相对变化 = "
+        f"{rel:.3e} > tol={tol:.1e}（ω={omega}）。补救方向：增大 max_outer 或降低 ω"
+        "（ω→1 时非线性外迭代可能振荡）；本函数**不静默回退牛顿闭包**——需要回退"
+        "请在调用方显式捕获本异常并自行告警。"
+    )

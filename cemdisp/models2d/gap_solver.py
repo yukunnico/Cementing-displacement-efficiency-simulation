@@ -1416,3 +1416,286 @@ def _uzawa_fixed_G_batch(c, n_arr, kappa_t, tau_y, Gt, Gbt, axial, undef, ny, r,
     if np.any(undef):
         u = np.where(undef[:, None, None], np.nan, u)
     return y_edge, u, iters
+
+
+# --------------------------------------------------------------------------- #
+# Task 5（A-3a）：批次"由均速反求 G"——闭包求值 + 逐格标量求根（**不做 Uzawa**）
+# --------------------------------------------------------------------------- #
+#
+# 动机（controller 裁定 R-T4-5 的后续，Task 5 dispatch）：D2DGA 外迭代需要"给局部
+# 间隙平均速度 ū 反求局部修改压力梯度 G"（(2.13) 的闭包反演）。逐格调
+# :func:`solve_fixed_mean_velocity` 实测 ~2.0 s/格点（其 60 步 Uzawa 二分在批次上
+# 受内存带宽限制；Task 4.5 实测全量批量仅 1.7×）⇒ 场级不可行。本入口改走
+#
+#     **批量闭包求值（Ĩ₁ 段）+ 逐格独立标量求根（1 维单调方程）**，
+#
+# 每次 F 求值 = 一次批量 GL 求积 ⇒ 呼101 量级场（10000 点）单次求值 ~0.16 s
+# （见 task-5-report.md 的性能实测）。
+#
+# 数学前提（本模块的 tilde 口径，(2.13)/(2.14)）
+# ---------------------------------------------
+# ``ū = Ī₁(G̃, Gb̃)·G̃ − Ī₂(G̃, Gb̃)·Gb̃``（tilde；= 量纲 ``H·ū = I₁·G − I₂·Gb/H``，
+# 由 ``I₁ = H²·Ĩ₁``、``G̃ = H·G`` 换回）。本入口**只做 Gb=0 的反演**（生产口径：浮力
+# 由 (4.22) 的 ``b`` 向量承担，见 ``hb_closure.HBClosure`` 的"Gb 分工"段）——此时方程
+# 各向同性 ⇒ 只需**均速模**  = |ū|，待解方程为
+#
+#     F(g̃) ≡ Ī₁(g̃)·g̃ − ū = 0，
+#
+# 其中 ``Ĩ₁(g̃)`` = ``closure_integrals_batch(...).I1 / H²``（**逐位同口径**：本模块的
+# ``_i1_tilde_axial_batch`` 与批量闭包路径共用 ``_gap_integral_batch`` 与同一分段
+# 结构；实测 rel = 0）。F 严格递增（物理流曲线：流量随压力梯度单调增；数值验证覆盖
+# n<1 / n>1 / 有屈服三类，见 ``tests/contract/test_stream_function_nonlinear.py`` 的
+# ``test_flow_curve_is_monotone_in_gradient``）。
+#
+# 退化格点（**不中断整批**）
+# ------------------------
+# ``ū = 0``（零驱动）或解落在屈服门槛下方（全场未屈服 ⇒ ``Ĩ₁ → 0``）⇒ **无正根**，
+# 逐点标记 ``undefined``（``G=0``、``I₁=NaN``），由调用方按 R-T1-6 的地板思路处置
+# （``HBClosure`` 在注入 ``G=0`` 处自行地板 + 单次告警）。⚠️ 与标量
+# :func:`solve_fixed_mean_velocity` 不同：后者对 ``u_bar=0`` 抛 ``ValueError``；批次里
+# 这类格点可能**合法成片出现**（窄边准静止），故本入口不抛错。求根本身不收敛
+# （``max_iter`` 用尽且支架未塌陷）**仍抛 ``RuntimeError``**——与标量路径同纪律，
+# 不静默返回未收敛值。
+
+
+@dataclass(frozen=True)
+class MeanVelocityInverseBatch:
+    """批次"由均速反求 G"的结果（**只解 I₁**，不跑 Uzawa；Gb=0 口径）。
+
+    Attributes:
+        G: ``(n_points,)`` 解出的修改压力梯度（量纲，= ``g̃/H``；**量值**口径——方向
+            由输入 ū 自身给出，本入口只解模）。``undefined`` 处为 0。
+        I1: ``(n_points,)`` 量纲 ``I₁ = H²·Ĩ₁``（**与** :func:`closure_integrals_batch`
+            的 ``I1`` 同口径、同函数路径）；``undefined`` 处为 NaN。
+        undefined: ``(n_points,)`` bool：无正根（``ū ≤ 0``，或解落在屈服门槛下）。
+        iters: ``(n_points,)`` int：各点自身的求值步数（``undefined`` 处 0）。
+        converged: ``(n_points,)`` bool：``|F| ≤ rtol·ū`` 或割线点停滞于机器精度
+            （后者的点另在 :attr:`stalled` 里标记）；``undefined`` 处 False。
+        stalled: ``(n_points,)`` bool：收敛走"割线点停滞"分支（``|Δg̃| ≤ 4·eps·g̃``，
+            已无可分辨改进）而非残差判据——机器精度级解，非失败。
+    """
+
+    G: Array
+    I1: Array
+    undefined: Array
+    iters: Array
+    converged: Array
+    stalled: Array
+
+
+def _i1_tilde_axial_batch(c, n_arr, kappa_t, tau_y, g_tilde):
+    """``₁(g̃)``（tilde；Gb=0）——与 :func:`closure_integrals_batch` 的 ``I1/H²`` 逐位同。
+
+    只做 (2.14) 的两段求积（中线带 [0,c̄] + 壁面带 [c̄,1]），**不算** I₂/q₀（通量比段
+    占一次批量求值约 2/3 的代价，本反演不需要）。轴向（``Gb=0``）时
+    ``_stress_vectors_batch`` 给出 ``c₂ = c₁ = g̃``、``d₂ = d₁ = 0``（减零/乘零均精确），
+    故**在同一 ``g̃`` 输入下**与批量闭包路径的 ``I1`` 逐位相同（实测 10000 点 rel = 0，
+    见 task-5-report.md §2）。⚠️ 经"量纲 ``G`` ⇄ ``g̃ = H·G``"往返后是 **≤1 ulp**
+    （实测 ``H*(x/H) == x`` 仅 85.7% 逐位成立）——那是换算舍入、非口径不一致，
+    场级实测 max rel = 1.2e-16。
+    """
+    n_pts = c.shape[0]
+    Gt = np.stack([g_tilde, np.zeros(n_pts)], axis=1)
+    c2, d2, c1, d1 = _stress_vectors_batch(c, Gt, np.zeros((n_pts, 2)))
+    axial = np.ones(n_pts, dtype=bool)          # Gb=0 恒轴向（分量 1 ≡ 0）
+    zero, one = np.zeros_like(c), np.ones_like(c)
+    int2 = _gap_integral_batch(zero, c, c2, d2, kappa_t[:, 1], n_arr[:, 1],
+                               tau_y[:, 1], axial, _weight_y2)
+    int1 = _gap_integral_batch(c, one, c1, d1, kappa_t[:, 0], n_arr[:, 0],
+                               tau_y[:, 0], axial, _weight_y2)
+    return int2 + int1
+
+
+def solve_g_from_mean_velocity_batch(
+    c_bar,
+    n,
+    kappa,
+    tau_y,
+    u_bar,
+    *,
+    H=1.0,
+    rtol: float = 1.0e-12,
+    max_iter: int = 200,
+) -> MeanVelocityInverseBatch:
+    """批次：给定间隙平均速度**模** ū 反求修改压力梯度 G（(2.13) 的一维闭包反演）。
+
+    ️ **口径**（与 :func:`solve_fixed_mean_velocity` 一致，勿混用）：
+
+    - 输入 ``u_bar`` = ``|ū|``（间隙平均速度**模**，与 :attr:`GapSolution.u_bar` 同
+      口径）；``Gb=0`` 时闭包各向同性 ⇒ 方向不影响 ``I₁``，故只解量值。
+    - 输出 ``G`` = **量纲**修改压力梯度（= ``g̃/H``）；``I1`` = 量纲 ``H²·Ĩ₁``。
+      二者满足 ``H·ū = I₁·G``（即 tilde 的 ``ū = Ī₁·G̃``）到求根容差以内。
+
+    Args:
+        c_bar/n/kappa/tau_y: 同 :func:`closure_integrals_batch` 的批接口径。
+        u_bar: ``(n_points,)`` 或标量——**非负**均速模。
+        H: ``(n_points,)`` 或标量——物理半隙（(A4) 换算与 ``I₁ = H²·Ĩ₁`` 用它）。
+        rtol: 逐格收敛容差（``|F| ≤ rtol·ū``，相对口径）。
+        max_iter: 逐格最大求值步数；用尽且支架未塌陷 ⇒ ``RuntimeError``。
+
+    Returns:
+        :class:`MeanVelocityInverseBatch`。
+
+    Raises:
+        ValueError: 形状/取值越界（``c̄∉[0,1]``、``H≤0``、``n≤0``、``κ≤0``、``τ_Y<0``、
+            ``u_bar`` 含负值/非有限、``rtol≤0``、``max_iter<2``）。
+        RuntimeError: 有格点在 ``max_iter`` 内未收敛（不静默返回未收敛值）。
+
+    算法（逐格独立；向量化到批次轴，活跃集逐步压缩）
+    ------------------------------------------------
+    1. **起点**：牛顿口径闭式 ``g̃₀ = 3√(κ₁κ₂)·ū/H``（单流体牛顿下 F 精确线性 ⇒ 一步
+       命中；非牛顿下只作支架起点，不参与收敛判据）。
+    2. **支架**：``lo = 0``（``F(0) = −ū < 0``；"未屈服 ⇒ 无流动"同样记入 F<0 侧），
+       ``hi`` 自 ``g̃₀`` **倍增**直到 ``F(hi) ≥ 0``（每轮只对未定格的子集求值）。
+    3. **幂律型割线 + 支架兜底**：F 单调递增 ⇒ 唯根；把曲线局部写成"带偏移的幂律"
+       ``F ≈ C·g̃^s − ū`` ⇒ 其精确根为 ``g̃* = g̃·(ū/(F+ū))^{1/s}``（纯幂律流体下
+       该形式**精确成立**：``F = C·g̃^{1/n} − ū``）；指数 ``s`` 首步取 ``1/min(n₁,n₂)``，
+       随后用最近两点的 log-log 斜率估计（超线性）。割线点越出支架或被 NaN 退化时
+       回退为支架内缩中点（``√(lo·hi)``，log 空间二分）⇒ 仍保证收敛。
+    4. **收敛**：``|F| ≤ rtol·ū``，或割线点停滞于机器精度（``|Δx| ≤ 4·eps·x``，
+       记入 :attr:`MeanVelocityInverseBatch.stalled`)。
+    """
+    # 批次大小：``u_bar`` 借第 5 槽参与"带长度输入须一致"的检查（其值不参与换算）
+    n_pts = _batch_n_points(c_bar, n, kappa, tau_y, u_bar, 0.0, H)
+    c = _batch_as_scalar(c_bar, n_pts, "c_bar")
+    Hv = _batch_as_scalar(H, n_pts, "H")
+    n_arr = _batch_as_pair(n, n_pts, "n")
+    kap = _batch_as_pair(kappa, n_pts, "kappa")
+    tau = _batch_as_pair(tau_y, n_pts, "tau_y")
+    u = _batch_as_scalar(u_bar, n_pts, "u_bar")
+    _check_range(c, 0.0, 1.0, "c_bar")
+    _check_positive(Hv, "H")
+    _check_positive(n_arr, "n")
+    _check_positive(kap, "kappa")
+    _check_nonneg(tau, "tau_y")
+    if not np.all(np.isfinite(u)) or np.any(u < 0.0):
+        raise ValueError(
+            f"u_bar 须为非负的有限均速模（本入口只解量值口径），得到 {u_bar!r}"
+        )
+    if not (float(rtol) > 0.0):
+        raise ValueError(f"rtol 须为正（相对残差容差），得到 rtol={rtol!r}")
+    if not isinstance(max_iter, int) or isinstance(max_iter, bool) or max_iter < 2:
+        raise ValueError(f"max_iter 须为 ≥2 的整数，得到 max_iter={max_iter!r}")
+
+    kappa_t = kap / Hv[:, None] ** n_arr       # (A4)：κ̃ = κ/H^n（与 _batch_inputs 同式）
+
+    G_out = np.zeros(n_pts)
+    I1_out = np.full(n_pts, np.nan)
+    undef = u <= 0.0                           # 零驱动 ⇒ 无正根
+    iters = np.zeros(n_pts, dtype=np.int64)
+    converged = np.zeros(n_pts, dtype=bool)
+    stalled = np.zeros(n_pts, dtype=bool)
+    idx = np.flatnonzero(~undef)
+    if idx.size:
+        ci, ni, ki = c[idx], n_arr[idx], kappa_t[idx]
+        ti, ui, Hi = tau[idx], u[idx], Hv[idx]
+        m = idx.size
+
+        def eval_i1(x, sub):
+            """``Ĩ₁(x)``（``x`` 与 ``sub`` 同为压缩子集，逐格独立求值）。"""
+            return _i1_tilde_axial_batch(ci[sub], ni[sub], ki[sub], ti[sub], x)
+
+        def eval_f(x, sub):
+            """``F(x) = Ĩ₁(x)·x − ``；未屈服（``Ĩ₁ = 0``）格自然给出 ``F = −ū < 0``。"""
+            return eval_i1(x, sub) * x - ui[sub]
+
+        # ---- 阶段 1：支架（hi 倍增；每轮只对未定格的子集求值）----------------
+        lo = np.zeros(m)
+        flo = -ui.copy()
+        hi = 3.0 * np.sqrt(kap[idx, 0] * kap[idx, 1]) * ui / Hi   # 牛顿口径起点 g̃₀
+        hi = np.where(hi > 0.0, hi, np.ones(m))                   # ū>0 ⇒ g̃>0
+        fhi = np.full(m, np.nan)
+        pending = np.ones(m, dtype=bool)
+        bracket_steps = 0
+        while np.any(pending):
+            if bracket_steps >= max_iter:
+                raise RuntimeError(
+                    f"由均速反求 G：{int(np.count_nonzero(pending))}/{m} 个格点在 "
+                    f"max_iter={max_iter} 步内未找到上界支架（F(hi)≥0）。"
+                    "补救方向：增大 max_iter（或检查 κ/τ_Y/ū 的量级是否自洽）。"
+                )
+            sub = np.flatnonzero(pending)
+            f_now = eval_f(hi[sub], sub)
+            ok = np.isfinite(f_now) & (f_now >= 0.0)
+            fhi[sub[ok]] = f_now[ok]
+            grow = sub[~ok]
+            pending = np.zeros(m, dtype=bool)
+            if grow.size:
+                hi[grow] *= 2.0
+                pending[grow] = True
+            bracket_steps += 1
+
+        # ---- 阶段 2：幂律型割线 + 支架兜底（活跃集压缩：收敛格退出求值）-------
+        # 步长用"带偏移的幂律"精确解：``F ≈ C·g̃^s − ū`` ⇒ ``g̃* = g̃·(ū/(F+ū))^{1/s}``
+        # （纯幂律流体下 F = C·g̃^{1/n} − ū 恰是这一形式 ⇒ 首步用 s=1/n 即近似到位；
+        #  后续用最近两点的 log-log 斜率估计 s，超线性收敛）。割线点越出支架或被
+        #  支架夹住时退化为支架内缩中点（保证收敛，与二分同阶）。
+        x = hi * ui / (fhi + ui)      # lo=0 侧的 regula falsi 首点 ∈ (0, hi]
+        x_prev = np.zeros(m)
+        f_prev = np.full(m, np.nan)
+        s_est = 1.0 / np.minimum(ni[:, 0], ni[:, 1])     # 首步指数：幂律流曲线 F∝g̃^{1/n}
+        done = np.zeros(m, dtype=bool)
+        res_ok = np.zeros(m, dtype=bool)
+        stall_ok = np.zeros(m, dtype=bool)
+        n_steps = np.zeros(m, dtype=np.int64)
+        eps = np.finfo(float).eps
+        for _ in range(max_iter):
+            sub = np.flatnonzero(~done)
+            if sub.size == 0:
+                break
+            xs = x[sub]
+            fxs = eval_f(xs, sub)
+            n_steps[sub] += 1
+            ui_s = ui[sub]
+            # 未屈服（NaN）⇒ 无流动 ⇒ 有效 F 记 −ū（置于 <0 侧，支架保持有序）
+            f_eff = np.where(np.isfinite(fxs), fxs, -ui_s)
+            below = f_eff < 0.0
+            lo[sub] = np.where(below, xs, lo[sub])
+            flo[sub] = np.where(below, f_eff, flo[sub])
+            hi[sub] = np.where(below, hi[sub], xs)
+            fhi[sub] = np.where(below, fhi[sub], f_eff)
+            ok_res = np.isfinite(fxs) & (np.abs(fxs) <= rtol * ui_s)
+            ok_stall = np.abs(xs - x_prev[sub]) <= 4.0 * eps * xs
+            new_done = ok_res | ok_stall
+            res_ok[sub] |= ok_res & new_done
+            stall_ok[sub] |= ok_stall & ~ok_res
+            done[sub] = new_done
+            # log-log 斜率（F+ū > 0 的两点；否则沿用上一步的估计）
+            num = fxs + ui_s
+            den = f_prev[sub] + ui_s
+            ok_s = (np.isfinite(f_prev[sub]) & (num > 0.0) & (den > 0.0)
+                    & (xs != x_prev[sub]))
+            with np.errstate(divide="ignore", invalid="ignore"):
+                s_two = np.log(num / den) / np.log(xs / x_prev[sub])
+            s_est[sub] = np.where(
+                ok_s & np.isfinite(s_two), np.clip(s_two, 0.2, 20.0), s_est[sub]
+            )
+            x_prev[sub] = xs
+            f_prev[sub] = fxs
+            # 幂律型步（F+ū ≤ 0 时给 NaN ⇒ 走兜底）
+            with np.errstate(divide="ignore", invalid="ignore"):
+                step = xs * (ui_s / np.where(num > 0.0, num, np.nan)) ** (1.0 / s_est[sub])
+            lo_s, hi_s = lo[sub], hi[sub]
+            fallback = np.where(lo_s > 0.0, np.sqrt(np.maximum(lo_s * hi_s, 0.0)),
+                                0.5 * (lo_s + hi_s))
+            inside = np.isfinite(step) & (step > lo_s) & (step < hi_s)
+            x[sub] = np.where(new_done, xs, np.where(inside, step, fallback))
+        if not np.all(done):
+            sub = np.flatnonzero(~done)
+            with np.errstate(invalid="ignore", divide="ignore"):
+                rel = np.abs(eval_f(x[sub], sub)) / ui[sub]
+            raise RuntimeError(
+                f"由均速反求 G：{sub.size}/{m} 个格点在 max_iter={max_iter} 步内未收敛"
+                f"（最差相对残差 {float(np.max(rel)):.3e} > rtol={rtol:.1e}）。F 严格单调"
+                " ⇒ 唯根存在；补救方向：增大 max_iter（本入口不静默返回未收敛值）。"
+            )
+        I1_t_final = eval_i1(x, np.arange(m))
+        undef_here = ~(I1_t_final > 0.0)       # 屈服门槛下（Ĩ₁≤0）⇒ 无正根
+        G_out[idx] = np.where(undef_here, 0.0, x / Hi)
+        I1_out[idx] = np.where(undef_here, np.nan, Hi ** 2 * I1_t_final)
+        iters[idx] = n_steps
+        undef[idx] |= undef_here
+        converged[idx] = ~undef_here
+        stalled[idx] = (stall_ok & ~res_ok) & ~undef_here
+    return MeanVelocityInverseBatch(G=G_out, I1=I1_out, undefined=undef,
+                                    iters=iters, converged=converged, stalled=stalled)
