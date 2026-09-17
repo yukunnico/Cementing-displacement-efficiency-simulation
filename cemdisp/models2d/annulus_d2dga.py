@@ -1687,14 +1687,22 @@ class AnnulusD2DGASolver:
           R-T5-1 REVISED 推荐路径：物理速度喂反求 + 物理 (κ, τ_Y) 参数）；
         - ``Gb=(0,0)``：Phase A 浮力全部经 (4.22) 的 ``b_field``（Task 4 警告：
           不得两处同时算同一份浮力）；
-        - 外迭代 ``max_outer=100``（接线配置）：冷启动首轮的 ‖ΔĪ₁‖ 收敛率实测
-          ~0.85/轮（ω=0.5，悬崖邻域 ū↔G↔I₁ 耦合的内在速率），Task 5 默认 50 轮
-          不够（rel 卡 ~1e-4）⇒ 提到 250 轮（实测冷启动需 ~73 轮、个别快变步
-          ~102-155 轮）让冷启动收敛、warm-start 得以挂载；
-          ω 保持 Task 5 默认 0.5（实测轨迹单调衰减、无振荡，自适应欠松弛
-          R-T6-2 阶梯 (ii) 无的放矢，不实现）；
-        - 初始 G：牛顿槽流估计 ``G = 3η₂ū/H̄²``（ū 取半环空柱截面均速
-          ``q_half/(π·r_a·2H̄)``）——仅为外迭代初值，量级 O(1) 即可；
+        - 外迭代 ``max_outer=400``（接线配置）：悬崖邻域 ū↔G↔I₁ 耦合的 ‖ΔĪ₁‖
+          收敛率实测 ~0.85-0.95/轮（ω=0.5，随场规模/悬崖格数变慢），Task 5
+          默认 50 轮不够 ⇒ 提到 400 轮（小场冷启动 ~73 轮、快变步 ~102-155 轮、
+          呼101 量级场 40×250 实测 ~280 轮）。
+          ω 保持 Task 5 默认 0.5；自适应欠松弛（R-T6-2 阶梯 (ii)，机制已实现于
+          ``solve_stream_function_nonlinear``）生产接线**不启用**——实测对当前
+          失败模式无改善（修复轮 1 证据）；
+        - 初始 G（启发式，可能低估）：warm-start 优先（上一步收敛 G 场）；冷启动
+          用**牛顿当量两段式**（先解牛顿线性 Ψ、按 ``G = H·ū/I₁_牛顿`` 逐格反推
+          注入）——因 ``I₁_HB ≤ I₁_牛顿`` 它系统性低估驱动，仅作外迭代初值；
+          稳健求根（反求工具的割线 + 夹逼二分回退，R-T6-2 REVISED）下外迭代
+          会自行修正，不依赖其准确；
+        - static 分支判据（R-T6-2 REVISED 第 2 条）：仅 |ū| ≤ 1e-12×max|ū| 的格
+          取冻结/地板，其余格一律找流动根（修复轮 1 的"救援格滞回"已废——
+          它与整批 rtol 阶梯组合曾把本应流动的格扫进冻结分支，实测退化解：
+          τ_Y2 扫描 max|w| 逐位相同、生产场 288/288 全 undefined）；
         - 外迭代 ``RuntimeError`` ⇒ **显式 RuntimeWarning + 回退牛顿线性闭包**
           （``closure=None``，即既有线性路径；R-T5-3：不静默，回退由调用方负责）。
         """
@@ -1713,18 +1721,17 @@ class AnnulusD2DGASolver:
         q_half = float(q_m3s) / 2.0
         velocity_scale = q_half / np.pi
         # R-T6-2 阶梯 (i)：时间步间 warm-start——上一时间步**收敛**的 G 场作首轮
-        # 闭包状态（瞬态场连续演化，悬崖格归属随前缘推进单调变化 ⇒ 轮数显著下降）；
-        # 首步/回退步无缓存 ⇒ 冷启动（标量牛顿估计 g_init）。跨步只传递初值、
-        # 不冻结任何格的归属（每步重新反求评估）。
+        # 闭包状态（瞬态场连续演化 ⇒ 加速器）；首步/回退步无缓存 ⇒ 冷启动
+        # （牛顿当量两段式启发式，见方法 docstring：可能低估 G，稳健求根下
+        # 外迭代自行修正）。跨步只传递初值、不冻结任何格的归属（每步重新反求）。
         prev_g = self._hb_prev_G
         initial_g = None
         if prev_g is not None:
             initial_g = prev_g
         else:
             # 冷启动（R-T6-2 阶梯 (i) 的冷启动半段）：**牛顿当量两段式**——先解
-            # 一次牛顿线性 Ψ，按 G = H·ū/I₁_牛顿 逐格反推注入。首轮闭包状态即
-            # 物理正确量级 ⇒ 悬崖格的 flowing/static 分支第一轮就取对（避免粗糙
-            # 标量 g_init 的错误地板决策被阶梯 (iii) 滞回锁死 ⇒ 间歇性全局爆发）。
+            # 一次牛顿线性 Ψ，按 G = H·ū/I₁_牛顿 逐格反推注入（启发式：因
+            # I₁_HB ≤ I₁_牛顿 系统性低估驱动，外迭代在稳健求根下自行修正）。
             psi0 = solve_stream_function(geom, c_bar, eta1, eta2, m_ratio, b_field,
                                          closure=None, ny=ny, nz=nz)
             w0, v0 = velocity_from_stream_function(psi0, geom)
@@ -1737,7 +1744,7 @@ class AnnulusD2DGASolver:
             psi = solve_stream_function_nonlinear(
                 geom, c_bar, closure, b_field, Gb=(0.0, 0.0),
                 velocity_scale=velocity_scale, initial_G=initial_g,
-                hysteresis=True, adaptive_omega=False, max_outer=250)
+                max_outer=400)
         except RuntimeError as exc:
             # 回退步的 G 是迭代中途态，不缓存（下一步仍冷启动，R-T5-3 最后防线）。
             self._hb_prev_G = None

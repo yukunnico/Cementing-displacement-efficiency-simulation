@@ -1564,6 +1564,12 @@ def solve_g_from_mean_velocity_batch(
        回退为支架内缩中点（``√(lo·hi)``，log 空间二分）⇒ 仍保证收敛。
     4. **收敛**：``|F| ≤ rtol·ū``，或割线点停滞于机器精度（``|Δx| ≤ 4·eps·x``，
        记入 :attr:`MeanVelocityInverseBatch.stalled`)。
+    5. **夹逼二分回退（R-T6-2 REVISED，Task 6 修复轮 2）**：割线在屈服门槛奇点
+       邻域可 2-循环（``ū_model(G)`` 平方根奇点的反问题）⇒ 对 ``max_iter`` 步后
+       仍未定格，用其支架 ``[lo, hi]``（不变量 ``F(lo)<0 ≤ F(hi)``）向量化二分
+       ~60 步（宽度 2^-60，求值另计、上限 200）至满足严格 rtol；二分到 fp
+       分辨率仍不满足 ⇒ ``RuntimeError``（根位于 fp 不可分辨邻域的反例信号，
+       上报不静默）。
     """
     # 批次大小：``u_bar`` 借第 5 槽参与"带长度输入须一致"的检查（其值不参与换算）
     n_pts = _batch_n_points(c_bar, n, kappa, tau_y, u_bar, 0.0, H)
@@ -1702,14 +1708,52 @@ def solve_g_from_mean_velocity_batch(
             inside = np.isfinite(step) & (step > lo_s) & (step < hi_s)
             x[sub] = np.where(new_done, xs, np.where(inside, step, fallback))
         if not np.all(done):
+            # ---- 阶段 3：夹逼二分回退（R-T6-2 REVISED，Task 6 修复轮 2）--------
+            # 割线在屈服门槛奇点邻域（ū_model(G) 平方根奇点的反问题）可 2-循环：
+            # 迭代在 F<0（未屈服）与近根之间往复、永不满足严格 rtol（实测单格
+            # 停摆残差跨五个数量级）。而阶段 1/2 维护的 [lo, hi] 支架恒满足
+            # F(lo)<0 ≤ F(hi)（不变量），二分 ~60 步宽度 2^-60 ⇒ 任何严格 rtol
+            # 都能满足。仅对未定格子集向量化二分；求值步数另计（上限 200，
+            # 不占 max_iter 预算）。二分到 fp 分辨率（宽度 ≤ 4eps·|x|）仍不满足
+            # rtol ⇒ RuntimeError（根位于 fp 不可分辨邻域——"流动根不存在"的
+            # 反例信号，R-T6-2 REVISED 要求上报而非静默接纳）。
             sub = np.flatnonzero(~done)
+            lo_b, hi_b = lo[sub].copy(), hi[sub].copy()
+            flo_b, fhi_b = flo[sub].copy(), fhi[sub].copy()
+            ui_b = ui[sub]
+            bisect_done = np.zeros(sub.size, dtype=bool)
+            for _ in range(200):
+                act = np.flatnonzero(~bisect_done)
+                if act.size == 0:
+                    break
+                lo_a, hi_a = lo_b[act], hi_b[act]
+                mid = np.where(lo_a > 0.0,
+                               np.sqrt(np.maximum(lo_a * hi_a, 0.0)),
+                               0.5 * (lo_a + hi_a))
+                fm = eval_f(mid, sub[act])
+                f_eff_m = np.where(np.isfinite(fm), fm, -ui_b[act])
+                below = f_eff_m < 0.0
+                lo_b[act] = np.where(below, mid, lo_a)
+                hi_b[act] = np.where(below, hi_a, mid)
+                ok_res = np.isfinite(fm) & (np.abs(fm) <= rtol * ui_b[act])
+                width_ok = (np.abs(hi_b[act] - lo_b[act])
+                            <= 4.0 * eps * np.maximum(np.abs(hi_b[act]), 1e-300))
+                new_done = ok_res | width_ok
+                bisect_done[act] = new_done
+                x[sub[act]] = np.where(new_done, mid, x[sub[act]])
+                n_steps[sub[act]] += 1
             with np.errstate(invalid="ignore", divide="ignore"):
-                rel = np.abs(eval_f(x[sub], sub)) / ui[sub]
-            raise RuntimeError(
-                f"由均速反求 G：{sub.size}/{m} 个格点在 max_iter={max_iter} 步内未收敛"
-                f"（最差相对残差 {float(np.max(rel)):.3e} > rtol={rtol:.1e}）。F 严格单调"
-                " ⇒ 唯根存在；补救方向：增大 max_iter（本入口不静默返回未收敛值）。"
-            )
+                rel_b = np.abs(eval_f(x[sub], sub)) / ui[sub]
+            unmet = ~(np.isfinite(rel_b) & (rel_b <= rtol))
+            if np.any(unmet):
+                raise RuntimeError(
+                    f"由均速反求 G：{int(np.count_nonzero(unmet))}/{sub.size} 个格点"
+                    f"经割线+夹逼二分后仍不满足 rtol={rtol:.1e}（最差相对残差 "
+                    f"{float(np.max(rel_b[unmet])):.3e}）——根位于 fp 不可分辨邻域，"
+                    "疑似流动根不存在的反例（R-T6-2 REVISED：上报，不静默接纳）。"
+                )
+            res_ok[sub] = True
+            done[sub] = True
         I1_t_final = eval_i1(x, np.arange(m))
         undef_here = ~(I1_t_final > 0.0)       # 屈服门槛下（Ĩ₁≤0）⇒ 无正根
         G_out[idx] = np.where(undef_here, 0.0, x / Hi)

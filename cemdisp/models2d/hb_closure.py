@@ -291,13 +291,14 @@ class HBClosure:
 
     @property
     def current_G(self):
-        """最近一次注入/反求收敛的 G（只读视图；``None`` = 尚未注入）。
+        """最近一次注入/反求收敛的 G（只读**副本**；``None`` = 尚未注入）。
 
         Task 6 修复轮 1（R-T6-2 阶梯 (i)）：供外层接线做时间步间 warm-start
-        （``solve_stream_function_nonlinear(initial_G=...)``）。纯只读透传，
-        不改变任何求值行为。
+        （``solve_stream_function_nonlinear(initial_G=...)``）。返回 ``.copy()``
+        （评审 Minor⑤）：调用方持有快照，后续 ``set_pressure_gradient`` 原地
+        清空/改写 ``_G`` 不会穿透到已缓存的上一步 G 场。
         """
-        return self._G
+        return None if self._G is None else self._G.copy()
 
     def set_pressure_gradient(self, G, Gb=(0.0, 0.0)) -> None:
         """注入当前局部压力梯度场 ``G``（与浮力向量 ``Gb``），并清空解缓存。

@@ -191,7 +191,9 @@ def test_h1_only_closure_leaves_yield_gate_field_bitwise_unchanged(monkeypatch):
     assert np.array_equal(tau0, tau1), "H1 不得改动混合 τy 场（屈服门不动，R-T6-1）"
     calls_h1: list = []
     _patch_nonlinear_spy(monkeypatch, calls_h1)
-    _run_solver(total_t=120.0, enable_hb_closure=True)
+    # HBClosure 的 R-T1-6 地板告警（首轮瞬态全场未屈服，每实例一次）显式认领。
+    with pytest.warns(RuntimeWarning, match="格点闭包无定义"):
+        _run_solver(total_t=120.0, enable_hb_closure=True)
     assert calls_h1, "H1 必须消费非线性外迭代入口（solve_stream_function_nonlinear）"
     assert "velocity_scale" in calls_h1[0]["kwargs"]
 
@@ -287,7 +289,8 @@ def test_nonlinear_failure_falls_back_to_newtonian_with_warning(monkeypatch):
 def test_velocity_scale_is_q_half_over_pi_and_closure_params_physical(monkeypatch):
     calls: list = []
     _patch_nonlinear_spy(monkeypatch, calls)
-    _run_solver(total_t=40.0, enable_hb_closure=True)
+    with pytest.warns(RuntimeWarning, match="格点闭包无定义"):
+        _run_solver(total_t=40.0, enable_hb_closure=True)
     assert calls, "HB 路径未调用非线性入口"
     kw = calls[0]["kwargs"]
     # ŵ = q_half/π = (Q/2)/π（生产换算锚 annulus_d2dga w = w_unit*(q_half/np.pi)）
@@ -449,3 +452,49 @@ def test_flush_summary_suffix_split_by_kind():
     assert "TAIL" in msg_spec
     assert "贡献非 0" in msg_spec
     assert "贡献为 0" not in msg_spec
+
+
+# --------------------------------------------------------------------------- #
+# 8. R-T6-2 REVISED（修复轮 2）：逐格稳健求根，冻结分支只给数值零
+# --------------------------------------------------------------------------- #
+
+def test_production_run_has_no_all_undefined_step(monkeypatch):
+    """硬断言（修复轮 2 Critical 的测试层盲区）：生产口径整跑的每一步，
+    HBClosure 的 undefined 格数都不得等于全场格数（禁止"全场冻死"退化解）。"""
+    captured = []
+    real = ann_mod.solve_stream_function_nonlinear
+
+    def spy(geom, c_bar, closure, b_field, *args, **kwargs):
+        psi = real(geom, c_bar, closure, b_field, *args, **kwargs)
+        captured.append(int(closure.n_static_wall_points))
+        return psi
+
+    monkeypatch.setattr(ann_mod, "solve_stream_function_nonlinear", spy)
+    ny, nz = 12, 24
+    # HBClosure 的 R-T1-6 地板告警（首轮瞬态，每实例一次）显式认领。
+    with pytest.warns(RuntimeWarning, match="格点闭包无定义"):
+        _run_solver(total_t=120.0, enable_hb_closure=True)
+    assert captured, "HB 路径未运行"
+    all_undefined = [n for n in captured if n == ny * nz]
+    assert not all_undefined, (
+        f"{len(all_undefined)}/{len(captured)} 步出现全场 undefined（冻结分支退化解）")
+
+
+def test_inverse_bisection_rescues_cliff_cell():
+    """反求工具的夹逼二分回退（R-T6-2 REVISED）：割线 2-循环的生产失败格
+    （c̄=0.2656, ū=0.00494, H=0.0276，τ_Y1=6 Pa Bingham 泥浆带）在严格
+    rtol=1e-12 下经二分收敛到**流动根**（修复轮 1 中该格 RuntimeError）。"""
+    from cemdisp.models2d.gap_solver import solve_g_from_mean_velocity_batch
+    inv = solve_g_from_mean_velocity_batch(
+        np.array([0.2656126482213439]),
+        np.tile((1.0, 0.75), (1, 1)),
+        np.tile((0.022, 0.55), (1, 1)),
+        np.tile((6.0, 0.0), (1, 1)),
+        np.array([0.004940186885829099]),
+        H=0.027589301497888453, rtol=1e-12, max_iter=200)
+    assert not bool(inv.undefined[0]) and bool(inv.converged[0])
+    g, i1 = float(inv.G[0]), float(inv.I1[0])
+    assert g > 0.0 and i1 > 0.0, "二分回退必须找到流动根（G>0, I₁>0）"
+    rel = abs(i1 * g - 0.027589301497888453 * 0.004940186885829099) / (
+        0.027589301497888453 * 0.004940186885829099)
+    assert rel <= 1e-10, f"闭合关系残差 {rel:.3e} 超界（应达严格 rtol 量级）"

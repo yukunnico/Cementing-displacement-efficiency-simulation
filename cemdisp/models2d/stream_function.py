@@ -182,19 +182,13 @@ __all__ = ["solve_stream_function", "solve_stream_function_nonlinear",
 _WALL_CONDUCTANCE_FLOOR = 1.0e-6
 
 # A-3a 外迭代的量级常量（与 gap_solver 的求根容差/上限；见其 docstring）。
-# ⚠️ Task 6 修复轮 1（R-T6-2）：反求遇**屈服悬崖 fp 间隙**时的分级容差阶梯。
-# 实测证据（τ_Y1=泥浆YP 生产接线）：悬崖邻域格的反求根处 F 在 fp 分辨率尺度上
-# "有效不连续"（求积分段随 g̃ 逐 ulp 跳变），割线停摆残差随 (c̄,ū) 跨五个数量级
-# （实测 2.5e-7 … 2.7e-1）——任何固定 rtol 都会误杀可解格或漏放真病格。处置：
-# 严格 rtol（Task 5 原值 1e-12）失败 ⇒ 按阶梯降级重试（显式告警，不静默）；
-# **外层 tol=1e-6 仍是质量闸门**——悬崖格 I₁ 绝对值极小，内层残差对场 ∞-范数
-# 不可见，降级不污染不动点。阶梯尽头仍失败 ⇒ RuntimeError（R-T5-3 回退兜底）。
+# ⚠️ R-T6-2 REVISED（Task 6 修复轮 2）：严格 rtol **全场统一**——所有格最终都
+# 要满足严格档（屈服门槛奇点邻域的割线 2-循环由反求工具的**夹逼二分回退**
+# 兜底，见 ``gap_solver.solve_g_from_mean_velocity_batch`` 阶段 3）。修复轮 1
+# 的"整批 rtol 阶梯 + 救援格滞回"已退役：整批降级会让健康格也在首个松判据处
+# 停机、被系统性扫进冻结分支（实测退化解：τ_Y2 扫描 max|w| 逐位相同、生产场
+# 288/288 全 undefined）。
 _INVERSE_RTOL = 1.0e-12
-_INVERSE_RTOL_LADDER = (1.0e-12, 1.0e-6, 1.0e-3, 1.0)
-# 救援格滞回阈值（阶梯 (iii)）：降级 rtol 接纳格里闭包关系残差超过它者视为
-# 悬崖分叉格、当轮取冻结分支。取外迭代 tol 同量级（低于它的降级残差对场
-# ∞-范数不可见，无须冻结）。
-_INVERSE_FREEZE_RELRES = 1.0e-6
 _INVERSE_MAX_ITER = 200
 
 # (2.2) 两分量的物理换算因子之比：w_phys ∝ w̄/π、v_phys ∝ v̄（T9 π 推导）⇒ v̄ 需乘 π
@@ -573,11 +567,11 @@ def solve_stream_function_nonlinear(geom: Dict, c_bar, hb_closure, b_field,
             收敛的 G 场，注入后作首轮线性解的闭包状态；``None``（默认）= 冷启动
             （不注入，既有行为逐位不变）。接受标量、(ny,nz) 场或 (2,ny,nz) 向量场
             （``set_pressure_gradient`` 同口径）；含非有限值/形状非法 ⇒ ValueError。
-        hysteresis: 悬崖格滞回（R-T6-2 阶梯 (iii)，Task 6 修复轮 1）。``True`` ⇒
-            本步外迭代内，一旦某格被反求判 undefined（无正根 ⇒ G=0 ⇒ 闭包地板），
-            后续轮对该格强制取冻结分支（ū 置 0），不再回翻——消除"地板涓流 ū →
-            恰好屈服 G"的反馈环（机理与 M3 门哲学一致性见方法内注释）。
-            **掩码生命周期 = 本函数一次调用**（跨步重新评估）。``False``（默认）
+        hysteresis: 悬崖格滞回（修复轮 1 引入；**已被 R-T6-2 REVISED 取代**，
+            生产接线不启用——其与整批 rtol 阶梯的组合曾把本应流动的格扫进冻结
+            分支（退化解）。机制保留为默认关开关：``True`` ⇒ 本步外迭代内一旦
+            某格被判 undefined（含 |ū| ≤ 场相对数值零）即保持冻结分支（ū 置 0），
+            掩码生命周期 = 本函数一次调用（跨步重新评估）。``False``（默认）
             = 既有行为逐位不变。
         adaptive_omega: 自适应欠松弛（R-T6-2 阶梯 (ii)，Task 6 修复轮 1）。
             ``True`` ⇒ 检测连续两轮 Δ 方向翻转（dot(Δ_k, Δ_{k−1})<0，2-振荡信号）
@@ -678,7 +672,6 @@ def solve_stream_function_nonlinear(geom: Dict, c_bar, hb_closure, b_field,
     # 一致（Pelipenko04 (2.6)-(2.8) 停流判据）。**跨步重新评估，不跨步冻结**
     # （掩码生命周期 = 本函数一次调用）。禁止多数投票等非物理机制。
     hyst_mask: np.ndarray | None = None
-    _inv_downgrade_warned = False
 
     # 自适应欠松弛状态（R-T6-2 阶梯 (ii)；默认关 ⇒ omega_cur ≡ omega，逐位不变）
     omega0 = float(omega)
@@ -714,54 +707,27 @@ def solve_stream_function_nonlinear(geom: Dict, c_bar, hb_closure, b_field,
         # ū 缩放到物理速度口径再反求（生产接线 ŵ = q_half/π）。默认 1.0 ⇒ ×1.0 对
         # IEEE 浮点逐位无扰（含 ±0/NaN），既有调用方行为不变。
         u_mag = u_mag * velocity_scale
-        # 悬崖格滞回（阶梯 (iii)）：已判 undefined 的格本步内保持冻结分支——
-        # 对其 ū 置 0 走反求的 undefined 路径（G=0 ⇒ 闭包 R-T1-6 地板），不再
-        # 为地板涓流 ū 反求"恰好屈服"的 G。默认关 ⇒ u_inv 即 u_mag（逐位不变）。
+        # static 分支判据（R-T6-2 REVISED 第 2 条）：只有 |ū| ≤ 1e-12×max|ū|
+        # （场相对数值零）的格才取冻结/地板（对其 ū 置 0 走反求 undefined 路径
+        # ⇒ G=0 ⇒ 闭包 R-T1-6 地板）；其余格一律找流动根（反求工具的割线 +
+        # 夹逼二分回退保证严格 rtol 下收敛）。冻结分支不再用于"反求失败格"。
+        u_zero_cut = 1.0e-12 * float(np.max(np.abs(u_mag)))
+        u_inv = np.where(np.abs(u_mag) <= u_zero_cut, 0.0, u_mag)
+        # 悬崖格滞回（⚠️ 已被 R-T6-2 REVISED 取代，开关保留默认关）：undefined 格
+        # 本步内保持冻结分支（ū 置 0）。生产接线**不启用**——上轮实测其与
+        # 整批 rtol 阶梯组合会把本应流动的格扫进冻结分支（全场冻死的退化解）。
         if hysteresis and hyst_mask is not None:
-            u_inv = np.where(hyst_mask, 0.0, u_mag)
-        else:
-            u_inv = u_mag
+            u_inv = np.where(hyst_mask, 0.0, u_inv)
         # ② 逐格反求 G（批量闭包 + 标量求根；Gb=0 生产口径）。
-        # 分级 rtol 阶梯（R-T6-2，见 _INVERSE_RTOL_LADDER 注）：严格 rtol 失败
-        # ⇒ 降级重试（显式告警一次/调用）；阶梯尽头仍失败 ⇒ RuntimeError。
-        inv = None
-        _rtol_used = _INVERSE_RTOL_LADDER[0]
-        for _rtol in _INVERSE_RTOL_LADDER:
-            try:
-                inv = solve_g_from_mean_velocity_batch(
-                    c.reshape(-1), n_hb, kappa_hb, tau_y_hb, u_inv.reshape(-1),
-                    H=H.reshape(-1), rtol=_rtol, max_iter=_INVERSE_MAX_ITER,
-                )
-                _rtol_used = _rtol
-                break
-            except RuntimeError:
-                if _rtol == _INVERSE_RTOL_LADDER[-1]:
-                    raise
-                if not _inv_downgrade_warned:
-                    _inv_downgrade_warned = True
-                    warnings.warn(
-                        f"反求在屈服悬崖邻域遇 fp 分辨率间隙（严格 rtol="
-                        f"{_INVERSE_RTOL_LADDER[0]:g} 不可达），按阶梯降级重试"
-                        "（外层 tol 仍为质量闸门；悬崖格 I₁ 绝对值极小，降级不污染"
-                        "不动点）。",
-                        RuntimeWarning,
-                        stacklevel=2,
-                    )
-                continue
+        # 严格 rtol 全场统一（R-T6-2 REVISED 第 4 条）：所有格最终都要满足严格档
+        # （真悬崖格经反求工具的夹逼二分回退达标）；rtol 阶梯/降级接纳已退役。
+        inv = solve_g_from_mean_velocity_batch(
+            c.reshape(-1), n_hb, kappa_hb, tau_y_hb, u_inv.reshape(-1),
+            H=H.reshape(-1), rtol=_INVERSE_RTOL, max_iter=_INVERSE_MAX_ITER,
+        )
         if hysteresis:
-            undef_flat = np.asarray(inv.undefined, dtype=bool)
-            new_frozen = undef_flat.reshape(H.shape)
-            if _rtol_used != _INVERSE_RTOL_LADDER[0]:
-                # 救援格滞回：降级 rtol 接纳的格里，闭包关系残差仍显著者
-                # （rel_res > 阈值）正是"悬崖分叉格"——每轮以悬崖流动态返回
-                # 剧烈抖动的 G、驱动全局 2-振荡。当轮计入滞回掩码，下一轮起
-                # 对其 ū 置 0 取冻结分支（M3 门哲学），地图即行收敛。
-                i1_g = np.asarray(inv.I1, dtype=float) * np.asarray(inv.G, dtype=float)
-                h_u = H.reshape(-1) * u_inv.reshape(-1)
-                rel_res = np.abs(h_u - i1_g) / np.maximum(np.abs(h_u), 1e-300)
-                rescued = (rel_res > _INVERSE_FREEZE_RELRES) & ~undef_flat
-                new_frozen = new_frozen | rescued.reshape(H.shape)
-            hyst_mask = new_frozen if hyst_mask is None else (hyst_mask | new_frozen)
+            undef = np.asarray(inv.undefined, dtype=bool).reshape(H.shape)
+            hyst_mask = undef if hyst_mask is None else (hyst_mask | undef)
         # ③ 注入（无正根格 G=0 ⇒ 闭包侧 R-T1-6 地板 + 单次告警）
         hb_closure.set_pressure_gradient(inv.G.reshape(H.shape))
         I1_new = _mobility_now()
