@@ -230,9 +230,18 @@ def test_h3_both_channels_same_source_same_value():
 
 
 def test_h1_changes_dynamics_via_closure():
-    """H1 的 HB 闭包（n₂≠1）改变算子 ⇒ 动力学结果与 H0 可分。"""
+    """H1 的 HB 闭包（n₂≠1、τ_Y1=泥浆YP）改变算子 ⇒ 动力学结果与 H0 可分。
+
+    同时验证 R-T6-2 验收：YP 口径 + 生产排量的整跑**不触发回退**（外迭代
+    在 warm-start + 两段式冷启动 + 悬崖滞回下全程收敛）。
+    """
     res_h0 = _run_solver(total_t=120.0)
-    res_h1 = _run_solver(total_t=120.0, enable_hb_closure=True)
+    with warnings.catch_warnings(record=True) as rec:
+        warnings.simplefilter("always")
+        res_h1 = _run_solver(total_t=120.0, enable_hb_closure=True)
+    fallbacks = [r for r in rec
+                 if issubclass(r.category, RuntimeWarning) and "回退" in str(r.message)]
+    assert not fallbacks, f"YP 口径生产工况不应回退：{[str(r.message)[:80] for r in fallbacks]}"
     d0, d1 = _result_digests(res_h0), _result_digests(res_h1)
     assert d0["cement"] != d1["cement"], "H1（HB 闭包）应改变浓度场"
 
@@ -289,7 +298,7 @@ def test_velocity_scale_is_q_half_over_pi_and_closure_params_physical(monkeypatc
     # 物理 (n, κ, τ_Y)（推荐路径；H1 ⇒ τ_Y2=0；τ_Y1=泥浆 spec YP；κ/n 来自 FluidSpec）
     assert closure.n == (1.0, 0.75)          # 泥浆 Bingham→n=1；水泥 power_law_n
     assert closure.kappa == (0.022, 0.55)    # 泥浆 PV；水泥 consistency_k
-    assert closure.tau_y == (0.0, 0.0)       # τ_Y1=0（泥浆屈服走屈服门通道）；τ_Y2=0（H1）
+    assert closure.tau_y == (6.0, 0.0)       # τ_Y1=泥浆 spec YP（R-T6-2）；τ_Y2=0（H1）
 
 
 # --------------------------------------------------------------------------- #
@@ -382,3 +391,61 @@ def test_dead_switch_warnings():
         AnnulusD2DGASolver(enable_hb_closure=True, hb_fix_cement_tau_y=True,
                            cement_tau_y_by_role={"TAIL": 5.0})
     assert not [r for r in rec if issubclass(r.category, UserWarning)]
+
+
+# --------------------------------------------------------------------------- #
+# 7. R-T6-2 修复轮 1：warm-start 默认逐位 + 汇总尾缀分流（评审 Important-1）
+# --------------------------------------------------------------------------- #
+
+def test_warm_start_default_is_bitwise_cold_start():
+    """solve_stream_function_nonlinear 的 initial_G 默认 None ⇒ 与不传参逐位一致。"""
+    from cemdisp.models2d.hb_closure import HBClosure
+    from cemdisp.models2d.stream_function import (
+        solve_stream_function, solve_stream_function_nonlinear)
+    y = np.linspace(0.0, np.pi * 0.1071, 12)
+    phi = y / y[-1]
+    nz = 6
+    H = np.broadcast_to(0.0458 * (1 + 0.3 * np.cos(np.pi * phi))[:, None], (12, nz)).copy()
+    geom = {"y": y, "phi": phi, "H": H, "b": 2 * H,
+            "s": np.linspace(0.0, 10.0, nz),
+            "hole_mm": np.full((1, nz), 260.0), "od_mm": np.full((1, nz), 168.3)}
+    c = 0.5 * np.ones((12, nz))
+    b = np.zeros((2, 12, nz))
+    b[0] = 8.0e4 * np.sin(np.pi * phi)[:, None] * c
+    hb = HBClosure(n=(1.0, 0.8), kappa=(0.022, 0.55), tau_y=(6.0, 0.0),
+                   m=0.4, B=0.3, ny_gap=41)
+    hb.set_pressure_gradient(300.0)  # 冷启动语义：调用方注入初值
+    psi_a = solve_stream_function_nonlinear(geom, c, hb, b, omega=0.5,
+                                            tol=1.0, max_outer=3)
+    hb2 = HBClosure(n=(1.0, 0.8), kappa=(0.022, 0.55), tau_y=(6.0, 0.0),
+                    m=0.4, B=0.3, ny_gap=41)
+    hb2.set_pressure_gradient(300.0)
+    psi_b = solve_stream_function_nonlinear(geom, c, hb2, b, initial_G=None,
+                                            omega=0.5, tol=1.0, max_outer=3)
+    assert np.array_equal(psi_a, psi_b)
+
+
+def test_flush_summary_suffix_split_by_kind():
+    """汇总告警尾缀按 skip 类型分流：missing ⇒ 贡献 0 提示；spec ⇒ 贡献非 0 声明。"""
+    _, _, lead, tail = _fluids()
+    solver_missing = AnnulusD2DGASolver(hb_fix_cement_tau_y=True,
+                                        cement_tau_y_by_role={})
+    solver_missing._cement_phase_yield_stress(lead)
+    with pytest.warns(UserWarning) as rec_missing:
+        solver_missing._hb_flush_tau_y_skips()
+    msg_missing = str(rec_missing[0].message)
+    assert "LEAD" in msg_missing
+    assert "贡献为 0" in msg_missing
+    assert "贡献非 0" not in msg_missing
+
+    solver_spec = AnnulusD2DGASolver(hb_fix_cement_tau_y=True,
+                                     cement_tau_y_by_role={"TAIL": 5.0})
+    bingham_tail = FluidSpec("tail", FluidRole.TAIL, 1920.0, RheologyModel.BINGHAM,
+                             plastic_viscosity_pa_s=0.17, yield_stress_pa=13.0)
+    solver_spec._cement_phase_yield_stress(bingham_tail)
+    with pytest.warns(UserWarning) as rec_spec:
+        solver_spec._hb_flush_tau_y_skips()
+    msg_spec = str(rec_spec[0].message)
+    assert "TAIL" in msg_spec
+    assert "贡献非 0" in msg_spec
+    assert "贡献为 0" not in msg_spec

@@ -289,6 +289,16 @@ class HBClosure:
         """缓存查找计数（累计）：``{"hits": int, "misses": int}``（misses = 实际解数）。"""
         return {"hits": self._hits, "misses": self._misses}
 
+    @property
+    def current_G(self):
+        """最近一次注入/反求收敛的 G（只读视图；``None`` = 尚未注入）。
+
+        Task 6 修复轮 1（R-T6-2 阶梯 (i)）：供外层接线做时间步间 warm-start
+        （``solve_stream_function_nonlinear(initial_G=...)``）。纯只读透传，
+        不改变任何求值行为。
+        """
+        return self._G
+
     def set_pressure_gradient(self, G, Gb=(0.0, 0.0)) -> None:
         """注入当前局部压力梯度场 ``G``（与浮力向量 ``Gb``），并清空解缓存。
 

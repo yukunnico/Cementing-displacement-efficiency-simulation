@@ -69,6 +69,7 @@ from cemdisp.models2d.d2dga_flux import (
     d2dga_flux_amplification,
 )
 from cemdisp.models2d.stream_function import (
+    _VELOCITY_COMPONENT_RATIO,
     solve_stream_function,
     solve_stream_function_nonlinear,
     velocity_from_stream_function,
@@ -406,8 +407,10 @@ class AnnulusD2DGASolver:
                 闭包，物理口径参数 + ``velocity_scale = q_half/π``，R-T5-1 REVISED
                 推荐路径）；外迭代不收敛（``RuntimeError``）⇒ 显式告警 + **回退牛顿
                 线性闭包**继续该时间步（R-T5-3，不静默）。闭包参数：被顶替液（泥浆）
-                取其 ``FluidSpec`` 的幂律等价（Bingham/牛顿 → n₁=1/κ₁=PV，τ_Y1=0——
-                泥浆屈服由既有屈服门通道承载，不进闭包以免两处计入）；
+                取其 ``FluidSpec`` 的幂律等价（Bingham/牛顿 → n₁=1/κ₁=PV），
+                **τ_Y1 = 泥浆 spec ``yield_stress_pa``**（R-T6-2，2026-09-17 用户
+                裁定：泥浆 spec YP 在闭包中真实可用；收敛性由时间步间 warm-start
+                等接线级工程保障）；
                 顶替液（水泥）n₂/κ₂ 取 ``power_law_n``/``consistency_k``，τ_Y2 由
                 ``hb_fix_cement_tau_y`` 门控（H1 ⇒ 0，R-T6-1）。互斥：
                 ``enable_power_law_gap_correction`` 被本开关替代（不生效，构造告警）。
@@ -552,6 +555,7 @@ class AnnulusD2DGASolver:
         self._hb_tau_y_skips_reported = False
         self._hb_wall_on_hb_path_warned = False
         self._hb_closure_memo: dict = {}
+        self._hb_prev_G = None  # 上一时间步收敛的 G 场（warm-start；每 run 重置）
 
         # A-3b 死开关告警（项目 A3 惯例：置真却无可消费路径/输入 ⇒ 一次性告警，
         # 防「死开关被当活杠杆」）。
@@ -853,31 +857,44 @@ class AnnulusD2DGASolver:
         """R-T6-1 的水泥 τy 解析（(a)/(b) 两处共用的唯一来源）：spec 优先，
         其次常数映射；缺失 ⇒ 记入显式跳过清单（一次性汇总告警，R4 不静默）。"""
         if fluid.yield_stress_pa is not None:
-            self._hb_note_tau_y_skip(
+            self._hb_note_tau_y_skip("spec", (
                 f"{fluid.role.name}: 水泥相自带 yield_stress_pa="
-                f"{float(fluid.yield_stress_pa):.6g} Pa，常数映射未消费（以 spec 为准）")
+                f"{float(fluid.yield_stress_pa):.6g} Pa，常数映射未消费（以 spec 为准）"))
             return float(fluid.yield_stress_pa)
         mapping = self.cement_tau_y_by_role or {}
         value = mapping.get(fluid.role.name.upper())
         if value is None or isinstance(value, str):
-            self._hb_note_tau_y_skip(
+            self._hb_note_tau_y_skip("missing", (
                 f"{fluid.role.name}: 常数映射缺该水泥相（或为 MISSING 哨兵）——"
-                "本相 τy 贡献显式置 0（R4 告警跳过，非静默）")
+                "本相 τy 贡献显式置 0（R4 告警跳过，非静默）"))
             return 0.0
         return float(value)
 
-    def _hb_note_tau_y_skip(self, reason: str) -> None:
-        """记录一条 τy 缺失/未消费留痕（同一 run 内一次性汇总告警，见 flush）。"""
-        self._hb_tau_y_skips.append(reason)
+    def _hb_note_tau_y_skip(self, kind: str, reason: str) -> None:
+        """记录一条 τy 跳过留痕（kind: "missing"/"spec"），同一 run 内一次性汇总。"""
+        self._hb_tau_y_skips.append((kind, reason))
 
     def _hb_flush_tau_y_skips(self) -> None:
-        """把 τy 跳过留痕一次性汇总告警（每 run 一次；R4：不得静默用 0）。"""
+        """把 τy 跳过留痕一次性汇总告警（每 run 一次；R4：不得静默）。
+
+        ⚠️ 两类 skip 的物理后果不同，汇总尾缀**分流**（评审 Important-1）：
+        - ``missing``：该相贡献显式置 0（与 HEAD 同），提示核对映射相覆盖；
+        - ``spec``：该相以 spec 自带 yield_stress_pa 为准，**贡献非 0**（与
+          HEAD 同值），与映射覆盖无关。
+        """
         if self.hb_fix_cement_tau_y and self._hb_tau_y_skips and not self._hb_tau_y_skips_reported:
-            unique = "；".join(dict.fromkeys(self._hb_tau_y_skips))
+            unique = "；".join(dict.fromkeys(reason for _k, reason in self._hb_tau_y_skips))
+            kinds = {k for k, _r in self._hb_tau_y_skips}
+            tail = []
+            if "missing" in kinds:
+                tail.append("missing 类跳过相的 τy 贡献为 0（与 HEAD 同），"
+                            "请核对 cement_tau_y_by_role 的相覆盖")
+            if "spec" in kinds:
+                tail.append("spec 类跳过相以水泥相自带 yield_stress_pa 为准"
+                            "（贡献非 0、与 HEAD 同值），与常数映射覆盖无关")
             warnings.warn(
                 f"hb_fix_cement_tau_y=True：井 {self._active_well_name!r} 的水泥 τy 注入"
-                f"存在显式跳过项（{unique}）。跳过相的贡献为 0（与 HEAD 同），"
-                "请核对 cement_tau_y_by_role 的相覆盖。",
+                f"存在显式跳过项（{unique}）。" + "；".join(tail) + "。",
                 UserWarning,
                 stacklevel=2,
             )
@@ -1628,11 +1645,11 @@ class AnnulusD2DGASolver:
         """构造/复用 HB 闭包（**物理口径**参数；B&F25 (2.13)-(2.15) 求值口径）。
 
         - 被顶替液（泥浆，流体 1/壁面带）：n₁/κ₁ 取 `_phase_power_law_params`
-          （Bingham/牛顿 → (1, PV)、POWER_LAW → (n, K)）；**τ_Y1 = 0**——泥浆的
-          屈服应力**不进闭包**（它由既有屈服门通道的混合 τy 场承载，与 HEAD 同；
-          若再进闭包即同一份泥浆屈服两处计入，且实测生产流速下泥浆格点落在
-          屈服悬崖两侧来回翻转，外迭代 50 轮不收敛 ⇒ 每步回退，Phase A 不可用；
-          探针证据见 task-6-report.md）；
+          （Bingham/牛顿 → (1, PV)、POWER_LAW → (n, K)）；**τ_Y1 = 泥浆 spec
+          ``yield_stress_pa``**（无则 0）——用户裁定 R-T6-2（2026-09-17，"想想
+          办法"）：泥浆 spec YP 在闭包中真实可用，收敛性由接线级工程保障
+          （时间步间 warm-start，见 `_solve_stream_function_hb`；探针与分级
+          证据见 task-6-report.md 修复轮 1）；
         - 顶替液（水泥，流体 2/中线带）：n₂/κ₂ 取 `_phase_power_law_params`
           （POWER_LAW → (power_law_n, consistency_k)）、τ_Y2 经
           `_hb_closure_cement_tau_y`（R-T6-1(b)：H1 ⇒ 0、H3 ⇒ 与屈服门同源同值）；
@@ -1641,7 +1658,9 @@ class AnnulusD2DGASolver:
         """
         n1, k1 = self._phase_power_law_params(mud_fluid)
         n2, k2 = self._phase_power_law_params(cement_fluid)
-        tau_y1 = 0.0
+        # τ_Y1 = 泥浆 spec YP（R-T6-2，2026-09-17 用户裁定：泥浆 spec YP 在闭包中
+        # 真实可用；收敛性由接线级 warm-start 工程保障，见 _solve_stream_function_hb）。
+        tau_y1 = self._fluid_yield_stress(mud_fluid)
         tau_y2 = self._hb_closure_cement_tau_y(cement_fluid)
         self._hb_flush_tau_y_skips()
         key = (n1, n2, k1, k2, tau_y1, tau_y2)
@@ -1668,6 +1687,12 @@ class AnnulusD2DGASolver:
           R-T5-1 REVISED 推荐路径：物理速度喂反求 + 物理 (κ, τ_Y) 参数）；
         - ``Gb=(0,0)``：Phase A 浮力全部经 (4.22) 的 ``b_field``（Task 4 警告：
           不得两处同时算同一份浮力）；
+        - 外迭代 ``max_outer=100``（接线配置）：冷启动首轮的 ‖ΔĪ₁‖ 收敛率实测
+          ~0.85/轮（ω=0.5，悬崖邻域 ū↔G↔I₁ 耦合的内在速率），Task 5 默认 50 轮
+          不够（rel 卡 ~1e-4）⇒ 提到 250 轮（实测冷启动需 ~73 轮、个别快变步
+          ~102-155 轮）让冷启动收敛、warm-start 得以挂载；
+          ω 保持 Task 5 默认 0.5（实测轨迹单调衰减、无振荡，自适应欠松弛
+          R-T6-2 阶梯 (ii) 无的放矢，不实现）；
         - 初始 G：牛顿槽流估计 ``G = 3η₂ū/H̄²``（ū 取半环空柱截面均速
           ``q_half/(π·r_a·2H̄)``）——仅为外迭代初值，量级 O(1) 即可；
         - 外迭代 ``RuntimeError`` ⇒ **显式 RuntimeWarning + 回退牛顿线性闭包**
@@ -1687,16 +1712,35 @@ class AnnulusD2DGASolver:
         closure = self._hb_closure_for(mud_fluid, cement_fluid, shear_rate)
         q_half = float(q_m3s) / 2.0
         velocity_scale = q_half / np.pi
-        half_gap_m = float(np.mean(geom["H"]))
-        r_a_m = float(np.mean((geom["hole_mm"] + geom["od_mm"]) / 4.0)) / 1000.0
-        u_est = q_half / max(np.pi * r_a_m * 2.0 * half_gap_m, 1e-12)
-        g_init = 3.0 * max(float(eta2), 1e-9) * max(u_est, 1e-12) / max(half_gap_m**2, 1e-18)
-        closure.set_pressure_gradient(g_init)
+        # R-T6-2 阶梯 (i)：时间步间 warm-start——上一时间步**收敛**的 G 场作首轮
+        # 闭包状态（瞬态场连续演化，悬崖格归属随前缘推进单调变化 ⇒ 轮数显著下降）；
+        # 首步/回退步无缓存 ⇒ 冷启动（标量牛顿估计 g_init）。跨步只传递初值、
+        # 不冻结任何格的归属（每步重新反求评估）。
+        prev_g = self._hb_prev_G
+        initial_g = None
+        if prev_g is not None:
+            initial_g = prev_g
+        else:
+            # 冷启动（R-T6-2 阶梯 (i) 的冷启动半段）：**牛顿当量两段式**——先解
+            # 一次牛顿线性 Ψ，按 G = H·ū/I₁_牛顿 逐格反推注入。首轮闭包状态即
+            # 物理正确量级 ⇒ 悬崖格的 flowing/static 分支第一轮就取对（避免粗糙
+            # 标量 g_init 的错误地板决策被阶梯 (iii) 滞回锁死 ⇒ 间歇性全局爆发）。
+            psi0 = solve_stream_function(geom, c_bar, eta1, eta2, m_ratio, b_field,
+                                         closure=None, ny=ny, nz=nz)
+            w0, v0 = velocity_from_stream_function(psi0, geom)
+            u0 = np.hypot(w0, _VELOCITY_COMPONENT_RATIO * v0) * velocity_scale
+            h_arr = np.asarray(geom["H"], dtype=float)
+            i1_newton = np.asarray(
+                mobility_i1(c_bar, m_ratio, eta1=eta1, eta2=eta2, H=h_arr), dtype=float)
+            closure.set_pressure_gradient(h_arr * u0 / np.maximum(i1_newton, 1e-30))
         try:
-            return solve_stream_function_nonlinear(
+            psi = solve_stream_function_nonlinear(
                 geom, c_bar, closure, b_field, Gb=(0.0, 0.0),
-                velocity_scale=velocity_scale)
+                velocity_scale=velocity_scale, initial_G=initial_g,
+                hysteresis=True, adaptive_omega=False, max_outer=250)
         except RuntimeError as exc:
+            # 回退步的 G 是迭代中途态，不缓存（下一步仍冷启动，R-T5-3 最后防线）。
+            self._hb_prev_G = None
             warnings.warn(
                 f"HB 闭包非线性外迭代未收敛，本时间步回退牛顿线性闭包路径"
                 f"（R-T5-3，不静默）：{exc}",
@@ -1705,6 +1749,9 @@ class AnnulusD2DGASolver:
             )
             return solve_stream_function(geom, c_bar, eta1, eta2, m_ratio, b_field,
                                          closure=None, wall=wall, ny=ny, nz=nz)
+        # 收敛 ⇒ 缓存收敛 G 场，供下一时间步 warm-start（阶梯 (i)）。
+        self._hb_prev_G = closure.current_G
+        return psi
 
     def _compute_velocity(
         self,
@@ -1992,10 +2039,12 @@ class AnnulusD2DGASolver:
         """
 
         mud_fluid, lead_fluid, tail_fluid, spacer_fluid, flusher_fluid = self._pick_fluids(fluids)
-        # A-3b：τy 显式跳过留痕按 run 重置（R4 每跑一次性汇总告警，不跨 run 累积）
+        # A-3b：τy 显式跳过留痕按 run 重置（R4 每跑一次性汇总告警，不跨 run 累积）；
+        # warm-start 缓存一并重置（G 场形状绑定本 run 的网格，跨 run 不复用）。
         self._active_well_name = well_spec.well_name
         self._hb_tau_y_skips = []
         self._hb_tau_y_skips_reported = False
+        self._hb_prev_G = None
         # 2026-09-06 选相修复：多种 WASH/SPACER 并存（如平衡液+驱油隔离液）时，
         # 按泵注程序中各流体的设计体积加权重建等效代表流体——进入环空的 spacer 相
         # 由这些流体按入库体积混合而成，物性（密度/黏度/屈服）应取入库加权而非
