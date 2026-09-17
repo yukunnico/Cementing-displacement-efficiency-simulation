@@ -255,9 +255,10 @@ def test_inverse_utility_rejects_negative_mean_velocity():
 def test_flow_curve_scale_covariance():
     """标度不变性（模块/函数 docstring 的"标度口径"段所引命题）：
 
-    ``κ' = κ·sⁿ/σ、τ_Y' = τ_Y/σ、ū' = /s ⇒ G' = G/σ、I₁' = (σ/s)·I₁``。
-    （误用 ``κ' = κ/sⁿ`` 会破坏不变性 ⇒ 该口径不可由闭包参数单独吸收，
-    这正是"须显式速度标度"的依据。）
+    ``κ' = κ·sⁿ/σ、τ_Y' = τ_Y/σ、ū' = ū/s ⇒ G' = G/σ、I₁' = (σ/s)·I₁``。
+    （误用 ``κ' = κ/sⁿ`` 会破坏不变性；``σ = s`` 时该标度**可**由闭包参数
+    ``(κ·ŵ^{n−1}, τ_Y/ŵ)`` 共同吸收——即"等价地"Option B，生产口径下
+    rel ≈ 1e-14，见 ``test_velocity_scale_alignment_equivalence``。）
     """
     H = 0.008
     base = gap_solver.solve_g_from_mean_velocity_batch(0.45, HB_N, HB_KAPPA, HB_TAUY,
@@ -273,24 +274,36 @@ def test_flow_curve_scale_covariance():
 
 
 def test_velocity_scale_alignment_equivalence():
-    """接线"等价地"公式钉子（R-T5-1 REVISED；模块 docstring 标度段所引）：
+    """接线"等价地"公式钉子（R-T5-1 REVISED；**生产口径** ū_phys = ŵ·ū_mod）：
 
-    同一物理问题在 ``ū_mod = ŵ·ū_phys`` 口径下，两种对齐给出**同一个** ``I₁``：
-    ① 物理参数 + 物理速度（推荐）；② 模块口径参数 ``(κ·ŵ^{1−n}, τ_Y·ŵ)`` + 模块速度。
-    注意 ``ŵ^{1−n}`` **不是** ``ŵ^{n−1}``——后者（翻转式）实测 rel ≈ 1.0（探针
-    probe_equiv_scale_formula.py），本测试防止再次写反。
+    同一物理问题两种对齐给出**同一个** ``I₁``：① 物理参数 + 物理速度（推荐，
+    velocity_scale=ŵ 乘入）；② 模块口径参数 ``(κ·ŵ^{n−1}, τ_Y/ŵ)`` + 模块速度
+    （= 物理速度/ŵ）。模块口径速度比物理**大** 1/ŵ 倍（呼101 量级实测 377×，
+    生产锚 ``annulus_d2dga.py:1433``：``w = w_unit·(q_half/π)``），故模块口径的
+    应力与 ``τ_Y`` 同比大 1/ŵ 倍、``κ`` 大 ``ŵ^{n−1}`` 倍——无量纲群不变。
+    （fix round 1 曾按反向口径误写 ``(κ·ŵ^{1−n}, τ_Y·ŵ)`` 并"证伪"生产约定，
+    fix round 2 订正；旧公式作为反例钉在本测试尾部，防止再写反。）
     """
     H = 0.008
-    w_hat = 0.01                                   # 任意生产级小标度
+    w_hat = 2.653e-3                               # 呼101 量级 q_half/π（生产锚）
     u_phys = 0.02
+    u_mod = u_phys / w_hat                         # 生产口径：模块速度 = 物理/ŵ
     base = gap_solver.solve_g_from_mean_velocity_batch(0.45, HB_N, HB_KAPPA, HB_TAUY,
                                                        u_phys, H=H)
-    kap_mod = tuple(k * w_hat ** (1.0 - n) for k, n in zip(HB_KAPPA, HB_N))
-    tau_mod = tuple(t * w_hat for t in HB_TAUY)
+    kap_mod = tuple(k * w_hat ** (n - 1.0) for k, n in zip(HB_KAPPA, HB_N))
+    tau_mod = tuple(t / w_hat for t in HB_TAUY)
     mod = gap_solver.solve_g_from_mean_velocity_batch(0.45, HB_N, kap_mod, tau_mod,
-                                                      u_phys * w_hat, H=H)
+                                                      u_mod, H=H)
     assert float(mod.I1[0]) == pytest.approx(float(base.I1[0]), rel=1e-10)
-    assert float(mod.G[0]) == pytest.approx(float(base.G[0]) * w_hat, rel=1e-10)
+    assert float(mod.G[0]) == pytest.approx(float(base.G[0]) / w_hat, rel=1e-10)
+    # 反例钉子：fix round 1 的翻转式 (κ·ŵ^{1−n}, τ_Y·ŵ) 在生产口径下必不成立
+    # （探针实测 rel ≈ 40.6，O(1) 级错误）——防止"反向警示"再写反方向。
+    kap_old = tuple(k * w_hat ** (1.0 - n) for k, n in zip(HB_KAPPA, HB_N))
+    tau_old = tuple(t * w_hat for t in HB_TAUY)
+    mod_old = gap_solver.solve_g_from_mean_velocity_batch(0.45, HB_N, kap_old, tau_old,
+                                                          u_mod, H=H)
+    rel_old = abs(float(mod_old.I1[0]) - float(base.I1[0])) / float(base.I1[0])
+    assert rel_old > 0.1, f"旧公式 rel={rel_old:.3e} 意外地小，反例钉子失效"
 
 
 def test_flow_curve_is_monotone_in_gradient():
