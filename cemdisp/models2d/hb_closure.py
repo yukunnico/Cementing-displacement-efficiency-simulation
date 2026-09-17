@@ -428,8 +428,7 @@ class HBClosure:
                     f"HBClosure：{n_static} 个格点闭包无定义（全场未屈服 ⇒ static wall "
                     f"layer，或 G=Gb=0），已取 I₁ 地板 = {_STATIC_WALL_MOBILITY_FLOOR:g}"
                     f"×I₁_牛顿、I₂=0。成因拆分：全场未屈服 {n_unyield} 个、"
-                    f"G 与 Gb 同时为零（零驱动；G 与 Gb 不能同时为零）{n_zero} 个。"
-                    "地板是算子适定性正则化"
+                    f"G 与 Gb 同时为零（零驱动）{n_zero} 个。地板是算子适定性正则化"
                     "（先例 stream_function._WALL_CONDUCTANCE_FLOOR），不是物理值"
                     "（真实物理值为 I₁=0、I₂=0）。每实例只告警一次；"
                     "计数见 n_static_wall_points。",

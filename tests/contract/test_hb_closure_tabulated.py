@@ -319,7 +319,7 @@ def test_hb_closure_zero_gradient_point_is_floored_with_warning():
     """``G`` 与 ``Gb`` 同时为零的退化点同样地板化 + 告警（另有别于"未屈服"的成因）。"""
     hb = HBClosure(n=HB_N, kappa=HB_KAPPA, tau_y=HB_TAU_Y, m=1.0, B=0.3)
     hb.set_pressure_gradient(0.0)
-    with pytest.warns(RuntimeWarning, match="不能同时为零"):
+    with pytest.warns(RuntimeWarning, match="同时为零"):
         I1 = np.asarray(hb.mobility(0.5, 1.0, 1.4, 0.9, HB_H))
     assert I1 == pytest.approx(
         _STATIC_WALL_MOBILITY_FLOOR * float(mobility_i1(0.5, 1.0, eta1=1.4, eta2=0.9, H=HB_H))
