@@ -687,6 +687,10 @@ def run_l3() -> None:
                 1 for w in caught
                 if issubclass(w.category, RuntimeWarning) and "回退牛顿线性闭包" in str(w.message))
             result = row.pop("_result")
+            # keep_result 还带 _solver/_well_spec 对象——不 pop 会在写 l3_summary.json 时
+            # json 序列化失败（2026-09-17 实证；对照表 CSV 不受影响因 extrasaction="ignore"）
+            row.pop("_solver", None)
+            row.pop("_well_spec", None)
             row["digest_cement"] = _digest(result.cement_field)
             row["digest_wall"] = _digest(result.wall_field)
             row["digest_spacer"] = _digest(result.spacer_field)
