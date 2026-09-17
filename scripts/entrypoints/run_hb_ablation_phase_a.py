@@ -50,6 +50,14 @@ ht1_004 特例（用户裁定 R-T6-6 = spec 优先）：该井水泥 spec 自带
   闭包侧 R-T1-6 地板告警（"格点闭包无定义"，每闭包实例至多一次）另行计数并
   解析格点数。
 - 可断点续跑：启动读 manifest，``status`` 为 DONE/CONTAMINATED 的 run 跳过。
+- **并行分片（R-T7-1，controller 裁定 B）**：``--shard P1..P5``（成本均衡预设）
+  或 ``--subset <run_id,...>``（显式子集）——分片进程写**独立**
+  ``manifest_p<k>.json``（``--subset`` 无 shard 名时写 ``manifest_subset.json``），
+  **禁止多进程同写一个 manifest**；全部完成后 ``--merge-shards`` 按 run_id
+  **去重 union** 并入主 manifest.json 并重生成 汇总/归因/l1 三件（同 run_id
+  内容不一致即报错）。同一 shard **不得双进程并发**。
+- ⚠️ **manifest 检查只许只读**（2026-09-17 事故教训：以 ``'w'`` 模式打开会截断
+  台账；运行中进程靠内存态在下一 run 边界原子重写自愈——勿依赖）。
 - 输出：``results/HB闭包A-B_2026-09-17/``（逐 run 子目录 + manifest.json +
   汇总.csv + 归因分解.csv + l1_determinism.json）。
 
@@ -104,6 +112,17 @@ WELLS: dict[str, Callable[[], tuple]] = {
     "hu102": loaders.load_hu102_tailpipe,
     "ht1_003": loaders.load_ht1_003_tailpipe,
     "ht1_004": loaders.load_ht1_004_tailpipe,
+}
+
+# R-T7-1 分片预设（controller 裁定 B：按成本均衡；每 shard 独立进程 + 独立
+# manifest_p<k>.json + 独立日志，禁多进程同写一个 manifest；完成后 --merge-shards）
+SHARDS: dict[str, list[str]] = {
+    "P1": ["hu102__H1"],
+    "P2": ["hu102__H3b_HB"],
+    "P3": ["hu102__H3a_LS"],
+    "P4": ["hu101__H1", "hu101__H3a_LS", "hu101__H3b_HB"],
+    "P5": ["ht1_003__H1", "ht1_003__H3a_LS", "ht1_003__H3b_HB",
+           "ht1_004__H1", "ht1_004__H3_spec"],
 }
 
 _ROLE_BY_PHASE = {"lead": "LEAD", "intermediate": "INTERMEDIATE", "tail": "TAIL"}
@@ -476,14 +495,24 @@ def load_manifest() -> dict[str, Any] | None:
 
 
 def save_manifest(manifest: dict[str, Any]) -> None:
-    tmp = MANIFEST_PATH.with_suffix(".json.tmp")
+    save_manifest_at(MANIFEST_PATH, manifest)
+
+
+def save_manifest_at(path: Path, manifest: dict[str, Any]) -> None:
+    """原子写 manifest（tmp + os.replace）。**唯一合法的 manifest 写入口**——
+    状态检查一律只读（2026-09-17 截断事故教训，见模块 docstring）。"""
+    tmp = path.with_suffix(".json.tmp")
     tmp.write_text(json.dumps(manifest, ensure_ascii=False, indent=1, default=float),
                    encoding="utf-8")
-    os.replace(tmp, MANIFEST_PATH)
+    os.replace(tmp, path)
 
 
-def write_summary_csv(manifest: dict[str, Any]) -> None:
-    """逐 (井, 标签) 一行；ht1_004 的双标签行共享 run_id 与指标。"""
+def write_summary_csv(manifest: dict[str, Any], suffix: str = "") -> None:
+    """逐 (井, 标签) 一行；ht1_004 的双标签行共享 run_id 与指标。
+
+    ``suffix``：分片模式写 ``汇总_p<k>.csv`` 等本地副本，**不动主聚合文件**
+    （主文件由默认全矩阵进程或 --merge-shards 重生成）。
+    """
     columns = ["well", "label", "run_id", "caliber", "status", "annotation",
                "enable_stream_yield_gate", "enable_hb_closure", "hb_fix_cement_tau_y",
                "tau_y_map", "fallback_count", "fallback_steps", "nonlinear_steps",
@@ -520,7 +549,8 @@ def write_summary_csv(manifest: dict[str, Any]) -> None:
                 "digest_wall": rec["digests"]["wall"],
                 "output_dir": rec["output_dir"],
             })
-    with SUMMARY_CSV.open("w", encoding="utf-8-sig", newline="") as handle:
+    summary_path = SUMMARY_CSV.with_name(f"汇总{suffix}.csv")
+    with summary_path.open("w", encoding="utf-8-sig", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=columns, extrasaction="ignore")
         writer.writeheader()
         writer.writerows(rows)
@@ -539,7 +569,7 @@ _LABEL_DELTA = {
 _METRIC_KEYS = ("eta_E", "eta_N", "cement_occ")
 
 
-def write_attribution_csv(manifest: dict[str, Any]) -> None:
+def write_attribution_csv(manifest: dict[str, Any], suffix: str = "") -> None:
     """spec §5.1 三分量分解（按标签取数；缺 run 记 NaN 不编造）。"""
     columns = ["well", "component", "eta_E", "eta_N", "cement_occ", "missing_labels"]
     rows: list[dict[str, Any]] = []
@@ -566,7 +596,8 @@ def write_attribution_csv(manifest: dict[str, Any]) -> None:
             rows.append({"well": well, "component": component,
                          "eta_E": values[0], "eta_N": values[1],
                          "cement_occ": values[2], "missing_labels": ";".join(missing)})
-    with ATTRIBUTION_CSV.open("w", encoding="utf-8-sig", newline="") as handle:
+    attribution_path = ATTRIBUTION_CSV.with_name(f"归因分解{suffix}.csv")
+    with attribution_path.open("w", encoding="utf-8-sig", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=columns, extrasaction="ignore")
         writer.writeheader()
         writer.writerows(rows)
@@ -585,7 +616,7 @@ _AUTHORITATIVE_SUMMARY = {
 }
 
 
-def write_l1_determinism(manifest: dict[str, Any]) -> dict[str, Any]:
+def write_l1_determinism(manifest: dict[str, Any], suffix: str = "") -> dict[str, Any]:
     """L1：H0 与 H0_repeat 同配置两次运行逐位对比（shenjingwangluo 域内）。
 
     并与该井既有权威 runner 摘要做**信息性**对照（只报漂移、不追查——代码默认
@@ -622,7 +653,7 @@ def write_l1_determinism(manifest: dict[str, Any]) -> dict[str, Any]:
                 "note": "信息性对照：权威摘要的产生时点/口径可能与本次 H0 不同，只报漂移不追查",
             }
         out[well] = entry
-    path = OUT_DIR / "l1_determinism.json"
+    path = OUT_DIR / f"l1_determinism{suffix}.json"
     path.write_text(json.dumps(out, ensure_ascii=False, indent=1), encoding="utf-8")
     return out
 
@@ -730,17 +761,70 @@ def parse_args() -> argparse.Namespace:
                         help="逗号分隔井键（注册表键名，非中文井名）")
     parser.add_argument("--variants", type=str, default="",
                         help="逗号分隔标签过滤（如 H0,H0p）；空 = 全部")
+    parser.add_argument("--shard", type=str, default="",
+                        help="P1..P5 预设分片（R-T7-1）：只跑该 shard 的 run_id，"
+                             "写独立 manifest_p<k>.json；同一 shard 不得双进程并发")
+    parser.add_argument("--subset", type=str, default="",
+                        help="显式 run_id 逗号列表（优先级低于 --shard）；"
+                             "无 shard 名时写 manifest_subset.json")
     parser.add_argument("--rerun", type=str, default="",
                         help="逗号分隔 run_id：强制重跑（忽略已完成状态）")
+    parser.add_argument("--merge-shards", action="store_true",
+                        help="合并 manifest_p*.json（含 manifest_subset.json）+ 主 manifest "
+                             "→ 主 manifest.json + 汇总/归因/l1 三件；同 run_id 内容不一致即报错")
     parser.add_argument("--list", action="store_true", help="只打印 run 计划后退出")
     parser.add_argument("--l3", action="store_true",
                         help="只跑 L3（zhang2022 基准 H0+H3b）后退出")
     return parser.parse_args()
 
 
+def merge_shards() -> None:
+    """合并分片 manifest 到主 manifest（按 run_id 去重 union；冲突即报错）。
+
+    读取 ``manifest_p*.json``（含 ``manifest_subset.json``）与主 ``manifest.json``，
+    wells 元数据不一致同样报错。合并后重生成 汇总.csv / 归因分解.csv /
+    l1_determinism.json（全部基于合并后的 run 集）。
+    """
+    if MANIFEST_PATH.exists():
+        merged: dict[str, Any] = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
+    else:
+        raise SystemExit(f"主 manifest 不存在：{MANIFEST_PATH}")
+    shard_files = sorted(OUT_DIR.glob("manifest_p*.json"))
+    print(f"[merge] 主 manifest runs={len(merged['runs'])}；分片文件："
+          f"{[f.name for f in shard_files] or '（无）'}", flush=True)
+    for path in shard_files:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        for run_id, record in data["runs"].items():
+            if run_id in merged["runs"]:
+                if merged["runs"][run_id] != record:
+                    raise SystemExit(
+                        f"[merge] 冲突：run_id={run_id!r} 在 {path.name} 与主 manifest "
+                        "内容不一致（禁止覆盖）——请人工核查后删除其一再合并")
+                print(f"[merge] {path.name}: {run_id} 已在主 manifest（逐字相同，跳过）")
+                continue
+            merged["runs"][run_id] = record
+        for well, meta in data["wells"].items():
+            if well in merged["wells"] and merged["wells"][well] != meta:
+                raise SystemExit(
+                    f"[merge] 冲突：wells[{well!r}] 元数据与主 manifest 不一致（{path.name}）")
+            merged["wells"].setdefault(well, meta)
+    save_manifest(merged)
+    write_summary_csv(merged)
+    write_attribution_csv(merged)
+    write_l1_determinism(merged)
+    contaminated = [rid for rid, rec in merged["runs"].items()
+                    if rec.get("status") == "CONTAMINATED"]
+    failed = [rid for rid, rec in merged["runs"].items() if rec.get("status") == "FAILED"]
+    print(f"[merge] 完成：合并后 runs={len(merged['runs'])}；CONTAMINATED={contaminated or '无'}；"
+          f"FAILED={failed or '无'}；已重生成 汇总.csv/归因分解.csv/l1_determinism.json", flush=True)
+
+
 def main() -> None:
     args = parse_args()
     OUT_DIR.mkdir(parents=True, exist_ok=True)
+    if args.merge_shards:
+        merge_shards()
+        return
     if args.list:
         for well in [w.strip() for w in args.wells.split(",") if w.strip()]:
             plan, calibers = build_run_plan(well)
@@ -762,12 +846,29 @@ def main() -> None:
     force = {r.strip() for r in args.rerun.split(",") if r.strip()}
     label_filter = ({v.strip() for v in args.variants.split(",") if v.strip()}
                     or None)
+    shard_key = args.shard.strip()
+    subset_ids = {s.strip() for s in args.subset.split(",") if s.strip()}
+    if shard_key:
+        if shard_key not in SHARDS:
+            raise SystemExit(f"未知 shard {shard_key!r}；可选 {sorted(SHARDS)}")
+        subset_ids = set(SHARDS[shard_key])
+        manifest_path = OUT_DIR / f"manifest_p{shard_key}.json"
+    elif subset_ids:
+        manifest_path = OUT_DIR / "manifest_subset.json"
+    else:
+        manifest_path = MANIFEST_PATH
+    print(f"[shard] manifest={manifest_path.name} subset={sorted(subset_ids) or '全矩阵'}",
+          flush=True)
 
-    manifest = load_manifest()
+    manifest = load_manifest() if manifest_path == MANIFEST_PATH else None
+    if manifest_path != MANIFEST_PATH and manifest_path.exists():
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     if manifest is None:
         manifest = new_manifest(wells)
-        save_manifest(manifest)
-        print(f"[manifest] 新建 {MANIFEST_PATH}", flush=True)
+        manifest_path.write_text(
+            json.dumps(manifest, ensure_ascii=False, indent=1, default=float),
+            encoding="utf-8")
+        print(f"[manifest] 新建 {manifest_path}", flush=True)
     else:
         print(f"[manifest] 续跑：已有 {len(manifest['runs'])} 个 run 记录", flush=True)
 
@@ -778,6 +879,8 @@ def main() -> None:
             fresh = new_manifest([well])
             manifest["wells"][well] = fresh["wells"][well]
         for run in plan:
+            if subset_ids and run["run_id"] not in subset_ids:
+                continue
             if label_filter is not None and not (set(run["labels"]) & label_filter):
                 continue
             total += 1
@@ -799,14 +902,17 @@ def main() -> None:
                     "status": "FAILED", "error": f"{type(exc).__name__}: {exc}",
                     "finished_at": time.strftime("%Y-%m-%d %H:%M:%S"),
                 }
-                save_manifest(manifest)
+                save_manifest_at(manifest_path, manifest)
                 print(f"[FAIL] {run['run_id']}: {type(exc).__name__}: {exc}", flush=True)
                 continue
             manifest["runs"][run["run_id"]] = record
-            save_manifest(manifest)
-            write_summary_csv(manifest)
-            write_attribution_csv(manifest)
-            write_l1_determinism(manifest)
+            save_manifest_at(manifest_path, manifest)
+            suffix = manifest_path.name.replace('manifest', '').replace('.json', '')
+            if manifest_path == MANIFEST_PATH:
+                suffix = ''
+            write_summary_csv(manifest, suffix)
+            write_attribution_csv(manifest, suffix)
+            write_l1_determinism(manifest, suffix)
             print(
                 f"[done] {run['run_id']} {record['status']} "
                 f"eta_E={record['eta_E']:.4f} eta_N={record['eta_N']:.4f} "
