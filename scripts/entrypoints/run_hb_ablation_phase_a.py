@@ -50,6 +50,9 @@ ht1_004 特例（用户裁定 R-T6-6 = spec 优先）：该井水泥 spec 自带
   闭包侧 R-T1-6 地板告警（"格点闭包无定义"，每闭包实例至多一次）另行计数并
   解析格点数。
 - 可断点续跑：启动读 manifest，``status`` 为 DONE/CONTAMINATED 的 run 跳过。
+  run 抛异常时写一条 FAILED **留痕记录**（身份字段）并继续——汇总/归因/L1 的写出
+  侧经 ``_record_is_complete()`` 对不完整记录降级（数值列留空 / 标签记 missing），
+  **manifest 中存在任何 status 的记录都不会让写出抛异常**（修复轮 1 Important-1）。
 - **并行分片（R-T7-1，controller 裁定 B）**：``--shard P1..P5``（成本均衡预设）
   或 ``--subset <run_id,...>``（显式子集）——分片进程写**独立**
   ``manifest_p<k>.json``（``--subset`` 无 shard 名时写 ``manifest_subset.json``），
@@ -507,8 +510,39 @@ def save_manifest_at(path: Path, manifest: dict[str, Any]) -> None:
     os.replace(tmp, path)
 
 
+# 成功 run 的**结果字段**（execute_run 成功分支必写）。manifest 契约允许 FAILED
+# 留痕记录存在（只有身份字段：run_id/well/labels/caliber/annotation/
+# solver_kwargs/status/error/finished_at；merge_shards() 亦明确预期 FAILED 记录），
+# 故写出侧一律先经 _record_is_complete() 判定，**不得**直接下标取结果字段
+# （否则任一 run 失败后，下一个成功 run 写 CSV 即抛 KeyError 崩溃——修复轮 1
+# Important-1）。
+_RESULT_KEYS = ("n_steps", "total_t_s", "wall_time_s", "eta_E", "eta_N",
+                "cement_occ", "mean_wall", "inventory_ratio", "buoyancy_number",
+                "diagnostics", "warnings", "digests", "output_dir")
+
+# FAILED 行在汇总 CSV 中留空的列（写空串而非 0/NaN，明示"无数据"而非伪造）
+_BLANK_ON_INCOMPLETE = ("fallback_count", "fallback_steps", "nonlinear_steps",
+                        "max_n_static", "all_undefined_steps",
+                        "floor_warning_count", "n_steps", "total_t_s",
+                        "wall_time_s", "eta_E", "eta_N", "cement_occ",
+                        "mean_wall", "inventory_ratio", "buoyancy_number",
+                        "digest_cement", "digest_wall", "output_dir")
+
+
+def _record_is_complete(rec: Mapping[str, Any]) -> bool:
+    """True = 记录含全部结果字段（成功 run：DONE / CONTAMINATED）。
+
+    FAILED 留痕记录返回 False——写出侧据此降级（留空 / 记 missing），
+    绝不因为一条失败记录而中断整个矩阵的产物写出。
+    """
+    return all(key in rec for key in _RESULT_KEYS)
+
+
 def write_summary_csv(manifest: dict[str, Any], suffix: str = "") -> None:
     """逐 (井, 标签) 一行；ht1_004 的双标签行共享 run_id 与指标。
+
+    FAILED 记录同样出一行（可断点续跑可见性），但 ``status`` 列为 ``FAILED``、
+    数值列留空——不伪造、不吞掉成功 run 的数据。
 
     ``suffix``：分片模式写 ``汇总_p<k>.csv`` 等本地副本，**不动主聚合文件**
     （主文件由默认全矩阵进程或 --merge-shards 重生成）。
@@ -522,33 +556,40 @@ def write_summary_csv(manifest: dict[str, Any], suffix: str = "") -> None:
                "buoyancy_number", "digest_cement", "digest_wall", "output_dir"]
     rows: list[dict[str, Any]] = []
     for run_id, rec in manifest["runs"].items():
-        kwargs = rec["solver_kwargs"]
-        for label in rec["labels"]:
-            rows.append({
-                "well": rec["well"], "label": label, "run_id": run_id,
-                "caliber": rec["caliber"], "status": rec["status"],
-                "annotation": rec["annotation"],
+        kwargs = rec.get("solver_kwargs", {})
+        complete = _record_is_complete(rec)
+        for label in rec.get("labels", []):
+            row: dict[str, Any] = {
+                "well": rec.get("well", ""), "label": label, "run_id": run_id,
+                "caliber": rec.get("caliber", ""), "status": rec.get("status", ""),
+                "annotation": rec.get("annotation", ""),
                 "enable_stream_yield_gate": kwargs.get("enable_stream_yield_gate", False),
                 "enable_hb_closure": kwargs.get("enable_hb_closure", False),
                 "hb_fix_cement_tau_y": kwargs.get("hb_fix_cement_tau_y", False),
                 "tau_y_map": json.dumps(kwargs.get("cement_tau_y_by_role", {}),
                                         ensure_ascii=False),
-                "fallback_count": rec["warnings"]["fallback_count"],
-                "fallback_steps": rec["diagnostics"]["fallback_steps"],
-                "nonlinear_steps": rec["diagnostics"]["nonlinear_steps"],
-                "max_n_static": rec["diagnostics"]["max_n_static"],
-                "all_undefined_steps": rec["diagnostics"]["all_undefined_steps"],
-                "floor_warning_count": rec["warnings"]["floor_warning_count"],
-                "n_steps": rec["n_steps"], "total_t_s": rec["total_t_s"],
-                "wall_time_s": rec["wall_time_s"],
-                "eta_E": rec["eta_E"], "eta_N": rec["eta_N"],
-                "cement_occ": rec["cement_occ"], "mean_wall": rec["mean_wall"],
-                "inventory_ratio": rec["inventory_ratio"],
-                "buoyancy_number": rec["buoyancy_number"],
-                "digest_cement": rec["digests"]["cement"],
-                "digest_wall": rec["digests"]["wall"],
-                "output_dir": rec["output_dir"],
-            })
+            }
+            if complete:
+                row.update({
+                    "fallback_count": rec["warnings"]["fallback_count"],
+                    "fallback_steps": rec["diagnostics"]["fallback_steps"],
+                    "nonlinear_steps": rec["diagnostics"]["nonlinear_steps"],
+                    "max_n_static": rec["diagnostics"]["max_n_static"],
+                    "all_undefined_steps": rec["diagnostics"]["all_undefined_steps"],
+                    "floor_warning_count": rec["warnings"]["floor_warning_count"],
+                    "n_steps": rec["n_steps"], "total_t_s": rec["total_t_s"],
+                    "wall_time_s": rec["wall_time_s"],
+                    "eta_E": rec["eta_E"], "eta_N": rec["eta_N"],
+                    "cement_occ": rec["cement_occ"], "mean_wall": rec["mean_wall"],
+                    "inventory_ratio": rec["inventory_ratio"],
+                    "buoyancy_number": rec["buoyancy_number"],
+                    "digest_cement": rec["digests"]["cement"],
+                    "digest_wall": rec["digests"]["wall"],
+                    "output_dir": rec["output_dir"],
+                })
+            else:
+                row.update({col: "" for col in _BLANK_ON_INCOMPLETE})
+            rows.append(row)
     summary_path = SUMMARY_CSV.with_name(f"汇总{suffix}.csv")
     with summary_path.open("w", encoding="utf-8-sig", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=columns, extrasaction="ignore")
@@ -570,16 +611,20 @@ _METRIC_KEYS = ("eta_E", "eta_N", "cement_occ")
 
 
 def write_attribution_csv(manifest: dict[str, Any], suffix: str = "") -> None:
-    """spec §5.1 三分量分解（按标签取数；缺 run 记 NaN 不编造）。"""
+    """spec §5.1 三分量分解（按标签取数；缺 run 记 NaN 不编造）。
+
+    FAILED 留痕记录**不算取数命中**——其标签按"缺 run"处理（记 NaN +
+    missing_labels 列出），不抛 KeyError、也不伪造数值。
+    """
     columns = ["well", "component", "eta_E", "eta_N", "cement_occ", "missing_labels"]
     rows: list[dict[str, Any]] = []
-    wells = sorted({rec["well"] for rec in manifest["runs"].values()})
+    wells = sorted({rec.get("well", "") for rec in manifest["runs"].values()})
     for well in wells:
         by_label: dict[str, dict[str, Any]] = {}
         for rec in manifest["runs"].values():
-            if rec["well"] != well:
+            if rec.get("well") != well or not _record_is_complete(rec):
                 continue
-            for label in rec["labels"]:
+            for label in rec.get("labels", []):
                 by_label[label] = rec
         for component, labels in _LABEL_DELTA.items():
             values: list[float | None] = []
@@ -626,8 +671,16 @@ def write_l1_determinism(manifest: dict[str, Any], suffix: str = "") -> dict[str
     for well in WELLS:
         first = manifest["runs"].get(f"{well}__H0")
         second = manifest["runs"].get(f"{well}__H0_repeat")
-        if first is None or second is None:
-            out[well] = {"status": "PENDING"}
+        if (first is None or second is None
+                or not _record_is_complete(first)
+                or not _record_is_complete(second)):
+            # 缺 run 或 H0/H0_repeat 留痕为 FAILED ⇒ PENDING（并列留痕两者状态，
+            # 便于区分"未跑"与"跑失败"；不抛 KeyError）
+            out[well] = {
+                "status": "PENDING",
+                "h0_status": (first or {}).get("status", "MISSING"),
+                "h0_repeat_status": (second or {}).get("status", "MISSING"),
+            }
             continue
         entry: dict[str, Any] = {
             "status": "DONE",
