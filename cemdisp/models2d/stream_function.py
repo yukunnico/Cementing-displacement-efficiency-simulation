@@ -123,22 +123,31 @@ HB 流体下 ``I₁`` 依赖局部应力尺度 ⇒ (4.22) 不再线性，须外�
 （R2）：牛顿极限下 Ī₁ 与 G 无关 ⇒ 首轮检测到 ``ΔĪ₁ ≡ 0`` 即刻返回该首轮 Ψ，
 与线性调用**逐位一致**（硬验收）。
 
-⚠️ **标度口径（Task 6 接线必须裁定；本函数未引入标度参数）**：外迭代的反求与闭包
-求值都在本模块的**单位通量 Ψ 口径**内自洽（``ū`` 由 (2.2) 同口径给出、``G`` 由
-``H·ū = I₁·G`` 反算）。闭包参数（``κ``/``τ_Y``）的**绝对应力标度**因此由该口径决定：
-若按生产装配（``annulus_d2dga._velocity_stream_function``）在求解后把速度按
-``ŵ = q_half/π``（T9 推导）缩放到物理量纲，则闭包求值处的应力标度偏离物理量纲
-``ŵ`` 倍（HB 屈服效应被系统性削弱——**静默的物理偏差**）。
-
-闭包关系的**正确不变性**（本仓数值核验 rel ≤ 1.2e-14，见 ``tests/contract/``
-``test_flow_curve_scale_covariance``；速度缩放 ``s``、应力缩放 ``σ``）::
+⚠️ **标度口径（单一标度；由接线方对齐，见 task-5-report.md §7.1 订正版）**：外迭代的
+反求与闭包求值都在本模块的**单位通量 Ψ 口径**内自洽（``ū`` 由 (2.2) 同口径给出、
+``G`` 由 ``H·ū = I₁·G`` 反算）。闭包关系的**标度不变性**（速度缩放 ``s``、应力缩放
+``σ``；本仓数值核验 9 组 rel ≤ 1.2e-14，见 ``tests/contract/``
+``test_flow_curve_scale_covariance``）::
 
     κ' = κ·sⁿ/σ,   τ_Y' = τ_Y/σ,   ū' = ū/s  ⇒  G' = G/σ,  I₁' = (σ/s)·I₁
 
-⇒ **单一标度无法同时满足"算子要物理 I₁"与"反求要 -口径速度"**（前者要求闭包参数
-为物理值、后者要求 ū 乘 ŵ）⇒ 本仓推荐的做法是给本函数一个**显式速度标度**
-（``ū_phys = ŵ·ū_module``，默认 1.0 = 模块口径），但签名冻结，**未引入**——
-须由 controller 裁定后接线（见 task-5-report.md 的"标度口径"节）。
+取 **``σ = s``**（同一物理问题换单位：长度不动 ⇒ 压力梯度与速度同步缩放）⇒
+**``I₁' = I₁``：``I₁`` 对标度不变 ⇒ 算子与反求要的是同一个 ``I₁``，不存在冲突**。
+⇒ **只有单一自由标度**（生产装配的 ``ŵ = q_half/π``，T9 推导）；接线只需让"喂进反求的
+``ū``"与"闭包的 ``κ``/``τ_Y`` 口径"使用**同一**标度：
+
+- **推荐**：``ū`` 乘 ``ŵ``（物理速度）+ 闭包用物理 ``(κ, τ_Y)``；或
+- 等价地：闭包改用模块口径参数 ``(κ·ŵ^{1−n}, τ_Y·ŵ)``、``ū`` 保持模块口径
+  ——二者给出**同一个** ``I₁``（不变性；注意是 ``ŵ^{1−n}`` **不是** ``ŵ^{n−1}``，
+  后者会差 ``ŵ^{2(n−1)}`` 倍——数值实测 rel ≈ 1.0 的翻转错误，已由
+  ``test_velocity_scale_alignment_equivalence`` 钉住）。
+
+**口径不一致的后果（方向已按生产口径写定，勿再写反）**：若闭包用物理 ``(κ, τ_Y)``
+而 ``ū`` 未乘 ``ŵ``（喂的是模块口径速度），闭包看到的应力标度随速度同步偏小
+（牛顿约 ``ŵ`` 倍、幂律约 ``ŵⁿ`` 倍；本仓生产井 ``ŵ = q_half/π ≪ 1``，呼101 量级
+``ŵ ≈ 1/300``）⇒ ``|τ̃| ≤ τ_Y`` 的格点成片落 ``undefined`` ⇒ R-T1-6 地板 ⇒
+**静止区被人为夸大（屈服效应被增强，不是削弱）**；反之若某工况 ``ŵ > 1``，
+方向反转（应力偏大 ⇒ 屈服效应被削弱）。
 """
 
 from __future__ import annotations
@@ -164,6 +173,10 @@ _WALL_CONDUCTANCE_FLOOR = 1.0e-6
 # A-3a 外迭代的量级常量（与 gap_solver 的求根容差/上限；见其 docstring）
 _INVERSE_RTOL = 1.0e-12
 _INVERSE_MAX_ITER = 200
+
+# (2.2) 两分量的物理换算因子之比：w_phys ∝ w̄/π、v_phys ∝ v̄（T9 π 推导）⇒ v̄ 需乘 π
+# 才与 w̄ 同口径（Important-4；本仓 |v|/|w| ~ 1e-6，数值影响极小，属正确性硬化）。
+_VELOCITY_COMPONENT_RATIO = float(np.pi)
 
 
 def _mean_radius_m(geom: Dict) -> float:
@@ -469,7 +482,8 @@ def _rheology_from_closure(closure) -> Tuple[float, float, float]:
     return 1.0, 1.0, 1.0
 
 
-def solve_stream_function_nonlinear(geom: Dict, c_bar, hb_closure, b_field, *,
+def solve_stream_function_nonlinear(geom: Dict, c_bar, hb_closure, b_field,
+                                    Gb=(0.0, 0.0), *,
                                     omega: float = 0.5, tol: float = 1e-6,
                                     max_outer: int = 50) -> Array:
     """解 HB 流体 (4.22) 流函数椭圆方程——**非线性外迭代**（A-3a）。
@@ -480,7 +494,7 @@ def solve_stream_function_nonlinear(geom: Dict, c_bar, hb_closure, b_field, *,
        ——闭包取调用方当前注入的 G 状态（``HBClosure`` 未注入 G 时牛顿极限短路仍
        可用；非牛顿闭包未注入会按 ``hb_closure`` 的规定抛 ``RuntimeError``）。
     2. 由 ``∇aΨ`` 经 (2.2) 取局部**间隙平均速度模** ``ū = |(w̄, v̄)|``。
-    3. **逐格独立反求** ``G``：解 1 维闭包方程 ``F(g̃) ≡ Ī₁(g̃)·g̃ −  = 0``
+    3. **逐格独立反求** ``G``：解 1 维闭包方程 ``F(g̃) ≡ Ī₁(g̃)·g̃ − ū = 0``
        （Gb=0 的生产口径；``Ī₁`` 走 :func:`gap_solver.solve_g_from_mean_velocity_batch`
        的批量闭包 + 标量求根，**不**逐格跑定均速 Uzawa）。无正根的格（``ū=0`` 或
        全场未屈服）注入 ``G=0`` ⇒ 交由闭包自身的 **R-T1-6 地板**（单次告警），
@@ -492,7 +506,9 @@ def solve_stream_function_nonlinear(geom: Dict, c_bar, hb_closure, b_field, *,
        ``I₁ ← (1−ω)·I₁ + ω·I₁_new`` 后用**冻结流动度**重解线性 Poisson。
        收敛（非逐位分支）后再做一次终解，使返回的 Ψ 与闭包当前状态严格对应。
     6. ``max_outer`` 轮内不收敛 ⇒ **``RuntimeError``**（不静默回退牛顿闭包——回退会
-       静默改变物理；调用方若想回退，须显式捕获并自行告警）。
+       静默改变物理）。⚠️ **"回退牛顿闭包"由调用方负责**——只有调用方知道回退后如何
+       继续该时间步：Task 6 在 ``enable_hb_closure=True`` 时对该异常 ``try/except`` →
+       告警 + 回退牛顿路径（本函数只负责"抛错不静默"，见 Raises 段）。
 
     ⚠️ **适用域**：HB 闭包属**扩展应用，未获外部验证**（B&F25 自述尚无外部验证）；
     Z&F22/23 的判据与结论仅严格适用于**竖直井 + 牛顿流体**，不得引其作 HB/斜井依据。
@@ -502,11 +518,13 @@ def solve_stream_function_nonlinear(geom: Dict, c_bar, hb_closure, b_field, *,
     方向/符号不进闭包、也不进算子（算子只消费标量 I₁），故不作符号判决。若下游
     需要带方向/符号的 G，须另立口径（本函数不支持）。
 
-    ⚠️ **标度口径**（见模块 docstring 的"非线性外迭代"段）：反求与闭包求值都在
-    ``solve_stream_function`` 的**单位通量 Ψ 口径**内自洽；闭包参数（``κ``/``τ_Y``）
-    的绝对应力标度必须与该口径匹配。生产装配在求解后按 ``ŵ = q_half/π`` 缩放速度，
-    此时闭包处在偏离物理量纲 ``ŵ`` 倍的应力标度上（本函数**未引入**标度参数，
-    须由接线方裁定；正确的不变性换算见模块 docstring 的 ``κ' = κ·sⁿ/σ`` 段）。
+    ⚠️ **标度口径（单一标度，见模块 docstring 的"非线性外迭代"段）**：反求与闭包
+    求值都在 ``solve_stream_function`` 的**单位通量 Ψ 口径**内自洽；接线须让喂进反求的
+    ``ū`` 与闭包的 ``κ``/``τ_Y`` 口径用**同一**标度 ``ŵ = q_half/π``（T9）——因
+    ``σ = s`` 时 ``I₁`` 标度不变，算子与反求要的是同一个 ``I₁``。口径不一致（闭包用
+    物理参数而 ``ū`` 未乘 ``ŵ``，生产井 ``ŵ ≪ 1``）会让闭包看到的应力标度偏小 ⇒
+    格点成片落 ``undefined`` ⇒ R-T1-6 地板 ⇒ **静止区被夸大（屈服效应被增强）**；
+    若某工况 ``ŵ > 1`` 则方向反转。
 
     Args:
         geom: 几何字典（同 :func:`solve_stream_function`）。
@@ -514,6 +532,8 @@ def solve_stream_function_nonlinear(geom: Dict, c_bar, hb_closure, b_field, *,
         hb_closure: HB 闭包提供者——须带 ``n``/``kappa``/``tau_y`` 属性
             （如 :class:`hb_closure.HBClosure`）且实现 ``set_pressure_gradient``。
         b_field: (2,ny,nz) 浮力全向量（(4.22) 字面分组，唯一口径）。
+        Gb: 反演口径下的浮力向量（(2.12)）；**只支持零向量**（生产口径：浮力经
+            ``b_field`` 承担）。非零 ⇒ ``NotImplementedError``（见 Raises）。
         omega: 欠松弛因子 ∈ (0,1]（``1`` ⇒ 不松弛）。
         tol: 外迭代收敛容差（``Ī₁`` 场的 ∞-范数相对变化；``0`` ⇒ 只认逐位相等）。
         max_outer: 最大外迭代轮数（含首轮）≥1。
@@ -524,7 +544,15 @@ def solve_stream_function_nonlinear(geom: Dict, c_bar, hb_closure, b_field, *,
 
     Raises:
         ValueError: 形状/取值非法；闭包缺少 ``n``/``kappa``/``tau_y`` 属性。
+        NotImplementedError: ``Gb ≠ 0``（本函数只实现 Gb=0 反演口径，见下）。
         RuntimeError: ``max_outer`` 轮内未收敛（消息含残差轨迹与补救方向）。
+
+    ⚠️ **Gb 口径（显式，不静默忽略）**：反演只实现 ``Gb = 0``——即 **Phase A 的生产
+    口径**（浮力由 (4.22) 的 ``b`` 向量承担、闭包 ``Gb`` 恒 0，见 ``hb_closure`` 的
+    "Gb 分工"段；本仓 ``b_field`` ↔ ``Gb`` 的换算未定义）。故：形参 ``Gb`` 非零即抛
+    ``NotImplementedError``（忽略它会把 ``−Ī₂Gb̃`` 混进 ``Ī₁G̃``、系统性高估局部应力
+    ⇒ 低估屈服效应）；同时以 duck-typing 校验**闭包实际注入的 ``Gb``**
+    （``HBClosure._Gb``），与形参不一致同样抛错（防口径分裂）。
     """
     H = np.asarray(geom["H"], dtype=float)
     if H.ndim != 2:
@@ -541,6 +569,23 @@ def solve_stream_function_nonlinear(geom: Dict, c_bar, hb_closure, b_field, *,
         raise ValueError(f"tol 须为非负（相对收敛容差），得到 tol={tol!r}")
     if not isinstance(max_outer, int) or isinstance(max_outer, bool) or max_outer < 1:
         raise ValueError(f"max_outer 须为 ≥1 的整数，得到 max_outer={max_outer!r}")
+
+    Gb_arr = np.asarray(Gb, dtype=float)
+    if not np.all(np.isfinite(Gb_arr)):
+        raise ValueError(f"Gb 须为有限值，得到 {Gb!r}")
+    if np.any(Gb_arr != 0.0):
+        raise NotImplementedError(
+            "solve_stream_function_nonlinear 只实现 **Gb=0** 的反演口径（Phase A 生产口径："
+            "浮力由 (4.22) 的 b 向量承担）。Gb≠0 时 (2.13) 的 −Ī₂·Gb̃ 项使应力场非共线、"
+            "需 2 维反演——本函数不支持且**不静默忽略**（忽略会系统性高估局部应力）。"
+            "量级实测与建议见 task-5-report.md §Important-3。"
+        )
+    gb_inj = getattr(hb_closure, "_Gb", None)      # duck-typing（非协议成员；HBClosure 有）
+    if gb_inj is not None and np.any(np.asarray(gb_inj, dtype=float) != 0.0):
+        raise NotImplementedError(
+            f"闭包已注入非零 Gb（{gb_inj!r}）：反演口径必须与闭包一致，本函数只实现 Gb=0。"
+            "请把浮力交由 (4.22) 的 b_field 承担，或先 set_pressure_gradient(G, Gb=(0,0))。"
+        )
 
     n_hb = getattr(hb_closure, "n", None)
     kappa_hb = getattr(hb_closure, "kappa", None)
@@ -571,9 +616,12 @@ def solve_stream_function_nonlinear(geom: Dict, c_bar, hb_closure, b_field, *,
     I1_cur = _mobility_now()                 # 与本轮 Ψ 同口径的 Ī₁ 场
     rel = np.inf
     for _round in range(1, int(max_outer) + 1):
-        # ① (2.2) 局部间隙平均速度模（同口径；hypot 对 v 的符号不敏感）
+        # ① (2.2) 局部间隙平均速度模——**按各分量的物理换算因子加权**（Important-4）：
+        # 生产换算 w_phys = (q/2)·w̄/π、v_phys = (q/2)·v̄（T9 π 推导）⇒ 模块 (2.2) 的
+        # w̄ 与 v̄ 相差 π 倍口径，直接 hypot 会把两个口径混在一起；把 v̄ 乘 π 归一到 w̄
+        # 口径后取模（整体标度 ŵ 由接线方对齐，见模块 docstring 的"标度口径"段）。
         w, v = velocity_from_stream_function(psi, geom)
-        u_mag = np.hypot(w, v)
+        u_mag = np.hypot(w, _VELOCITY_COMPONENT_RATIO * v)
         # ② 逐格反求 G（批量闭包 + 标量求根；Gb=0 生产口径）
         inv = solve_g_from_mean_velocity_batch(
             c.reshape(-1), n_hb, kappa_hb, tau_y_hb, u_mag.reshape(-1),
@@ -595,7 +643,7 @@ def solve_stream_function_nonlinear(geom: Dict, c_bar, hb_closure, b_field, *,
         I1_cur = (1.0 - omega) * I1_cur + omega * I1_new
         psi = _solve_linear(_FrozenMobilityClosure(I1_cur, hb_closure))
     raise RuntimeError(
-        f"非线性外迭代在 max_outer={max_outer} 轮内未收敛：₁ 场 ∞-范数相对变化 = "
+        f"非线性外迭代在 max_outer={max_outer} 轮内未收敛：Ī₁ 场 ∞-范数相对变化 = "
         f"{rel:.3e} > tol={tol:.1e}（ω={omega}）。补救方向：增大 max_outer 或降低 ω"
         "（ω→1 时非线性外迭代可能振荡）；本函数**不静默回退牛顿闭包**——需要回退"
         "请在调用方显式捕获本异常并自行告警。"

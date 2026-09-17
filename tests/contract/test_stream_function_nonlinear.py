@@ -272,8 +272,29 @@ def test_flow_curve_scale_covariance():
             float(base.I1[0]) * sigma / s_scale, rel=1e-10)
 
 
+def test_velocity_scale_alignment_equivalence():
+    """接线"等价地"公式钉子（R-T5-1 REVISED；模块 docstring 标度段所引）：
+
+    同一物理问题在 ``ū_mod = ŵ·ū_phys`` 口径下，两种对齐给出**同一个** ``I₁``：
+    ① 物理参数 + 物理速度（推荐）；② 模块口径参数 ``(κ·ŵ^{1−n}, τ_Y·ŵ)`` + 模块速度。
+    注意 ``ŵ^{1−n}`` **不是** ``ŵ^{n−1}``——后者（翻转式）实测 rel ≈ 1.0（探针
+    probe_equiv_scale_formula.py），本测试防止再次写反。
+    """
+    H = 0.008
+    w_hat = 0.01                                   # 任意生产级小标度
+    u_phys = 0.02
+    base = gap_solver.solve_g_from_mean_velocity_batch(0.45, HB_N, HB_KAPPA, HB_TAUY,
+                                                       u_phys, H=H)
+    kap_mod = tuple(k * w_hat ** (1.0 - n) for k, n in zip(HB_KAPPA, HB_N))
+    tau_mod = tuple(t * w_hat for t in HB_TAUY)
+    mod = gap_solver.solve_g_from_mean_velocity_batch(0.45, HB_N, kap_mod, tau_mod,
+                                                      u_phys * w_hat, H=H)
+    assert float(mod.I1[0]) == pytest.approx(float(base.I1[0]), rel=1e-10)
+    assert float(mod.G[0]) == pytest.approx(float(base.G[0]) * w_hat, rel=1e-10)
+
+
 def test_flow_curve_is_monotone_in_gradient():
-    """数学前提：``F(g̃) = ₁(g̃)·g̃`` 在 g̃ 上严格递增（含 n>1 剪切增稠与有屈服）。
+    """数学前提：``F(g̃) = Ĩ₁(g̃)·g̃`` 在 g̃ 上严格递增（含 n>1 剪切增稠与有屈服）。
 
     这是"逐格标量求根"赖以成立的单调性前提（与 brief 的"先验证单调性再依赖"一致）。
     """
@@ -286,3 +307,125 @@ def test_flow_curve_is_monotone_in_gradient():
                                                 g_t / H, H=H)
         F = (cb.I1 / H ** 2) * g_t
         assert np.all(np.diff(F[~cb.undefined]) > 0.0)
+
+
+# --------------------------------------------------------------------------- #
+# 5. Gb 口径显式化 + 斜井/强浮力算例（R-T5-4 / R-T5-5，fix round 1）
+# --------------------------------------------------------------------------- #
+
+
+def test_nonzero_gb_argument_is_rejected_not_silently_ignored():
+    """形参 ``Gb ≠ 0`` ⇒ ``NotImplementedError``（显式拒绝，两级入口均不静默忽略）。"""
+    g = _geom()
+    c, b = _b_field(g)
+    hb = _hb_closure()
+    hb.set_pressure_gradient(300.0)
+    with pytest.raises(NotImplementedError, match="Gb"):
+        solve_stream_function_nonlinear(g, c, hb, b, Gb=(0.0, 1.0))
+    with pytest.raises(NotImplementedError, match="Gb"):
+        gap_solver.solve_g_from_mean_velocity_batch(0.45, HB_N, HB_KAPPA, HB_TAUY,
+                                                    0.02, Gb=(1.0, 0.0), H=0.008)
+
+
+def test_nonfinite_gb_argument_is_rejected():
+    """``Gb`` 含 NaN/Inf ⇒ ``ValueError``（非有限值不得进入口径判断）。"""
+    g = _geom()
+    c, b = _b_field(g)
+    hb = _hb_closure()
+    hb.set_pressure_gradient(300.0)
+    with pytest.raises(ValueError, match="有限"):
+        solve_stream_function_nonlinear(g, c, hb, b, Gb=(0.0, np.nan))
+    with pytest.raises(ValueError, match="有限"):
+        gap_solver.solve_g_from_mean_velocity_batch(0.45, HB_N, HB_KAPPA, HB_TAUY,
+                                                    0.02, Gb=(np.inf, 0.0), H=0.008)
+
+
+def test_closure_with_injected_nonzero_gb_is_rejected():
+    """闭包已注入非零 ``Gb`` 而反演按 Gb=0 ⇒ 口径分裂，入口显式拒绝（防静默）。"""
+    g = _geom()
+    c, b = _b_field(g)
+    hb = _hb_closure()
+    hb.set_pressure_gradient(300.0, Gb=(0.5, 0.2))
+    with pytest.raises(NotImplementedError, match="非零 Gb"):
+        solve_stream_function_nonlinear(g, c, hb, b)
+
+
+def _inclined_b_field(g, beta_deg=45.0, amp_phi=1.0, amp_xi=1.0e6):
+    """斜井 b 场：φ-槽（轴向重力）+ ξ-槽（方位浮力，沿 ξ 取半波、两端严格为零）。
+
+    ⚠️ **合成应力算例（非物理量级）**：``amp_xi=1e6`` 约为生产浮力量级
+    （b ~ O(10–70)，0708 八井实测）的 1e4 倍——目的只有一个：让 ``π·|v̄| > |w̄|``
+    的 **v 主导格**真实出现（本模块度量下 ξ-槽响应天然被 1/r_a 放大的 φ-槽与
+    单位通量 BC 压制，生产量级永远达不到 v 主导，实测见 task-5-report.md
+    §Important-3）。``amp_xi=1`` 起的**生产量级**收敛性由
+    ``test_inclined_production_scale_converges`` 覆盖。
+
+    ξ-槽沿 ξ 取 ``sin(πs/s_max)``（两端为零 ⇒ 散度源项不含边界贡献，线性叠加
+    自洽）；``tan(β)`` 为井斜引起的重力方位分量比例（R29：ξ-槽配 sin πφ·sin β）。
+    """
+    c = (0.5 + 0.2 * np.cos(np.pi * g["phi"]))[:, None] * np.ones_like(g["H"])
+    chi = 1.0 + 2.0 * c - c ** 3
+    b = np.zeros((2,) + g["H"].shape)
+    b[0] = amp_phi * chi
+    b[1] = (amp_xi * chi * np.sin(np.pi * g["phi"])[:, None]
+            * np.tan(np.deg2rad(beta_deg))
+            * np.sin(np.pi * g["s"] / g["s"][-1])[None, :])
+    return c, b
+
+
+def _converged_inclined_run(amp_xi=1.0e6, beta_deg=45.0, tol=1e-10, max_outer=300):
+    g = _geom(nz=9)
+    c, b = _inclined_b_field(g, beta_deg=beta_deg, amp_phi=1.0, amp_xi=amp_xi)
+    hb = _hb_closure()
+    hb.set_pressure_gradient(300.0)
+    psi = solve_stream_function_nonlinear(g, c, hb, b, Gb=(0.0, 0.0), omega=0.5,
+                                          tol=tol, max_outer=max_outer)
+    return g, c, b, hb, psi
+
+
+def test_inclined_strong_buoyancy_converges_with_v_dominant_cells():
+    """斜井（b_ξ≠0）强浮力应力算例收敛，且存在 v 分量为主的格点（π 加权被真实触发）。
+
+    生产含义：本仓井斜 1.8–15° 内方位浮力经 (4.22) 的 b 向量承担、闭包反演口径
+    Gb=0（R-T5-4 ①的显式契约）；该算例证明反演口径在 v-主导格仍自洽收敛。
+    """
+    g, c, b, hb, psi = _converged_inclined_run()
+    assert np.all(np.isfinite(psi))
+    w, v = velocity_from_stream_function(psi, g)
+    u_w = np.hypot(w, np.pi * v)
+    dominant = (np.pi * np.abs(v) > np.abs(w)) & (u_w > 0.01 * float(u_w.max()))
+    assert int(dominant.sum()) > 0, "算例未产生 v 主导格点，π 加权未被触发"
+
+
+def test_inclined_case_closure_relation_uses_weighted_u_caliber():
+    """闭合关系必须用**加权口径** ``ū = hypot(w̄, π·v̄)``（R-T5-5）：
+
+    收敛场上 v-主导格点处，加权口径闭合残差 ≤ 1e-6，而未加权口径偏差达 O(0.1)
+    （纯 v 格理论上限 (π−1)/π ≈ 0.68，实测场混合格约 0.16）——两口径相差
+    ~9 个量级，钉住"两分量差 π 倍被 hypot 混合"这一错误。
+    """
+    g, c, b, hb, psi = _converged_inclined_run()
+    H = g["H"]
+    w, v = velocity_from_stream_function(psi, g)
+    G_inj = np.asarray(hb._G, dtype=float)
+    I1 = np.asarray(hb.mobility(c, M_RATIO, ETA1, ETA2, H), dtype=float)
+    pred = (I1 / H ** 2) * (H * G_inj)                 # Ī₁·G̃（量纲链）
+    u_w = np.hypot(w, np.pi * v)
+    u_p = np.hypot(w, v)                               # 未加权（错误口径）
+    keep = (G_inj > 0) & (u_w > 0.05 * float(u_w.max()))
+    rel_w = float(np.max(np.abs(u_w - pred)[keep] / np.abs(pred[keep])))
+    rel_p = float(np.max(np.abs(u_p - pred)[keep] / np.abs(pred[keep])))
+    assert rel_w < 1e-6, f"加权口径闭合残差 {rel_w:.3e} 超容差"
+    assert rel_p > 0.05, f"未加权口径残差 {rel_p:.3e} 过小，判别力不足"
+
+
+def test_inclined_production_scale_converges():
+    """生产量级斜井算例（β=15°、amp_xi=1 ≈ 现场浮力量级）收敛且有限。
+
+    与应力算例的分工：本条证明**生产参数**下外迭代行为正常（v 分量不主导，
+    π 加权属正确性硬化）；应力算例负责触发 v 主导格。
+    """
+    g, c, b, hb, psi = _converged_inclined_run(amp_xi=1.0, beta_deg=15.0)
+    assert np.all(np.isfinite(psi))
+    w, v = velocity_from_stream_function(psi, g)
+    assert float(np.max(np.abs(v) / np.maximum(np.abs(w), 1e-300))) < 1.0

@@ -1484,7 +1484,7 @@ class MeanVelocityInverseBatch:
 
 
 def _i1_tilde_axial_batch(c, n_arr, kappa_t, tau_y, g_tilde):
-    """``₁(g̃)``（tilde；Gb=0）——与 :func:`closure_integrals_batch` 的 ``I1/H²`` 逐位同。
+    """``Ĩ₁(g̃)``（tilde；Gb=0）——与 :func:`closure_integrals_batch` 的 ``I1/H²`` 逐位同。
 
     只做 (2.14) 的两段求积（中线带 [0,c̄] + 壁面带 [c̄,1]），**不算** I₂/q₀（通量比段
     占一次批量求值约 2/3 的代价，本反演不需要）。轴向（``Gb=0``）时
@@ -1512,6 +1512,7 @@ def solve_g_from_mean_velocity_batch(
     kappa,
     tau_y,
     u_bar,
+    Gb=(0.0, 0.0),
     *,
     H=1.0,
     rtol: float = 1.0e-12,
@@ -1519,16 +1520,22 @@ def solve_g_from_mean_velocity_batch(
 ) -> MeanVelocityInverseBatch:
     """批次：给定间隙平均速度**模** ū 反求修改压力梯度 G（(2.13) 的一维闭包反演）。
 
-    ️ **口径**（与 :func:`solve_fixed_mean_velocity` 一致，勿混用）：
+    ⚠️ **口径**（与 :func:`solve_fixed_mean_velocity` 一致，勿混用）：
 
     - 输入 ``u_bar`` = ``|ū|``（间隙平均速度**模**，与 :attr:`GapSolution.u_bar` 同
-      口径）；``Gb=0`` 时闭包各向同性 ⇒ 方向不影响 ``I₁``，故只解量值。
+      口径）；``Gb=0`` 时闭包各向同性 ⇒ 方向不影响 ``I₁``，故只解量值。幅值口径
+      （(2.2) 两分量的相对因子）由调用方在构造 ``u_bar`` 时对齐（见
+      ``stream_function._VELOCITY_COMPONENT_RATIO``）。
+      ⚠️ **仅 ``Gb=0``**：``Gb ≠ 0`` 时 (2.13) 的 ``−Ī₂·Gb̃`` 项令应力场非共线、需 2 维
+      反演 ⇒ 本入口构造期**显式拒绝**（``NotImplementedError``，不静默忽略）。
     - 输出 ``G`` = **量纲**修改压力梯度（= ``g̃/H``）；``I1`` = 量纲 ``H²·Ĩ₁``。
       二者满足 ``H·ū = I₁·G``（即 tilde 的 ``ū = Ī₁·G̃``）到求根容差以内。
 
     Args:
         c_bar/n/kappa/tau_y: 同 :func:`closure_integrals_batch` 的批接口径。
-        u_bar: ``(n_points,)`` 或标量——**非负**均速模。
+        u_bar: ``(n_points,)`` 或标量——**非负**均速模（本入口只解量值口径）。
+        Gb: 浮力向量（(2.12)）；**只支持零向量**（生产口径：浮力经 (4.22) 的 ``b``
+            承担）。非零 ⇒ ``NotImplementedError``。
         H: ``(n_points,)`` 或标量——物理半隙（(A4) 换算与 ``I₁ = H²·Ĩ₁`` 用它）。
         rtol: 逐格收敛容差（``|F| ≤ rtol·ū``，相对口径）。
         max_iter: 逐格最大求值步数；用尽且支架未塌陷 ⇒ ``RuntimeError``。
@@ -1538,7 +1545,8 @@ def solve_g_from_mean_velocity_batch(
 
     Raises:
         ValueError: 形状/取值越界（``c̄∉[0,1]``、``H≤0``、``n≤0``、``κ≤0``、``τ_Y<0``、
-            ``u_bar`` 含负值/非有限、``rtol≤0``、``max_iter<2``）。
+            ``u_bar`` 含负值/非有限、``Gb`` 非有限、``rtol≤0``、``max_iter<2``）。
+        NotImplementedError: ``Gb ≠ 0``（本入口只实现 Gb=0 反演，见上）。
         RuntimeError: 有格点在 ``max_iter`` 内未收敛（不静默返回未收敛值）。
 
     算法（逐格独立；向量化到批次轴，活跃集逐步压缩）
@@ -1576,6 +1584,17 @@ def solve_g_from_mean_velocity_batch(
         raise ValueError(f"rtol 须为正（相对残差容差），得到 rtol={rtol!r}")
     if not isinstance(max_iter, int) or isinstance(max_iter, bool) or max_iter < 2:
         raise ValueError(f"max_iter 须为 ≥2 的整数，得到 max_iter={max_iter!r}")
+
+    Gb_arr = np.asarray(Gb, dtype=float)
+    if not np.all(np.isfinite(Gb_arr)):
+        raise ValueError(f"Gb 须为有限值，得到 {Gb!r}")
+    if np.any(Gb_arr != 0.0):
+        raise NotImplementedError(
+            "solve_g_from_mean_velocity_batch 只实现 **Gb=0** 的反演（生产口径：浮力由 "
+            "(4.22) 的 b 向量承担）。Gb≠0 时 (2.13) 的 −Ī₂·Gb̃ 项使应力场非共线、需 2 维"
+            "反演——本入口不支持且**不静默忽略**（忽略会把 −Ī₂Gb̃ 混进 Ī₁G̃、系统性高估"
+            "局部应力 ⇒ 低估屈服效应）。量级实测见 task-5-report.md §Important-3。"
+        )
 
     kappa_t = kap / Hv[:, None] ** n_arr       # (A4)：κ̃ = κ/H^n（与 _batch_inputs 同式）
 
