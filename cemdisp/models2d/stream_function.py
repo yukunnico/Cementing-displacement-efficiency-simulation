@@ -137,7 +137,9 @@ HB 流体下 ``I₁`` 依赖局部应力尺度 ⇒ (4.22) 不再线性，须外�
 ⇒ **只有单一自由标度**（生产装配的 ``ŵ = q_half/π``，T9 推导）；接线只需让"喂进反求的
 ``ū``"与"闭包的 ``κ``/``τ_Y`` 口径"使用**同一**标度：
 
-- **推荐**：``ū`` 乘 ``ŵ``（物理速度）+ 闭包用物理 ``(κ, τ_Y)``；或
+- **推荐**：``ū`` 乘 ``ŵ``（物理速度）+ 闭包用物理 ``(κ, τ_Y)``——该乘法由
+  ``solve_stream_function_nonlinear`` 的 ``velocity_scale`` 形参承载（Task 6 生产
+  接线传 ``ŵ = q_half/π``）；或
 - 等价地：闭包改用模块口径参数 ``(κ·ŵ^{n−1}, τ_Y/ŵ)``、``ū`` 保持模块口径
   ——二者给出**同一个** ``I₁``（不变性）。模块口径速度比物理**大** ``1/ŵ`` 倍
   （生产锚 ``annulus_d2dga.py:1433``：``w = w_unit·(q_half/π)``），故模块口径的
@@ -491,6 +493,7 @@ def _rheology_from_closure(closure) -> Tuple[float, float, float]:
 
 def solve_stream_function_nonlinear(geom: Dict, c_bar, hb_closure, b_field,
                                     Gb=(0.0, 0.0), *,
+                                    velocity_scale: float = 1.0,
                                     omega: float = 0.5, tol: float = 1e-6,
                                     max_outer: int = 50) -> Array:
     """解 HB 流体 (4.22) 流函数椭圆方程——**非线性外迭代**（A-3a）。
@@ -527,8 +530,9 @@ def solve_stream_function_nonlinear(geom: Dict, c_bar, hb_closure, b_field,
 
     ⚠️ **标度口径（单一标度，见模块 docstring 的"非线性外迭代"段）**：反求与闭包
     求值都在 ``solve_stream_function`` 的**单位通量 Ψ 口径**内自洽；接线须让喂进反求的
-    ``ū`` 与闭包的 ``κ``/``τ_Y`` 口径用**同一**标度 ``ŵ = q_half/π``（T9）——因
-    ``σ = s`` 时 ``I₁`` 标度不变，算子与反求要的是同一个 ``I₁``。口径不一致（闭包用
+    ``ū`` 与闭包的 ``κ``/``τ_Y`` 口径用**同一**标度 ``ŵ = q_half/π``（T9）——该标度由
+    **``velocity_scale`` 形参显式承载**（Task 6 生产接线传 ``ŵ = q_half/π``，推荐路径 =
+    物理 (κ, τ_Y) + ū×ŵ；``velocity_scale=1.0`` 默认 = 既有行为）。口径不一致（闭包用
     物理参数而 ``ū`` 未乘 ``ŵ``；模块口径速度比物理**大** ``1/ŵ`` 倍，生产井
     ``ŵ = q_half/π ≪ 1``）会让闭包看到的应力比物理**大** ``ŵ^{-n}`` 倍（呼101 量级
     实测 ≈ 53×，探针 probe_direction_chain.py [3]）⇒ 屈服门槛形同虚设 ⇒
@@ -542,6 +546,12 @@ def solve_stream_function_nonlinear(geom: Dict, c_bar, hb_closure, b_field,
         b_field: (2,ny,nz) 浮力全向量（(4.22) 字面分组，唯一口径）。
         Gb: 反演口径下的浮力向量（(2.12)）；**只支持零向量**（生产口径：浮力经
             ``b_field`` 承担）。非零 ⇒ ``NotImplementedError``（见 Raises）。
+        velocity_scale: 反求所喂速度的显式标度（A-3b，R-T5-1 REVISED）：反求循环把
+            (2.2) 单位通量口径的 ``ū`` 乘以该值后再解 ``H·ū = I₁·G``。语义
+            ``ū_fed = velocity_scale·ū_module``；生产接线（Task 6）传生产换算锚
+            ``ŵ = q_half/π``（``annulus_d2dga``：``w = w_unit·(q_half/π)``）+ 物理
+            (κ, τ_Y) 参数（推荐路径）；``1.0``（默认）= 既有行为（模块口径自洽，
+            牛顿极限等既有测试逐位不变）。
         omega: 欠松弛因子 ∈ (0,1]（``1`` ⇒ 不松弛）。
         tol: 外迭代收敛容差（``Ī₁`` 场的 ∞-范数相对变化；``0`` ⇒ 只认逐位相等）。
         max_outer: 最大外迭代轮数（含首轮）≥1。
@@ -581,6 +591,12 @@ def solve_stream_function_nonlinear(geom: Dict, c_bar, hb_closure, b_field,
     Gb_arr = np.asarray(Gb, dtype=float)
     if not np.all(np.isfinite(Gb_arr)):
         raise ValueError(f"Gb 须为有限值，得到 {Gb!r}")
+    # velocity_scale（A-3b，Task 6 接线）：外迭代反求所喂速度的显式标度——
+    # 语义 ū_fed = velocity_scale·ū_module（R-T5-1 REVISED：生产接线传 ŵ = q_half/π，
+    # 使闭包在物理应力标度上求值；默认 1.0 = 既有行为，×1.0 对 IEEE 浮点逐位无扰）。
+    velocity_scale = float(velocity_scale)
+    if not (np.isfinite(velocity_scale) and velocity_scale > 0.0):
+        raise ValueError(f"velocity_scale 须为正的有限值，得到 {velocity_scale!r}")
     if np.any(Gb_arr != 0.0):
         raise NotImplementedError(
             "solve_stream_function_nonlinear 只实现 **Gb=0** 的反演口径（Phase A 生产口径："
@@ -630,6 +646,10 @@ def solve_stream_function_nonlinear(geom: Dict, c_bar, hb_closure, b_field,
         # 口径后取模（整体标度 ŵ 由接线方对齐，见模块 docstring 的"标度口径"段）。
         w, v = velocity_from_stream_function(psi, geom)
         u_mag = np.hypot(w, _VELOCITY_COMPONENT_RATIO * v)
+        # velocity_scale（R-T5-1 REVISED）：ū_fed = ŵ·ū_module——把模块单位通量口径的
+        # ū 缩放到物理速度口径再反求（生产接线 ŵ = q_half/π）。默认 1.0 ⇒ ×1.0 对
+        # IEEE 浮点逐位无扰（含 ±0/NaN），既有调用方行为不变。
+        u_mag = u_mag * velocity_scale
         # ② 逐格反求 G（批量闭包 + 标量求根；Gb=0 生产口径）
         inv = solve_g_from_mean_velocity_batch(
             c.reshape(-1), n_hb, kappa_hb, tau_y_hb, u_mag.reshape(-1),
