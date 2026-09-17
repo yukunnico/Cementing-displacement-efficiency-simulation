@@ -1,0 +1,1945 @@
+{
+ "meta": {
+  "created_at": "2026-09-17 18:49:48",
+  "script": "scripts/entrypoints/run_hb_ablation_phase_a.py",
+  "git_head": "5e742015ab7f9f1abb87ece57f9e21dc3a263428",
+  "python": "3.13.7 | packaged by Anaconda, Inc. | (main, Sep  9 2025, 19:54:37) [MSC v.1929 64 bit (AMD64)]",
+  "numpy": "2.3.3",
+  "platform": "Windows-10-10.0.19045-SP0",
+  "conda_env": "",
+  "matrix": "7 行 × 4 井（用户裁定 2026-09-17）；ht1_004 按 R-T6-6 spec 优先 a/b 重合",
+  "runner_reuse": "load_<well>_tailpipe + CasingFlowSolver(T1 生产口径) + annulus_stop_time_s(F2) + split_cement_phases=True + nz=250；唯一差别 = 变体开关"
+ },
+ "wells": {
+  "hu101": {
+   "tau_y_calibers": {
+    "bingham_ls": {
+     "LEAD": 2.9641565505975644,
+     "TAIL": 2.603368617615636
+    },
+    "hb_fitted_new": {
+     "LEAD": 0.9697406536739089,
+     "TAIL": 1.5110938746664877
+    },
+    "detail": {
+     "bingham_ls": {
+      "values": {
+       "LEAD": 2.9641565505975644,
+       "TAIL": 2.603368617615636
+      },
+      "provenance": {
+       "LEAD": {
+        "phase": "lead",
+        "source_file": "2/201/2011/20111/201112/2011122.pdf",
+        "source_location": "检测分析结果·领浆·流变性能（委托书 W301-22094）",
+        "field": "fitted_bingham_ls_intercept_pa",
+        "in_rheometer_csv": false
+       },
+       "TAIL": {
+        "phase": "tail",
+        "source_file": "2/201/2011/20111/201112/2011122.pdf",
+        "source_location": "检测分析结果·尾浆·流变性能（委托书 W301-22094）",
+        "field": "fitted_bingham_ls_intercept_pa",
+        "in_rheometer_csv": false
+       }
+      }
+     },
+     "hb_fitted_new": {
+      "values": {
+       "LEAD": 0.9697406536739089,
+       "TAIL": 1.5110938746664877
+      },
+      "provenance": {
+       "LEAD": {
+        "phase": "lead",
+        "source_file": "2/201/2011/20111/201112/2011122.pdf",
+        "source_location": "检测分析结果·领浆·流变性能（委托书 W301-22094）",
+        "field": "fitted_hb_tau_y_pa（route=fitted_new）",
+        "in_rheometer_csv": false
+       },
+       "TAIL": {
+        "phase": "tail",
+        "source_file": "2/201/2011/20111/201112/2011122.pdf",
+        "source_location": "检测分析结果·尾浆·流变性能（委托书 W301-22094）",
+        "field": "fitted_hb_tau_y_pa（route=fitted_new）",
+        "in_rheometer_csv": false
+       }
+      }
+     }
+    }
+   },
+   "run_plan": [
+    {
+     "run_id": "hu101__H0",
+     "labels": [
+      "H0"
+     ],
+     "caliber": "",
+     "annotation": "全默认（L1 锚，B-2 off，与生产 runner 同配置）"
+    },
+    {
+     "run_id": "hu101__H0p",
+     "labels": [
+      "H0p"
+     ],
+     "caliber": "",
+     "annotation": "B-2 on 基线"
+    },
+    {
+     "run_id": "hu101__H1",
+     "labels": [
+      "H1"
+     ],
+     "caliber": "",
+     "annotation": "H0p+HB 闭包（τ_Y2=0、屈服门不动；B-2 在 HB 路径惰性，一次性告警留痕）"
+    },
+    {
+     "run_id": "hu101__H2a_LS",
+     "labels": [
+      "H2a_LS"
+     ],
+     "caliber": "bingham_ls",
+     "annotation": "H0p+水泥 τy 注入（Bingham-LS 截距口径，屈服门通道）"
+    },
+    {
+     "run_id": "hu101__H2b_HB",
+     "labels": [
+      "H2b_HB"
+     ],
+     "caliber": "hb_fitted_new",
+     "annotation": "H0p+水泥 τy 注入（HB 拟合口径，屈服门通道）"
+    },
+    {
+     "run_id": "hu101__H3a_LS",
+     "labels": [
+      "H3a_LS"
+     ],
+     "caliber": "bingham_ls",
+     "annotation": "H0p+两开关全开（LS 口径）；HB 路径上 B-2 惰性"
+    },
+    {
+     "run_id": "hu101__H3b_HB",
+     "labels": [
+      "H3b_HB"
+     ],
+     "caliber": "hb_fitted_new",
+     "annotation": "H0p+两开关全开（HB 口径，生产口径候选）；HB 路径上 B-2 惰性"
+    },
+    {
+     "run_id": "hu101__H0_repeat",
+     "labels": [
+      "H0_repeat"
+     ],
+     "caliber": "",
+     "annotation": "L1 确定性检查：H0 同配置第二次运行（逐位对比）"
+    }
+   ],
+   "fluids_audit": [
+    {
+     "name": "钻井液",
+     "role": "MUD",
+     "rheology_model": "BINGHAM",
+     "power_law_n": null,
+     "consistency_k": null,
+     "yield_stress_pa": 9.2
+    },
+    {
+     "name": "平衡液",
+     "role": "WASH",
+     "rheology_model": "BINGHAM",
+     "power_law_n": null,
+     "consistency_k": null,
+     "yield_stress_pa": 9.2
+    },
+    {
+     "name": "驱油隔离液",
+     "role": "SPACER",
+     "rheology_model": "BINGHAM",
+     "power_law_n": null,
+     "consistency_k": null,
+     "yield_stress_pa": 5.0
+    },
+    {
+     "name": "领浆",
+     "role": "LEAD",
+     "rheology_model": "POWER_LAW",
+     "power_law_n": 0.844,
+     "consistency_k": 0.381,
+     "yield_stress_pa": null
+    },
+    {
+     "name": "尾浆",
+     "role": "TAIL",
+     "rheology_model": "POWER_LAW",
+     "power_law_n": 0.83,
+     "consistency_k": 0.352,
+     "yield_stress_pa": null
+    },
+    {
+     "name": "轻泥浆",
+     "role": "DISPLACEMENT",
+     "rheology_model": "BINGHAM",
+     "power_law_n": null,
+     "consistency_k": null,
+     "yield_stress_pa": 9.2
+    },
+    {
+     "name": "中置液",
+     "role": "DISPLACEMENT",
+     "rheology_model": "BINGHAM",
+     "power_law_n": null,
+     "consistency_k": null,
+     "yield_stress_pa": 9.2
+    },
+    {
+     "name": "井浆",
+     "role": "DISPLACEMENT",
+     "rheology_model": "BINGHAM",
+     "power_law_n": null,
+     "consistency_k": null,
+     "yield_stress_pa": 9.2
+    }
+   ],
+   "well_name": "呼101"
+  },
+  "hu102": {
+   "tau_y_calibers": {
+    "bingham_ls": {
+     "LEAD": 9.255394095535394,
+     "TAIL": 9.255394095535394
+    },
+    "hb_fitted_new": {
+     "LEAD": 5.474268506930611e-13,
+     "TAIL": 5.474268506930611e-13
+    },
+    "detail": {
+     "bingham_ls": {
+      "values": {
+       "LEAD": 9.255394095535394,
+       "TAIL": 9.255394095535394
+      },
+      "provenance": {
+       "LEAD": {
+        "phase": "lead",
+        "source_file": "2021/20234.doc",
+        "source_location": "slurry rheology",
+        "field": "fitted_bingham_ls_intercept_pa",
+        "in_rheometer_csv": true
+       },
+       "TAIL": {
+        "phase": "tail",
+        "source_file": "2021/20234.doc",
+        "source_location": "slurry rheology",
+        "field": "fitted_bingham_ls_intercept_pa",
+        "in_rheometer_csv": true
+       }
+      }
+     },
+     "hb_fitted_new": {
+      "values": {
+       "LEAD": 5.474268506930611e-13,
+       "TAIL": 5.474268506930611e-13
+      },
+      "provenance": {
+       "LEAD": {
+        "phase": "lead",
+        "source_file": "2021/20234.doc",
+        "source_location": "slurry rheology",
+        "field": "fitted_hb_tau_y_pa（route=fitted_new）",
+        "in_rheometer_csv": true
+       },
+       "TAIL": {
+        "phase": "tail",
+        "source_file": "2021/20234.doc",
+        "source_location": "slurry rheology",
+        "field": "fitted_hb_tau_y_pa（route=fitted_new）",
+        "in_rheometer_csv": true
+       }
+      }
+     }
+    }
+   },
+   "run_plan": [
+    {
+     "run_id": "hu102__H0",
+     "labels": [
+      "H0"
+     ],
+     "caliber": "",
+     "annotation": "全默认（L1 锚，B-2 off，与生产 runner 同配置）"
+    },
+    {
+     "run_id": "hu102__H0p",
+     "labels": [
+      "H0p"
+     ],
+     "caliber": "",
+     "annotation": "B-2 on 基线"
+    },
+    {
+     "run_id": "hu102__H1",
+     "labels": [
+      "H1"
+     ],
+     "caliber": "",
+     "annotation": "H0p+HB 闭包（τ_Y2=0、屈服门不动；B-2 在 HB 路径惰性，一次性告警留痕）"
+    },
+    {
+     "run_id": "hu102__H2a_LS",
+     "labels": [
+      "H2a_LS"
+     ],
+     "caliber": "bingham_ls",
+     "annotation": "H0p+水泥 τy 注入（Bingham-LS 截距口径，屈服门通道）"
+    },
+    {
+     "run_id": "hu102__H2b_HB",
+     "labels": [
+      "H2b_HB"
+     ],
+     "caliber": "hb_fitted_new",
+     "annotation": "H0p+水泥 τy 注入（HB 拟合口径，屈服门通道）"
+    },
+    {
+     "run_id": "hu102__H3a_LS",
+     "labels": [
+      "H3a_LS"
+     ],
+     "caliber": "bingham_ls",
+     "annotation": "H0p+两开关全开（LS 口径）；HB 路径上 B-2 惰性"
+    },
+    {
+     "run_id": "hu102__H3b_HB",
+     "labels": [
+      "H3b_HB"
+     ],
+     "caliber": "hb_fitted_new",
+     "annotation": "H0p+两开关全开（HB 口径，生产口径候选）；HB 路径上 B-2 惰性"
+    },
+    {
+     "run_id": "hu102__H0_repeat",
+     "labels": [
+      "H0_repeat"
+     ],
+     "caliber": "",
+     "annotation": "L1 确定性检查：H0 同配置第二次运行（逐位对比）"
+    }
+   ],
+   "fluids_audit": [
+    {
+     "name": "钻井液",
+     "role": "MUD",
+     "rheology_model": "BINGHAM",
+     "power_law_n": null,
+     "consistency_k": null,
+     "yield_stress_pa": 10.0
+    },
+    {
+     "name": "替浆液",
+     "role": "DISPLACEMENT",
+     "rheology_model": "BINGHAM",
+     "power_law_n": null,
+     "consistency_k": null,
+     "yield_stress_pa": 10.0
+    },
+    {
+     "name": "平衡液",
+     "role": "WASH",
+     "rheology_model": "BINGHAM",
+     "power_law_n": null,
+     "consistency_k": null,
+     "yield_stress_pa": 18.0
+    },
+    {
+     "name": "隔离液",
+     "role": "SPACER",
+     "rheology_model": "BINGHAM",
+     "power_law_n": null,
+     "consistency_k": null,
+     "yield_stress_pa": 8.0
+    },
+    {
+     "name": "领浆",
+     "role": "LEAD",
+     "rheology_model": "POWER_LAW",
+     "power_law_n": 0.737,
+     "consistency_k": 0.947,
+     "yield_stress_pa": null
+    },
+    {
+     "name": "尾管水泥浆",
+     "role": "TAIL",
+     "rheology_model": "POWER_LAW",
+     "power_law_n": 0.737,
+     "consistency_k": 0.947,
+     "yield_stress_pa": null
+    },
+    {
+     "name": "压塞液",
+     "role": "OTHER",
+     "rheology_model": "BINGHAM",
+     "power_law_n": null,
+     "consistency_k": null,
+     "yield_stress_pa": 10.0
+    },
+    {
+     "name": "后置液",
+     "role": "OTHER",
+     "rheology_model": "BINGHAM",
+     "power_law_n": null,
+     "consistency_k": null,
+     "yield_stress_pa": 8.0
+    },
+    {
+     "name": "冲洗液",
+     "role": "WASH",
+     "rheology_model": "BINGHAM",
+     "power_law_n": null,
+     "consistency_k": null,
+     "yield_stress_pa": 8.0
+    },
+    {
+     "name": "冲洗液（FLUSHER）",
+     "role": "FLUSHER",
+     "rheology_model": "BINGHAM",
+     "power_law_n": null,
+     "consistency_k": null,
+     "yield_stress_pa": 1.5
+    }
+   ],
+   "well_name": "呼102"
+  },
+  "ht1_003": {
+   "tau_y_calibers": {
+    "bingham_ls": {
+     "LEAD": 9.497165969599429,
+     "TAIL": 9.338058376213542
+    },
+    "hb_fitted_new": {
+     "LEAD": 4.013186086650193,
+     "TAIL": 3.872245990995524
+    },
+    "detail": {
+     "bingham_ls": {
+      "values": {
+       "LEAD": 9.497165969599429,
+       "TAIL": 9.338058376213542
+      },
+      "provenance": {
+       "LEAD": {
+        "phase": "lead",
+        "source_file": "化验报告/HT1-003 油层尾管 化验报告.docx 表7",
+        "source_location": "表7 流变性能 · 领浆",
+        "field": "fitted_bingham_ls_intercept_pa",
+        "in_rheometer_csv": true
+       },
+       "TAIL": {
+        "phase": "tail",
+        "source_file": "化验报告/HT1-003 油层尾管 化验报告.docx 表7",
+        "source_location": "表7 流变性能 · 尾浆",
+        "field": "fitted_bingham_ls_intercept_pa",
+        "in_rheometer_csv": true
+       }
+      }
+     },
+     "hb_fitted_new": {
+      "values": {
+       "LEAD": 4.013186086650193,
+       "TAIL": 3.872245990995524
+      },
+      "provenance": {
+       "LEAD": {
+        "phase": "lead",
+        "source_file": "化验报告/HT1-003 油层尾管 化验报告.docx 表7",
+        "source_location": "表7 流变性能 · 领浆",
+        "field": "fitted_hb_tau_y_pa（route=fitted_new）",
+        "in_rheometer_csv": true
+       },
+       "TAIL": {
+        "phase": "tail",
+        "source_file": "化验报告/HT1-003 油层尾管 化验报告.docx 表7",
+        "source_location": "表7 流变性能 · 尾浆",
+        "field": "fitted_hb_tau_y_pa（route=fitted_new）",
+        "in_rheometer_csv": true
+       }
+      }
+     }
+    }
+   },
+   "run_plan": [
+    {
+     "run_id": "ht1_003__H0",
+     "labels": [
+      "H0"
+     ],
+     "caliber": "",
+     "annotation": "全默认（L1 锚，B-2 off，与生产 runner 同配置）"
+    },
+    {
+     "run_id": "ht1_003__H0p",
+     "labels": [
+      "H0p"
+     ],
+     "caliber": "",
+     "annotation": "B-2 on 基线"
+    },
+    {
+     "run_id": "ht1_003__H1",
+     "labels": [
+      "H1"
+     ],
+     "caliber": "",
+     "annotation": "H0p+HB 闭包（τ_Y2=0、屈服门不动；B-2 在 HB 路径惰性，一次性告警留痕）"
+    },
+    {
+     "run_id": "ht1_003__H2a_LS",
+     "labels": [
+      "H2a_LS"
+     ],
+     "caliber": "bingham_ls",
+     "annotation": "H0p+水泥 τy 注入（Bingham-LS 截距口径，屈服门通道）"
+    },
+    {
+     "run_id": "ht1_003__H2b_HB",
+     "labels": [
+      "H2b_HB"
+     ],
+     "caliber": "hb_fitted_new",
+     "annotation": "H0p+水泥 τy 注入（HB 拟合口径，屈服门通道）"
+    },
+    {
+     "run_id": "ht1_003__H3a_LS",
+     "labels": [
+      "H3a_LS"
+     ],
+     "caliber": "bingham_ls",
+     "annotation": "H0p+两开关全开（LS 口径）；HB 路径上 B-2 惰性"
+    },
+    {
+     "run_id": "ht1_003__H3b_HB",
+     "labels": [
+      "H3b_HB"
+     ],
+     "caliber": "hb_fitted_new",
+     "annotation": "H0p+两开关全开（HB 口径，生产口径候选）；HB 路径上 B-2 惰性"
+    },
+    {
+     "run_id": "ht1_003__H0_repeat",
+     "labels": [
+      "H0_repeat"
+     ],
+     "caliber": "",
+     "annotation": "L1 确定性检查：H0 同配置第二次运行（逐位对比）"
+    }
+   ],
+   "fluids_audit": [
+    {
+     "name": "钻井液",
+     "role": "MUD",
+     "rheology_model": "POWER_LAW",
+     "power_law_n": 0.631,
+     "consistency_k": 0.751,
+     "yield_stress_pa": null
+    },
+    {
+     "name": "平衡液",
+     "role": "WASH",
+     "rheology_model": "BINGHAM",
+     "power_law_n": null,
+     "consistency_k": null,
+     "yield_stress_pa": 9.2
+    },
+    {
+     "name": "隔离液1",
+     "role": "SPACER",
+     "rheology_model": "POWER_LAW",
+     "power_law_n": 0.668,
+     "consistency_k": 1.245,
+     "yield_stress_pa": null
+    },
+    {
+     "name": "隔离液2",
+     "role": "SPACER",
+     "rheology_model": "POWER_LAW",
+     "power_law_n": 0.668,
+     "consistency_k": 1.245,
+     "yield_stress_pa": null
+    },
+    {
+     "name": "领浆",
+     "role": "LEAD",
+     "rheology_model": "POWER_LAW",
+     "power_law_n": 0.597,
+     "consistency_k": 1.622,
+     "yield_stress_pa": null
+    },
+    {
+     "name": "尾浆",
+     "role": "TAIL",
+     "rheology_model": "POWER_LAW",
+     "power_law_n": 0.585,
+     "consistency_k": 1.673,
+     "yield_stress_pa": null
+    },
+    {
+     "name": "压塞液",
+     "role": "OTHER",
+     "rheology_model": "BINGHAM",
+     "power_law_n": null,
+     "consistency_k": null,
+     "yield_stress_pa": 8.0
+    },
+    {
+     "name": "保护液",
+     "role": "DISPLACEMENT",
+     "rheology_model": "BINGHAM",
+     "power_law_n": null,
+     "consistency_k": null,
+     "yield_stress_pa": 8.2
+    },
+    {
+     "name": "基液",
+     "role": "DISPLACEMENT",
+     "rheology_model": "BINGHAM",
+     "power_law_n": null,
+     "consistency_k": null,
+     "yield_stress_pa": 8.0
+    },
+    {
+     "name": "替钻井液",
+     "role": "DISPLACEMENT",
+     "rheology_model": "BINGHAM",
+     "power_law_n": null,
+     "consistency_k": null,
+     "yield_stress_pa": 10.0
+    },
+    {
+     "name": "井浆",
+     "role": "DISPLACEMENT",
+     "rheology_model": "BINGHAM",
+     "power_law_n": null,
+     "consistency_k": null,
+     "yield_stress_pa": 9.3
+    }
+   ],
+   "well_name": "呼1-003井（HT1-003）"
+  },
+  "ht1_004": {
+   "tau_y_calibers": {
+    "bingham_ls": {
+     "LEAD": 4.578561179192609,
+     "TAIL": 4.506036181014398
+    },
+    "hb_fitted_new": {
+     "LEAD": 5.474268506930611e-13,
+     "TAIL": 4.047960313648443e-13
+    },
+    "detail": {
+     "bingham_ls": {
+      "values": {
+       "LEAD": 4.578561179192609,
+       "TAIL": 4.506036181014398
+      },
+      "provenance": {
+       "LEAD": {
+        "phase": "lead",
+        "source_file": "化验报告/HT1-004 油层尾管 化验报告.docx 表7",
+        "source_location": "表7 流变性能 · 领浆",
+        "field": "fitted_bingham_ls_intercept_pa",
+        "in_rheometer_csv": true
+       },
+       "TAIL": {
+        "phase": "tail",
+        "source_file": "化验报告/HT1-004 油层尾管 化验报告.docx 表7",
+        "source_location": "表7 流变性能 · 尾浆",
+        "field": "fitted_bingham_ls_intercept_pa",
+        "in_rheometer_csv": true
+       }
+      }
+     },
+     "hb_fitted_new": {
+      "values": {
+       "LEAD": 5.474268506930611e-13,
+       "TAIL": 4.047960313648443e-13
+      },
+      "provenance": {
+       "LEAD": {
+        "phase": "lead",
+        "source_file": "化验报告/HT1-004 油层尾管 化验报告.docx 表7",
+        "source_location": "表7 流变性能 · 领浆",
+        "field": "fitted_hb_tau_y_pa（route=fitted_new）",
+        "in_rheometer_csv": true
+       },
+       "TAIL": {
+        "phase": "tail",
+        "source_file": "化验报告/HT1-004 油层尾管 化验报告.docx 表7",
+        "source_location": "表7 流变性能 · 尾浆",
+        "field": "fitted_hb_tau_y_pa（route=fitted_new）",
+        "in_rheometer_csv": true
+       }
+      }
+     }
+    }
+   },
+   "run_plan": [
+    {
+     "run_id": "ht1_004__H0",
+     "labels": [
+      "H0"
+     ],
+     "caliber": "",
+     "annotation": "全默认（L1 锚，B-2 off，与生产 runner 同配置）"
+    },
+    {
+     "run_id": "ht1_004__H0p",
+     "labels": [
+      "H0p"
+     ],
+     "caliber": "",
+     "annotation": "B-2 on 基线"
+    },
+    {
+     "run_id": "ht1_004__H1",
+     "labels": [
+      "H1"
+     ],
+     "caliber": "",
+     "annotation": "H0p+HB 闭包（τ_Y2=0、屈服门不动；B-2 在 HB 路径惰性，一次性告警留痕）"
+    },
+    {
+     "run_id": "ht1_004__H2_spec",
+     "labels": [
+      "H2a_LS",
+      "H2b_HB"
+     ],
+     "caliber": "spec 优先",
+     "annotation": "spec 优先，a/b 重合（R-T6-6）：水泥 spec 自带 YP，常数映射未消费"
+    },
+    {
+     "run_id": "ht1_004__H3_spec",
+     "labels": [
+      "H3a_LS",
+      "H3b_HB"
+     ],
+     "caliber": "spec 优先",
+     "annotation": "spec 优先，a/b 重合（R-T6-6）：水泥 spec 自带 YP，常数映射未消费；HB 路径上 B-2 惰性"
+    },
+    {
+     "run_id": "ht1_004__H0_repeat",
+     "labels": [
+      "H0_repeat"
+     ],
+     "caliber": "",
+     "annotation": "L1 确定性检查：H0 同配置第二次运行（逐位对比）"
+    }
+   ],
+   "fluids_audit": [
+    {
+     "name": "钻井液",
+     "role": "MUD",
+     "rheology_model": "BINGHAM",
+     "power_law_n": null,
+     "consistency_k": null,
+     "yield_stress_pa": 8.5
+    },
+    {
+     "name": "保护液",
+     "role": "DISPLACEMENT",
+     "rheology_model": "BINGHAM",
+     "power_law_n": null,
+     "consistency_k": null,
+     "yield_stress_pa": 9.2
+    },
+    {
+     "name": "先导浆",
+     "role": "WASH",
+     "rheology_model": "BINGHAM",
+     "power_law_n": null,
+     "consistency_k": null,
+     "yield_stress_pa": 9.8
+    },
+    {
+     "name": "隔离液1",
+     "role": "SPACER",
+     "rheology_model": "BINGHAM",
+     "power_law_n": null,
+     "consistency_k": null,
+     "yield_stress_pa": 9.8
+    },
+    {
+     "name": "隔离液2",
+     "role": "SPACER",
+     "rheology_model": "BINGHAM",
+     "power_law_n": null,
+     "consistency_k": null,
+     "yield_stress_pa": 10.0
+    },
+    {
+     "name": "领浆",
+     "role": "LEAD",
+     "rheology_model": "BINGHAM",
+     "power_law_n": null,
+     "consistency_k": null,
+     "yield_stress_pa": 13.0
+    },
+    {
+     "name": "尾浆",
+     "role": "TAIL",
+     "rheology_model": "BINGHAM",
+     "power_law_n": null,
+     "consistency_k": null,
+     "yield_stress_pa": 14.0
+    },
+    {
+     "name": "压塞液",
+     "role": "OTHER",
+     "rheology_model": "BINGHAM",
+     "power_law_n": null,
+     "consistency_k": null,
+     "yield_stress_pa": 9.0
+    },
+    {
+     "name": "替钻井液",
+     "role": "DISPLACEMENT",
+     "rheology_model": "BINGHAM",
+     "power_law_n": null,
+     "consistency_k": null,
+     "yield_stress_pa": 9.5
+    },
+    {
+     "name": "基液",
+     "role": "DISPLACEMENT",
+     "rheology_model": "BINGHAM",
+     "power_law_n": null,
+     "consistency_k": null,
+     "yield_stress_pa": 9.0
+    },
+    {
+     "name": "井浆",
+     "role": "DISPLACEMENT",
+     "rheology_model": "BINGHAM",
+     "power_law_n": null,
+     "consistency_k": null,
+     "yield_stress_pa": 9.5
+    },
+    {
+     "name": "冲洗液（FLUSHER）",
+     "role": "FLUSHER",
+     "rheology_model": "BINGHAM",
+     "power_law_n": null,
+     "consistency_k": null,
+     "yield_stress_pa": 9.0
+    }
+   ],
+   "well_name": "呼1-004井（HT1-004）"
+  }
+ },
+ "runs": {
+  "hu101__H0": {
+   "run_id": "hu101__H0",
+   "well": "hu101",
+   "labels": [
+    "H0"
+   ],
+   "caliber": "",
+   "annotation": "全默认（L1 锚，B-2 off，与生产 runner 同配置）",
+   "solver_kwargs": {},
+   "status": "DONE",
+   "total_t_s": 13742.727,
+   "casing_1d_wall_s": 0.0,
+   "wall_time_s": 149.19,
+   "n_steps": 4814,
+   "dt_min_s": 1.2805854525322502,
+   "dt_median_s": 2.7904409496757125,
+   "dt_max_s": 4.0,
+   "eta_E": 0.9735178050876083,
+   "eta_N": 0.8305774631029166,
+   "cement_occ": 0.9735178050876083,
+   "mean_wall": 0.02842919110229247,
+   "channeling_index": 0.30923694779103933,
+   "mixing_index": 0.07549317010986761,
+   "buoyancy_number": 18.88836489489284,
+   "inventory_ratio": 0.911357716122442,
+   "annulus_volume_m3": 65.53042974168298,
+   "cement_volume_m3": 70.0,
+   "diagnostics": {
+    "nonlinear_steps": 0,
+    "fallback_steps": 0,
+    "inverse_calls_total": 0,
+    "cold_step_s": null,
+    "warm_step_median_s": null,
+    "warm_step_max_s": null,
+    "max_n_static": null,
+    "all_undefined_steps": 0
+   },
+   "warnings": {
+    "fallback_count": 0,
+    "hb_wall_ignored_count": 0,
+    "tau_y_skip_flush_count": 0,
+    "floor_warning_count": 0,
+    "floor_warning_cells": [],
+    "others": []
+   },
+   "digests": {
+    "cement": "0b27a0cf0ae88bb31fd627bcd6d0fd852554d132f69521f4e25e988da606c2bc",
+    "spacer": "7d0e8ce6c31ba8a155ba57e612ccd599a4c07d46858d60382388106a5430fff1",
+    "wall": "ac9679283805af2fa2f23dffda8fcbb0cc4cf6e3d96b7fdddf2d0cc7de969a1d",
+    "lead": "b7e9e5bc32c7bab1f76cff89f9c2f44364ad8f537791347f05be89380fdcc5e5",
+    "tail": "c352a583f091a5826901a52c54ba217ee2a3a3f788cb225d186cf98a0f7fd10c"
+   },
+   "output_dir": "D:\\users\\desktop\\research\\控压固井项目\\cement model\\results\\HB闭包A-B_2026-09-17\\hu101__H0",
+   "finished_at": "2026-09-17 18:52:17"
+  },
+  "hu101__H0p": {
+   "run_id": "hu101__H0p",
+   "well": "hu101",
+   "labels": [
+    "H0p"
+   ],
+   "caliber": "",
+   "annotation": "B-2 on 基线",
+   "solver_kwargs": {
+    "enable_stream_yield_gate": true
+   },
+   "status": "DONE",
+   "total_t_s": 13742.727,
+   "casing_1d_wall_s": 0.0,
+   "wall_time_s": 162.62,
+   "n_steps": 5191,
+   "dt_min_s": 1.2507169593664003,
+   "dt_median_s": 2.7176758319092187,
+   "dt_max_s": 4.0,
+   "eta_E": 0.9430896735540061,
+   "eta_N": 0.719411612068202,
+   "cement_occ": 0.9430896735540061,
+   "mean_wall": 0.050574120587468505,
+   "channeling_index": 0.4457831325299398,
+   "mixing_index": 0.13274041500583944,
+   "buoyancy_number": 18.88836489489284,
+   "inventory_ratio": 0.882872451327679,
+   "annulus_volume_m3": 65.53042974168298,
+   "cement_volume_m3": 70.0,
+   "diagnostics": {
+    "nonlinear_steps": 0,
+    "fallback_steps": 0,
+    "inverse_calls_total": 0,
+    "cold_step_s": null,
+    "warm_step_median_s": null,
+    "warm_step_max_s": null,
+    "max_n_static": null,
+    "all_undefined_steps": 0
+   },
+   "warnings": {
+    "fallback_count": 0,
+    "hb_wall_ignored_count": 0,
+    "tau_y_skip_flush_count": 0,
+    "floor_warning_count": 0,
+    "floor_warning_cells": [],
+    "others": []
+   },
+   "digests": {
+    "cement": "ee416713049bd7c407454860aeb468c35a2f35fe68412b5e5dc101f9386342d4",
+    "spacer": "45fed1b9f8bc62a06638b2d83c8e9c8a8bfed6f958d91b1585854cc87022095b",
+    "wall": "046bf85fa6643868bd70552928d56935b830c3f49a1ae1c8f2be6f05bbec8d7d",
+    "lead": "76d8071cb331a4db86cc16371cbd5b1fbfdaa896ee968070895f8f640e26f614",
+    "tail": "f92b3e8c102af4b5e18f913b2711213c5419bf27d687a71702da22b1b081aac2"
+   },
+   "output_dir": "D:\\users\\desktop\\research\\控压固井项目\\cement model\\results\\HB闭包A-B_2026-09-17\\hu101__H0p",
+   "finished_at": "2026-09-17 18:55:00"
+  },
+  "hu101__H2a_LS": {
+   "run_id": "hu101__H2a_LS",
+   "well": "hu101",
+   "labels": [
+    "H2a_LS"
+   ],
+   "caliber": "bingham_ls",
+   "annotation": "H0p+水泥 τy 注入（Bingham-LS 截距口径，屈服门通道）",
+   "solver_kwargs": {
+    "enable_stream_yield_gate": true,
+    "hb_fix_cement_tau_y": true,
+    "cement_tau_y_by_role": {
+     "LEAD": 2.9641565505975644,
+     "TAIL": 2.603368617615636
+    }
+   },
+   "status": "DONE",
+   "total_t_s": 13742.727,
+   "casing_1d_wall_s": 0.0,
+   "wall_time_s": 186.51,
+   "n_steps": 5187,
+   "dt_min_s": 1.2914957868288184,
+   "dt_median_s": 2.7904409496756983,
+   "dt_max_s": 4.0,
+   "eta_E": 0.9365412912256685,
+   "eta_N": 0.6866627778614,
+   "cement_occ": 0.9365412912256685,
+   "mean_wall": 0.10084992561533584,
+   "channeling_index": 0.47389558232912515,
+   "mixing_index": 0.14579772028025226,
+   "buoyancy_number": 18.88836489489284,
+   "inventory_ratio": 0.8767421897835532,
+   "annulus_volume_m3": 65.53042974168298,
+   "cement_volume_m3": 70.0,
+   "diagnostics": {
+    "nonlinear_steps": 0,
+    "fallback_steps": 0,
+    "inverse_calls_total": 0,
+    "cold_step_s": null,
+    "warm_step_median_s": null,
+    "warm_step_max_s": null,
+    "max_n_static": null,
+    "all_undefined_steps": 0
+   },
+   "warnings": {
+    "fallback_count": 0,
+    "hb_wall_ignored_count": 0,
+    "tau_y_skip_flush_count": 0,
+    "floor_warning_count": 0,
+    "floor_warning_cells": [],
+    "others": []
+   },
+   "digests": {
+    "cement": "64aa7093386a5822cb7a421a30916f24ee7c7e4f4b0604e9a3abd4301fb18237",
+    "spacer": "7a815f4463a109203e76a8b17425e5de90fb44f678793acaaf6c4e2785fe19ba",
+    "wall": "bab1c5984e882fa937c7c8e36a323ec4ed58fc7294fe02a4fb34f1ff39bbde5e",
+    "lead": "29e63a93cefa211f28d7b01e2de8afad9f78fb9a2e966202b8f6c6255aa9292e",
+    "tail": "9cf3fde166049ae96daebf7367e673be6217f7bb1afabc2db483211133aca332"
+   },
+   "output_dir": "D:\\users\\desktop\\research\\控压固井项目\\cement model\\results\\HB闭包A-B_2026-09-17\\hu101__H2a_LS",
+   "finished_at": "2026-09-17 19:00:46"
+  },
+  "hu101__H2b_HB": {
+   "run_id": "hu101__H2b_HB",
+   "well": "hu101",
+   "labels": [
+    "H2b_HB"
+   ],
+   "caliber": "hb_fitted_new",
+   "annotation": "H0p+水泥 τy 注入（HB 拟合口径，屈服门通道）",
+   "solver_kwargs": {
+    "enable_stream_yield_gate": true,
+    "hb_fix_cement_tau_y": true,
+    "cement_tau_y_by_role": {
+     "LEAD": 0.9697406536739089,
+     "TAIL": 1.5110938746664877
+    }
+   },
+   "status": "DONE",
+   "total_t_s": 13742.727,
+   "casing_1d_wall_s": 0.0,
+   "wall_time_s": 185.18,
+   "n_steps": 5184,
+   "dt_min_s": 0.67615880818812,
+   "dt_median_s": 2.7648547374210466,
+   "dt_max_s": 4.0,
+   "eta_E": 0.9415329011339423,
+   "eta_N": 0.7089614530577782,
+   "cement_occ": 0.9415329011339423,
+   "mean_wall": 0.062315512672755514,
+   "channeling_index": 0.4578313253010193,
+   "mixing_index": 0.13525928949246865,
+   "buoyancy_number": 18.88836489489284,
+   "inventory_ratio": 0.8814150803891536,
+   "annulus_volume_m3": 65.53042974168298,
+   "cement_volume_m3": 70.0,
+   "diagnostics": {
+    "nonlinear_steps": 0,
+    "fallback_steps": 0,
+    "inverse_calls_total": 0,
+    "cold_step_s": null,
+    "warm_step_median_s": null,
+    "warm_step_max_s": null,
+    "max_n_static": null,
+    "all_undefined_steps": 0
+   },
+   "warnings": {
+    "fallback_count": 0,
+    "hb_wall_ignored_count": 0,
+    "tau_y_skip_flush_count": 0,
+    "floor_warning_count": 0,
+    "floor_warning_cells": [],
+    "others": []
+   },
+   "digests": {
+    "cement": "01235e6aa0507c0760e709c951089f7c4e54a560254c97cd3541bcbbc7e9dd41",
+    "spacer": "4caaf99b07281909a98de03889573689f42f49963bf57fa24bbdcf5f72c4f569",
+    "wall": "435cde007c89e3c53ff3bea4a98f3d857111ea3032e38d34929be27c708830db",
+    "lead": "3aca1d92fd001d16e67c4d453a3156fcfc22b326acbd7aeeed3c5f1e664d23de",
+    "tail": "84ad7478f800547ec7c74210f3fa016106c51516f76c14b31e6f0b5d44e7451c"
+   },
+   "output_dir": "D:\\users\\desktop\\research\\控压固井项目\\cement model\\results\\HB闭包A-B_2026-09-17\\hu101__H2b_HB",
+   "finished_at": "2026-09-17 19:03:51"
+  },
+  "hu101__H0_repeat": {
+   "run_id": "hu101__H0_repeat",
+   "well": "hu101",
+   "labels": [
+    "H0_repeat"
+   ],
+   "caliber": "",
+   "annotation": "L1 确定性检查：H0 同配置第二次运行（逐位对比）",
+   "solver_kwargs": {},
+   "status": "DONE",
+   "total_t_s": 13742.727,
+   "casing_1d_wall_s": 0.0,
+   "wall_time_s": 178.94,
+   "n_steps": 4814,
+   "dt_min_s": 1.2805854525322502,
+   "dt_median_s": 2.7904409496757125,
+   "dt_max_s": 4.0,
+   "eta_E": 0.9735178050876083,
+   "eta_N": 0.8305774631029166,
+   "cement_occ": 0.9735178050876083,
+   "mean_wall": 0.02842919110229247,
+   "channeling_index": 0.30923694779103933,
+   "mixing_index": 0.07549317010986761,
+   "buoyancy_number": 18.88836489489284,
+   "inventory_ratio": 0.911357716122442,
+   "annulus_volume_m3": 65.53042974168298,
+   "cement_volume_m3": 70.0,
+   "diagnostics": {
+    "nonlinear_steps": 0,
+    "fallback_steps": 0,
+    "inverse_calls_total": 0,
+    "cold_step_s": null,
+    "warm_step_median_s": null,
+    "warm_step_max_s": null,
+    "max_n_static": null,
+    "all_undefined_steps": 0
+   },
+   "warnings": {
+    "fallback_count": 0,
+    "hb_wall_ignored_count": 0,
+    "tau_y_skip_flush_count": 0,
+    "floor_warning_count": 0,
+    "floor_warning_cells": [],
+    "others": []
+   },
+   "digests": {
+    "cement": "0b27a0cf0ae88bb31fd627bcd6d0fd852554d132f69521f4e25e988da606c2bc",
+    "spacer": "7d0e8ce6c31ba8a155ba57e612ccd599a4c07d46858d60382388106a5430fff1",
+    "wall": "ac9679283805af2fa2f23dffda8fcbb0cc4cf6e3d96b7fdddf2d0cc7de969a1d",
+    "lead": "b7e9e5bc32c7bab1f76cff89f9c2f44364ad8f537791347f05be89380fdcc5e5",
+    "tail": "c352a583f091a5826901a52c54ba217ee2a3a3f788cb225d186cf98a0f7fd10c"
+   },
+   "output_dir": "D:\\users\\desktop\\research\\控压固井项目\\cement model\\results\\HB闭包A-B_2026-09-17\\hu101__H0_repeat",
+   "finished_at": "2026-09-17 19:06:50"
+  },
+  "hu102__H0": {
+   "run_id": "hu102__H0",
+   "well": "hu102",
+   "labels": [
+    "H0"
+   ],
+   "caliber": "",
+   "annotation": "全默认（L1 锚，B-2 off，与生产 runner 同配置）",
+   "solver_kwargs": {},
+   "status": "DONE",
+   "total_t_s": 11737.143,
+   "casing_1d_wall_s": 0.0,
+   "wall_time_s": 497.26,
+   "n_steps": 13813,
+   "dt_min_s": 0.38583458548055205,
+   "dt_median_s": 0.7289400856643624,
+   "dt_max_s": 1.3570244125814952,
+   "eta_E": 0.9852649631268567,
+   "eta_N": 0.8859138183693933,
+   "cement_occ": 0.9852649631268567,
+   "mean_wall": 0.0,
+   "channeling_index": 0.2570281124495173,
+   "mixing_index": 0.036176882003155185,
+   "buoyancy_number": 1.955608872292268,
+   "inventory_ratio": 0.7172736926138159,
+   "annulus_volume_m3": 12.376013794032469,
+   "cement_volume_m3": 17.0,
+   "diagnostics": {
+    "nonlinear_steps": 0,
+    "fallback_steps": 0,
+    "inverse_calls_total": 0,
+    "cold_step_s": null,
+    "warm_step_median_s": null,
+    "warm_step_max_s": null,
+    "max_n_static": null,
+    "all_undefined_steps": 0
+   },
+   "warnings": {
+    "fallback_count": 0,
+    "hb_wall_ignored_count": 0,
+    "tau_y_skip_flush_count": 0,
+    "floor_warning_count": 0,
+    "floor_warning_cells": [],
+    "others": []
+   },
+   "digests": {
+    "cement": "2ddd1b507a609d8e43294cf7f61d668fdba1d0af2ba6b4ba9ccead441bb48a28",
+    "spacer": "42062fb0a60e1cbca4ea5abfc377858e811c2b3cc53a808eb8aa578f67e5eaa1",
+    "wall": "f8c784aa6b57396e7c5e094c34d079d8252473e46e2f60593a921dbebf941fcc",
+    "lead": "7008192bd9cc752734d409bb99556fa22fa7bacaa9bd9110f6165f792daf16a3",
+    "tail": "63fb7412b272061906e501a49a567da00f198db716fb4c56c2c20f54da04137a"
+   },
+   "output_dir": "D:\\users\\desktop\\research\\控压固井项目\\cement model\\results\\HB闭包A-B_2026-09-17\\hu102__H0",
+   "finished_at": "2026-09-17 19:15:07"
+  },
+  "hu102__H0p": {
+   "run_id": "hu102__H0p",
+   "well": "hu102",
+   "labels": [
+    "H0p"
+   ],
+   "caliber": "",
+   "annotation": "B-2 on 基线",
+   "solver_kwargs": {
+    "enable_stream_yield_gate": true
+   },
+   "status": "DONE",
+   "total_t_s": 11737.143,
+   "casing_1d_wall_s": 0.0,
+   "wall_time_s": 502.03,
+   "n_steps": 13819,
+   "dt_min_s": 0.38837046083790483,
+   "dt_median_s": 0.7289088638199246,
+   "dt_max_s": 1.3570244125814952,
+   "eta_E": 0.9853054691946164,
+   "eta_N": 0.886230269721856,
+   "cement_occ": 0.9853054691946164,
+   "mean_wall": 0.0,
+   "channeling_index": 0.2530120481924936,
+   "mixing_index": 0.0361360112795242,
+   "buoyancy_number": 1.955608872292268,
+   "inventory_ratio": 0.717303181064012,
+   "annulus_volume_m3": 12.376013794032469,
+   "cement_volume_m3": 17.0,
+   "diagnostics": {
+    "nonlinear_steps": 0,
+    "fallback_steps": 0,
+    "inverse_calls_total": 0,
+    "cold_step_s": null,
+    "warm_step_median_s": null,
+    "warm_step_max_s": null,
+    "max_n_static": null,
+    "all_undefined_steps": 0
+   },
+   "warnings": {
+    "fallback_count": 0,
+    "hb_wall_ignored_count": 0,
+    "tau_y_skip_flush_count": 0,
+    "floor_warning_count": 0,
+    "floor_warning_cells": [],
+    "others": []
+   },
+   "digests": {
+    "cement": "d31264eae4b696720675f0a9772e8a23fff54630053ce77a5c714e0e4e58a791",
+    "spacer": "6494e092a2a2ef827c9ea008bab15f4d472601ab68471c5f24e4160383b5db62",
+    "wall": "f8c784aa6b57396e7c5e094c34d079d8252473e46e2f60593a921dbebf941fcc",
+    "lead": "f377e3dcc91c16652a200b0bea2d27a1d4492c810c5270c9a2cdfecdc00443e4",
+    "tail": "1a6a0473f5bc79e71eb721e3ef713f22abad8a6cbff94667ec776307ab61d56b"
+   },
+   "output_dir": "D:\\users\\desktop\\research\\控压固井项目\\cement model\\results\\HB闭包A-B_2026-09-17\\hu102__H0p",
+   "finished_at": "2026-09-17 19:23:30"
+  },
+  "hu102__H2a_LS": {
+   "run_id": "hu102__H2a_LS",
+   "well": "hu102",
+   "labels": [
+    "H2a_LS"
+   ],
+   "caliber": "bingham_ls",
+   "annotation": "H0p+水泥 τy 注入（Bingham-LS 截距口径，屈服门通道）",
+   "solver_kwargs": {
+    "enable_stream_yield_gate": true,
+    "hb_fix_cement_tau_y": true,
+    "cement_tau_y_by_role": {
+     "LEAD": 9.255394095535394,
+     "TAIL": 9.255394095535394
+    }
+   },
+   "status": "DONE",
+   "total_t_s": 11737.143,
+   "casing_1d_wall_s": 0.0,
+   "wall_time_s": 505.47,
+   "n_steps": 13820,
+   "dt_min_s": 0.0939652808883693,
+   "dt_median_s": 0.7288947266533796,
+   "dt_max_s": 1.3570244125814952,
+   "eta_E": 0.9853183863359695,
+   "eta_N": 0.8863274868884361,
+   "cement_occ": 0.9853183863359695,
+   "mean_wall": 0.0,
+   "channeling_index": 0.2530120481924936,
+   "mixing_index": 0.0361186255799856,
+   "buoyancy_number": 1.955608872292268,
+   "inventory_ratio": 0.7173125847533983,
+   "annulus_volume_m3": 12.376013794032469,
+   "cement_volume_m3": 17.0,
+   "diagnostics": {
+    "nonlinear_steps": 0,
+    "fallback_steps": 0,
+    "inverse_calls_total": 0,
+    "cold_step_s": null,
+    "warm_step_median_s": null,
+    "warm_step_max_s": null,
+    "max_n_static": null,
+    "all_undefined_steps": 0
+   },
+   "warnings": {
+    "fallback_count": 0,
+    "hb_wall_ignored_count": 0,
+    "tau_y_skip_flush_count": 0,
+    "floor_warning_count": 0,
+    "floor_warning_cells": [],
+    "others": []
+   },
+   "digests": {
+    "cement": "5a67da16d4cd074e52d66b038fe0e3fb905b04acc4d9c906fe1c010a7c5920ce",
+    "spacer": "2769e151f9a596ca8d7e359171fd7a5f22ff17457c2155c01236ed7bc9990510",
+    "wall": "f8c784aa6b57396e7c5e094c34d079d8252473e46e2f60593a921dbebf941fcc",
+    "lead": "e105acfb349d9288c240f338a48580fcc59eb7b741d78990be6358f9520193eb",
+    "tail": "f14761575b2871e658ea8760d78672994b7e3c060af69821064332d0013b2c0b"
+   },
+   "output_dir": "D:\\users\\desktop\\research\\控压固井项目\\cement model\\results\\HB闭包A-B_2026-09-17\\hu102__H2a_LS",
+   "finished_at": "2026-09-17 19:31:55"
+  },
+  "hu102__H2b_HB": {
+   "run_id": "hu102__H2b_HB",
+   "well": "hu102",
+   "labels": [
+    "H2b_HB"
+   ],
+   "caliber": "hb_fitted_new",
+   "annotation": "H0p+水泥 τy 注入（HB 拟合口径，屈服门通道）",
+   "solver_kwargs": {
+    "enable_stream_yield_gate": true,
+    "hb_fix_cement_tau_y": true,
+    "cement_tau_y_by_role": {
+     "LEAD": 5.474268506930611e-13,
+     "TAIL": 5.474268506930611e-13
+    }
+   },
+   "status": "DONE",
+   "total_t_s": 11737.143,
+   "casing_1d_wall_s": 0.0,
+   "wall_time_s": 513.79,
+   "n_steps": 13819,
+   "dt_min_s": 0.38837046083790483,
+   "dt_median_s": 0.7289088638199246,
+   "dt_max_s": 1.3570244125814952,
+   "eta_E": 0.9853054691946166,
+   "eta_N": 0.8862302697218591,
+   "cement_occ": 0.9853054691946166,
+   "mean_wall": 0.0,
+   "channeling_index": 0.2530120481924936,
+   "mixing_index": 0.03613601127952381,
+   "buoyancy_number": 1.955608872292268,
+   "inventory_ratio": 0.7173031810640123,
+   "annulus_volume_m3": 12.376013794032469,
+   "cement_volume_m3": 17.0,
+   "diagnostics": {
+    "nonlinear_steps": 0,
+    "fallback_steps": 0,
+    "inverse_calls_total": 0,
+    "cold_step_s": null,
+    "warm_step_median_s": null,
+    "warm_step_max_s": null,
+    "max_n_static": null,
+    "all_undefined_steps": 0
+   },
+   "warnings": {
+    "fallback_count": 0,
+    "hb_wall_ignored_count": 0,
+    "tau_y_skip_flush_count": 0,
+    "floor_warning_count": 0,
+    "floor_warning_cells": [],
+    "others": []
+   },
+   "digests": {
+    "cement": "975ad3f765d3ec4e435eb3e8e2e1f58164eaf174d4b162a49ba05ac74eb3755c",
+    "spacer": "c47c7e543d57b595c7094740cc39121639c5fc20ecd5cfb84afaa502b01962f5",
+    "wall": "f8c784aa6b57396e7c5e094c34d079d8252473e46e2f60593a921dbebf941fcc",
+    "lead": "4a5f036308483421e6edb009163db7940d6bc1bb0be0732cc34aa4fb53b1eb4b",
+    "tail": "2ab331f31d5832e3b09f08a638d02dc6034125f5232f5880941a946e1a3ad2a4"
+   },
+   "output_dir": "D:\\users\\desktop\\research\\控压固井项目\\cement model\\results\\HB闭包A-B_2026-09-17\\hu102__H2b_HB",
+   "finished_at": "2026-09-17 19:40:29"
+  },
+  "hu102__H0_repeat": {
+   "run_id": "hu102__H0_repeat",
+   "well": "hu102",
+   "labels": [
+    "H0_repeat"
+   ],
+   "caliber": "",
+   "annotation": "L1 确定性检查：H0 同配置第二次运行（逐位对比）",
+   "solver_kwargs": {},
+   "status": "DONE",
+   "total_t_s": 11737.143,
+   "casing_1d_wall_s": 0.0,
+   "wall_time_s": 488.01,
+   "n_steps": 13813,
+   "dt_min_s": 0.38583458548055205,
+   "dt_median_s": 0.7289400856643624,
+   "dt_max_s": 1.3570244125814952,
+   "eta_E": 0.9852649631268567,
+   "eta_N": 0.8859138183693933,
+   "cement_occ": 0.9852649631268567,
+   "mean_wall": 0.0,
+   "channeling_index": 0.2570281124495173,
+   "mixing_index": 0.036176882003155185,
+   "buoyancy_number": 1.955608872292268,
+   "inventory_ratio": 0.7172736926138159,
+   "annulus_volume_m3": 12.376013794032469,
+   "cement_volume_m3": 17.0,
+   "diagnostics": {
+    "nonlinear_steps": 0,
+    "fallback_steps": 0,
+    "inverse_calls_total": 0,
+    "cold_step_s": null,
+    "warm_step_median_s": null,
+    "warm_step_max_s": null,
+    "max_n_static": null,
+    "all_undefined_steps": 0
+   },
+   "warnings": {
+    "fallback_count": 0,
+    "hb_wall_ignored_count": 0,
+    "tau_y_skip_flush_count": 0,
+    "floor_warning_count": 0,
+    "floor_warning_cells": [],
+    "others": []
+   },
+   "digests": {
+    "cement": "2ddd1b507a609d8e43294cf7f61d668fdba1d0af2ba6b4ba9ccead441bb48a28",
+    "spacer": "42062fb0a60e1cbca4ea5abfc377858e811c2b3cc53a808eb8aa578f67e5eaa1",
+    "wall": "f8c784aa6b57396e7c5e094c34d079d8252473e46e2f60593a921dbebf941fcc",
+    "lead": "7008192bd9cc752734d409bb99556fa22fa7bacaa9bd9110f6165f792daf16a3",
+    "tail": "63fb7412b272061906e501a49a567da00f198db716fb4c56c2c20f54da04137a"
+   },
+   "output_dir": "D:\\users\\desktop\\research\\控压固井项目\\cement model\\results\\HB闭包A-B_2026-09-17\\hu102__H0_repeat",
+   "finished_at": "2026-09-17 19:48:37"
+  },
+  "ht1_003__H0": {
+   "run_id": "ht1_003__H0",
+   "well": "ht1_003",
+   "labels": [
+    "H0"
+   ],
+   "caliber": "",
+   "annotation": "全默认（L1 锚，B-2 off，与生产 runner 同配置）",
+   "solver_kwargs": {},
+   "status": "DONE",
+   "total_t_s": 10255.165,
+   "casing_1d_wall_s": 0.0,
+   "wall_time_s": 112.73,
+   "n_steps": 2896,
+   "dt_min_s": 1.5026742013706098,
+   "dt_median_s": 4.0,
+   "dt_max_s": 4.0,
+   "eta_E": 0.9986344028695533,
+   "eta_N": 0.9932013860278429,
+   "cement_occ": 0.9986344028695533,
+   "mean_wall": 0.0,
+   "channeling_index": 0.0,
+   "mixing_index": 0.005159096129301264,
+   "buoyancy_number": 2.2497193516764984,
+   "inventory_ratio": 0.8598678768735952,
+   "annulus_volume_m3": 57.68992895196336,
+   "cement_volume_m3": 67.0,
+   "diagnostics": {
+    "nonlinear_steps": 0,
+    "fallback_steps": 0,
+    "inverse_calls_total": 0,
+    "cold_step_s": null,
+    "warm_step_median_s": null,
+    "warm_step_max_s": null,
+    "max_n_static": null,
+    "all_undefined_steps": 0
+   },
+   "warnings": {
+    "fallback_count": 0,
+    "hb_wall_ignored_count": 0,
+    "tau_y_skip_flush_count": 0,
+    "floor_warning_count": 0,
+    "floor_warning_cells": [],
+    "others": []
+   },
+   "digests": {
+    "cement": "a02197f2b6b5a705facddb1e833419d4470ee5ef9c045bb6b667f520c20f375a",
+    "spacer": "009bf468e4ba5e34629e3beae667d6a00948ccd3727e27c7f36fd6a2438be5f1",
+    "wall": "f8c784aa6b57396e7c5e094c34d079d8252473e46e2f60593a921dbebf941fcc",
+    "lead": "bc25c180685cdceebc133ea4dd80f03d8e3fd60431b04087aeb37054ecec43c4",
+    "tail": "fbefa7cefecd457f5f3bc90d83cb271d276d3c022161b5b801b5414fecddeb84"
+   },
+   "output_dir": "D:\\users\\desktop\\research\\控压固井项目\\cement model\\results\\HB闭包A-B_2026-09-17\\ht1_003__H0",
+   "finished_at": "2026-09-17 19:50:30"
+  },
+  "ht1_003__H0p": {
+   "run_id": "ht1_003__H0p",
+   "well": "ht1_003",
+   "labels": [
+    "H0p"
+   ],
+   "caliber": "",
+   "annotation": "B-2 on 基线",
+   "solver_kwargs": {
+    "enable_stream_yield_gate": true
+   },
+   "status": "DONE",
+   "total_t_s": 10255.165,
+   "casing_1d_wall_s": 0.0,
+   "wall_time_s": 118.19,
+   "n_steps": 2896,
+   "dt_min_s": 1.5026742013706098,
+   "dt_median_s": 4.0,
+   "dt_max_s": 4.0,
+   "eta_E": 0.9986344028695533,
+   "eta_N": 0.9932013860278429,
+   "cement_occ": 0.9986344028695533,
+   "mean_wall": 0.0,
+   "channeling_index": 0.0,
+   "mixing_index": 0.005159096129301264,
+   "buoyancy_number": 2.2497193516764984,
+   "inventory_ratio": 0.8598678768735952,
+   "annulus_volume_m3": 57.68992895196336,
+   "cement_volume_m3": 67.0,
+   "diagnostics": {
+    "nonlinear_steps": 0,
+    "fallback_steps": 0,
+    "inverse_calls_total": 0,
+    "cold_step_s": null,
+    "warm_step_median_s": null,
+    "warm_step_max_s": null,
+    "max_n_static": null,
+    "all_undefined_steps": 0
+   },
+   "warnings": {
+    "fallback_count": 0,
+    "hb_wall_ignored_count": 0,
+    "tau_y_skip_flush_count": 0,
+    "floor_warning_count": 0,
+    "floor_warning_cells": [],
+    "others": []
+   },
+   "digests": {
+    "cement": "a02197f2b6b5a705facddb1e833419d4470ee5ef9c045bb6b667f520c20f375a",
+    "spacer": "009bf468e4ba5e34629e3beae667d6a00948ccd3727e27c7f36fd6a2438be5f1",
+    "wall": "f8c784aa6b57396e7c5e094c34d079d8252473e46e2f60593a921dbebf941fcc",
+    "lead": "bc25c180685cdceebc133ea4dd80f03d8e3fd60431b04087aeb37054ecec43c4",
+    "tail": "fbefa7cefecd457f5f3bc90d83cb271d276d3c022161b5b801b5414fecddeb84"
+   },
+   "output_dir": "D:\\users\\desktop\\research\\控压固井项目\\cement model\\results\\HB闭包A-B_2026-09-17\\ht1_003__H0p",
+   "finished_at": "2026-09-17 19:52:29"
+  },
+  "ht1_003__H2a_LS": {
+   "run_id": "ht1_003__H2a_LS",
+   "well": "ht1_003",
+   "labels": [
+    "H2a_LS"
+   ],
+   "caliber": "bingham_ls",
+   "annotation": "H0p+水泥 τy 注入（Bingham-LS 截距口径，屈服门通道）",
+   "solver_kwargs": {
+    "enable_stream_yield_gate": true,
+    "hb_fix_cement_tau_y": true,
+    "cement_tau_y_by_role": {
+     "LEAD": 9.497165969599429,
+     "TAIL": 9.338058376213542
+    }
+   },
+   "status": "DONE",
+   "total_t_s": 10255.165,
+   "casing_1d_wall_s": 0.0,
+   "wall_time_s": 116.56,
+   "n_steps": 2896,
+   "dt_min_s": 1.5026742013706098,
+   "dt_median_s": 4.0,
+   "dt_max_s": 4.0,
+   "eta_E": 0.9986344028695533,
+   "eta_N": 0.9932013860278425,
+   "cement_occ": 0.9986344028695533,
+   "mean_wall": 0.0,
+   "channeling_index": 0.0,
+   "mixing_index": 0.0051590961293014395,
+   "buoyancy_number": 2.2497193516764984,
+   "inventory_ratio": 0.8598678768735952,
+   "annulus_volume_m3": 57.68992895196336,
+   "cement_volume_m3": 67.0,
+   "diagnostics": {
+    "nonlinear_steps": 0,
+    "fallback_steps": 0,
+    "inverse_calls_total": 0,
+    "cold_step_s": null,
+    "warm_step_median_s": null,
+    "warm_step_max_s": null,
+    "max_n_static": null,
+    "all_undefined_steps": 0
+   },
+   "warnings": {
+    "fallback_count": 0,
+    "hb_wall_ignored_count": 0,
+    "tau_y_skip_flush_count": 0,
+    "floor_warning_count": 0,
+    "floor_warning_cells": [],
+    "others": []
+   },
+   "digests": {
+    "cement": "f64a350c3db1e36b16e5f302f78a066181fb90255a2727e9868ad053c347c4ff",
+    "spacer": "0e16b066dd877954563f257a3a56241c21d4b73f481fea26bdee30805ef55e81",
+    "wall": "f8c784aa6b57396e7c5e094c34d079d8252473e46e2f60593a921dbebf941fcc",
+    "lead": "741bd4d21ac6e085e0354fb88f93b5daf003e4b77811e64d1143fd200d4a338d",
+    "tail": "14df1f0910248be2f9a7c0ff5dd9f977b256aa92fa5209e3e75707ef0c01aaa1"
+   },
+   "output_dir": "D:\\users\\desktop\\research\\控压固井项目\\cement model\\results\\HB闭包A-B_2026-09-17\\ht1_003__H2a_LS",
+   "finished_at": "2026-09-17 19:54:25"
+  },
+  "ht1_003__H2b_HB": {
+   "run_id": "ht1_003__H2b_HB",
+   "well": "ht1_003",
+   "labels": [
+    "H2b_HB"
+   ],
+   "caliber": "hb_fitted_new",
+   "annotation": "H0p+水泥 τy 注入（HB 拟合口径，屈服门通道）",
+   "solver_kwargs": {
+    "enable_stream_yield_gate": true,
+    "hb_fix_cement_tau_y": true,
+    "cement_tau_y_by_role": {
+     "LEAD": 4.013186086650193,
+     "TAIL": 3.872245990995524
+    }
+   },
+   "status": "DONE",
+   "total_t_s": 10255.165,
+   "casing_1d_wall_s": 0.0,
+   "wall_time_s": 112.05,
+   "n_steps": 2896,
+   "dt_min_s": 1.5026742013706098,
+   "dt_median_s": 4.0,
+   "dt_max_s": 4.0,
+   "eta_E": 0.9986344028695534,
+   "eta_N": 0.9932013860278429,
+   "cement_occ": 0.9986344028695534,
+   "mean_wall": 0.0,
+   "channeling_index": 0.0,
+   "mixing_index": 0.005159096129301163,
+   "buoyancy_number": 2.2497193516764984,
+   "inventory_ratio": 0.8598678768735953,
+   "annulus_volume_m3": 57.68992895196336,
+   "cement_volume_m3": 67.0,
+   "diagnostics": {
+    "nonlinear_steps": 0,
+    "fallback_steps": 0,
+    "inverse_calls_total": 0,
+    "cold_step_s": null,
+    "warm_step_median_s": null,
+    "warm_step_max_s": null,
+    "max_n_static": null,
+    "all_undefined_steps": 0
+   },
+   "warnings": {
+    "fallback_count": 0,
+    "hb_wall_ignored_count": 0,
+    "tau_y_skip_flush_count": 0,
+    "floor_warning_count": 0,
+    "floor_warning_cells": [],
+    "others": []
+   },
+   "digests": {
+    "cement": "1e3e8a018156510b7008e6c480175dbe58ed2be3e7de172d46b3ab075de8ac83",
+    "spacer": "c28bc6a4e68a690e0e3b0bec8fc360c100c06557aedaf370205175d9a0c34d71",
+    "wall": "f8c784aa6b57396e7c5e094c34d079d8252473e46e2f60593a921dbebf941fcc",
+    "lead": "039b95b2a403cb94ebc8babc5efcca7390bbcb20431cfa65f61495c9454ed944",
+    "tail": "77c9ba66ae9c2bd9250ce9cac3da5a2dd14f028d1ed8743a4260a3759337a74b"
+   },
+   "output_dir": "D:\\users\\desktop\\research\\控压固井项目\\cement model\\results\\HB闭包A-B_2026-09-17\\ht1_003__H2b_HB",
+   "finished_at": "2026-09-17 19:56:17"
+  },
+  "ht1_003__H0_repeat": {
+   "run_id": "ht1_003__H0_repeat",
+   "well": "ht1_003",
+   "labels": [
+    "H0_repeat"
+   ],
+   "caliber": "",
+   "annotation": "L1 确定性检查：H0 同配置第二次运行（逐位对比）",
+   "solver_kwargs": {},
+   "status": "DONE",
+   "total_t_s": 10255.165,
+   "casing_1d_wall_s": 0.0,
+   "wall_time_s": 133.43,
+   "n_steps": 2896,
+   "dt_min_s": 1.5026742013706098,
+   "dt_median_s": 4.0,
+   "dt_max_s": 4.0,
+   "eta_E": 0.9986344028695533,
+   "eta_N": 0.9932013860278429,
+   "cement_occ": 0.9986344028695533,
+   "mean_wall": 0.0,
+   "channeling_index": 0.0,
+   "mixing_index": 0.005159096129301264,
+   "buoyancy_number": 2.2497193516764984,
+   "inventory_ratio": 0.8598678768735952,
+   "annulus_volume_m3": 57.68992895196336,
+   "cement_volume_m3": 67.0,
+   "diagnostics": {
+    "nonlinear_steps": 0,
+    "fallback_steps": 0,
+    "inverse_calls_total": 0,
+    "cold_step_s": null,
+    "warm_step_median_s": null,
+    "warm_step_max_s": null,
+    "max_n_static": null,
+    "all_undefined_steps": 0
+   },
+   "warnings": {
+    "fallback_count": 0,
+    "hb_wall_ignored_count": 0,
+    "tau_y_skip_flush_count": 0,
+    "floor_warning_count": 0,
+    "floor_warning_cells": [],
+    "others": []
+   },
+   "digests": {
+    "cement": "a02197f2b6b5a705facddb1e833419d4470ee5ef9c045bb6b667f520c20f375a",
+    "spacer": "009bf468e4ba5e34629e3beae667d6a00948ccd3727e27c7f36fd6a2438be5f1",
+    "wall": "f8c784aa6b57396e7c5e094c34d079d8252473e46e2f60593a921dbebf941fcc",
+    "lead": "bc25c180685cdceebc133ea4dd80f03d8e3fd60431b04087aeb37054ecec43c4",
+    "tail": "fbefa7cefecd457f5f3bc90d83cb271d276d3c022161b5b801b5414fecddeb84"
+   },
+   "output_dir": "D:\\users\\desktop\\research\\控压固井项目\\cement model\\results\\HB闭包A-B_2026-09-17\\ht1_003__H0_repeat",
+   "finished_at": "2026-09-17 19:58:31"
+  },
+  "ht1_004__H0": {
+   "run_id": "ht1_004__H0",
+   "well": "ht1_004",
+   "labels": [
+    "H0"
+   ],
+   "caliber": "",
+   "annotation": "全默认（L1 锚，B-2 off，与生产 runner 同配置）",
+   "solver_kwargs": {},
+   "status": "DONE",
+   "total_t_s": 11409.61,
+   "casing_1d_wall_s": 0.0,
+   "wall_time_s": 137.8,
+   "n_steps": 3455,
+   "dt_min_s": 1.112968509941311,
+   "dt_median_s": 4.0,
+   "dt_max_s": 4.0,
+   "eta_E": 0.9987552559027053,
+   "eta_N": 0.9941463200340117,
+   "cement_occ": 0.9987552559027053,
+   "mean_wall": 0.0,
+   "channeling_index": 0.0,
+   "mixing_index": 0.0048073640111485905,
+   "buoyancy_number": 2.751887679171109,
+   "inventory_ratio": 0.7859187892621499,
+   "annulus_volume_m3": 59.80426899474763,
+   "cement_volume_m3": 76.0,
+   "diagnostics": {
+    "nonlinear_steps": 0,
+    "fallback_steps": 0,
+    "inverse_calls_total": 0,
+    "cold_step_s": null,
+    "warm_step_median_s": null,
+    "warm_step_max_s": null,
+    "max_n_static": null,
+    "all_undefined_steps": 0
+   },
+   "warnings": {
+    "fallback_count": 0,
+    "hb_wall_ignored_count": 0,
+    "tau_y_skip_flush_count": 0,
+    "floor_warning_count": 0,
+    "floor_warning_cells": [],
+    "others": []
+   },
+   "digests": {
+    "cement": "5ba28237785a67c666c8064cc36b883316665ce9673986229850b3bb72728198",
+    "spacer": "b0a7219ff9730296ddfd9607be521a134340314c21afe990b7fca22157c58855",
+    "wall": "f8c784aa6b57396e7c5e094c34d079d8252473e46e2f60593a921dbebf941fcc",
+    "lead": "c90bc8719fa810370e77dfb4d57d87ee4aa5538298bf53f2a379bf52c8e10508",
+    "tail": "9683656a1ce165b970c497b2fc0106db6b083a1097de3fd893d77193ea388619"
+   },
+   "output_dir": "D:\\users\\desktop\\research\\控压固井项目\\cement model\\results\\HB闭包A-B_2026-09-17\\ht1_004__H0",
+   "finished_at": "2026-09-17 20:00:49"
+  },
+  "ht1_004__H0p": {
+   "run_id": "ht1_004__H0p",
+   "well": "ht1_004",
+   "labels": [
+    "H0p"
+   ],
+   "caliber": "",
+   "annotation": "B-2 on 基线",
+   "solver_kwargs": {
+    "enable_stream_yield_gate": true
+   },
+   "status": "DONE",
+   "total_t_s": 11409.61,
+   "casing_1d_wall_s": 0.0,
+   "wall_time_s": 150.6,
+   "n_steps": 3450,
+   "dt_min_s": 1.1129685096866524,
+   "dt_median_s": 4.0,
+   "dt_max_s": 4.0,
+   "eta_E": 0.9987507221698722,
+   "eta_N": 0.994123285045181,
+   "cement_occ": 0.9987507221698722,
+   "mean_wall": 0.0,
+   "channeling_index": 0.0,
+   "mixing_index": 0.004824699625391319,
+   "buoyancy_number": 2.751887679171109,
+   "inventory_ratio": 0.7859152216755986,
+   "annulus_volume_m3": 59.80426899474763,
+   "cement_volume_m3": 76.0,
+   "diagnostics": {
+    "nonlinear_steps": 0,
+    "fallback_steps": 0,
+    "inverse_calls_total": 0,
+    "cold_step_s": null,
+    "warm_step_median_s": null,
+    "warm_step_max_s": null,
+    "max_n_static": null,
+    "all_undefined_steps": 0
+   },
+   "warnings": {
+    "fallback_count": 0,
+    "hb_wall_ignored_count": 0,
+    "tau_y_skip_flush_count": 0,
+    "floor_warning_count": 0,
+    "floor_warning_cells": [],
+    "others": []
+   },
+   "digests": {
+    "cement": "fb34a0d7ecb77d400c33af7b06dd2f0e484c3aef7fda9ff07a9f6b590cb3174c",
+    "spacer": "d937fb664ed0317b634112ed71039fc7ea69772ce48d9a95e9c93fce4b212924",
+    "wall": "f8c784aa6b57396e7c5e094c34d079d8252473e46e2f60593a921dbebf941fcc",
+    "lead": "987d9061ccede1b7d856d5c3cdbd43d5a48dd1333fb83b4b9c0f8da399ddfe99",
+    "tail": "8cfac2790cd620713b19751c5f1b2e30081879a9d5f35a73f1f7d424f7c0abb5"
+   },
+   "output_dir": "D:\\users\\desktop\\research\\控压固井项目\\cement model\\results\\HB闭包A-B_2026-09-17\\ht1_004__H0p",
+   "finished_at": "2026-09-17 20:03:19"
+  },
+  "ht1_004__H2_spec": {
+   "run_id": "ht1_004__H2_spec",
+   "well": "ht1_004",
+   "labels": [
+    "H2a_LS",
+    "H2b_HB"
+   ],
+   "caliber": "spec 优先",
+   "annotation": "spec 优先，a/b 重合（R-T6-6）：水泥 spec 自带 YP，常数映射未消费",
+   "solver_kwargs": {
+    "enable_stream_yield_gate": true,
+    "hb_fix_cement_tau_y": true,
+    "cement_tau_y_by_role": {
+     "LEAD": 5.474268506930611e-13,
+     "TAIL": 4.047960313648443e-13
+    }
+   },
+   "status": "DONE",
+   "total_t_s": 11409.61,
+   "casing_1d_wall_s": 0.0,
+   "wall_time_s": 149.48,
+   "n_steps": 3450,
+   "dt_min_s": 1.1129685096866524,
+   "dt_median_s": 4.0,
+   "dt_max_s": 4.0,
+   "eta_E": 0.9987507221698722,
+   "eta_N": 0.994123285045181,
+   "cement_occ": 0.9987507221698722,
+   "mean_wall": 0.0,
+   "channeling_index": 0.0,
+   "mixing_index": 0.004824699625391319,
+   "buoyancy_number": 2.751887679171109,
+   "inventory_ratio": 0.7859152216755986,
+   "annulus_volume_m3": 59.80426899474763,
+   "cement_volume_m3": 76.0,
+   "diagnostics": {
+    "nonlinear_steps": 0,
+    "fallback_steps": 0,
+    "inverse_calls_total": 0,
+    "cold_step_s": null,
+    "warm_step_median_s": null,
+    "warm_step_max_s": null,
+    "max_n_static": null,
+    "all_undefined_steps": 0
+   },
+   "warnings": {
+    "fallback_count": 0,
+    "hb_wall_ignored_count": 0,
+    "tau_y_skip_flush_count": 1,
+    "floor_warning_count": 0,
+    "floor_warning_cells": [],
+    "others": [],
+    "tau_y_skip_messages": [
+     "hb_fix_cement_tau_y=True：井 '呼1-004井（HT1-004）' 的水泥 τy 注入存在显式跳过项（LEAD: 水泥相自带 yield_stress_pa=13 Pa，常数映射未消费（以 spec 为准）；TAIL: 水泥相自带 yield_stress_pa=14 Pa，常数映射未消费（以 spec 为准））。spec 类跳过相以水泥相自带 yield_stress_pa 为准（贡献非 0、与 HEAD 同值），与常数映射覆盖无关。"
+    ]
+   },
+   "digests": {
+    "cement": "fb34a0d7ecb77d400c33af7b06dd2f0e484c3aef7fda9ff07a9f6b590cb3174c",
+    "spacer": "d937fb664ed0317b634112ed71039fc7ea69772ce48d9a95e9c93fce4b212924",
+    "wall": "f8c784aa6b57396e7c5e094c34d079d8252473e46e2f60593a921dbebf941fcc",
+    "lead": "987d9061ccede1b7d856d5c3cdbd43d5a48dd1333fb83b4b9c0f8da399ddfe99",
+    "tail": "8cfac2790cd620713b19751c5f1b2e30081879a9d5f35a73f1f7d424f7c0abb5"
+   },
+   "output_dir": "D:\\users\\desktop\\research\\控压固井项目\\cement model\\results\\HB闭包A-B_2026-09-17\\ht1_004__H2_spec",
+   "finished_at": "2026-09-17 20:05:49"
+  },
+  "ht1_004__H0_repeat": {
+   "run_id": "ht1_004__H0_repeat",
+   "well": "ht1_004",
+   "labels": [
+    "H0_repeat"
+   ],
+   "caliber": "",
+   "annotation": "L1 确定性检查：H0 同配置第二次运行（逐位对比）",
+   "solver_kwargs": {},
+   "status": "DONE",
+   "total_t_s": 11409.61,
+   "casing_1d_wall_s": 0.0,
+   "wall_time_s": 140.51,
+   "n_steps": 3455,
+   "dt_min_s": 1.112968509941311,
+   "dt_median_s": 4.0,
+   "dt_max_s": 4.0,
+   "eta_E": 0.9987552559027053,
+   "eta_N": 0.9941463200340117,
+   "cement_occ": 0.9987552559027053,
+   "mean_wall": 0.0,
+   "channeling_index": 0.0,
+   "mixing_index": 0.0048073640111485905,
+   "buoyancy_number": 2.751887679171109,
+   "inventory_ratio": 0.7859187892621499,
+   "annulus_volume_m3": 59.80426899474763,
+   "cement_volume_m3": 76.0,
+   "diagnostics": {
+    "nonlinear_steps": 0,
+    "fallback_steps": 0,
+    "inverse_calls_total": 0,
+    "cold_step_s": null,
+    "warm_step_median_s": null,
+    "warm_step_max_s": null,
+    "max_n_static": null,
+    "all_undefined_steps": 0
+   },
+   "warnings": {
+    "fallback_count": 0,
+    "hb_wall_ignored_count": 0,
+    "tau_y_skip_flush_count": 0,
+    "floor_warning_count": 0,
+    "floor_warning_cells": [],
+    "others": []
+   },
+   "digests": {
+    "cement": "5ba28237785a67c666c8064cc36b883316665ce9673986229850b3bb72728198",
+    "spacer": "b0a7219ff9730296ddfd9607be521a134340314c21afe990b7fca22157c58855",
+    "wall": "f8c784aa6b57396e7c5e094c34d079d8252473e46e2f60593a921dbebf941fcc",
+    "lead": "c90bc8719fa810370e77dfb4d57d87ee4aa5538298bf53f2a379bf52c8e10508",
+    "tail": "9683656a1ce165b970c497b2fc0106db6b083a1097de3fd893d77193ea388619"
+   },
+   "output_dir": "D:\\users\\desktop\\research\\控压固井项目\\cement model\\results\\HB闭包A-B_2026-09-17\\ht1_004__H0_repeat",
+   "finished_at": "2026-09-17 20:08:10"
+  }
+ }
+}

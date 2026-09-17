@@ -1,0 +1,122 @@
+{
+ "hu101": {
+  "status": "DONE",
+  "bitwise_equal": true,
+  "digests_first": {
+   "cement": "0b27a0cf0ae88bb31fd627bcd6d0fd852554d132f69521f4e25e988da606c2bc",
+   "spacer": "7d0e8ce6c31ba8a155ba57e612ccd599a4c07d46858d60382388106a5430fff1",
+   "wall": "ac9679283805af2fa2f23dffda8fcbb0cc4cf6e3d96b7fdddf2d0cc7de969a1d",
+   "lead": "b7e9e5bc32c7bab1f76cff89f9c2f44364ad8f537791347f05be89380fdcc5e5",
+   "tail": "c352a583f091a5826901a52c54ba217ee2a3a3f788cb225d186cf98a0f7fd10c"
+  },
+  "digests_repeat": {
+   "cement": "0b27a0cf0ae88bb31fd627bcd6d0fd852554d132f69521f4e25e988da606c2bc",
+   "spacer": "7d0e8ce6c31ba8a155ba57e612ccd599a4c07d46858d60382388106a5430fff1",
+   "wall": "ac9679283805af2fa2f23dffda8fcbb0cc4cf6e3d96b7fdddf2d0cc7de969a1d",
+   "lead": "b7e9e5bc32c7bab1f76cff89f9c2f44364ad8f537791347f05be89380fdcc5e5",
+   "tail": "c352a583f091a5826901a52c54ba217ee2a3a3f788cb225d186cf98a0f7fd10c"
+  },
+  "eta_E_first": 0.9735178050876083,
+  "eta_E_repeat": 0.9735178050876083,
+  "eta_N_first": 0.8305774631029166,
+  "eta_N_repeat": 0.8305774631029166,
+  "authoritative_reference": {
+   "path": "D:\\users\\desktop\\research\\控压固井项目\\cement model\\results\\呼101尾管_1D2D耦合模型\\呼101尾管_1D2D耦合模型_结果摘要.json",
+   "eta_E": 0.6805413605115335,
+   "eta_N": 0.4111438950369535,
+   "drift_eta_E_pp": 29.298,
+   "drift_eta_N_pp": 41.943,
+   "note": "信息性对照：权威摘要的产生时点/口径可能与本次 H0 不同，只报漂移不追查"
+  }
+ },
+ "hu102": {
+  "status": "DONE",
+  "bitwise_equal": true,
+  "digests_first": {
+   "cement": "2ddd1b507a609d8e43294cf7f61d668fdba1d0af2ba6b4ba9ccead441bb48a28",
+   "spacer": "42062fb0a60e1cbca4ea5abfc377858e811c2b3cc53a808eb8aa578f67e5eaa1",
+   "wall": "f8c784aa6b57396e7c5e094c34d079d8252473e46e2f60593a921dbebf941fcc",
+   "lead": "7008192bd9cc752734d409bb99556fa22fa7bacaa9bd9110f6165f792daf16a3",
+   "tail": "63fb7412b272061906e501a49a567da00f198db716fb4c56c2c20f54da04137a"
+  },
+  "digests_repeat": {
+   "cement": "2ddd1b507a609d8e43294cf7f61d668fdba1d0af2ba6b4ba9ccead441bb48a28",
+   "spacer": "42062fb0a60e1cbca4ea5abfc377858e811c2b3cc53a808eb8aa578f67e5eaa1",
+   "wall": "f8c784aa6b57396e7c5e094c34d079d8252473e46e2f60593a921dbebf941fcc",
+   "lead": "7008192bd9cc752734d409bb99556fa22fa7bacaa9bd9110f6165f792daf16a3",
+   "tail": "63fb7412b272061906e501a49a567da00f198db716fb4c56c2c20f54da04137a"
+  },
+  "eta_E_first": 0.9852649631268567,
+  "eta_E_repeat": 0.9852649631268567,
+  "eta_N_first": 0.8859138183693933,
+  "eta_N_repeat": 0.8859138183693933,
+  "authoritative_reference": {
+   "path": "D:\\users\\desktop\\research\\控压固井项目\\cement model\\results\\呼102尾管_1D2D耦合模型\\呼102尾管_1D2D耦合模型_结果摘要.json",
+   "eta_E": 0.9718282403307571,
+   "eta_N": 0.8060699420265119,
+   "drift_eta_E_pp": 1.344,
+   "drift_eta_N_pp": 7.984,
+   "note": "信息性对照：权威摘要的产生时点/口径可能与本次 H0 不同，只报漂移不追查"
+  }
+ },
+ "ht1_003": {
+  "status": "DONE",
+  "bitwise_equal": true,
+  "digests_first": {
+   "cement": "a02197f2b6b5a705facddb1e833419d4470ee5ef9c045bb6b667f520c20f375a",
+   "spacer": "009bf468e4ba5e34629e3beae667d6a00948ccd3727e27c7f36fd6a2438be5f1",
+   "wall": "f8c784aa6b57396e7c5e094c34d079d8252473e46e2f60593a921dbebf941fcc",
+   "lead": "bc25c180685cdceebc133ea4dd80f03d8e3fd60431b04087aeb37054ecec43c4",
+   "tail": "fbefa7cefecd457f5f3bc90d83cb271d276d3c022161b5b801b5414fecddeb84"
+  },
+  "digests_repeat": {
+   "cement": "a02197f2b6b5a705facddb1e833419d4470ee5ef9c045bb6b667f520c20f375a",
+   "spacer": "009bf468e4ba5e34629e3beae667d6a00948ccd3727e27c7f36fd6a2438be5f1",
+   "wall": "f8c784aa6b57396e7c5e094c34d079d8252473e46e2f60593a921dbebf941fcc",
+   "lead": "bc25c180685cdceebc133ea4dd80f03d8e3fd60431b04087aeb37054ecec43c4",
+   "tail": "fbefa7cefecd457f5f3bc90d83cb271d276d3c022161b5b801b5414fecddeb84"
+  },
+  "eta_E_first": 0.9986344028695533,
+  "eta_E_repeat": 0.9986344028695533,
+  "eta_N_first": 0.9932013860278429,
+  "eta_N_repeat": 0.9932013860278429,
+  "authoritative_reference": {
+   "path": "D:\\users\\desktop\\research\\控压固井项目\\cement model\\results\\呼1-003_1D2D耦合模型\\呼1-003_1D2D耦合模型_结果摘要.json",
+   "eta_E": 0.9972649310918232,
+   "eta_N": 0.9875522568449782,
+   "drift_eta_E_pp": 0.137,
+   "drift_eta_N_pp": 0.565,
+   "note": "信息性对照：权威摘要的产生时点/口径可能与本次 H0 不同，只报漂移不追查"
+  }
+ },
+ "ht1_004": {
+  "status": "DONE",
+  "bitwise_equal": true,
+  "digests_first": {
+   "cement": "5ba28237785a67c666c8064cc36b883316665ce9673986229850b3bb72728198",
+   "spacer": "b0a7219ff9730296ddfd9607be521a134340314c21afe990b7fca22157c58855",
+   "wall": "f8c784aa6b57396e7c5e094c34d079d8252473e46e2f60593a921dbebf941fcc",
+   "lead": "c90bc8719fa810370e77dfb4d57d87ee4aa5538298bf53f2a379bf52c8e10508",
+   "tail": "9683656a1ce165b970c497b2fc0106db6b083a1097de3fd893d77193ea388619"
+  },
+  "digests_repeat": {
+   "cement": "5ba28237785a67c666c8064cc36b883316665ce9673986229850b3bb72728198",
+   "spacer": "b0a7219ff9730296ddfd9607be521a134340314c21afe990b7fca22157c58855",
+   "wall": "f8c784aa6b57396e7c5e094c34d079d8252473e46e2f60593a921dbebf941fcc",
+   "lead": "c90bc8719fa810370e77dfb4d57d87ee4aa5538298bf53f2a379bf52c8e10508",
+   "tail": "9683656a1ce165b970c497b2fc0106db6b083a1097de3fd893d77193ea388619"
+  },
+  "eta_E_first": 0.9987552559027053,
+  "eta_E_repeat": 0.9987552559027053,
+  "eta_N_first": 0.9941463200340117,
+  "eta_N_repeat": 0.9941463200340117,
+  "authoritative_reference": {
+   "path": "D:\\users\\desktop\\research\\控压固井项目\\cement model\\results\\呼1-004_1D2D耦合模型\\呼1-004_1D2D耦合模型_结果摘要.json",
+   "eta_E": 0.9985245349889794,
+   "eta_N": 0.9937730934980922,
+   "drift_eta_E_pp": 0.023,
+   "drift_eta_N_pp": 0.037,
+   "note": "信息性对照：权威摘要的产生时点/口径可能与本次 H0 不同，只报漂移不追查"
+  }
+ }
+}
