@@ -495,9 +495,10 @@ def _stress_vectors(c_bar, G_t: Array, Gb_t: Array):
     ``d₁=(c₂−c₁)c̄``，非共线时 ``d₁`` 不平行于 ``c₁``）。
 
     ⚠️ 符号约定：``G`` 是驱动方向的修改压力梯度（(2.13) 口径）：
-    ``Ī₁>0`` ⇒ 间隙平均流速与 G 同向。故本实现的 λ₀ 取附录 A (A17) 的**相反号**
-    （即 ``λ₀ = −λ₀^{(A17)}``）：附录 A 的 (A1)/(A16) 印刷式与 (2.13) 反号，
-    照抄会使 ``G>0`` 时 ``ũ<0``（与 (2.13) 及 Z&F22 口径矛盾）。闭包量
+    ``Ī₁>0`` ⇒ 间隙平均流速与 G 同向。本文取**镜像符号约定**
+    （``λ₀ = −λ₀^{(A17)}``，配 ``+Σ`` 壁面向回积分）：``G>0`` ⇒ ``ũ>0``，
+    与 (2.13) 及 Z&F22 口径一致，**公开输出与原文一致**（Task 1 评审独立复算
+    (A4) 后判定附录 A 自洽，非印刷反号）。闭包量
     ``Ĩ₁/Ĩ₂/q₀`` 只依赖 ``|τ̃|``，此选择不影响它们。
     """
     c2 = G_t - (1.0 - c_bar) * Gb_t
@@ -895,7 +896,7 @@ def closure_integrals_batch(c_bar, n, kappa, tau_y, G, Gb=(0.0, 0.0), *, H=1.0):
 
     Raises:
         ValueError: 形状不一致/取值越界（``c̄∉[0,1]``、``H≤0``、``n≤0``、``κ≤0``、
-            ``τ_Y<0``）。
+            ``τ_Y<0``、``G``/``Gb`` 非有限（终审 I4））。
     """
     ctx = _batch_inputs(c_bar, n, kappa, tau_y, G, Gb, H)
     I1_t, I2_t, q0 = _closure_integrals_batch(
@@ -1088,6 +1089,8 @@ def _batch_inputs(c_bar, n, kappa, tau_y, G, Gb, H, *, ny=None, r=None, max_iter
     _check_positive(n_arr, "n")
     _check_positive(kap, "kappa")
     _check_nonneg(tau, "tau_y")
+    _check_finite(G_raw, "G")        # 终审 I4：G/Gb 有限性此前无校验
+    _check_finite(Gb_raw, "Gb")
 
     # 方向归约（逐点；共线 ⇒ 旋转到共同方向，非共线 ⇒ 原样）——与 _reduce_directions 逐式同
     Gx, Gy = G_raw[:, 0], G_raw[:, 1]
@@ -1131,6 +1134,21 @@ def _check_nonneg(v, name) -> None:
     arr = np.asarray(v, dtype=float)
     if not np.all(np.isfinite(arr)) or np.any(arr < 0.0):
         raise ValueError(f"{name} 须为非负的有限值")
+
+
+def _check_finite(v, name) -> None:
+    """批量入口的有限性校验（终审 I4）。
+
+    ``G``/``Gb`` 含 NaN/Inf 时，下游 ``np.where`` 会把该格静默归入 ``undefined``
+    掩码（读起来像"物理塞流点"而非输入错误，且沿途抛出 numpy ``RuntimeWarning``）。
+    生产 HB 路径（``HBClosure._evaluate``）在上游已显式拒绝非有限 ``G``/``Gb``，
+    本校验服务于直接调用 ``closure_integrals_batch`` / ``solve_fixed_G_batch`` 的调用方。
+    """
+    arr = np.asarray(v, dtype=float)
+    if not np.all(np.isfinite(arr)):
+        raise ValueError(
+            f"{name} 须为有限值（NaN/Inf 会被静默归入 undefined 掩码，掩盖输入错误）"
+        )
 
 
 # --------------------------------------------------------------------------- #
@@ -1474,7 +1492,9 @@ class MeanVelocityInverseBatch:
         converged: ``(n_points,)`` bool：``|F| ≤ rtol·ū`` 或割线点停滞于机器精度
             （后者的点另在 :attr:`stalled` 里标记）；``undefined`` 处 False。
         stalled: ``(n_points,)`` bool：收敛走"割线点停滞"分支（``|Δg̃| ≤ 4·eps·g̃``，
-            已无可分辨改进）而非残差判据——机器精度级解，非失败。
+            已无可分辨改进）而非残差判据——机器精度级解，非失败。**消费方**：
+            ``stream_function.solve_stream_function_nonlinear`` 第 ② 步后统计并在非零时
+            ``RuntimeWarning``（终审 I2：此前该判别量全仓无消费）。
     """
 
     G: Array

@@ -414,6 +414,11 @@ class AnnulusD2DGASolver:
                 顶替液（水泥）n₂/κ₂ 取 ``power_law_n``/``consistency_k``，τ_Y2 由
                 ``hb_fix_cement_tau_y`` 门控（H1 ⇒ 0，R-T6-1）。互斥：
                 ``enable_power_law_gap_correction`` 被本开关替代（不生效，构造告警）。
+                ⚠️ **耗时量级（2026-09-17 实测）**：HB 口径单井 **1.5–3.3 h**
+                （hu102 环空容积小、流速高 ⇒ 约 9 h/run），是牛顿口径（2–8.5 min/井）
+                的 **45–50×**。瓶颈在闭包求值**不在 CFD**：``solve_g_from_mean_velocity_batch``
+                78% / ``HBClosure._evaluate`` 20% / 线性 Poisson 仅 0.8%。出处
+                ``docs/superpowers/research/2026-09-17-hb-path-timing-and-reduction-options.md``。
             hb_fix_cement_tau_y: A-3b 水泥 τy 注入开关，默认 False（R-T6-1）。
                 True ⇒ 水泥相 τy 注入**两处**（同源同值）：(a) 既有屈服门的混合 τy 场
                 （相体积加权处，水泥相贡献由 0 改为常数）；(b) ``enable_hb_closure=True``
@@ -569,7 +574,7 @@ class AnnulusD2DGASolver:
         if hb_fix_cement_tau_y and not enable_yield_gate and not enable_hb_closure:
             _hb_dead.append(
                 "hb_fix_cement_tau_y（enable_yield_gate=False 且 enable_hb_closure=False"
-                " ⇒ 注入的 τy 场无任何消费点）")
+                " ⇒ 注入的 τy 场无任何动力学消费点）")
         if _hb_dead:
             warnings.warn(
                 f"AnnulusD2DGASolver 的开关 {_hb_dead[0]}"

@@ -242,12 +242,15 @@ class NonlinearSpy:
 
     - 每个非线性外迭代调用 = 一个"步"bucket（含冷/热耗时）；
     - 每次批量反求记录 undefined 数（最后反求轮 = 该步 n_static 口径）；
+    - 每次批量反求同时记录 fp 停滞格数（``stalled``）⇒ 汇总 ``stalled_total`` 落
+      manifest，使"严格 rtol 全场覆盖"（= 0）成为有据事实（终审 I2）；
     - 异常（含回退前的 RuntimeError）原样抛出，只留痕。
     """
 
     def __init__(self) -> None:
         self.steps: list[dict[str, Any]] = []
         self.total_inverse_calls = 0
+        self.total_stalled = 0          # 终审 I2：fp 停滞分支格点累计（0 = 严格 rtol 全覆盖）
         self._current: dict[str, Any] | None = None
         self._orig_nl: Any = None
         self._orig_inv: Any = None
@@ -270,7 +273,8 @@ class NonlinearSpy:
 
     def _wrap_nonlinear(self, *args: Any, **kwargs: Any) -> Any:
         bucket: dict[str, Any] = {"inverse_calls": 0, "undefined_final": None,
-                                  "undefined_max": 0, "cells": None, "ok": False}
+                                  "undefined_max": 0, "stalled_final": None,
+                                  "stalled_max": 0, "cells": None, "ok": False}
         self._current = bucket
         self.steps.append(bucket)
         t0 = time.perf_counter()
@@ -284,6 +288,8 @@ class NonlinearSpy:
     def _wrap_inverse(self, *args: Any, **kwargs: Any) -> Any:
         result = self._orig_inv(*args, **kwargs)
         self.total_inverse_calls += 1
+        stalled = int(np.asarray(result.stalled).sum())     # 终审 I2
+        self.total_stalled += stalled
         bucket = self._current
         if bucket is not None:
             bucket["inverse_calls"] += 1
@@ -291,6 +297,8 @@ class NonlinearSpy:
             bucket["cells"] = int(np.asarray(result.undefined).size)
             bucket["undefined_final"] = undefined
             bucket["undefined_max"] = max(bucket["undefined_max"], undefined)
+            bucket["stalled_final"] = stalled
+            bucket["stalled_max"] = max(bucket["stalled_max"], stalled)
         return result
 
     # ---- 聚合 ------------------------------------------------------------
@@ -299,6 +307,7 @@ class NonlinearSpy:
         ok_steps = [s for s in steps if s["ok"]]
         dts = [s["dt_s"] for s in ok_steps]
         finals = [s["undefined_final"] for s in steps if s["undefined_final"] is not None]
+        stalleds = [s["stalled_final"] for s in steps if s["stalled_final"] is not None]
         return {
             "nonlinear_steps": len(steps),
             "fallback_steps": sum(1 for s in steps if not s["ok"]),
@@ -307,6 +316,8 @@ class NonlinearSpy:
             "warm_step_median_s": (round(float(np.median(dts[1:])), 3) if len(dts) > 1 else None),
             "warm_step_max_s": (round(float(np.max(dts[1:])), 3) if len(dts) > 1 else None),
             "max_n_static": max(finals) if finals else None,
+            "stalled_total": self.total_stalled,          # 终审 I2：0 ⇒ 严格 rtol 全覆盖
+            "max_n_stalled": max(stalleds) if stalleds else None,
             "all_undefined_steps": (
                 sum(1 for s in steps
                     if s["cells"] and s["undefined_final"] is not None

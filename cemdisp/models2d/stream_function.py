@@ -719,12 +719,24 @@ def solve_stream_function_nonlinear(geom: Dict, c_bar, hb_closure, b_field,
         if hysteresis and hyst_mask is not None:
             u_inv = np.where(hyst_mask, 0.0, u_inv)
         # ② 逐格反求 G（批量闭包 + 标量求根；Gb=0 生产口径）。
-        # 严格 rtol 全场统一（R-T6-2 REVISED 第 4 条）：所有格最终都要满足严格档
-        # （真悬崖格经反求工具的夹逼二分回退达标）；rtol 阶梯/降级接纳已退役。
+        # 严格 rtol 全场统一（R-T6-2 REVISED 第 4 条）：所有格**要么**满足严格 rtol，
+        # **要么**落在 fp 停滞分支（``inv.stalled``：``|Δg̃| ≤ 4·eps·g̃``，机器精度级解；
+        # 真悬崖格经反求工具的夹逼二分回退达标）；rtol 阶梯/降级接纳已退役。
+        # 停滞格此前**无任何消费方**（终审 I2）——故此处显式统计，非零即告警一次，
+        # 使"未触发"成为有据事实（Task 7 spy 另把 ``stalled_total`` 落 manifest）。
         inv = solve_g_from_mean_velocity_batch(
             c.reshape(-1), n_hb, kappa_hb, tau_y_hb, u_inv.reshape(-1),
             H=H.reshape(-1), rtol=_INVERSE_RTOL, max_iter=_INVERSE_MAX_ITER,
         )
+        if np.any(inv.stalled):
+            warnings.warn(
+                f"solve_stream_function_nonlinear：本次反求有 "
+                f"{int(np.count_nonzero(inv.stalled))}/{int(np.size(inv.stalled))} 个格点"
+                "落在 fp 停滞分支（|Δg̃| ≤ 4·eps·g̃）而非满足严格 rtol——机器精度级解、"
+                "非失败，但不受 R-T6-2 REVISED 的严格 rtol 保证覆盖。若频繁出现，请检查 "
+                "κ/τ_Y/ū 量级是否自洽（根可能位于 fp 不可分辨邻域）。",
+                RuntimeWarning, stacklevel=2,
+            )
         if hysteresis:
             undef = np.asarray(inv.undefined, dtype=bool).reshape(H.shape)
             hyst_mask = undef if hyst_mask is None else (hyst_mask | undef)
