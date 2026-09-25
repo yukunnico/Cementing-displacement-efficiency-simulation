@@ -1124,3 +1124,34 @@ Run（哨兵验证）：临时把锚 JSON 里 `eta_N` 改 1e-9 ⇒ `test_default
 git add tests/contract/test_default_path_bitwise_anchor.py tests/contract/_default_path_anchor_hu101.json tests/contract/test_anchor_integrity.py
 git commit -m "test(consistency): 锚加固——缺锚即失败/键集守卫/来源指纹（R17-R19）"
 ```
+
+---
+
+### Task 12: 管容常量口径落地（用户裁定 R67/R68）
+
+**Files:**
+- Modify: `cemdisp/data/loaders/ht1_001_loader.py`（常量值 + 注释链）
+- Modify: `cemdisp/data/loaders/hu2_loader.py`（分段链纠正 + 注释链）
+- Modify: `tests/contract/test_shoe_lag_wiring.py`（等值断言随新值更新）
+- Test: `tests/contract/test_shoe_lag_wiring.py`
+
+**Interfaces:** Consumes 证据报告 `docs/superpowers/research/2026-09-25-shoe-lag-volume-caliber-evidence.md`（含一手资料出处与逐字摘录）
+
+- [ ] **Step 1: ht1_001 常量改为 94.439**，并在注释链写清推导：`93.4934（7.1.4 表四段和，止于阻位 7642.674m）+ 0.95（7.1.1 尾浆(下塞)行，阻位→鞋 103.326m）= 94.439`
+- [ ] **Step 2: hu2 三段偏离纠正**（按设计 7.1.4 表口径）：149.2 钻杆改用设计表的 `12.91 L/m`（≈ID128.2）；补 `5292.5→5308.564` 的 16.064 m；四段和算至**阻位 7438.9**。**Step 2 的产出 = 两个数值**：`V_to_stop_collar`（止于阻位）与 `V_to_shoe = V_to_stop_collar + (阻位→鞋段容积)`
+- [ ] **Step 3: 取 `V_to_shoe` 作为 `HU2_SHOE_LAG_VOLUME_M3`**（与 R67 的"严格地面→鞋"一致），注释里**并列写明 `V_to_stop_collar` 的值**并注明"若改为阻位口径，只需把常量换成该值"
+- [ ] **Step 4: 更新 `tests/contract/test_shoe_lag_wiring.py` 的等值断言**为新值（`pytest.approx(rel=1e-9)`），并保留 R62 的 1.05 量级哨兵与交叉判别测试
+- [ ] **Step 5: 更正注释链里的段落号错标**（`6.4.1` → `7.1.4`，并注明 `6.4.1` 实为"套管基础数据"）；**不要**改 `pumping_schedule.csv`/`well_geometry.csv`（另案）
+- [ ] **Step 6: 原始输出**：两口井新旧值对照打印 + 本任务测试绿 + contract 仅 1 条既存红
+- [ ] **Step 7: Commit**（**不**执行 Task 3 的 Step 5；不写 `results/`）
+
+---
+
+### Task 13: 停止时刻逻辑（用户裁定 R69；**实施前须先出方案报用户**）
+
+**背景**：`casing_flow.py:1033`/`:1109` 的到达判据 `target = 步累计体积 + 管容` 超出末步累计即 `return None`，使 `annulus_stop_time_s()` 回退为"泵注结束"。证据显示该边界**零余量**（hu2 边界 79.0、ht1_001 边界 93.7）⇒ 结构性脆弱。用户裁定"修停止时刻逻辑"。
+
+**Files:** 待方案确定（预计 `cemdisp/transport1d/casing_flow.py`、各 runner 的 `annulus_stop_time_s` 调用点）
+
+- [ ] **Step 1: 出方案报用户**（至少三个候选：① 显式工艺停泵时刻 + 尾缘迟到量；② 停泵时刻 = 泵注结束 + 尾缘到鞋的预期滞后（解析外推）；③ 保留判据但在回退时强制告警并写入摘要），每条附：物理依据、对 8 井的波及面、实现量、是否改数值口径
+- [ ] **Step 2: 用户选定后再拆实现步骤**
