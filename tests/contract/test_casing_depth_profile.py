@@ -33,6 +33,7 @@ from cemdisp.transport1d.casing_flow import CasingFlowSolver
 from cemdisp.transport1d import casing_depth_profile
 from cemdisp.transport1d.casing_depth_profile import (
     band_contract_violations,
+    band_width_summary,
     build_casing_depth_profile,
 )
 
@@ -319,6 +320,35 @@ def test_band_contract_passes_on_fine_grid(solved):
         depths_m=_depths(2001), times_s=_times(21), mixing_band=True,
     )
     assert band_contract_violations(profile) == []
+
+
+def test_band_contract_uses_explicit_cell_size(solved):
+    """(C)：放大窗尺度以显式分辨率判定——整井网格报违规，放大窗分辨率通过。"""
+
+    solver, well, fluids, schedule, result = solved
+    profile = build_casing_depth_profile(
+        solver, well, fluids, schedule, result,
+        depths_m=_depths(61), times_s=_times(21), mixing_band=True,
+    )
+    assert band_contract_violations(profile), "61 点整井网格（Δz=1.67 m）应报违规"
+    assert band_contract_violations(profile, cell_size_m=0.1) == [], (
+        "放大窗分辨率 0.1 m 下带宽 ≥ 3 格，应通过"
+    )
+
+
+def test_band_width_summary_reports_visibility(solved):
+    """带宽诊断摘要必须如实给出中位带宽与占域长比例（不美化）。"""
+
+    solver, well, fluids, schedule, result = solved
+    profile = build_casing_depth_profile(
+        solver, well, fluids, schedule, result,
+        depths_m=_depths(1001), times_s=_times(21), mixing_band=True,
+    )
+    summary = band_width_summary(profile)
+    assert int(summary["n_interfaces"]) >= 1
+    assert 0.0 < float(summary["median_band_m"]) < float(summary["domain_m"])
+    assert 0.0 < float(summary["median_domain_frac"]) < 1.0
+    assert float(summary["min_band_m"]) <= float(summary["median_band_m"])
 
 
 def test_band_contract_exempts_plug_face(solved):

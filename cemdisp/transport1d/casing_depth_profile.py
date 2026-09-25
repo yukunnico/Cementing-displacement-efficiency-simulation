@@ -38,9 +38,8 @@ if TYPE_CHECKING:  # pragma: no cover - 仅类型检查
 
 # erf⁻¹(0.99)：|A − 0.5| ≤ 0.49 对应的 |t − τ|/σ，用于把「带宽」定义成可测量
 _BAND_Z_HALF = 1.1630871536766740
-# 混浆带自洽下限契约（2026-09-26 Q17b + Q21A，纯数值口径，不含现场标定）
+# 混浆带自洽下限契约（2026-09-26 裁定 (B)+(C)）：整井尺度只报告，放大窗尺度按 3 格拦截
 _BAND_MIN_CELLS = 3.0
-_BAND_MIN_DOMAIN_FRAC = 1.0e-3
 # 锐界面自动判据：相邻深度格某相份额跳变阈值
 _SHARP_JUMP = 0.98
 _DOMAIN_TOL_M = 1.0e-6
@@ -392,20 +391,32 @@ def _compose_shares(
     return np.transpose(raw, (1, 2, 0))
 
 
-def band_contract_violations(profile: CasingDepthProfile) -> list[str]:
-    """混浆带自洽下限契约（Q17b + Q21A）：带宽 ≥ max(3Δz, 0.1% 域长)。
+def band_contract_violations(
+    profile: CasingDepthProfile,
+    *,
+    cell_size_m: float | None = None,
+    domain_frac: float = 0.0,
+) -> list[str]:
+    """混浆带自洽下限契约（2026-09-26 用户裁定 (B)+(C)）。
 
-    仅对**实际存在混浆带**（σ > 0）的界面逐深度检查；胶塞面为工艺锐界面，豁免。
-    返回违规描述列表，空列表代表通过。
+    两种尺度，两种用法：
+
+    - **整井尺度（报告，不拦截）**：``cell_size_m=None``、``domain_frac=0.0``。
+      实测呼1-004 中位带宽 25.0 m 仅占域长 0.327%，在整井图上纸面高度约 0.5 mm
+      —— 肉眼看不出是物理事实，不是缺陷，因此**只报告不拦截**。
+    - **放大窗尺度（通过条件）**：调用方传 ``cell_size_m`` = 放大窗的深度分辨率，
+      下限 = 3 格。带宽必须在放大窗里被网格解析出来，否则放大窗也白做。
+
+    胶塞面为工艺锐界面（σ ≡ 0），豁免。
     """
 
     violations: list[str] = []
     depths = profile.depths_m
     if depths.size < 2:
         return ["深度网格不足 2 个点，无法评估带宽契约"]
-    dz = float(np.median(np.diff(depths)))
+    dz = float(cell_size_m) if cell_size_m is not None else float(np.median(np.diff(depths)))
     domain = float(depths[-1] - depths[0])
-    floor = max(_BAND_MIN_CELLS * dz, _BAND_MIN_DOMAIN_FRAC * domain)
+    floor = max(_BAND_MIN_CELLS * dz, float(domain_frac) * domain)
 
     for k, is_plug in enumerate(profile.plug_boundary):
         if is_plug:
@@ -418,9 +429,48 @@ def band_contract_violations(profile: CasingDepthProfile) -> list[str]:
             violations.append(
                 f"界面 {k}（{profile.fluid_names[k]}→{profile.fluid_names[k + 1]}）"
                 f"最小带宽 {width_min:.4g} m < 下限 {floor:.4g} m"
-                f"（{_BAND_MIN_CELLS:g}Δz 与 {_BAND_MIN_DOMAIN_FRAC:.1%} 域长的较大者）"
+                f"（{_BAND_MIN_CELLS:g}×网格 {dz:.4g} m"
+                + (f" 与 {domain_frac:.2%} 域长" if domain_frac > 0.0 else "")
+                + " 的较大者）"
             )
     return violations
 
 
-__all__ = ["CasingDepthProfile", "build_casing_depth_profile", "band_contract_violations"]
+def band_width_summary(profile: CasingDepthProfile) -> dict[str, object]:
+    """带宽诊断摘要：非胶塞面界面的中位/最小带宽与占域长比例。
+
+    供出图与运行日志**如实**标注"带宽是肉眼可见还是纸面亚毫米"，不做任何美化。
+    """
+
+    depths = profile.depths_m
+    domain = float(depths[-1] - depths[0]) if depths.size >= 2 else 0.0
+    medians: list[float] = []
+    minima: list[float] = []
+    for k, is_plug in enumerate(profile.plug_boundary):
+        if is_plug:
+            continue
+        active = profile.sigma_t_s[k] > 0.0
+        if not np.any(active):
+            continue
+        widths = profile.band_width_m[k][active]
+        medians.append(float(np.median(widths)))
+        minima.append(float(np.min(widths)))
+    if not medians:
+        return {"n_interfaces": 0, "median_band_m": 0.0, "min_band_m": 0.0,
+                "median_domain_frac": 0.0, "domain_m": domain}
+    median_band = float(np.median(medians))
+    return {
+        "n_interfaces": len(medians),
+        "median_band_m": median_band,
+        "min_band_m": float(np.min(minima)),
+        "median_domain_frac": (median_band / domain) if domain > 0.0 else 0.0,
+        "domain_m": domain,
+    }
+
+
+__all__ = [
+    "CasingDepthProfile",
+    "band_contract_violations",
+    "band_width_summary",
+    "build_casing_depth_profile",
+]
