@@ -103,6 +103,61 @@ def test_stream_yield_gate_alive_when_input_on():
 
 
 # --------------------------------------------------------------------------- #
+# 3b. R50：HB 路径显式丢弃 wall ⇒ stream_yield_gate 同样无消费方
+# --------------------------------------------------------------------------- #
+
+def test_stream_yield_gate_dead_on_hb_path():
+    """HB 非线性入口无 wall 形参（:1788-1796）⇒ 开了它也无动力学作用。"""
+    dead = _dead_switches(enable_stream_function=True, enable_yield_gate=True,
+                          enable_stream_yield_gate=True, enable_hb_closure=True)
+    assert any("enable_stream_yield_gate" in d for d in dead)
+    assert any("enable_hb_closure=True" in d for d in dead)
+
+
+def test_stream_yield_gate_alive_when_hb_off():
+    """HB 关（默认）时，同一组合仍是活配置 ⇒ 不得告警（R50 的反例）。"""
+    dead = _dead_switches(enable_stream_function=True, enable_yield_gate=True,
+                          enable_stream_yield_gate=True, enable_hb_closure=False)
+    assert not any("enable_stream_yield_gate" in d for d in dead)
+
+
+# --------------------------------------------------------------------------- #
+# 3c. R49：enable_local_i3 是唯一"默认关 + 置真后仍可被静默忽略"的开关
+#     （消费点 :2282 位于 :2269 的 `enable_d2dga_i3_flux and enable_d2dga` 门内）
+# --------------------------------------------------------------------------- #
+
+def test_local_i3_dead_when_i3_flux_off():
+    dead = _dead_switches(enable_local_i3=True, enable_d2dga_i3_flux=False,
+                          enable_d2dga=True)
+    assert any("enable_local_i3" in d for d in dead)
+    assert any("enable_d2dga_i3_flux=False" in d for d in dead)
+    # 上游开关本身是合法回退，不得被判死（R49 末条）
+    assert not any(d.startswith("enable_d2dga") for d in dead)
+
+
+def test_local_i3_dead_when_d2dga_off():
+    dead = _dead_switches(enable_local_i3=True, enable_d2dga_i3_flux=True,
+                          enable_d2dga=False)
+    assert any("enable_local_i3" in d for d in dead)
+    assert any("enable_d2dga=False" in d for d in dead)
+    assert not any(d.startswith("enable_d2dga") for d in dead)
+
+
+def test_local_i3_alive_when_all_three_on():
+    """三者全开的反例：不告警。"""
+    dead = _dead_switches(enable_local_i3=True, enable_d2dga_i3_flux=True,
+                          enable_d2dga=True)
+    assert dead == []
+
+
+def test_local_i3_default_off_is_not_dead():
+    """默认关（未偏离默认值）⇒ 静默，即使上游被回退关掉。"""
+    dead = _dead_switches(enable_local_i3=False, enable_d2dga_i3_flux=False,
+                          enable_d2dga=False)
+    assert not any("enable_local_i3" in d for d in dead)
+
+
+# --------------------------------------------------------------------------- #
 # 4. 构造期行为
 # --------------------------------------------------------------------------- #
 
@@ -125,3 +180,45 @@ def test_default_construction_is_silent():
         warnings.simplefilter("error")
         AnnulusD2DGASolver()
         AnnulusD2DGASolver(nz=4, ny=9, total_t=1.0)
+
+
+# --------------------------------------------------------------------------- #
+# 5. R49/R50/R51 的构造期行为（生产路径实际发生的组合）
+# --------------------------------------------------------------------------- #
+
+def test_constructor_warns_when_local_i3_upstream_off():
+    """R49：生产脚本（rerun_all_wells_corrected / ht1_004_ablation）传 enable_local_i3=True，
+    上游一关就会被静默忽略 ⇒ 必须点名告警。"""
+    with pytest.warns(UserWarning, match="enable_local_i3"):
+        AnnulusD2DGASolver(total_t=1.0, nz=4, ny=9, enable_local_i3=True,
+                           enable_d2dga_i3_flux=False)
+    with pytest.warns(UserWarning, match="enable_local_i3"):
+        AnnulusD2DGASolver(total_t=1.0, nz=4, ny=9, enable_local_i3=True,
+                           enable_d2dga=False)
+
+
+def test_constructor_quiet_when_local_i3_all_upstream_on():
+    """R49 反例：三者全开（=生产 corrected 口径）必须静默。"""
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        AnnulusD2DGASolver(total_t=1.0, nz=4, ny=9, enable_local_i3=True)
+
+
+def test_constructor_warns_when_stream_yield_gate_on_hb_path():
+    """R50：构造期语义须与运行期（HB 丢弃 wall 的幂等 UserWarning）一致。"""
+    with pytest.warns(UserWarning, match="enable_stream_yield_gate"):
+        AnnulusD2DGASolver(total_t=1.0, nz=4, ny=9, enable_stream_yield_gate=True,
+                           enable_hb_closure=True)
+
+
+def test_hb_on_old_path_does_not_claim_replacement_of_b3():
+    """R51：旧路径上 HB 根本没运行，不得再宣称"HB 替代 B-3"（与"B-3 走错路径"互相矛盾）；
+    但两个开关仍须各自被点名一次。"""
+    with warnings.catch_warnings(record=True) as rec:
+        warnings.simplefilter("always")
+        AnnulusD2DGASolver(total_t=1.0, nz=4, ny=9, enable_stream_function=False,
+                           enable_hb_closure=True, enable_power_law_gap_correction=True)
+    msgs = [str(r.message) for r in rec if issubclass(r.category, UserWarning)]
+    assert any("enable_hb_closure" in m for m in msgs)
+    assert any("enable_power_law_gap_correction" in m for m in msgs)
+    assert not any("替代" in m for m in msgs)

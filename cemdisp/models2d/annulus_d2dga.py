@@ -170,6 +170,17 @@ _SWITCH_DEFAULTS: Dict[str, bool] = {
     "enable_regime_split": False,
     "enable_stream_yield_gate": False,
     "enable_power_law_gap_correction": False,
+    # R49/R50（2026-09-25 修复轮 2）：下面四个开关的默认值也收进本表——它们的
+    # **上游/互斥**关系（``enable_local_i3`` 依赖 ``enable_d2dga_i3_flux`` 且
+    # ``enable_d2dga``；``enable_stream_yield_gate`` 被 ``enable_hb_closure`` 废掉）
+    # 同样由守卫判定，故必须能在此取到默认值。
+    # ⚠️ 这四个默认取值本身**不**参与"死开关"判定：关掉 ``enable_d2dga`` /
+    # ``enable_d2dga_i3_flux`` 是合法回退，不得因用户回退而告警这两个开关本身，
+    # 只告警"被它们废掉的下游开关"。
+    "enable_d2dga": True,
+    "enable_d2dga_i3_flux": True,
+    "enable_local_i3": False,
+    "enable_hb_closure": False,
 }
 # 旧代数路径专属开关：仅在 enable_stream_function=False 时被消费。
 _OLD_PATH_ONLY_SWITCHES = (
@@ -189,9 +200,15 @@ def _dead_switches(**switches) -> list[str]:
 
     规则（与代码实际消费点一一对应；改消费点时必须同步改这里）：
       * 旧代数路径专属开关：仅在 ``enable_stream_function=False`` 时被消费
-        （``_compute_velocity`` 在新路径早退，见 :1894-1899）；
-      * ``enable_stream_yield_gate``：置真（偏离默认）但 ``enable_yield_gate=False``
-        ⇒ 无 wall 可进算子，属无消费者（:1897）；
+        （``_compute_velocity`` 在新路径早退，见 :1933-1938）；
+      * ``enable_stream_yield_gate``：置真（偏离默认）但 wall 到不了算子
+        ⇒ 无消费者。两种废法：① 其输入 ``enable_yield_gate=False``（无 wall 可算，:1936）；
+        ② ``enable_hb_closure=True``（HB 非线性入口不接 wall 形参，仅回退线性路径消费，
+        见 :1788-1796）；
+      * ``enable_local_i3``：置真（偏离默认）但 I3 通量块整体不执行
+        ⇒ 局部化无消费方。两种废法（R49）：上游 ``enable_d2dga_i3_flux=False``
+        或 ``enable_d2dga=False``（消费点在同一 ``and`` 门内，:2282 位于 :2269 门内）。
+        ⚠️ 上游两个开关**本身**不判死——关闭它们是合法回退；
       * 新路径专属开关：仅在 ``enable_stream_function=True`` 时被消费，旧路径下同样空转；
       * ``K_AXIAL`` 为模块常量、非构造形参，仅旧路径消费，附在告警文本里说明；
       * **取值等于 ``_SWITCH_DEFAULTS`` 的开关一律不判死**（R42）：默认即空转属基线状态，
@@ -205,15 +222,30 @@ def _dead_switches(**switches) -> list[str]:
         return _value(name) != _SWITCH_DEFAULTS[name]
 
     dead: list[str] = []
+    # 路径无关个案（R49）：enable_local_i3 的消费点位于 I3 通量块，该块在
+    # enable_stream_function 两条路径上都执行，故不放进任一分支。
+    if _deviates("enable_local_i3"):
+        blocked = [f"{up}=False" for up in ("enable_d2dga_i3_flux", "enable_d2dga")
+                   if not _value(up)]
+        if blocked:
+            dead.append("enable_local_i3（I3 通量局部化：其上游 " + "、".join(blocked)
+                        + " ⇒ I3 通量块整体不执行，局部化无消费方）")
     if _value("enable_stream_function"):
         for name, desc in _OLD_PATH_ONLY_SWITCHES:
             if _deviates(name):
                 dead.append(f"{name}（{desc}：仅旧代数路径 enable_stream_function=False 消费）")
         # 屈服门进算子：默认组合（yield_gate=True 且 stream_yield_gate=False）两者皆默认
-        # ⇒ 静默；只有用户打开了它却关掉它的输入（enable_yield_gate=False）才告警。
-        if _value("enable_stream_yield_gate") and not _value("enable_yield_gate"):
-            dead.append("enable_stream_yield_gate（屈服门进流函数算子：其输入 "
-                        "enable_yield_gate=False ⇒ 无 wall 可入算子）")
+        # ⇒ 静默；用户主动打开它却让 wall 到不了算子时才告警（R50 起含 HB 路径）。
+        if _value("enable_stream_yield_gate"):
+            causes: list[str] = []
+            if not _value("enable_yield_gate"):
+                causes.append("其输入 enable_yield_gate=False ⇒ 无 wall 可入算子")
+            if _value("enable_hb_closure"):
+                causes.append("enable_hb_closure=True ⇒ HB 非线性入口不接 wall "
+                              "（仅回退线性路径消费，:1788-1796）")
+            if causes:
+                dead.append("enable_stream_yield_gate（屈服门进流函数算子："
+                            + "；".join(causes) + "）")
     else:
         for name, desc in _NEW_PATH_ONLY_SWITCHES:
             if _deviates(name):
@@ -347,9 +379,9 @@ class AnnulusD2DGASolver:
         nz: int = 140,
         ny: int = 40,
         total_t: float = 12000.0,
-        enable_d2dga: bool = True,
-        enable_d2dga_i3_flux: bool = True,
-        enable_local_i3: bool = False,
+        enable_d2dga: bool = _SWITCH_DEFAULTS["enable_d2dga"],
+        enable_d2dga_i3_flux: bool = _SWITCH_DEFAULTS["enable_d2dga_i3_flux"],
+        enable_local_i3: bool = _SWITCH_DEFAULTS["enable_local_i3"],
         enable_true_buoyancy: bool = _SWITCH_DEFAULTS["enable_true_buoyancy"],
         instability_decay_scale: float = 5.0,
         save_interval: int = 60,
@@ -374,7 +406,7 @@ class AnnulusD2DGASolver:
         enable_power_law_gap_correction: bool = _SWITCH_DEFAULTS["enable_power_law_gap_correction"],  # B-3 opt-in：幂律间隙一阶修正（默认关）
         enable_stream_function: bool = _SWITCH_DEFAULTS["enable_stream_function"],
         # ⚠️ 2026-09-17 A-3b（Task 6）：HB 闭包接线双开关（opt-in，默认全关 ⇒ 逐位=HEAD）。
-        enable_hb_closure: bool = False,
+        enable_hb_closure: bool = _SWITCH_DEFAULTS["enable_hb_closure"],
         hb_fix_cement_tau_y: bool = False,
         cement_tau_y_by_role: Mapping[str, float] | None = None,
     ) -> None:
@@ -617,7 +649,10 @@ class AnnulusD2DGASolver:
                 UserWarning,
                 stacklevel=2,
             )
-        if enable_hb_closure and enable_power_law_gap_correction:
+        # R51（修复轮 2）：HB 闭包只在流函数路径上被消费；旧路径下 enable_hb_closure 已由
+        # 上方 `_hb_dead` 点名，此处若仍宣称"HB 替代 B-3"会与 `_dead_switches` 的
+        # "B-3 走错路径"结论互相矛盾（HB 在该配置下根本没运行）。加一个路径条件即可消双报。
+        if enable_hb_closure and enable_stream_function and enable_power_law_gap_correction:
             warnings.warn(
                 "enable_hb_closure=True 与 enable_power_law_gap_correction=True 互斥："
                 "HB 闭包（B&F25 (2.13)-(2.15)）替代幂律一阶修正闭包，后者不生效。",
@@ -635,6 +670,10 @@ class AnnulusD2DGASolver:
             enable_stream_function=enable_stream_function,
             enable_yield_gate=enable_yield_gate,
             enable_stream_yield_gate=enable_stream_yield_gate,
+            enable_hb_closure=enable_hb_closure,          # R50：HB 路径废掉 wall
+            enable_local_i3=enable_local_i3,              # R49：上游 I3 通量门
+            enable_d2dga_i3_flux=enable_d2dga_i3_flux,
+            enable_d2dga=enable_d2dga,
             enable_power_law_gap_correction=enable_power_law_gap_correction,
             enable_regime_split=enable_regime_split,
             enable_true_buoyancy=enable_true_buoyancy,
