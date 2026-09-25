@@ -11,9 +11,12 @@ import subprocess
 from pathlib import Path
 
 from tests.contract.test_default_path_bitwise_anchor import (
-    ANCHOR, POINTER_KEYS, _FIELD_ATTRS, _SCALAR_FIELDS, expected_keys)
+    ANCHOR, FINGERPRINT_KEYS, POINTER_KEYS, _FIELD_ATTRS, _SCALAR_FIELDS,
+    expected_keys)
 
-FINGERPRINT_KEYS = {"_note", "_generated_from", "_env"}
+# R41（单一真源）：``FINGERPRINT_KEYS`` **不再在本文件重复定义**，改为从主锚测试
+# import（那里是唯一定义处）。此前本文件写集合、主锚测试写元组 ⇒ 两处各一份，
+# 改一处不会让另一处变红，正是本计划所防的"一事实两处写"漂移。
 ANCHOR_TEST_MODULE = "tests.contract.test_default_path_bitwise_anchor"
 
 # 锚里 sha_* 的摘要口径：sha256 = 64 字符小写 hex（R27-1）。
@@ -32,7 +35,7 @@ def test_anchor_file_must_exist():
 
 def test_anchor_covers_exactly_expected_keys():
     want = json.loads(ANCHOR.read_text(encoding="utf-8"))
-    keys = set(want) - FINGERPRINT_KEYS - set(POINTER_KEYS)
+    keys = set(want) - set(FINGERPRINT_KEYS) - set(POINTER_KEYS)
     assert keys == expected_keys(), (
         f"锚键集不匹配：缺 {expected_keys() - keys}；多 {keys - expected_keys()}")
 
@@ -57,10 +60,10 @@ def test_scalar_fields_are_measured_not_declared_silently():
 
 def test_anchor_carries_provenance_note():
     want = json.loads(ANCHOR.read_text(encoding="utf-8"))
-    assert FINGERPRINT_KEYS <= set(want), (
+    assert set(FINGERPRINT_KEYS) <= set(want), (
         f"锚必须带来源指纹 {sorted(FINGERPRINT_KEYS)}："
         "微网格非生产数字的警告 + 生成条件 + 环境版本，"
-        f"当前缺 {sorted(FINGERPRINT_KEYS - set(want))}")
+        f"当前缺 {sorted(set(FINGERPRINT_KEYS) - set(want))}")
     for key in sorted(FINGERPRINT_KEYS):
         assert isinstance(want[key], str) and want[key].strip(), (
             f"锚指纹 {key} 必须是非空字符串")
@@ -295,7 +298,7 @@ def test_regenerate_refuses_first_build_without_fingerprint(monkeypatch, tmp_pat
                        "--reconcile-source",
                        "docs/superpowers/plans/baseline-2026-09-25.md"]) == 0
     written = json.loads(anchor.read_text(encoding="utf-8"))
-    assert set(written) == expected_keys() | set(POINTER_KEYS) | FINGERPRINT_KEYS, (
+    assert set(written) == expected_keys() | set(POINTER_KEYS) | set(FINGERPRINT_KEYS), (
         f"首建锚键集不对：{sorted(set(written))}")
     assert written["_env"] == "Python 3.13.7 / numpy 2.3.3", (
         f"首建锚必须用 --env 的值，而非 'unknown'：{written['_env']!r}")

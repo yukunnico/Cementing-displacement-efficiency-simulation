@@ -128,7 +128,8 @@ G3 八井数字）。本任务**未执行**任何收口动作。
 3. 该 `spacer_fluid` 作为环空二维的隔离液相参与 `_compute_props`（定义 `:1107`，调用 `:1917-1927`），
    消费点逐条为 `:1132`(μ)、`:1139`(ρ)、`:1150`(τy)、`:1174`+`:1175-1178`(n/K)，返回 `:1179`。
    **其产物在默认（流函数）路径上的实际去向只有两处**：
-   - **I₃ 浮力通量**（`:2291-2312`，默认路径执行——上游 `enable_d2dga_i3_flux`/`enable_d2dga` 默认 `True`）：
+   - **I₃ 浮力通量**（`:2291-2314`，默认路径执行——上游 `enable_d2dga_i3_flux`/`enable_d2dga` 默认 `True`；
+     `q_phi, q_xi = d2dga_buoyancy_flux(` 在 `:2311` 起、闭括号 `)` 在 `:2314`）：
      `rho`（含隔离液相贡献）**恒进入** `delta_rho`（`:2306` 或 `:2309`）；
      `mu` **只在 `enable_local_i3=False` 时**进入 `eta2`（`:2308`），
      开启局部化时 `eta2` 取水泥相黏度场 `_eta2`（`:2305`）
@@ -366,7 +367,7 @@ G3 那次的 `汇总.csv` 里 `corrected` 列全为 `True`（确实用了 `--ski
 # 差异 ①②④：读两侧代码即可
 sed -n '39,43p;52,53p;70,87p' scripts/entrypoints/rerun_all_wells_corrected.py
 sed -n '107,113p;180,203p'     cemdisp/runners/hu101_tailpipe.py
-sed -n '165,187p;1955,1962p;2014p;2129,2146p;2160,2166p;2291,2312p;2358,2361p' cemdisp/models2d/annulus_d2dga.py
+sed -n '165,187p;1955,1962p;2014p;2129,2146p;2160,2166p;2291,2314p;2358,2361p' cemdisp/models2d/annulus_d2dga.py
 
 # 差异 ② 的"8/8 进入分支、6/8 物性改变"：只跑 loader，对 _composite_spacer_fluid 两种权重直接求值
 #   eq  = AnnulusD2DGASolver._composite_spacer_fluid(ws, None)                     # schedule=None 口径

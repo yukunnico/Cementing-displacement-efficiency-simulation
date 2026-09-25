@@ -55,7 +55,10 @@ _SCALAR_FIELDS = {
     "instability": "最终失稳指数",
 }
 
-# 锚 JSON 里的来源指纹键（不参与数值比对，见 test_anchor_integrity.py）
+# 锚 JSON 里的来源指纹键（不参与数值比对，见 test_anchor_integrity.py）。
+# R41（单一真源）：**本处是唯一定义**。元守卫 test_anchor_integrity.py 与重锚脚本
+# _regenerate_default_path_anchor.py 一律从这里 import —— 不得各自再写一份
+# （那正是 test_signature_defaults_match_table 所防的"一事实两处"漂移形态）。
 FINGERPRINT_KEYS = ("_note", "_generated_from", "_env")
 
 # 指纹键之外的**可解析指针键**（值是一个仓内相对路径，供对账/重锚脚本解析，见 R27）

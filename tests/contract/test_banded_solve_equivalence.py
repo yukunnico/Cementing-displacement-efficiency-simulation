@@ -338,7 +338,9 @@ def test_timing_spsolve_vs_banded_single_solve(capsys=None):
         见 task-8-report.md「计时（原始）」）。
     全链（只计 2D ``solver.run``，A/B/A/B）实测 2.31–2.44×；修复轮 1 复测
     round1 2.26× / round2 2.40×（min 比 2.40×：spsolve 144.48 s → 带状 60.24 s），
-    原始输出归档于 ``results/内部自洽加固_2026-09-25/提速实测_全链ABAB.txt``。
+    原始输出归档于 ``results/内部自洽加固_2026-09-25/提速实测_全链ABAB.md``
+    （R144：归档一律用 ``.md``；``.txt`` 会被 ``.gitignore`` 吞掉，轮 2 已改名，
+    R149① 订正了本行遗留的旧 ``.txt`` 引用）。
     """
     ny, nz = 40, 250
     g = _geom(ny, nz)

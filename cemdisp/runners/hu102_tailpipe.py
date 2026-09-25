@@ -180,7 +180,15 @@ def annulus_stop_time_s(
                 continue
             if front.time_s >= last_cement_time_s - 1.0e-9:
                 return float(front.time_s)
-    return float(casing_result.cement_end_time_s)
+    # R134：本行**不可达**——上方 `if casing_result.cement_end_time_s is not None:`
+    # 已返回全部非 None 情形 ⇒ 走到此处该值必为 None ⇒ 旧写法 `float(None)` 会抛
+    # TypeError。当时仅因现场井 fronts 非空（第一级守卫必命中）而未触发。
+    # 改显式 raise：文档化不变量，且若将来有人移除第一级守卫则**响亮失败**而非
+    # 静默走一条语义未定义的路径。行为不变（今日不可达）。
+    raise RuntimeError(
+        "annulus_stop_time_s 不变量被破坏：cement_end_time_s 为 None 且前缘扫描"
+        "亦未找到'末段水泥之后的首个非水泥'前缘。按用户裁定 R80/R81，停算时刻的"
+        "定义就是 cement_end_time_s（不建碰压表达）——本路径无合法回退值。")
 
 
 def _export_casing_flow_timing(

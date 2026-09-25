@@ -21,9 +21,16 @@
   逐位锚重锚（R19）。
 - 文件末尾另有 **solver 级不变量守卫**（修复轮 2，OPEN FINDING 2）：
   `test_solver_level_switch_reaches_every_solve_call_site` 直接在 solver 级断言
-  `enable_banded_solve=False ⇒ 带状分解一次都不调用`（覆盖全部 4 处流函数线性调用点），
-  是**接线级的主守卫**；`test_banded_solve_equivalence.py` 的两条 spy 测试是更快的
-  单元级守卫（分别钉住开关分支选择与非线性入口的形参透传）。
+  `enable_banded_solve=False ⇒ 带状分解一次都不调用`（**直接覆盖 3 处流函数线性调用点**：
+  线性路径、HB 冷启动启发式、HB 非线性入口），是**接线级的主守卫**；
+  `test_banded_solve_equivalence.py` 的两条 spy 测试是更快的单元级守卫
+  （分别钉住开关分支选择与非线性入口的形参透传）。
+  ⚠️ **第 4 处调用点未被任何测试直接覆盖**：`_solve_stream_function_hb` 的 HB **回退分支**
+  （`RuntimeError` ⇒ 牛顿线性闭包，`cemdisp/models2d/annulus_d2dga.py` 内
+  `return solve_stream_function(..., banded=self.enable_banded_solve)`，即
+  `annulus_d2dga.py:1857-1859`）在本窗口内未触发；它是**独立**调用点、带**自己的**
+  `banded=` 透传，删掉它**不会被任何一个测试抓到**（本守卫对它是**间接**的：仅当回退
+  分支被触发时才可能连带变红）。用户裁定 I-1：**不得**声称"覆盖全部 4 处"。
 
 网格与时长（nz=30/ny=12/total_t=14000s）与**逐位锚 `_default_path_anchor_hu101.json`
 完全同口径**（同 loader、同 T1 三开关、同默认环空开关），只多一个显式的
@@ -100,7 +107,9 @@ def test_banded_switch_round_trip_within_tolerance():
 # 覆盖其中 1 处、并会暗示并不存在的对称性覆盖（其余 3 处同样无跳级测试）。故改为在
 # **solver 级**直接断言不变量：``enable_banded_solve=False`` ⇒ 整个 run 内带状分解
 # **一次都不调用**（且 spsolve 确实被调用，防"空跑也能过"）；``=True`` ⇒ 至少调用一次。
-# 两个参数（HB 关 / HB 开）合起来把 4 处调用点全部罩住。
+# 两个参数（HB 关 / HB 开）合起来**直接覆盖 4 处中的 3 处**；第 4 处
+# （``_solve_stream_function_hb`` 的 HB 回退分支，``annulus_d2dga.py:1857-1859``）
+# 本窗口不触发，本守卫对它只是**间接**的（见本文件 docstring 的 ⚠️ 段与 :162-163）。
 # --------------------------------------------------------------------------- #
 
 # 小窗（开关**每一步**都被消费 ⇒ 无需跑到前缘）；实测线性 ~0.04 s / HB ~0.3 s。
@@ -160,7 +169,9 @@ def test_solver_level_switch_reaches_every_solve_call_site(monkeypatch, _pipelin
       * ``hb=True``  参数 = **HB 非线性路径**（冷启动启发式 + 非线性入口，含首轮/
         欠松弛重解/收敛终解）；
       * **未**直接覆盖：HB 的**回退分支**（``RuntimeError`` ⇒ 牛顿线性闭包）——本窗口
-        内未触发；它与冷启动启发式共用同一处已断言的透传，故守卫是间接的。
+        内未触发。它是**独立**调用点（``annulus_d2dga.py:1857-1859``，
+        自带 ``banded=self.enable_banded_solve``），**不**与冷启动启发式共用透传
+        ⇒ 删掉它的 ``banded=`` 不会被任何测试抓到；本守卫对它是**间接**的。
     """
     well, fluids, schedule, inlet = _pipeline
     calls = _spy_factorizations(monkeypatch)

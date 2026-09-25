@@ -852,6 +852,13 @@ git commit -m "perf(consistency): 流函数线性求解换带状 Cholesky（纯�
 
 **物理判据（每条都必须可证伪、并写明来源）**：
 
+> ⚠️ **计数口径（终审 I-2 订正，用户裁定 R195）**：本表 7 项中 **P-4「总通量守恒」
+> 是离散算子的代数恒等式、不是独立测量**（``w̄ = ∂φΨ/(2r_aH)`` 与「中心差分 + 梯形」
+> 逐列严格互逆 ⇒ 对**任意**内部解恒成立，无法在求解器输出上失败）。
+> ⇒ 本计划应读作「**7 项判据（其中 P-4 为算子恒等式，非独立测量）**」，
+> **可独立证伪的判据是 6 项**；下文凡写"7 项可证伪判据"处均按此订正理解。
+> 判据的实现与阈值**未**改动（改 P-4 的实现＝改判据口径，属新工作而非修复）。
+
 | # | 检查项 | 判据 | 依据 |
 |---|---|---|---|
 | P-1 | 浓度有界 | `0 ≤ c ≤ 1`（含全部快照） | 体积分数定义 |
@@ -903,7 +910,7 @@ def test_monotone_fails_on_nonphysical_field():
 
 - [ ] **Step 3: Write minimal implementation**
 
-`physical_sanity.py`：按上表实现 7 项检查，返回逐项结果（未提供判据所需输入时该项 `通过=None` 且 `说明="未测：<原因>"`，**不得**默认为通过）。`scripts/entrypoints/verify_physical_sanity.py`：对可跑井跑短窗（`nz=60`）并写 `results/内部自洽加固_2026-09-25/物理合理性台账.csv`。
+`physical_sanity.py`：按上表实现 7 项检查（其中 P-4 为算子恒等式，非独立测量），返回逐项结果（未提供判据所需输入时该项 `通过=None` 且 `说明="未测：<原因>"`，**不得**默认为通过）。`scripts/entrypoints/verify_physical_sanity.py`：对可跑井跑短窗（`nz=60`）并写 `results/内部自洽加固_2026-09-25/物理合理性台账.csv`。
 
 - [ ] **Step 4: Run test + 生成台账**
 
@@ -915,7 +922,7 @@ Expected: 生成 CSV；**任何一项不通过都必须如实记录并在结论�
 
 ```bash
 git add cemdisp/diagnostics/physical_sanity.py scripts/entrypoints/verify_physical_sanity.py tests/contract/test_physical_sanity.py "results/内部自洽加固_2026-09-25/物理合理性台账.csv"
-git commit -m "feat(consistency): 物理合理性闸门（7 项可证伪判据）+ 台账"
+git commit -m "feat(consistency): 物理合理性闸门（7 项判据，其中 P-4 为算子恒等式）+ 台账"
 ```
 
 ---
