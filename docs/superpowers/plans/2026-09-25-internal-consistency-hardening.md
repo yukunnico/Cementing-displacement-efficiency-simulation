@@ -1155,3 +1155,42 @@ git commit -m "test(consistency): 锚加固——缺锚即失败/键集守卫/�
 
 - [ ] **Step 1: 出方案报用户**（至少三个候选：① 显式工艺停泵时刻 + 尾缘迟到量；② 停泵时刻 = 泵注结束 + 尾缘到鞋的预期滞后（解析外推）；③ 保留判据但在回退时强制告警并写入摘要），每条附：物理依据、对 8 井的波及面、实现量、是否改数值口径
 - [ ] **Step 2: 用户选定后再拆实现步骤**
+
+---
+
+### Task 14: dict→splat 调用面治理（由 Task 5 评审 R98 立案）
+
+**背景**：Task 5 建成的调用签名闸门只抓**直接关键字调用**；而**至少 9 个脚本**用 `dict(...)` + `**kw`/`extra_kw` 把已删形参 `dispersion_dt_scale` 传进求解器 ⇒ **运行期仍 `TypeError`，闸门却报绿**。闸门"绿而无用"与本计划的目的直接冲突。
+
+**Files:**
+- Modify: `scripts/entrypoints/check_call_signatures.py`（扩展 dict→splat 数据流校验）
+- Modify/Delete: 涉及的 9 个脚本（按 `scripts/entrypoints/rerun_all_wells_corrected.py` 为样板清理）
+- Test: `tests/contract/test_entrypoint_signatures.py`（补相应断言）
+
+**Interfaces:** Consumes `find_bad_kwargs(root) -> list[tuple[str,int,str,str]]`（Task 5 产物）
+
+- [ ] **Step 1: 先出清单**：用 ast 或 grep 列出全部 `dict(...)`+`**` 进入 `AnnulusD2DGASolver`/`CasingFlowSolver` 的调用点，并逐个判定其 dict 中是否有**已删形参**；把清单写进报告（数量以实测为准，不采信"9"这个数）
+- [ ] **Step 2: 清理**：从各 dict 中删掉已删形参键（**不得**重新引入形参）；若某脚本已整体作废（如 `dispersion_scale_sensitivity_scan.py`，R102 已记"8 次仿真逐位相同"），**优先归档/删除**并说明
+- [ ] **Step 3: 扩展闸门**：在 `check_call_signatures.py` 内增加**同函数作用域**的 `name = {...}` → `Call(**name)` 键集校验（够用即可，不必做跨函数的全量数据流）
+- [ ] **Step 4: 测试钉死**：加一条"坏 dict + splat 必须被抓到"的用例（构造临时文件）
+- [ ] **Step 5: 判据**：本任务测试绿 + 锚两文件绿 + 既存红不新增；**按 R104 用 pathspec 提交**
+
+---
+
+## 附录 A：影响论文的结构性发现（受版本控制留档，2026-09-25）
+
+### A.1 `R0` 与 `R1` 消融级结构性恒等 ⇒ 不得再生产 R0/R1 差异类图表
+
+**事实（Task 5 评审三条独立证据）**：
+1. 级别定义仅 `enable_d2dga_auto_m` 一项不同（`cemdisp/runners/ht1_004_ablation.py:47-52` 的 `ABLATION_LEVELS`；`scripts/entrypoints/closure_contribution_scan.py:26-32` 的 `LEVELS` 同理），而该形参**已自 `d8917b7`（2026-09-08，"R0 兼容分支删除——auto-m 恒开"）起从 `__init__` 移除** ⇒ 两者构造出的 kwargs 逐字相同。
+2. 求解器确定性（无 RNG，CFL 自适应为确定式）⇒ 同 kwargs ⇒ 输出**逐位相同**。
+3. `inspect.signature` 实测 `has VAR_KEYWORD=False`（无 `**kwargs`）⇒ 删参前那 4 处调用**确实**抛 `TypeError`；即两个消融脚本自 09-08 起**已 17 天不可调用**。
+
+**受害物（规划层）**：`docs/superpowers/plans/2026-07-13-improved-d2dga-paper-design.md` §Task 3 规划「**图6（R0 vs R1 窄边窜槽对比）**」并写明 "Expected: R0 与 R1 效率有差异"。该图现**结构性恒平（差值 ≡ 0）**。
+
+**约束（写作红线）**：
+- **不得**再生产任何"R0 vs R1 有差异"的图表或表格。
+- 若论文/汇报材料已引用该类对比，须核实其来源：要么**早于 2026-09-08**（当时 auto_m 仍是有效开关），要么是**退化产物**（差值恒 0），后者必须撤除。
+- `closure_contribution_scan.py` 输出的 CSV 仍保留 `auto_m` 列（R0=0/R1=1），而指标列将逐位相同 ⇒ 该列是**纯标签、零信息**，却看起来像做过 auto_m 消融。引用该表时须显式说明。
+
+**状态**：**未处理**（需先裁定：删除 R0 级、或用真实区分量替代 R0/R1 的对照维度）。已并入 Task 14 的范围讨论。
