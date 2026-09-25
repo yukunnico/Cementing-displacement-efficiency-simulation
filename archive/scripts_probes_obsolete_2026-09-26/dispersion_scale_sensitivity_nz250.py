@@ -1,5 +1,13 @@
 """NZ=250 弥散敏感性附表（C1 方案 A）：8 井 × dispersion_dt_scale ∈ {0.0, 0.5}。
 
+归档说明（2026-09-26，Task 14 修复轮 1）：本脚本已整体作废并 `git mv` 至
+`archive/scripts_probes_obsolete_2026-09-26/`。作废原因与附加裁定 4（R115）归档的
+`dispersion_scale_sensitivity_scan.py` **同源同一缺陷**：它唯一的自变量
+`dispersion_dt_scale` 已随 Task 7（2026-09-14 源模型口径重构）删除自创拉普拉斯弥散
+而移除 ⇒ scale 档不再传进求解器，0.0 / 0.5 两档的求解器输入与基线逐字相同
+（R102 已记『逐位相同』）⇒ 该表不再有任何判别力，跑它只会产出恒等的假对照。
+保留本文件是为了留下历史结论与当时的执行口径，**不再维护、不得引用其 scale 结论**。
+
 口径：修正配置（CORRECTED_KW）+ nz=250 生产网格 + CFL on，仅改弥散 dt 归一
 标度 dispersion_dt_scale（基线 = 1.0，直接复用 A3 基线 JSON，不重跑）。
 scale=0.0 表示关闭弥散项的 dt 归一贡献（κ→数值正则化参数声明见 obsidian
