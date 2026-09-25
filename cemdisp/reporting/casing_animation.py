@@ -186,6 +186,37 @@ def _zoom_center(zoom_profile: "CasingDepthProfile") -> float:
     return float(0.5 * (depths[0] + depths[-1]))
 
 
+def zoom_content(zoom_profile: "CasingDepthProfile", threshold: float = 0.05) -> np.ndarray:
+    """逐帧统计放大窗内的「界面含量」：同时有 ≥2 相份额 > threshold 的深度格数。
+
+    用于论文拼贴选帧（2026-09-26 用户裁定 (B)：不取等间隔，改取窗内确有内容的帧）。
+    窗内无界面时为 0，此时拼贴图会是一片空白，对读者无信息量。
+    """
+
+    shares = np.asarray(zoom_profile.shares, dtype=float)
+    resolved = (shares > threshold).sum(axis=2)          # (n_t, n_z)
+    return (resolved >= 2).sum(axis=1)
+
+
+def _select_content_frames(
+    zoom_profile: "CasingDepthProfile", n_panels: int, threshold: float = 0.05
+) -> np.ndarray:
+    """选出放大窗内确有界面的帧（按时间先后排列），不足时回退等间隔。"""
+
+    n_frames = len(zoom_profile.times_s)
+    n_panels = min(n_panels, n_frames)
+    content = zoom_content(zoom_profile, threshold)
+    informative = np.flatnonzero(content > 0)
+    if informative.size == 0:
+        # 放大窗全程无界面：如实回退等间隔，不伪造内容
+        return np.unique(np.linspace(0, n_frames - 1, n_panels).astype(int))
+    if informative.size <= n_panels:
+        return informative
+    # 按含量取前 n_panels 帧，再按时间排序，保持演化顺序可读
+    ranked = informative[np.argsort(-content[informative], kind="stable")[:n_panels]]
+    return np.sort(ranked)
+
+
 def _nearest_boundary(profile: "CasingDepthProfile", depth_m: float) -> int | None:
     """离给定深度最近的「已出现」界面下标（用于放大窗标注带宽）。
 
@@ -235,6 +266,31 @@ def _apply_front_marks(ax, profile: "CasingDepthProfile", time_idx: int) -> None
                     va="bottom", ha="right", transform=ax.transAxes)
 
 
+def shoe_timeline_matrix(shoe_timeline, times_s) -> tuple[tuple[str, ...], np.ndarray, np.ndarray]:
+    """鞋口出流时间线 → (相名, (n_phase, n_t) 份额矩阵, 事件时刻数组)。
+
+    相名按首次出现顺序排列；事件时刻用于在时间条上打出出流切换刻度（交付物 5 的③）。
+    """
+
+    names: list[str] = []
+    for event in shoe_timeline.events:
+        for name, _frac in event.phase_fractions:
+            if name not in names:
+                names.append(name)
+
+    times = np.asarray(times_s, dtype=float)
+    matrix = np.zeros((len(names), times.size), dtype=float)
+    for j, t_s in enumerate(times):
+        state = shoe_timeline.at(float(t_s))
+        if state is None:
+            continue
+        for name, frac in state.phase_fractions:
+            if name in names:
+                matrix[names.index(name), j] = max(float(frac), 0.0)
+    event_times = np.array([float(e.time_s) for e in shoe_timeline.events], dtype=float)
+    return tuple(names), matrix, event_times
+
+
 # ── 图幅 ─────────────────────────────────────────────────────────────
 
 
@@ -243,12 +299,13 @@ def _build_figure(
     zoom_profile: "CasingDepthProfile",
     annulus_result: "AnnulusSimulationResult",
     *,
-    figsize: tuple[float, float] = (17.0, 10.0),
+    shoe_timeline=None,
+    figsize: tuple[float, float] = (17.0, 11.0),
 ):
-    """搭建图幅：整井 5 面板 + 独立色标行 + 放大窗与声明面板 + 相名图例。
+    """搭建图幅：整井 5 面板 + 鞋口出流时间条 + 独立色标行 + 放大窗与声明面板。
 
-    色标各占独立 GridSpec 轴（第 1 行），与任何数据轴都不重叠——这是 2026-09-26
-    「右侧色标遮挡图表」的修复口径。
+    色标各占独立 GridSpec 轴，与任何数据轴都不重叠——这是 2026-09-26
+    「右侧色标遮挡图表」的修复口径。``shoe_timeline`` 为 None 时不出时间条。
     """
 
     channels, md = annulus_channels(annulus_result)
@@ -256,14 +313,23 @@ def _build_figure(
     depth_min, depth_max = float(depths[0]), float(depths[-1])
     x_lo, x_hi = _casing_bore_extent(profile)
     colors = phase_colors(profile.fluid_names)
+    has_shoe = shoe_timeline is not None
 
     fig = plt.figure(figsize=figsize)
-    grid = fig.add_gridspec(3, 5, height_ratios=(3.4, 0.16, 1.25), hspace=0.30, wspace=0.20)
-    casing_ax = fig.add_subplot(grid[0, 0])
-    ann_axes = [fig.add_subplot(grid[0, i], sharey=casing_ax) for i in range(1, 5)]
-    cax_list = [fig.add_subplot(grid[1, i]) for i in range(1, 5)]
-    zoom_ax = fig.add_subplot(grid[2, 0:3])
-    info_ax = fig.add_subplot(grid[2, 3:5])
+    if has_shoe:
+        grid = fig.add_gridspec(4, 5, height_ratios=(3.2, 0.42, 0.16, 1.25),
+                                hspace=0.34, wspace=0.20)
+        row_main, row_shoe, row_cax, row_bottom = 0, 1, 2, 3
+    else:
+        grid = fig.add_gridspec(3, 5, height_ratios=(3.4, 0.16, 1.25),
+                                hspace=0.30, wspace=0.20)
+        row_main, row_shoe, row_cax, row_bottom = 0, None, 1, 2
+
+    casing_ax = fig.add_subplot(grid[row_main, 0])
+    ann_axes = [fig.add_subplot(grid[row_main, i], sharey=casing_ax) for i in range(1, 5)]
+    cax_list = [fig.add_subplot(grid[row_cax, i]) for i in range(1, 5)]
+    zoom_ax = fig.add_subplot(grid[row_bottom, 0:3])
+    info_ax = fig.add_subplot(grid[row_bottom, 3:5])
 
     casing_ax.imshow(
         _casing_strip(blend_rgb(profile.shares[0], profile.fluid_names, colors)),
@@ -293,6 +359,26 @@ def _build_figure(
     for ax in (casing_ax, *ann_axes):
         ax.axhspan(float(zd[0]), float(zd[-1]), facecolor="none",
                    edgecolor="darkorange", lw=1.2, zorder=5)
+
+    shoe_ax = None
+    shoe_image = None
+    shoe_playhead = None
+    if has_shoe:
+        # 交付物 5 之③：鞋口出流时间条（横轴=地面累计时间，纵轴=相，色=该相份额）
+        shoe_ax = fig.add_subplot(grid[row_shoe, 0:5])
+        names, matrix, event_times = shoe_timeline_matrix(shoe_timeline, profile.times_s)
+        t_end = float(profile.times_s[-1])
+        shoe_image = shoe_ax.imshow(
+            matrix, vmin=0.0, vmax=1.0, cmap="viridis", aspect="auto",
+            extent=(0.0, t_end / 60.0, len(names), 0.0), origin="upper",
+        )
+        shoe_ax.set_yticks(np.arange(len(names), dtype=float) + 0.5)
+        shoe_ax.set_yticklabels(names, fontsize=7.5)
+        shoe_ax.set_xlabel("地面累计时间 / min", fontsize=9)
+        shoe_ax.set_title("鞋口出流时间线（③）", fontsize=10, fontweight="bold")
+        for t_event in event_times:
+            shoe_ax.axvline(t_event / 60.0, color="white", lw=0.4, alpha=0.5)
+        shoe_playhead = shoe_ax.axvline(0.0, color="crimson", lw=1.6)
 
     handles = [Patch(facecolor=colors[n], label=n) for n in profile.fluid_names]
     handles.append(Line2D([], [], color="crimson", lw=2.0, label="胶塞面（工艺）"))
@@ -335,6 +421,8 @@ def _build_figure(
         "zoom_center": _zoom_center(zoom_profile),
         "colors": colors,
         "extent": (x_lo, x_hi, depth_max, depth_min),
+        "shoe_image": shoe_image,
+        "shoe_playhead": shoe_playhead,
     }
 
 
@@ -394,6 +482,7 @@ def animate_stitched_displacement(
     output_dir: Path | str,
     *,
     well_name: str | None = None,
+    shoe_timeline=None,
     interval_ms: int = 200,
     fps: int = 8,
 ) -> Path:
@@ -401,6 +490,8 @@ def animate_stitched_displacement(
 
     ``profile`` 与 ``zoom_profile`` 必须用同一组时刻构建（= 环空
     ``snapshot_times_s``），使三处同帧（Q22-b-i）；放大窗可另用更细的深度网格。
+    传入 ``shoe_timeline``（= ``CasingFlowResult.shoe_timeline``）时额外绘制鞋口
+    出流时间条与走时游标（交付物 5 之③）。
 
     Raises:
         ValueError: 三侧帧数不一致。
@@ -417,7 +508,8 @@ def animate_stitched_displacement(
             f"放大窗帧数 {len(zoom_profile.times_s)} 与整井剖面帧数 {n_frames} 不一致"
         )
 
-    parts = _build_figure(profile, zoom_profile, annulus_result)
+    parts = _build_figure(profile, zoom_profile, annulus_result,
+                          shoe_timeline=shoe_timeline)
     fig = parts["fig"]
     colors = parts["colors"]
     x_lo, x_hi, depth_max, depth_min = parts["extent"]
@@ -431,6 +523,10 @@ def animate_stitched_displacement(
         for name, ax in zip(_ANNULUS_CHANNELS, parts["ann_axes"]):
             parts["ann_images"][name].set_data(np.flipud(channels[name][frame_idx].T))
         _draw_zoom(parts, profile, zoom_profile, frame_idx)
+        if parts["shoe_playhead"] is not None:
+            parts["shoe_playhead"].set_xdata(
+                [profile.times_s[frame_idx] / 60.0, profile.times_s[frame_idx] / 60.0]
+            )
         title.set_text(
             f"管内—环空顶替过程拼接 — t = {profile.times_s[frame_idx] / 60.0:.1f} min"
         )
@@ -467,7 +563,7 @@ def plot_stitched_snapshots(
     n_frames = len(profile.times_s)
     if channels["尾浆"].shape[0] != n_frames or len(zoom_profile.times_s) != n_frames:
         raise ValueError("管内 / 放大窗 / 环空 帧数不一致，无法拼贴")
-    indices = np.unique(np.linspace(0, n_frames - 1, min(n_panels, n_frames)).astype(int))
+    indices = _select_content_frames(zoom_profile, n_panels)
 
     depths = np.asarray(profile.depths_m, dtype=float)
     depth_min, depth_max = float(depths[0]), float(depths[-1])
@@ -532,4 +628,6 @@ __all__ = [
     "blend_rgb",
     "phase_colors",
     "plot_stitched_snapshots",
+    "shoe_timeline_matrix",
+    "zoom_content",
 ]

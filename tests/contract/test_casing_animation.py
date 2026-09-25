@@ -30,6 +30,8 @@ from cemdisp.data.pumping_schedule import (
 )
 from cemdisp.data.well_spec import WellSpec
 from cemdisp.reporting.casing_animation import (
+    _select_content_frames,
+    zoom_content,
     _build_figure,
     _front_lines,
     animate_stitched_displacement,
@@ -318,6 +320,107 @@ def test_plug_face_is_marked_among_front_lines(scene):
     lines = _front_lines(profile, N_TIMES - 1)
     assert lines, "末帧没有任何界面，前缘轨迹为空"
     assert len([line for line in lines if line[2]]) == 1, "胶塞面标记数应为 1"
+
+
+# ── 5. 交付物 5：鞋口出流时间线（③）──────────────────────────────────
+
+
+@pytest.fixture(scope="module")
+def solved_result():
+    """合成井的 1D 求解结果，用于取 shoe_timeline。"""
+
+    well, fluids, schedule = _well(), _fluids(), _schedule()
+    return CasingFlowSolver().run(well, fluids, schedule)
+
+
+def test_shoe_timeline_matrix_is_closed(scene, solved_result):
+    """鞋口出流份额矩阵每列必须闭合到 1，且相名非空。"""
+
+    from cemdisp.reporting.casing_animation import shoe_timeline_matrix
+
+    profile, _zoom, _annulus, _out = scene
+    names, matrix, event_times = shoe_timeline_matrix(
+        solved_result.shoe_timeline, profile.times_s
+    )
+    assert len(names) >= 2, f"鞋口出流相名过少：{names}"
+    assert matrix.shape == (len(names), len(profile.times_s))
+    assert np.allclose(matrix.sum(axis=0), 1.0, atol=1.0e-9), "鞋口出流份额未闭合"
+    assert event_times.size > 0
+    assert np.all(np.diff(event_times) >= -1.0e-9), "鞋口事件时刻未单调"
+
+
+def test_shoe_panel_does_not_overlap_other_axes(scene, solved_result):
+    """时间条轴不得与色标轴或数据轴相交（同一类遮挡的回归）。"""
+
+    import matplotlib.pyplot as plt
+
+    profile, zoom_profile, annulus, _out = scene
+    parts = _build_figure(profile, zoom_profile, annulus,
+                          shoe_timeline=solved_result.shoe_timeline)
+    fig = parts["fig"]
+    try:
+        assert parts["shoe_playhead"] is not None, "传入 shoe_timeline 后未生成时间条"
+        data_axes = [parts["casing_ax"], *parts["ann_axes"], parts["zoom_ax"]]
+        others = [ax for ax in fig.axes if ax not in data_axes]
+        for other in others:
+            for dax in data_axes:
+                assert not _overlaps(other.get_position(), dax.get_position()), (
+                    f"时间条/色标轴与数据轴 {dax.get_title()!r} 重叠"
+                )
+    finally:
+        plt.close(fig)
+
+
+# ── 6. 拼贴选帧：取有内容的帧（用户裁定 (B)）─────────────────────────
+
+
+def test_snapshot_prefers_informative_frames(scene):
+    """拼贴选帧必须优先取放大窗内确有界面的帧，而非等间隔。"""
+
+    from cemdisp.reporting.casing_animation import _select_content_frames, zoom_content
+
+    _profile, zoom_profile, _annulus, _out = scene
+    content = zoom_content(zoom_profile)
+    informative = int((content > 0).sum())
+    picked = _select_content_frames(zoom_profile, 3)
+    assert picked.size == min(3, informative if informative else len(content))
+    for idx in picked:
+        assert content[idx] > 0, (
+            f"选中的第 {idx} 帧（t={zoom_profile.times_s[idx]/60:.1f} min）放大窗内没有界面"
+        )
+    assert np.all(np.diff(picked) > 0), "选中帧未按时间先后排列"
+    # 等间隔选帧会落在空帧上，说明本用例确实在检验 (B) 而非恒真
+    even = np.unique(np.linspace(0, len(content) - 1, 4).astype(int))
+    assert (content[even] == 0).any(), "等间隔选帧恰好全有内容，本用例失去区分度"
+
+
+def test_snapshot_falls_back_when_no_content(scene):
+    """放大窗全程无界面时必须如实回退等间隔，不伪造内容。
+
+    用构造的剖面（全程单一相、无界面）直接检验回退分支——真实井在开泵瞬间
+    井口就已出现界面，构造不出"全程空窗"的物理输入。
+    """
+
+    from cemdisp.transport1d.casing_depth_profile import CasingDepthProfile
+
+    n_t, n_z = 5, 7
+    empty = CasingDepthProfile(
+        times_s=np.linspace(0.0, 10.0, n_t),
+        depths_m=np.linspace(0.0, 6.0, n_z),
+        fluid_names=("甲", "乙"),
+        shares=np.tile(np.array([1.0, 0.0]), (n_t, n_z, 1)),
+        sigma_t_s=np.zeros((1, n_z)),
+        band_width_m=np.zeros((1, n_z)),
+        boundary_arrival_s=np.full((1, n_z), np.inf),
+        plug_boundary=(False,),
+        mixing_band=False,
+        velocity_m_s=np.zeros((n_t, n_z)),
+        shear_rate_s=np.zeros((n_t, n_z)),
+        pipe_area_m2=np.full(n_z, 0.01),
+    )
+    assert not np.any(zoom_content(empty) > 0), "夹具并非空窗，用例失去意义"
+    picked = _select_content_frames(empty, 4)
+    assert picked.size == 4 and np.all(np.diff(picked) > 0)
 
 
 def test_front_line_depth_is_deepest_reached(scene):
