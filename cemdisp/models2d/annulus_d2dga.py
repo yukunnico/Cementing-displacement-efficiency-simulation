@@ -154,8 +154,24 @@ def _low_tail_indicators(geom: Dict[str, Array], cement: Array, ny: int) -> Dict
     return {"standoff低于0.5段占比": so_frac, "窄边效率低于0.05域占比": tail_frac}
 
 
-# A3 惯例（Task 2，2026-09-25）：置真但在当前速度场路径上**无消费者**的开关清单。
-# 规则与代码实际消费点一一对应，改消费点时必须同步改 `_dead_switches` 与本表。
+# A3 惯例（Task 2，2026-09-25；R42 修复轮 1）：开关默认值的**单一真源**。
+# `__init__` 签名与 `_dead_switches` 都从这里取值，禁止在签名/守卫里另写一份字面量
+# （两处各写一份正是 R18 类漂移的温床；防漂移断言见
+#  tests/contract/test_dead_switch_guard.py::test_signature_defaults_match_table）。
+# 本表同时定义告警语义：**取值 == 默认值 ⇒ 基线状态，不属预期落空 ⇒ 不告警**；
+# 只有"用户主动偏离默认值，且该取值在当前路径上无消费者"才算死开关。
+# 理由：告警的价值是"用户主动要求了一件不会发生的事"；若默认即空转也告警，全部 runner
+# 与井次跑批都会刷告警 ⇒ 训练所有人忽略告警，与"消除静默失效"的目的相反。
+_SWITCH_DEFAULTS: Dict[str, bool] = {
+    "enable_stream_function": True,
+    "enable_true_buoyancy": True,
+    "enable_power_law_gap_law": True,
+    "enable_yield_gate": True,
+    "enable_regime_split": False,
+    "enable_stream_yield_gate": False,
+    "enable_power_law_gap_correction": False,
+}
+# 旧代数路径专属开关：仅在 enable_stream_function=False 时被消费。
 _OLD_PATH_ONLY_SWITCHES = (
     ("enable_regime_split", "M2 局部流态修正"),
     ("enable_true_buoyancy", "真浮力体力"),
@@ -169,29 +185,38 @@ _NEW_PATH_ONLY_SWITCHES = (
 
 
 def _dead_switches(**switches) -> list[str]:
-    """返回"置真但在当前路径上无消费者"的开关名（A3 惯例，纯函数便于测试）。
+    """返回"**偏离默认值**且在当前路径上无消费者"的开关名（纯函数，便于测试）。
 
     规则（与代码实际消费点一一对应；改消费点时必须同步改这里）：
       * 旧代数路径专属开关：仅在 ``enable_stream_function=False`` 时被消费
-        （``_compute_velocity`` 在新路径早退，见 :1867-1872）；
-      * ``enable_yield_gate``：新路径下 ``wall`` 只写诊断量，需
-        ``enable_stream_yield_gate=True`` 才进流函数算子（:1870）；
+        （``_compute_velocity`` 在新路径早退，见 :1894-1899）；
+      * ``enable_stream_yield_gate``：置真（偏离默认）但 ``enable_yield_gate=False``
+        ⇒ 无 wall 可进算子，属无消费者（:1897）；
       * 新路径专属开关：仅在 ``enable_stream_function=True`` 时被消费，旧路径下同样空转；
-      * ``K_AXIAL`` 为模块常量、非构造形参，仅旧路径消费，附在告警文本里说明。
+      * ``K_AXIAL`` 为模块常量、非构造形参，仅旧路径消费，附在告警文本里说明；
+      * **取值等于 ``_SWITCH_DEFAULTS`` 的开关一律不判死**（R42）：默认即空转属基线状态，
+        不是"用户主动要求了一件不会发生的事"（否则每次默认构造都必告警）。
     """
+    def _value(name: str) -> bool:
+        return bool(switches.get(name, _SWITCH_DEFAULTS[name]))
+
+    def _deviates(name: str) -> bool:
+        """取值是否偏离该类声明的默认值（R42 的 ``values_are_default`` 判定）。"""
+        return _value(name) != _SWITCH_DEFAULTS[name]
+
     dead: list[str] = []
-    new_path = bool(switches.get("enable_stream_function", True))
-    if new_path:
+    if _value("enable_stream_function"):
         for name, desc in _OLD_PATH_ONLY_SWITCHES:
-            if switches.get(name, False):
+            if _deviates(name):
                 dead.append(f"{name}（{desc}：仅旧代数路径 enable_stream_function=False 消费）")
-        if switches.get("enable_yield_gate", True) and not switches.get(
-                "enable_stream_yield_gate", False):
-            dead.append("enable_yield_gate（wall 已算出但不进算子：需 "
-                        "enable_stream_yield_gate=True 才有动力学作用，当前仅写诊断量）")
+        # 屈服门进算子：默认组合（yield_gate=True 且 stream_yield_gate=False）两者皆默认
+        # ⇒ 静默；只有用户打开了它却关掉它的输入（enable_yield_gate=False）才告警。
+        if _value("enable_stream_yield_gate") and not _value("enable_yield_gate"):
+            dead.append("enable_stream_yield_gate（屈服门进流函数算子：其输入 "
+                        "enable_yield_gate=False ⇒ 无 wall 可入算子）")
     else:
         for name, desc in _NEW_PATH_ONLY_SWITCHES:
-            if switches.get(name, False):
+            if _deviates(name):
                 dead.append(f"{name}（{desc}：仅流函数新路径 enable_stream_function=True 消费）")
     return dead
 
@@ -325,11 +350,11 @@ class AnnulusD2DGASolver:
         enable_d2dga: bool = True,
         enable_d2dga_i3_flux: bool = True,
         enable_local_i3: bool = False,
-        enable_true_buoyancy: bool = True,
+        enable_true_buoyancy: bool = _SWITCH_DEFAULTS["enable_true_buoyancy"],
         instability_decay_scale: float = 5.0,
         save_interval: int = 60,
         yield_regularization_M: float = 100.0,
-        enable_regime_split: bool = False,
+        enable_regime_split: bool = _SWITCH_DEFAULTS["enable_regime_split"],
         regime_relax_alpha: float = 0.5,
         regime_max_iter: int = 24,
         regime_tol_rel: float = 1e-3,
@@ -340,14 +365,14 @@ class AnnulusD2DGASolver:
         cfl_number: float = 0.5,
         dt_min: float = 0.1,
         e_clip_max: float = 0.55,
-        enable_yield_gate: bool = True,  # 2026-09-02 默认启用可逆τw物理屈服门（替代非物理永久浓度冻结，结果网格收敛）
+        enable_yield_gate: bool = _SWITCH_DEFAULTS["enable_yield_gate"],  # 2026-09-02 默认启用可逆τw物理屈服门（替代非物理永久浓度冻结，结果网格收敛）
         yield_gate_f_safety: float = 1.15,
         enable_e_clip_ruling: bool = True,
         e_clip_measured_max: float = 0.90,
-        enable_power_law_gap_law: bool = True,
-        enable_stream_yield_gate: bool = False,  # B-2 opt-in：屈服门进流函数算子（默认关=HEAD 逐位）
-        enable_power_law_gap_correction: bool = False,  # B-3 opt-in：幂律间隙一阶修正（默认关）
-        enable_stream_function: bool = True,
+        enable_power_law_gap_law: bool = _SWITCH_DEFAULTS["enable_power_law_gap_law"],
+        enable_stream_yield_gate: bool = _SWITCH_DEFAULTS["enable_stream_yield_gate"],  # B-2 opt-in：屈服门进流函数算子（默认关=HEAD 逐位）
+        enable_power_law_gap_correction: bool = _SWITCH_DEFAULTS["enable_power_law_gap_correction"],  # B-3 opt-in：幂律间隙一阶修正（默认关）
+        enable_stream_function: bool = _SWITCH_DEFAULTS["enable_stream_function"],
         # ⚠️ 2026-09-17 A-3b（Task 6）：HB 闭包接线双开关（opt-in，默认全关 ⇒ 逐位=HEAD）。
         enable_hb_closure: bool = False,
         hb_fix_cement_tau_y: bool = False,
@@ -600,10 +625,12 @@ class AnnulusD2DGASolver:
                 stacklevel=2,
             )
 
-        # A3 惯例（Task 2，2026-09-25 完备化）：置真但当前速度场路径无消费者的开关
-        # 一次性告警，防「死开关被当活杠杆」。原先只检查**反方向**组合（如新路径专属
-        # 开关落在旧路径上），默认路径下 enable_true_buoyancy/enable_power_law_gap_law/
-        # enable_yield_gate 等置真空转零告警；现由 `_dead_switches` 双向覆盖。
+        # A3 惯例（Task 2，2026-09-25 完备化；R42 修复轮 1）：**偏离其声明默认值**且当前
+        # 速度场路径无消费者的开关一次性告警，防「死开关被当活杠杆」。原先只检查**反方向**
+        # 组合（如新路径专属开关落在旧路径上），默认路径下 enable_true_buoyancy/
+        # enable_power_law_gap_law/enable_yield_gate 等置真空转零告警；现由
+        # `_dead_switches` 双向覆盖。取值等于默认值的开关不报（默认即空转属基线状态，
+        # 报了会让每次默认构造都刷告警 ⇒ 训练所有人忽略告警；表见 `_SWITCH_DEFAULTS`）。
         _dead = _dead_switches(
             enable_stream_function=enable_stream_function,
             enable_yield_gate=enable_yield_gate,
