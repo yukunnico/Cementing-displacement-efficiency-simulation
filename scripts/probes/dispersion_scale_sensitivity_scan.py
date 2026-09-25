@@ -1,5 +1,11 @@
 """M1 弥散系数 κ 缩放敏感性扫描脚本（CFL on/off 双组存档）。
 
+⚠️ 2026-09-25 作废声明（Task 5）：本脚本扫描的 `dispersion_dt_scale` 形参已被
+Task 7（2026-09-14 源模型口径重构）**彻底删除**——自创拉普拉斯弥散及其 4 个
+`dispersion_*` 形参均已从 `AnnulusD2DGASolver` 移除（弥散改由 q₀ + I₃ 闭包承载）。
+故本脚本的 scale 维度不再传递、不再有任何判别力（各行逐位相同），仅保留供历史
+存档复现；其 scale 结论（含下方"验收目标"）不得再被引用。
+
 任务背景（.superpowers/sdd/2026-08-23-annulus-distortion-fix/task-5-brief.md）：
 Task 4 (M1) 已将弥散系数改为按 dt 归一：_dt_norm = dispersion_dt_scale * (dt_step / dispersion_dt_ref)。
 本脚本扫描 dispersion_dt_scale ∈ {0.0, 0.25, 0.5, 1.0}，CFL on/off 各一组：
@@ -132,19 +138,21 @@ def run_one_case(scale: float, cfl_on: bool, *, nz: int, ny: int) -> dict:
     # Annulus stop time
     total_t = annulus_stop_time_s(casing_result=casing_result, fluids=fluids)
 
-    # 2D D2DGA solver：R3 三闭包全开，M1 弥散参数透传
+    # 2D D2DGA solver：R3 三闭包全开
+    # ⚠️ 2026-09-25：`enable_d2dga_auto_m` 与 `dispersion_dt_scale` 两个形参均已从求解器
+    # 删除（前者随 R0 分支删除；后者随 Task 7 删除自创拉普拉斯弥散），传了运行期即
+    # TypeError。故本脚本的 scale 维度**已无判别力**（各 scale 输出逐位相同），
+    # 仅按历史口径保留以便复现旧存档；新分析请勿引用其 scale 结论。
     solver = AnnulusD2DGASolver(
         dt=DT,
         nz=nz,
         ny=ny,
         total_t=total_t,
         enable_d2dga=True,
-        enable_d2dga_auto_m=True,
         enable_d2dga_i3_flux=True,
         enable_true_buoyancy=True,
         open_outlet=True,
         enable_cfl_adaptive=cfl_on,
-        dispersion_dt_scale=scale,
     )
 
     result = solver.run(well_spec, fluids, provider)

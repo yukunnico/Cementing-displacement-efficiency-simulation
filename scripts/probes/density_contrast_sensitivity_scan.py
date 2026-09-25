@@ -154,13 +154,14 @@ def main() -> None:
             total_t = annulus_stop_time_s(casing_result=casing_result, fluids=fluids_override)
 
             # 2D D2DGA solver
+            # ⚠️ 2026-09-25：`enable_d2dga_auto_m` 形参已从求解器删除（R0 分支删除
+            # ⇒ m 恒自动计算）；R3.enable_d2dga_auto_m 仅留作三闭包口径记录。
             solver = AnnulusD2DGASolver(
                 dt=DT,
                 nz=NZ,
                 ny=40,
                 total_t=total_t,
                 enable_d2dga=True,
-                enable_d2dga_auto_m=R3.enable_d2dga_auto_m,
                 enable_d2dga_i3_flux=R3.enable_d2dga_i3_flux,
                 enable_true_buoyancy=R3.enable_true_buoyancy,
                 open_outlet=True,

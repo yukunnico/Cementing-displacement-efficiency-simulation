@@ -36,8 +36,9 @@ from cemdisp.data.well_spec import WellSpec
 class AblationLevel:
     """消融级别定义——三个开关的布尔组合。
 
-    当前只有 enable_d2dga_auto_m 在求解器上存在（Task 2）。
-    i3_flux 和 true_buoyancy 字段保留供 Task 4/5/6 前向使用。
+    2026-09-25 订正：`enable_d2dga_auto_m` 形参已从求解器删除（R0 分支删除 ⇒ m
+    恒自动计算），故此字段只用于消融口径留档与摘要列，**不再透传求解器**；
+    真正透传的是 i3_flux 与 true_buoyancy 两个字段。
     """
     name: str  # "R0".."R3"
     enable_d2dga_auto_m: bool
@@ -129,6 +130,9 @@ def run_one_level(
     implemented (Zhang 2022 式 4.24); enable_true_buoyancy=False falls
     back to simplified (2φ−1) proxy.
 
+    ⚠️ 2026-09-25 订正：`enable_d2dga_auto_m` **不再**透传（形参已删，见 annulus_d2dga.py
+    R0 分支删除说明）；仍透传的只有 `enable_d2dga_i3_flux` 与 `enable_true_buoyancy`。
+
     Parameters
     ----------
     well_spec_override : WellSpec | None
@@ -172,13 +176,15 @@ def run_one_level(
         total_t = annulus_stop_time_s(casing_result=casing_result, fluids=fluids)
 
     # 2D D2DGA solver — R0-R3 开关 + 修正配置开关一并透传
+    # ⚠️ 2026-09-25：`enable_d2dga_auto_m` 形参已随 R0 分支删除（annulus_d2dga.py
+    # 2026-09-07：m 恒由 _compute_props 自动计算），不得再透传——传了运行期即 TypeError。
+    # 因此 R0/R1 在求解器上不再有区别，level.enable_d2dga_auto_m 仅作消融定义留档。
     solver = AnnulusD2DGASolver(
         dt=dt,
         nz=nz,
         ny=40,
         total_t=total_t,
         enable_d2dga=True,
-        enable_d2dga_auto_m=level.enable_d2dga_auto_m,
         enable_d2dga_i3_flux=level.enable_d2dga_i3_flux,
         enable_true_buoyancy=level.enable_true_buoyancy,
         enable_cfl_adaptive=enable_cfl_adaptive,

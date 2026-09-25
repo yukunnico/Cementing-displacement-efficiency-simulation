@@ -70,10 +70,11 @@ def run_one_level(
     provider = build_coupled_annulus_inlet_provider(casing_result, casing_solver, fluids)
     total_t = annulus_stop_time_s(casing_result=casing_result, fluids=fluids)
 
+    # ⚠️ 2026-09-25：`enable_d2dga_auto_m` 形参已从求解器删除（R0 分支删除 ⇒ m 恒自动
+    # 计算），不得再透传；LEVELS 里的 auto_m 列仅记录消融定义，故 R0/R1 结果相同。
     solver = AnnulusD2DGASolver(
         dt=dt, nz=nz, ny=40, total_t=total_t,
         enable_d2dga=enable_d2dga,
-        enable_d2dga_auto_m=enable_d2dga_auto_m,
         enable_d2dga_i3_flux=enable_d2dga_i3_flux,
         enable_true_buoyancy=enable_true_buoyancy,
         open_outlet=True,
