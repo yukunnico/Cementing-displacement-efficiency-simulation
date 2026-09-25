@@ -1,4 +1,7 @@
 {
+  "_env": "Python 3.13.7 / numpy 2.3.3 / scipy 1.16.2（对账源：docs/superpowers/plans/baseline-2026-09-25.md）",
+  "_generated_from": "HEAD bc155b0 + 4 个未提交 HB 改动（工作树脏态）；生成命令见 task-10-report.md",
+  "_note": "微网格锚（nz=30/ny=12/total_t=14000s），非生产数字，不得用于论文或与现场 CBL 比对",
   "channeling": 0.27586206896540544,
   "eta_E": 0.9203933244336414,
   "eta_N": 0.7188836497828229,
