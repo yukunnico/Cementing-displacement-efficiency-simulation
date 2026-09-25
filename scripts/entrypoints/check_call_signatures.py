@@ -40,6 +40,16 @@ Task 14 扩展（闸门"绿而无用"的修复）
   4. 盲区显式化：`SyntaxError` / `UnicodeDecodeError` 的文件**打印跳过计数**（不静默）；
      `with` 与 `async with` 一视同仁；目标类日后若新增 `**kwargs`（`VAR_KEYWORD`），
      该类关键字校验**显式停用并告警**，而不是把全部关键字误报成"形参不存在"。
+
+开销（本仓 279 个可解析文件、0 跳过）：
+  全仓扫描是**秒级**操作，支配项是 `Repo.load`（`ast.parse` + 逐节点绑定事实收集），
+  不是关键字比对本身；纯 `ast.parse` 全仓约 0.8 s，`Repo.load` 约 2.6–2.9 s，
+  `_scan` 合计约 **3.6–4.7 s**（两次独立测量：3.62–4.69 s / 3.77–4.10 s）。
+  ⚠️ **墙钟随机器负载浮动**（同一提交态在不同负载下可差近 2 倍），因此请预期一个**区间**
+  而不是某个固定常数；`visible_calls` / `_signatures` / `_var_keyword_targets` 已做进程内
+  缓存（缓存只影响耗时，实测不改变判定结果）。本闸门挂在合并前路径上
+  （`tests/contract/test_entrypoint_signatures.py::test_no_bad_keyword_arguments_anywhere`），
+  改动前请把这一量级计入预算。
 """
 from __future__ import annotations
 
