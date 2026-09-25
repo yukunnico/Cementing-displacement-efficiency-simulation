@@ -1194,3 +1194,154 @@ git commit -m "test(consistency): 锚加固——缺锚即失败/键集守卫/�
 - `closure_contribution_scan.py` 输出的 CSV 仍保留 `auto_m` 列（R0=0/R1=1），而指标列将逐位相同 ⇒ 该列是**纯标签、零信息**，却看起来像做过 auto_m 消融。引用该表时须显式说明。
 
 **状态**：**未处理**（需先裁定：删除 R0 级、或用真实区分量替代 R0/R1 的对照维度）。已并入 Task 14 的范围讨论。
+
+---
+
+## 附录 B：退化对照总表（Task 14 清理轮留档，2026-09-26，受版本控制）
+
+### B.0 这份表解决什么问题
+
+附录 A 留档了 **R0≡R1 结构性恒等**（`enable_d2dga_auto_m` 形参已删 ⇒ 两级 kwargs 逐字相同）。
+Task 14 的清理又暴露**同一类问题的另一批实例**：一批"看起来做过消融/敏感性对照、实际差值恒 0"
+的行。这类行**不能当对照读**——引用它会产出"某机制无影响"的假结论。
+
+本附录给出**逐行可审计**的清单：变体名 / 脚本 / 它等于哪一行 / **判定的方法** / 失去意义的图或表。
+审计论文表格的人不需要重做本文的工作：只要拿本表的"变体名 + 脚本"去对账即可。
+
+### B.0.1 两种方法，不得混用
+
+| 方法 | 含义 | 需要的依据 |
+|---|---|---|
+| **结构性** | 两行的 kwargs **逐字相同**（或差异仅在"等于形参默认值"的位上）⇒ 同一求解器 + 确定性 ⇒ 输出逐位相同 | 读代码给出 kwargs 逐字对比；"等于默认值"须给出 `inspect.signature` 的默认值 |
+| **实测** | kwargs **不同**，但**跑出来逐位相同** | 给出实际跑的算例、比对口径与结果（哈希/逐位断言） |
+
+**两条前提**（下面所有"结构性"行的公共前提）：
+
+1. **求解器确定性（实测）**：`tests/contract/test_default_path_bitwise_anchor.py` 的冻结锚
+   是在**另一个提交/进程**里生成的，当下运行仍**逐位复现**（该测试长期全绿，且不做浮点容差）。
+   本轮另做同进程双跑对照：同 kwargs 两次构造运行，五场 sha256 + 五标量**完全一致**
+   （见 B.0.2 的 A 行与 F 行）。
+2. **`has VAR_KEYWORD = False`**：`AnnulusD2DGASolver.__init__` 无 `**kwargs`
+   （闸门 `_var_keyword_targets()` 每次运行都实测为空）。因此"已删形参"只会触发 `TypeError`，
+   不会被静默吸收。
+
+### B.0.2 实测：默认路径上哪些开关真的改变输出
+
+口径（与冻结锚同款，**微网格、非生产数字**）：hu101 生产 loader + T1 生产 1D 三开关 +
+**默认环空配置**（不含 `CORRECTED_KW`），`nz=30 / ny=12 / total_t=14000s`（覆盖整个顶替序列）。
+指纹 = 五场（cement/lead/tail/spacer/wall）sha256 + 五个标量（η_E/η_N/窜槽/混浆/失稳）拼接后取前 16 位。
+
+| kwargs | 指纹 | 与基线 |
+|---|---|---|
+| `{}`（基线） | `a24abcfffac3b0a7` | — |
+| `{}` 重跑 | `a24abcfffac3b0a7` | **逐位相同**（确定性对照） |
+| `enable_regime_split=True` | `a24abcfffac3b0a7` | **逐位相同 ⇒ 该开关在默认路径上无消费者** |
+| `enable_true_buoyancy=False` | `a24abcfffac3b0a7` | **逐位相同 ⇒ 同上** |
+| `enable_power_law_gap_law=False` | `a24abcfffac3b0a7` | **逐位相同 ⇒ 同上** |
+| `e_clip_max=0.90` | `a24abcfffac3b0a7` | **逐位相同 ⇒ 同上（已弃用）** |
+| `enable_e_clip_ruling=False` | `a24abcfffac3b0a7` | **逐位相同 ⇒ 同上（已弃用）** |
+| `enable_local_i3=True` | `4972b49f78c2e756` | 不同（活） |
+| `yield_gate_f_safety=1.6` | `b97836ac3f47ea3c` | 不同（活） |
+| `yield_regularization_M=1000.0` | `50b93341c7754516` | 不同（活） |
+| `enable_yield_gate=False` | `07e91da61a97401e` | 不同（活） |
+| `enable_stream_yield_gate=True` | `c78a6a763d2a9e50` | 不同（活） |
+| `enable_d2dga_i3_flux=False`（对照） | `71a0c623c6b9e5ae` | 不同（**证明比对有牙**） |
+| `enable_d2dga=False`（对照） | `71a0c623c6b9e5ae` | 不同；**与上一行同指纹**——两者闸的是同一个 I3 通量块（与 `_dead_switches` 的注释一致） |
+| `enable_power_law_gap_correction=True`（对照） | `cd10aaf804decc41` | 不同（对照） |
+
+**形参默认值（`inspect.signature` 实测）**：`enable_yield_gate=True`、`enable_regime_split=False`、
+`enable_local_i3=False`、`enable_true_buoyancy=True`、`e_clip_max=0.55`、`enable_e_clip_ruling=True`。
+⇒ **显式传"等于默认值"的开关与不传等价**（Python 语义，确定性前提同上）。
+
+**代码侧独立印证（结构性）**：`cemdisp/models2d/annulus_d2dga.py` 的 `_dead_switches`
+（A3 惯例，R42）与 `_OLD_PATH_ONLY_SWITCHES` 已**在代码里声明**：`enable_regime_split` /
+`enable_true_buoyancy` / `enable_power_law_gap_law` 属"仅旧代数路径
+（`enable_stream_function=False`）消费"，默认路径偏离即告警；`e_clip_*` 三形参由构造器
+DeprecationWarning 声明"显式传值不再生效"。**实测与代码声明一致**，故下文的"实测"行
+既可由微网格复现，也有代码侧的路径级依据（路径属性与网格无关，故可外推到脚本的 nz=80/250）。
+
+### B.1 本次清理**直接造成**的退化行（一行一条）
+
+删键前这些行会 `TypeError`（脚本根本跑不起来）；删键后它们能跑，但**与某一行逐位相同**。
+
+| # | 变体名 | 脚本 | 等于哪一行 | 方法（依据） | 失去意义的图/表 |
+|---|---|---|---|---|---|
+| B1-1 | `dispersion_zero` | `scripts/entrypoints/run_ablation_variants.py` | "求解器全默认（无任何覆盖）" | **结构性**：删键后 dict 字面量为空，构造实参只剩 `total_t`/`nz` ⇒ 与任何无覆盖构造同 kwargs | 该脚本自产的 `results/消融变体_runner口径_2026-09-09/`（CSV/MD/逐变体 JSON）里 `dispersion_zero` 行；**无已知论文图/表受害者**（但若被引作"弥散消融"，该结论为零） |
+| B1-2 | `M1 only` | `scripts/probes/isolate_fix_mechanisms.py` | `BASELINE(全关)` | **结构性**：两行 kwargs 均为 `{}`，逐字相同 | 09-02 呼101 机制归因表；**M1 独立归因失效**（对应 2026-08-23 计划 Task 5 / 设计稿 §4 的"M1 一轮独立归因"） |
+| B1-3 | `M1+M3` | 同上 | `M3 only` | **结构性**：两行 kwargs 均为 `{enable_yield_gate: True}`，逐字相同 | 同上 |
+| B1-4 | `ALL corrected` | 同上 | **不再与同表任何行重合** | — | 我 Task 14 首轮报告把 `ALL corrected` 也列为退化行，**此处更正：该判断过强**。它只是少了已删的 M1 维，仍与 `M3+M2+M4` 不同（多 `enable_local_i3`），标签与内容仍相符 |
+| B1-5 | `b5_dispaz0.002` | `scripts/probes/hu101_standoff_response_tuning_survey_20260911.py` | **同 SO 的"无旋钮"配置**（A 段在 `SO=0.55` 有同名行；`SO=0.40/0.70` 无 A 段对应行，但其 B 段斜率即无旋钮基线斜率） | **结构性**：`solver_kw={}` 与 `solver_kw=None` 都归约为 `{}`；同 `well_spec`/`fluids`/`schedule`/缓存键 | 该脚本 B 段"旋钮对响应斜率的控制"表的 `b5` 行；**无已知论文图/表受害者**（09-11 调研报告的"方位弥散空杠杆"结论**方向仍对**，但今天不再由该脚本的对照给出） |
+| B1-6 | `D_disp_x0.5` / `D_disp_x2` / `D_disp_x3` | `scripts/probes/hu101_low_score_attribution_probe_20260911.py` | `A_基线` | **结构性**：同 `well_spec`/`fluids`/`schedule`/缓存键，`solver_kw={}` 与缺省等价 | 该脚本 D 段表（3 行 = `A_基线` 的 3 份副本）；无已知论文图/表受害者 |
+| B1-7 | `scale ∈ {0.0, 0.5}` 全部档 | `scripts/probes/dispersion_scale_sensitivity_nz250.py`（**已归档**） | 彼此逐位相同；与外部基线 JSON 档（`scale=1.0`，`source=baseline_reuse`）的关系**未实测** | **结构性**（彼此：kwargs 逐字相同）。**未实测**：脚本断点续跑会复用旧 JSON；"与外部 JSON 也相同"只有脚本自述的同源口径，我没有跑 | 2026-08-23 计划 Task 5 的 κ 扫描验收（①mixing 0.59→0.2–0.35 ②scale→0 平台由 κ 主导 ③前沿米级）；已归档 |
+| B1-8 | 全部 8 档（`scale∈{0,0.25,0.5,1.0}` × CFL on/off） | `scripts/probes/dispersion_scale_sensitivity_scan.py`（**已归档**） | 彼此逐位相同 | **实测（R102 记录，非我本次实测）**：`.superpowers/sdd/2026-09-25-internal-consistency-hardening/progress.md:268` 记"8 次仿真输出逐位相同"；本次未复跑（脚本已归档） | 同上（M1 κ 扫描验收）；已归档 |
+| B1-9 | `关壁面冻结` | `scripts/probes/_wallfreeze_grid_mechanism_20260902.py` | `BASE` | **结构性**：两行 kwargs 均为 `dict()`；`run_variant(name, ...)` 的 `name` 只进输出标签，不进构造 | `results/_质量平衡取证_2026-09-02/阶段5_壁面冻结网格机制.json` 的两行；B2 屈服门取证链 |
+| B1-10 | `关壁面冻结+关弥散` | 同上 | `BASE` | **结构性**：同上 | 同上 |
+| B1-11 | `对照_完全无壁面层` | `scripts/probes/_yieldgate_verify_20260902.py` | `对照_浓度冻结基线` | **结构性**：两行 kwargs 均为 `dict()`，逐字相同 | `results/_质量平衡取证_2026-09-02/阶段6_物理屈服门验证.json` 的两行 |
+
+### B.2 同一批脚本里**本次清理之外**发现的同类退化（另行发现，非本次清理引入）
+
+这些行的 kwargs **并未**被本次清理改动；它们的退化来自"死开关 / 显式传默认值"，
+依据是 B.0.2 的**实测**与代码侧 `_dead_switches` 声明。**按行类列**（成员逐条列在"行成员"里，
+以便逐行对账）。
+
+| 类 | 退化的开关（依据） | 行成员（脚本 · 变体名） | 失去意义的图/表 |
+|---|---|---|---|
+| B2-1 | `enable_regime_split=True` 在默认路径无消费者（**实测**，`_OLD_PATH_ONLY_SWITCHES` 声明） | `run_ablation_variants` · `m2_regime_split`；`isolate_fix_mechanisms` · `M2 only`、`M3+M2+M4`（该位）、`ALL corrected`（该位）；`CORRECTED_KW` 的该位（`bisect_hu103_20260902` / `c_verify_convergence_20260902` / `corrected_ref_hu1_hu103_20260902` / `debug_hu1_hu103_eta_zero_20260902` / `dump_tailwindow_2d_v1` / `rerun_stop_fix_20260901` / `analyze_distortion_fix` / `sensitivity_common` / `mass_balance_diag`） | `run_ablation_variants` 消融表 `m2` 行（与 `dispersion_zero` 互为重复）；09-02 各脚本的 `+enable_regime_split` 逐开关行 |
+| B2-2 | `enable_true_buoyancy=False` 在默认路径无消费者（**实测**，同上声明） | `hu101_low_score_attribution_probe_20260911` · `B_真浮力关`；`run_gap_fill_variants` · `r2_i3`（唯一键）、`r0_base`（该位）；`_wallfreeze_grid_mechanism_20260902` · `关壁面冻结+关弥散+关D2DGA`（该位） | 09-11 调研报告的"真浮力关 +15.6pp"类结论（**注**：该数字来自**旧代数路径**口径；此处只声明"在**当前 HEAD** 上该脚本无法复现该对照"，不否认历史口径的成立） |
+| B2-3 | `enable_power_law_gap_law=False` 在默认路径无消费者（**实测**） | `hu101_standoff_response_tuning_survey_20260911` · `b2_gaplaw_off` | 该脚本 B 段旋钮表 `b2` 行（5 个旋钮里 2 个是假对照：`b1`/`b2`） |
+| B2-4 | `e_clip_max` / `e_clip_measured_max` / `enable_e_clip_ruling` 已弃用、显式传值不再生效（构造器 DeprecationWarning 声明 + **实测**） | `hu101_standoff_response_tuning_survey_20260911` · `b1_eclip0.90`；`hu101_low_score_attribution_probe_20260911` · 整个 `C` 段（5 档 `C_eclip=…`）；`isolate_fix_mechanisms` · `M4 only(e=.90)`、`M3+M4`、`M3+M2+M4`、`ALL corrected`（该位）；`_wallfreeze_grid_mechanism_20260902` · `关壁面冻结+关弥散+近同心`；`CORRECTED_KW` 的该位（同 B2-1 的脚本清单） | 该两脚本的旋钮/扫描表中 `b1` 与整个 `C` 段；`isolate_fix_mechanisms` 的 `M4` 归因 |
+| B2-5 | 显式传"等于形参默认值"的开关 ≡ 不传（`inspect.signature` **实测**默认值：`enable_yield_gate=True`） | `isolate_fix_mechanisms` · `M3 only`、`M1+M3`、`M3+M4`、`M3+M2+M4`；`_yieldgate_verify_20260902` · `物理屈服门` | `isolate_fix_mechanisms` 的 `M3` 归因；`_yieldgate_verify_20260902` 的**整张表**（3 行全部等价 ⇒ 零信息） |
+
+**B2 的合并后果（逐脚本）**：
+
+- `run_ablation_variants.py`：3 个变体里 **2 个**（`m2_regime_split`、`dispersion_zero`）等价于"无覆盖"，
+  只有 `i3_localized` 有区分力 ⇒ 该消融表在 M2 与"弥散"两维上零信息。
+- `isolate_fix_mechanisms.py`：10 行塌成 **2 个等价类** ——
+  `{I3 only, ALL corrected}`（活的部分是 `enable_local_i3`）与 `{其余 8 行}`。
+- `hu101_low_score_attribution_probe_20260911.py`：**B/C/D 三段共 9 行全部退化为 `A_基线` 副本**
+  （B：1 行真浮力关；C：5 档 e_clip；D：3 档弥散），只有 `E_nz500`、`F_*`、`G_*` 仍有区分力。
+- `_yieldgate_verify_20260902.py`：整表 3 行等价。
+- `hu101_standoff_response_tuning_survey_20260911.py`：B 段 5 旋钮里 `b1`/`b2`/`b5` 三个是假对照，
+  只有 `b3_fsafety1.6`、`b4_M1000` 有区分力（两者**实测为活**，与 09-11 旧路径口径下"M1000 ±0.0000 死"的结论**不同**——
+  那是旧路径的结论，不得跨路径引用）。
+
+### B.3 状态与需裁定
+
+- **B.1（本次清理造成）**：已按 Task 14 的硬约束处理 —— **只删键、不改口径**，标签保留，
+  在代码内加注释披露，并在本表逐行留档。**不需要**再改脚本，除非裁定"删行"。
+- **B.2（本次清理之外）**：**未处理**。建议裁定方向（三选一，可组合）：
+  ① 删掉无区分力的行；② 用有真实区分力的量替换该维度；③ 保留行但在输出表/图注里显式标注"该行与基线同构、零信息"。
+  无论选哪条，都应同时裁定**是否做全仓同类扫描**（本附录只覆盖 Task 14 触碰过的 18 个脚本，
+  `enable_true_buoyancy=False` / `e_clip_max` 在**其它**脚本（如 `scripts/entrypoints/run_gap_fill_variants.py`
+  以外的跑批、`cemdisp/runners/*`）的用法**未**逐一枚举）。
+- **不在本附录判断范围**：2026-08-23 设计稿 §4 列的"表4（8 井效率/窜槽/混浆）、表5（消融）、
+  表6（网格收敛）、67% 居中度阈值、呼101 '65.04% vs 62.77% +2.27pp'、'20 秒'卖点"——那是
+  **M1 是否落地**对论文数字的影响清单，与"灵敏度扫描有无判别力"是两件事。附录 A 已覆盖 R0/R1
+  的图6/图9/表5 受害者，本附录不重复声明。
+- **时效口径（重要）**：B.0.2 与 B.2 的"默认值恒等"判定按**当前 HEAD** 的形参默认值给出；
+  我**未**追溯历史默认值，因此这些行在**历史运行**时是否同构**不在此表结论内**——
+  本表只保证"**今天重跑**时同构"。
+
+### B.4 复核方式（可复现）
+
+```bash
+# 1) 闸门：全仓调用面（应 0 处问题）
+PYTHONIOENCODING=utf-8 PYTHONUTF8=1 python scripts/entrypoints/check_call_signatures.py
+
+# 2) 形参默认值（B2-5 的结构性依据）
+PYTHONIOENCODING=utf-8 PYTHONUTF8=1 python -c "import inspect; \
+from cemdisp.models2d import AnnulusD2DGASolver as S; \
+p=inspect.signature(S.__init__).parameters; \
+print({k: p[k].default for k in ('enable_yield_gate','enable_regime_split','enable_local_i3',\
+'enable_true_buoyancy','e_clip_max','enable_e_clip_ruling')})"
+
+# 3) B.0.2 的开关实测：按 tests/contract/test_default_path_bitwise_anchor.py 的
+#    _run_default_case() 同款流水线（hu101 loader + T1 三开关 + 默认环空配置，
+#    nz=30/ny=12/total_t=14000s），对每个 kwarg 组合跑一次，比五场 sha256 + 五标量。
+#    对照项（enable_d2dga_i3_flux=False / enable_d2dga=False /
+#    enable_power_law_gap_correction=True）必须"不同"，否则说明该算例无判别力。
+
+# 4) 确定性前提
+PYTHONIOENCODING=utf-8 PYTHONUTF8=1 python -m pytest \
+  tests/contract/test_default_path_bitwise_anchor.py tests/contract/test_anchor_integrity.py -q
+```
