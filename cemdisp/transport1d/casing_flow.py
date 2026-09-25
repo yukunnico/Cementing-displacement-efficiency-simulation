@@ -246,6 +246,9 @@ class CasingFlowSolver:
         self._scheduled_steps_by_result_id: dict[int, tuple[_ScheduledStep, ...]] = {}
         self._initial_fluid_by_result_id: dict[int, str] = {}
         self._fluids_by_result_id: dict[int, tuple[FluidSpec, ...]] = {}
+        # T5：run() 时的本井规格，供停泵沉降查询取本井管内半径
+        # （此前 `_settled_exit_fluid_name_enhanced` 以无参形式取半径 ⇒ 恒 0.05 m）
+        self._well_spec_by_result_id: dict[int, WellSpec] = {}
 
     def run(
         self,
@@ -376,6 +379,7 @@ class CasingFlowSolver:
         self._scheduled_steps_by_result_id[id(result)] = scheduled_steps
         self._initial_fluid_by_result_id[id(result)] = initial_fluid
         self._fluids_by_result_id[id(result)] = fluids
+        self._well_spec_by_result_id[id(result)] = well_spec
         return result
 
     def pipe_exit_state_at(self, result: CasingFlowResult, time_s: float) -> PipeExitState:
@@ -406,6 +410,9 @@ class CasingFlowSolver:
                 cumulative_at_time=cumulative_at_time,
                 pipe_volume_m3=pipe_volume_m3,
                 default_fluid_name=state.phase_fractions[0][0],
+                # T5：传本井 well_spec，使 τ_c = Δρ·g·R 用真实管内半径。
+                # 手工构造的 result（不在 run() 的 id 表内）取 None ⇒ 退回 0.05 m。
+                well_spec=self._well_spec_by_result_id.get(id(result)),
             )
             return PipeExitState(
                 time_s=time_s,
@@ -1324,6 +1331,7 @@ class CasingFlowSolver:
         cumulative_at_time: float,
         pipe_volume_m3: float,
         default_fluid_name: str,
+        well_spec: WellSpec | None = None,
     ) -> str:
         """停泵期间考虑凝胶强度和屈服应力的增强沉降模型。
 
@@ -1342,6 +1350,8 @@ class CasingFlowSolver:
             cumulative_at_time: 该时刻的累计泵入体积（m3）
             pipe_volume_m3: 管内容积（m3）
             default_fluid_name: 默认流体名称（当无沉降时返回此名称）
+            well_spec: 井筒规格；提供时 τ_c 用本井管内半径（T5），
+                为 None 时退回 `_effective_pipe_radius_m` 的 0.05 m 兜底。
 
         Returns:
             考虑增强沉降效应后的鞋口流体名称
@@ -1368,7 +1378,7 @@ class CasingFlowSolver:
         # 修正 2: 屈服应力效应
         yield_suppression = 0.0
         if current_fluid is not None and current_fluid.yield_stress_pa is not None and current_fluid.yield_stress_pa > 0.0:
-            pipe_radius_m = self._effective_pipe_radius_m()
+            pipe_radius_m = self._effective_pipe_radius_m(well_spec)
             tau_critical = delta_rho * self.g_constant * pipe_radius_m
             if tau_critical > 1e-6:
                 yield_ratio = min(current_fluid.yield_stress_pa / tau_critical, 1.0)
