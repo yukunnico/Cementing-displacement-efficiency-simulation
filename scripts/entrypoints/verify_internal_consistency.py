@@ -4,24 +4,34 @@
 产出
 ----
 ``results/内部自洽加固_2026-09-25/一致性台账.csv``，列为：
-``井名, 域内eta_E, 饥饿份额, 恒等式偏差, 1D尾浆到鞋时刻_s, 2D前缘位置_m, 质量守恒误差, 说明``
+``井名, 域内eta_E, 饥饿份额, 恒等式偏差, 1D尾浆到鞋时刻_s, 2D前缘_距鞋口_m, 质量守恒误差, 说明``
 
 口径声明（复核者必读）
 ----------------------
 1. **短窗非生产数字**：本脚本用 ``nz=60 / ny=12`` 的**短窗**网格，只为让三项自洽量跑得动、
    逐井可比；其 η 值**不得**当作论文/验证数字、**不得**与现场 CBL 比对。生产口径是
    ``cemdisp/runners/*_tailpipe.py``（nz=250）与 ``scripts/entrypoints/rerun_all_wells_corrected.py``。
-   ⚠️ **该列不是"误差"，是过渡带的代数和**：对连续场可严格展开为
-   ``Σ_{c≥0.5} b(1−c)/∬b − Σ_{c<0.5} b·c/∬b``（与 ``(1−η_E) − 饥饿份额`` 逐位相等，
-   实测差 0.0，见 task-6-report.md），二值场时恒为 0。网格加密只会收窄过渡带、
-   不会把连续场变二值：实测 hu101 nz=60 → 4.29e-2、nz=120 → 3.27e-2、nz=250 → 2.62e-2；
-   而**基准算例**（纯水泥恒定入口 ⇒ 场近乎二值）实测 6.7e-10 ~ 1.0e-3 ⇒ 历史口径
-   "偏差 ≤0.007" 的出处是基准算例，**不是**现场井。故本列只用于**同窗横向比较**。
-2. **1D/2D 口径**：1D 用生产 runner 口径（`enable_gravity` + T1 三开关
+2. **``恒等式偏差`` 列不是"误差"，是过渡带的代数和**：``(1−η_E) − 饥饿份额`` 与
+   ``Σ_{c≥0.5} b(1−c)/∬b − Σ_{c<0.5} b·c/∬b`` **代数恒等**，独立复算浮点一致到 ~1e-16，
+   二值场时恒为 0。网格加密只会收窄过渡带、不会把连续场变二值：实测 hu101
+   nz=60 → 4.29e-2、nz=120 → 3.27e-2、nz=250 → 2.62e-2；而**基准算例**
+   （纯水泥恒定入口 ⇒ 场近乎二值）实测 6.7e-10 ~ 1.0e-3 ⇒ 历史口径"偏差 ≤0.007"
+   的出处是**基准算例**、**不是现场井**（现场井实测 0.006~0.043，8 井中 6 井 >0.01）。
+   故本列只用于**同窗横向比较**，说明列逐井标注其相对 ≤0.01 的基准量级。
+3. **``2D前缘_距鞋口_m`` 是模型 s 口径**：环空求解域自 ``s=0``（鞋口、入口）向 ``s=L``
+   （悬挂器侧、出口）展开，该列 = b 加权方位列均值首达 0.5 的最大 ``s``（未达则 0.0，
+   与求解器 ``_front`` 同约定）；``md = bottom − s`` 只是派生标签。旧 md 口径的列
+   （``md[reached.min()]``）在现场井上恒等于域底、无判别力，已废弃（见 task-6-report.md 修复轮 1）。
+   说明列另保留求解器 metrics 的逐方位（宽/中/窄）s 口径前缘与域长作对照。
+4. **1D/2D 口径**：1D 用生产 runner 口径（`enable_gravity` + T1 三开关
    `mixing_contact_time` / `plug_face_zero_mixing` / `has_plug`），2D 用环空**默认**开关
-   （不加 `CORRECTED_KW`），停算时刻 = ``CasingFlowResult.cement_end_time_s``
-   （尾浆全部进入环空的时刻；缺失时按 `rerun_all_wells_corrected._stop_t` 的前缘扫描回退）。
-3. **质量守恒列写"未测"的理由**（协调者裁定 #4：假设不成立即如实写未测，不得自造公式）：
+   （不加 `CORRECTED_KW`）。``1D尾浆到鞋时刻_s`` 取 ``CasingFlowResult.cement_end_time_s``
+   （尾浆全部进入环空的时刻）；**2D 停算时长** ``total_t = min(泵注总时长 + 1200s, 尾浆到鞋时刻)``，
+   与 ``scripts/entrypoints/rerun_all_wells_corrected.py:75`` 的
+   ``tt = min(_total_t(schedule)+1200., _stop_t(cr,fluids))`` **同一公式**（修复轮 1 对齐）。
+   若 ``cement_end_time_s`` 缺失且前缘扫描无回退，本脚本**返回 None 并显式失败**，
+   不返回 nan（nan 会被当合法 ``total_t`` 静默传入求解器；参照实现此处为 ``float(None)`` 抛错）。
+5. **质量守恒列写"未测"的理由**（协调者裁定 #4：假设不成立即如实写未测，不得自造公式）：
    ``zhang2022_benchmark.mass_conservation_error``（:430）的口径是
    ``max |V_ann·bulk_cement_fill − Q·t| / (Q·t)``，其成立前提有两条：
    ① **单一恒定排量** ``q_m3s``；② **入口自 t=0 恒为纯水泥**（基准算例 `build_inlet_provider`
@@ -41,7 +51,7 @@ import sys
 import time
 import traceback
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 import numpy as np
 
@@ -67,8 +77,14 @@ OUT_CSV = OUT_DIR / "一致性台账.csv"
 NZ = 60
 NY = 12
 
+# 2D 停算时长的附加余量（与 rerun_all_wells_corrected.py:75 一致）
+TAIL_MARGIN_S = 1200.0
+
+# 恒等式偏差的历史参照量级——**出自基准算例**（见模块 docstring 第 2 条），非现场井
+BASELINE_DEVIATION = 0.01
+
 COLUMNS = ["井名", "域内eta_E", "饥饿份额", "恒等式偏差", "1D尾浆到鞋时刻_s",
-           "2D前缘位置_m", "质量守恒误差", "说明"]
+           "2D前缘_距鞋口_m", "质量守恒误差", "说明"]
 
 # 与 runner 一致的 8 井（内部代号，与 Task 1/3/7 台账口径统一）
 WELLS = [
@@ -80,15 +96,26 @@ WELLS = [
 
 _NT = "未测"
 
-# 质量守恒列"未测"的简短理由（完整论证见模块 docstring 第 3 条）
+# 质量守恒列"未测"的简短理由（完整论证见模块 docstring 第 5 条）
 _MC_REASON = ("质量守恒未测：mass_conservation_error 前提(单一恒定排量+入口自t=0恒为纯水泥)"
               "对现场分段变排量/多流体入口不成立，按裁定不自造公式")
 
 
-def stop_time_s(casing_result: Any, fluids: tuple) -> float:
+def total_pump_time_s(schedule: Any) -> float:
+    """泵注总时长（s）：``Σ volume/rate×60``，排量 ≤0 的段按 0 计。
+
+    与 ``rerun_all_wells_corrected._total_t`` 逐字同口径。
+    """
+    return sum(0.0 if st.rate_m3_min <= 0 else st.volume_m3 / st.rate_m3_min * 60.0
+               for st in schedule.steps)
+
+
+def stop_time_s(casing_result: Any, fluids: tuple) -> Optional[float]:
     """2D 停算时刻 = 尾浆全部进入环空（``cement_end_time_s``），缺失时按前缘扫描回退。
 
-    与 ``scripts/entrypoints/rerun_all_wells_corrected._stop_t`` 同口径（F2 修复 2026-09-01）。
+    与 ``scripts/entrypoints/rerun_all_wells_corrected._stop_t`` 同口径（F2 修复 2026-09-01）；
+    二者都缺失时返回 ``None``（**不返回 nan**）——参照实现在此路径会 ``float(None)`` 抛错，
+    本脚本让调用方显式失败，避免 nan 被当作合法 ``total_t`` 静默传入求解器。
     """
     if casing_result.cement_end_time_s is not None:
         return float(casing_result.cement_end_time_s)
@@ -105,30 +132,41 @@ def stop_time_s(casing_result: Any, fluids: tuple) -> float:
                 continue
             if f.time_s >= last - 1.0e-9:
                 return float(f.time_s)
-    return float("nan")
+    return None
 
 
-def row_from_result(label: str, result: Any, t_stop_s: float) -> dict[str, str]:
-    """由 2D 结果组装台账行（三项自洽量 + 模型 s 口径前缘，供说明列对照）。"""
+def row_from_result(label: str, result: Any, t_stop_s: float, total_t_s: float,
+                    pump_time_s: float) -> dict[str, str]:
+    """由 2D 结果组装台账行（三项自洽量 + 模型 s 口径前缘 + 逐井基准标注）。"""
     geom = result.geom
     cement = np.asarray(result.cement_field, dtype=float)
     eta = domain_eta_e(cement, geom)
     starved = starved_volume_fraction(cement, geom)
     deviation = (1.0 - eta) - starved
-    front_md = front_position_m(cement, geom)
+    front_s = front_position_m(cement, geom)
     last = result.metrics.iloc[-1]
-    # 同口径自审：域内积分必须与求解器自算的 effective_efficiency（≡ bulk_cement_fill）逐位一致；
-    # 不一致说明归一化/口径漂移，如实写进说明列（是诊断提示，不是验收门）。
+    # 同口径自审：域内积分必须与求解器自算的 effective_efficiency（≡ bulk_cement_fill）一致
+    # （同一条表达式的两次求值，实测浮点一致到 ~1e-16）；不一致说明归一化/口径漂移，
+    # 如实写进说明列（是诊断提示，不是验收门）。
     solver_eta = float(last["effective_efficiency"])
+    deviation_note = (
+        f"恒等式偏差{deviation:.4f}超出历史基准量级<={BASELINE_DEVIATION}"
+        f"（该基准出自基准算例，非现场井）"
+        if abs(deviation) > BASELINE_DEVIATION else
+        f"恒等式偏差{deviation:.4f}在基准量级内(<={BASELINE_DEVIATION}；基准出自基准算例，非现场井)")
     notes = [
         f"短窗nz={NZ}/ny={NY}（非生产数字）",
-        ("eta_E与solver末行effective_efficiency逐位一致"
+        ("eta_E与solver末行effective_efficiency一致（浮点一致到~1e-16）"
          if eta == solver_eta else
          f"⚠️eta_E与solver末行不一致：{eta:.6f} vs {solver_eta:.6f}"),
-        f"模型s口径前缘自鞋口(m)：宽{float(last['front_wide_m']):.0f}"
+        f"本列2D前缘为模型s口径（b加权列均值首达0.5的最大s，自鞋口起；md=bottom-s为派生标签）",
+        f"求解器s口径前缘自鞋口(m)：宽{float(last['front_wide_m']):.0f}"
         f"/中{float(last['front_mid_m']):.0f}/窄{float(last['front_narrow_m']):.0f}；"
         f"域长{float(geom['s'][-1]):.0f}",
-        f"md口径前缘≡域底{float(geom['md'][0]):.0f}（定义见 internal_consistency.front_position_m）",
+        deviation_note,
+        f"2D停算时长total_t={total_t_s:.0f}s"
+        f"=min(泵注{pump_time_s:.0f}s+{TAIL_MARGIN_S:.0f}s, 尾浆到鞋{t_stop_s:.0f}s)"
+        f"（与rerun_all_wells_corrected同公式）",
         _MC_REASON,
     ]
     if abs(deviation) > 0.05:
@@ -139,7 +177,7 @@ def row_from_result(label: str, result: Any, t_stop_s: float) -> dict[str, str]:
         "饥饿份额": f"{starved:.6f}",
         "恒等式偏差": f"{deviation:.6f}",
         "1D尾浆到鞋时刻_s": f"{t_stop_s:.1f}",
-        "2D前缘位置_m": f"{front_md:.2f}",
+        "2D前缘_距鞋口_m": f"{front_s:.2f}",
         "质量守恒误差": _NT,
         "说明": "; ".join(notes),
     }
@@ -149,7 +187,7 @@ def failed_row(label: str, exc: BaseException) -> dict[str, str]:
     """失败行：如实记录异常类型与消息（跑不动的井不允许静默消失）。"""
     return {
         "井名": label, "域内eta_E": _NT, "饥饿份额": _NT, "恒等式偏差": _NT,
-        "1D尾浆到鞋时刻_s": _NT, "2D前缘位置_m": _NT, "质量守恒误差": _NT,
+        "1D尾浆到鞋时刻_s": _NT, "2D前缘_距鞋口_m": _NT, "质量守恒误差": _NT,
         "说明": f"运行失败：{type(exc).__name__}: {exc}",
     }
 
@@ -166,11 +204,17 @@ def compute_row(label: str, loader: Any) -> dict[str, str]:
     )
     casing_result = casing_solver.run(well, fluids, schedule)
     t_stop_s = stop_time_s(casing_result, fluids)
+    if t_stop_s is None:
+        raise RuntimeError(
+            "无法确定 2D 停算时刻：cement_end_time_s 缺失且前缘扫描无回退"
+            "（口径同 rerun_all_wells_corrected._stop_t，但显式失败而非 nan/float(None)）")
+    pump_time_s = total_pump_time_s(schedule)
+    total_t_s = min(pump_time_s + TAIL_MARGIN_S, t_stop_s)  # 同 rerun_all_wells_corrected.py:75
     inlet = build_coupled_annulus_inlet_provider(
         casing_result, CasingFlowSolver(enable_gravity=True), fluids,
         split_cement_phases=True)
-    result = AnnulusD2DGASolver(total_t=t_stop_s, nz=NZ, ny=NY).run(well, fluids, inlet)
-    return row_from_result(label, result, t_stop_s)
+    result = AnnulusD2DGASolver(total_t=total_t_s, nz=NZ, ny=NY).run(well, fluids, inlet)
+    return row_from_result(label, result, t_stop_s, total_t_s, pump_time_s)
 
 
 def write_ledger(rows: list[dict[str, str]], path: Path = OUT_CSV) -> Path:
@@ -195,7 +239,7 @@ def main() -> int:
         try:
             row = compute_row(label, loader)
             print(f"[OK]   {label}: eta_E={row['域内eta_E']} 偏差={row['恒等式偏差']} "
-                  f"({time.perf_counter() - t0:.1f}s)")
+                  f"前缘s={row['2D前缘_距鞋口_m']} ({time.perf_counter() - t0:.1f}s)")
         except Exception as exc:  # noqa: BLE001 —— 逐井隔离，失败必须留痕
             traceback.print_exc()
             row = failed_row(label, exc)
@@ -206,7 +250,8 @@ def main() -> int:
     print(f"\n台账已写入 {OUT_CSV}（{len(rows)} 口井，失败 {n_failed} 口）")
     for row in rows:
         print(f"  {row['井名']:<8} eta_E={row['域内eta_E']:<9} 饥饿={row['饥饿份额']:<9} "
-              f"偏差={row['恒等式偏差']:<10} 守恒={row['质量守恒误差']}")
+              f"偏差={row['恒等式偏差']:<10} 前缘s={row['2D前缘_距鞋口_m']:<9} "
+              f"守恒={row['质量守恒误差']}")
     return n_failed
 
 
