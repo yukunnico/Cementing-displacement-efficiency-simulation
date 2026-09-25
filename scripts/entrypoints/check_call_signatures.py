@@ -67,6 +67,10 @@ SKIP_DIRS = {
 # 跨文件形参中转的解析深度上限（防环、防病态链式调用把扫描拖死）
 _MAX_DEPTH = 8
 
+# 目标类签名 / `**kwargs` 检出结果缓存（每次全仓扫描都会调；re-inspect 无意义开销）
+_SIGNATURE_CACHE: dict[str, set[str]] | None = None
+_VAR_KEYWORD_CACHE: set[str] | None = None
+
 
 # --------------------------------------------------------------------------- #
 # 仓储级 AST 事实
@@ -277,6 +281,8 @@ class _Repo:
         self.file_by_module: dict[str, _File] = {}
         self.imports: dict[str, dict[str, tuple[str, str | None]]] = {}
         self.calls: dict[tuple[str, ...], list[tuple[_File, tuple[str, ...], ast.Call]]] = {}
+        self.calls_by_name: dict[str, list[tuple[str, ...]]] = {}
+        self.visible_cache: dict[tuple[str, str], list[tuple[_File, tuple[str, ...], ast.Call]]] = {}
         self.memo: dict[tuple, tuple[dict[str, ast.expr | None], bool]] = {}
         self.busy: set[tuple] = set()
 
@@ -311,6 +317,10 @@ class _Repo:
                 if key is not None:
                     self.calls.setdefault(key, []).append(
                         (facts, facts.scope_of[id(node)], node))
+        # 形参解析要按"函数名"取调用点；预建 名字 → 键 的倒排索引，
+        # 否则每次解析都要线性扫 self.calls.items()（全仓 279 文件量级下这是热点）。
+        for key in self.calls:
+            self.calls_by_name.setdefault(key[-1], []).append(key)
 
     def _call_key(self, findings: _File, node: ast.Call) -> tuple[str, ...] | None:
         """调用点在"定义处可见性"坐标系里的键。"""
@@ -330,11 +340,16 @@ class _Repo:
     def visible_calls(self, facts: _File, func_name: str
                       ) -> list[tuple[_File, tuple[str, ...], ast.Call]]:
         """能真正解析到 `facts` 里这个函数的调用点（同文件 + 显式 import 进来的）。"""
+        cache_key = (str(facts.path), func_name)
+        cached = self.visible_cache.get(cache_key)
+        if cached is not None:
+            return cached
         out = list(self.calls.get(("local", str(facts.path), func_name), ()))
         module = self.module_of.get(str(facts.path), "")
-        for (kind, mod, name), sites in self.calls.items():
-            if kind == "import" and name == func_name and _mod_match(module, mod):
-                out.extend(sites)
+        for key in self.calls_by_name.get(func_name, ()):
+            if key[0] == "import" and _mod_match(module, key[1]):
+                out.extend(self.calls.get(key, ()))
+        self.visible_cache[cache_key] = out
         return out
 
     # ---------------------------------------------------------------- 解析
@@ -632,27 +647,33 @@ class _Repo:
 
 def _signatures() -> dict[str, set[str]]:
     """取两个目标类 `__init__` 的真实形参名（单一真源 = 代码本身，不写死清单）。"""
-    from cemdisp.models2d import AnnulusD2DGASolver
-    from cemdisp.transport1d import CasingFlowSolver
+    global _SIGNATURE_CACHE
+    if _SIGNATURE_CACHE is None:
+        from cemdisp.models2d import AnnulusD2DGASolver
+        from cemdisp.transport1d import CasingFlowSolver
 
-    out: dict[str, set[str]] = {}
-    for cls in (AnnulusD2DGASolver, CasingFlowSolver):
-        params = inspect.signature(cls.__init__).parameters
-        out[cls.__name__] = {n for n in params if n != "self"}
-    return out
+        out: dict[str, set[str]] = {}
+        for cls in (AnnulusD2DGASolver, CasingFlowSolver):
+            params = inspect.signature(cls.__init__).parameters
+            out[cls.__name__] = {n for n in params if n != "self"}
+        _SIGNATURE_CACHE = out
+    return _SIGNATURE_CACHE
 
 
 def _var_keyword_targets() -> set[str]:
     """接受 `**kwargs` 的目标类：其关键字校验必须显式停用（否则全量误报）。"""
-    from cemdisp.models2d import AnnulusD2DGASolver
-    from cemdisp.transport1d import CasingFlowSolver
+    global _VAR_KEYWORD_CACHE
+    if _VAR_KEYWORD_CACHE is None:
+        from cemdisp.models2d import AnnulusD2DGASolver
+        from cemdisp.transport1d import CasingFlowSolver
 
-    out: set[str] = set()
-    for cls in (AnnulusD2DGASolver, CasingFlowSolver):
-        params = inspect.signature(cls.__init__).parameters
-        if any(p.kind is inspect.Parameter.VAR_KEYWORD for p in params.values()):
-            out.add(cls.__name__)
-    return out
+        out: set[str] = set()
+        for cls in (AnnulusD2DGASolver, CasingFlowSolver):
+            params = inspect.signature(cls.__init__).parameters
+            if any(p.kind is inspect.Parameter.VAR_KEYWORD for p in params.values()):
+                out.add(cls.__name__)
+        _VAR_KEYWORD_CACHE = out
+    return _VAR_KEYWORD_CACHE
 
 
 def _call_name(node: ast.AST) -> str | None:
@@ -732,6 +753,10 @@ def _scan(root: Path) -> _ScanResult:
     """仓储级扫描：直接关键字 + dict→splat 双重数据流。"""
     root = Path(root)
     sigs = _signatures()
+    # ⚠️ 仅测试 monkeypatch 下可达：两个目标类当前都无 `**kwargs`（`_var_keyword_targets()`
+    # 实测恒为空，见 tests/contract/test_entrypoint_signatures.py::
+    # test_target_classes_accept_no_var_keyword）⇒ 正常运行下 `disabled` 恒为空集。
+    # R117③ 要求"目标类日后新增 **kwargs 时显式停用 + 告警"，故这条分支必须保留。
     disabled = _var_keyword_targets() & TARGETS
     repo = _Repo()
     repo.load(root)
@@ -759,6 +784,7 @@ def _scan(root: Path) -> _ScanResult:
                 continue
             cls = _call_name(node.func)
             if cls not in TARGETS or cls in disabled:
+                # `cls in disabled` 仅测试 monkeypatch 下可达（见 `_scan` 顶部注释）
                 continue
             scope = facts.scope_of[id(node)]
             for kw in node.keywords:
@@ -797,7 +823,7 @@ def main() -> int:
         kinds = ", ".join(sorted({kind for _, kind in result.skipped}))
         print(f"[signatures] 跳过 {len(result.skipped)} 个无法解析的文件（{kinds}）"
               f"：{', '.join(sorted({Path(p).name for p, _ in result.skipped}))}")
-    for name in result.disabled_targets:
+    for name in result.disabled_targets:   # 仅测试 monkeypatch 下非空（见 `_scan` 顶部注释）
         print(f"[signatures] ⚠️ 目标类 {name} 接受 **kwargs ⇒ 该类关键字校验已停用"
               f"（显式处理，避免全量误报）；若系误增请复查构造签名")
     print(f"[signatures] {len(result.bad)} 处问题")
