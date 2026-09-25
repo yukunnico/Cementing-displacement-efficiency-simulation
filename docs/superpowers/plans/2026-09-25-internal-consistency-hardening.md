@@ -917,3 +917,210 @@ Expected: 生成 CSV；**任何一项不通过都必须如实记录并在结论�
 git add cemdisp/diagnostics/physical_sanity.py scripts/entrypoints/verify_physical_sanity.py tests/contract/test_physical_sanity.py "results/内部自洽加固_2026-09-25/物理合理性台账.csv"
 git commit -m "feat(consistency): 物理合理性闸门（7 项可证伪判据）+ 台账"
 ```
+
+---
+
+### Task 10: 端到端默认路径逐位锚（由 Task 1 评审 R10 追认）
+
+**背景（计划缺陷修正）**：原计划四处引用 `tests/contract/test_six_well_integration.py` 作为"逐位锚定默认路径 ⇒ 证明零数值影响"。**评审已核实该测试全文仅为同步画像卡冒烟测试、零数值断言**，且全仓不存在端到端默认路径的逐位锚。⇒ Task 2/4 的"零数值影响"证明在此之前**无证据可依**，故先建锚。
+
+**Files:**
+- Create: `tests/contract/test_default_path_bitwise_anchor.py`
+- Create: `tests/contract/_default_path_anchor_hu101.json`（锚文件，首次运行生成后由人工确认并提交）
+
+**Interfaces:**
+- Produces: 可被 Task 2 / Task 4 / Task 8 复用的"默认路径逐位不变"证明；`_run_default_case() -> dict` 供测试与后续任务调用
+
+- [ ] **Step 1: Write the failing test**
+
+```python
+# tests/contract/test_default_path_bitwise_anchor.py
+"""默认路径端到端逐位锚（R10）。
+
+口径：hu101 生产 loader + T1 生产 1D 三开关 + 默认环空开关（不含 CORRECTED_KW），
+微网格 nz=30/ny=12/total_t=200s（只求逐位稳定，不求数值精度）。
+锁：cement/lead/tail/spacer/wall 五场 sha256 + η_E/η_N/窜槽/混浆/失稳五个标量。
+用途：任何声称"零数值影响"的改动都必须让本测试保持全绿。
+"""
+import hashlib
+import json
+from pathlib import Path
+
+import numpy as np
+import pytest
+
+from cemdisp.data.loaders import hu101_loader
+from cemdisp.models2d import AnnulusD2DGASolver
+from cemdisp.models2d.boundary_bridge import build_coupled_annulus_inlet_provider
+from cemdisp.transport1d import CasingFlowSolver
+
+ANCHOR = Path(__file__).with_name("_default_path_anchor_hu101.json")
+
+
+def _run_default_case() -> dict:
+    well, fluids, schedule, _ = hu101_loader.load_hu101_tailpipe()
+    cr = CasingFlowSolver(enable_gravity=True, mixing_contact_time=True,
+                          plug_face_zero_mixing=True, has_plug=True).run(
+        well, fluids, schedule)
+    inlet = build_coupled_annulus_inlet_provider(
+        cr, CasingFlowSolver(enable_gravity=True), fluids, split_cement_phases=True)
+    solver = AnnulusD2DGASolver(total_t=200.0, nz=30, ny=12)
+    res = solver.run(well, fluids, inlet, schedule=schedule)
+    out = {}
+    for name in ("cement", "lead", "tail", "spacer", "wall"):
+        arr = np.asarray(getattr(res, f"{name}_final"), dtype=float)
+        out[f"sha_{name}"] = hashlib.sha256(arr.tobytes()).hexdigest()
+    fr = res.summary["最终结果"]
+    for key, field in (("eta_E", "全井段最终有效顶替效率"),
+                       ("eta_N", "窄四分位效率"),
+                       ("channeling", "最终窜槽指数"),
+                       ("mixing", "最终混浆指数"),
+                       ("instability", "最终失稳指数")):
+        out[key] = float(fr[field])
+    return out
+
+
+def test_default_path_matches_bitwise_anchor():
+    got = _run_default_case()
+    if not ANCHOR.exists():
+        pytest.skip(f"锚文件不存在，已输出实测供确认：{json.dumps(got)[:400]}")
+    want = json.loads(ANCHOR.read_text(encoding="utf-8"))
+    assert got == want, "默认路径数值发生位移（若为有意改动，须走重锚并记录位移台账）"
+```
+
+- [ ] **Step 2: Run it, confirm the skip + capture actual values**
+
+Run: `... -m pytest tests/contract/test_default_path_bitwise_anchor.py -v -s`
+Expected: `SKIPPED`，输出含实测五场 sha256 与五个标量
+
+- [ ] **Step 3: 生成锚文件并人工确认**
+
+把 Step 2 输出的 JSON 写入 `tests/contract/_default_path_anchor_hu101.json`（格式化、UTF-8），**再跑两次** `_run_default_case()` 确认两次结果**完全一致**（同机同版本下逐位可复现）。若两次不一致 ⇒ **停下上报**（说明默认路径本身不确定，"逐位锚"路线不成立）。
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `... -m pytest tests/contract/test_default_path_bitwise_anchor.py -v` → PASS
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add tests/contract/test_default_path_bitwise_anchor.py tests/contract/_default_path_anchor_hu101.json
+git commit -m "test(consistency): 新建默认路径端到端逐位锚（R10 修正计划缺陷）"
+```
+
+---
+
+### Task 11: 锚加固（防假绿 + 防误改 + 来源指纹）——由 Task 10 评审 R17/R18/R19 立案
+
+**背景**：Task 10 建成的默认路径逐位锚是后续所有"零数值影响"结论的唯一证据载体，但评审查出两处缺口：① **假绿**——锚文件缺失时 `pytest.skip`，CI 变绿而零验证（`pyproject.toml` 无 `addopts`、全仓无 `conftest.py` 兜底）；② **无键集守卫**——锚 JSON 被手工改成少键时 `got == want` 仍 PASS。**且最危险的方向不是改测试而是改 JSON 数值**（可让任何位移静默通过，不触发任何检查），这在 Task 8 换线性求解器时必然发生位移的情形下尤其致命。
+
+**Files:**
+- Modify: `tests/contract/test_default_path_bitwise_anchor.py`
+- Modify: `tests/contract/_default_path_anchor_hu101.json`（只加来源注释键，**不动 5 个数值**）
+- Create: `tests/contract/test_anchor_integrity.py`
+
+**Interfaces:**
+- Produces: `expected_keys() -> set[str]`（锚必须覆盖的键集，供本测试与 Task 8 复用）
+
+- [ ] **Step 1: Write the failing test**
+
+```python
+# tests/contract/test_anchor_integrity.py
+"""锚完整性守卫（R17/R18）：缺锚必须失败而非跳过；键集必须齐备；必须有来源指纹。"""
+import json
+from pathlib import Path
+
+import pytest
+
+from tests.contract.test_default_path_bitwise_anchor import (
+    ANCHOR, expected_keys, _FIELD_ATTRS, _SCALAR_FIELDS)
+
+FINGERPRINT_KEYS = {"_note", "_generated_from", "_env"}
+
+
+def test_anchor_file_must_exist():
+    assert ANCHOR.is_file(), (
+        f"逐位锚文件缺失：{ANCHOR} —— 缺锚会让默认路径的零数值影响证明静默失效，"
+        "严禁用 skip 掩盖")
+
+
+def test_anchor_covers_exactly_expected_keys():
+    want = json.loads(ANCHOR.read_text(encoding="utf-8"))
+    keys = set(want) - FINGERPRINT_KEYS
+    assert keys == expected_keys(), (
+        f"锚键集不匹配：缺 {expected_keys() - keys}；多 {keys - expected_keys()}")
+
+
+def test_expected_keys_derived_not_hardcoded():
+    """键集必须由字段表推导，避免两处各写一份而漂移。"""
+    assert expected_keys() == {f"sha_{n}" for n in _FIELD_ATTRS} | set(_SCALAR_FIELDS)
+
+
+def test_anchor_carries_provenance_note():
+    want = json.loads(ANCHOR.read_text(encoding="utf-8"))
+    assert "_note" in want and "_generated_from" in want and "_env" in want, (
+        "锚必须带来源指纹：微网格非生产数字的警告 + 生成条件 + 环境版本")
+
+
+def test_anchor_run_does_not_skip():
+    """锚存在时主测试不得走 skip 分支（用 skip 计数断言）。"""
+    src = Path(ANCHOR.with_name("test_default_path_bitwise_anchor.py")).read_text(
+        encoding="utf-8")
+    assert "pytest.skip" not in src, "主测试仍可在缺锚时静默跳过（R17 假绿路径）"
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `PYTHONIOENCODING=utf-8 PYTHONUTF8=1 D:/apps/Anaconda/envs/shenjingwangluo/python.exe -m pytest tests/contract/test_anchor_integrity.py -v`
+Expected: 至少 2 条 FAIL（`expected_keys` 不存在 / 锚无 `_note`），`test_anchor_run_does_not_skip` FAIL
+
+- [ ] **Step 3: Write minimal implementation**
+
+① 在 `test_default_path_bitwise_anchor.py` 内把字段表提升为模块常量并新增推导函数：
+
+```python
+_FIELD_ATTRS = {"cement": "cement_field", "lead": "lead_field", "tail": "tail_field",
+                "spacer": "spacer_field", "wall": "wall_field"}
+_SCALAR_FIELDS = ("eta_E", "eta_N", "channeling", "mixing", "instability")
+
+
+def expected_keys() -> set[str]:
+    """锚必须覆盖的键集（由字段表推导，禁止与断言行各写一份）。"""
+    return {f"sha_{n}" for n in _FIELD_ATTRS} | set(_SCALAR_FIELDS)
+```
+
+② 把缺锚分支从 `pytest.skip` 改为**显式失败**：
+
+```python
+    want = json.loads(ANCHOR.read_text(encoding="utf-8"))
+    assert set(want) >= expected_keys(), (
+        f"锚键集不齐：缺 {expected_keys() - set(want)}（R18）")
+    got = _run_default_case()
+    mismatched = {k for k in expected_keys() if got.get(k) != want.get(k)}
+    assert not mismatched, (
+        f"默认路径数值位移：{sorted(mismatched)}（若为有意改动，须走重锚："
+        "与改动同批次、并在 results/内部自洽加固_2026-09-25/位移台账.csv 留迹）")
+```
+
+③ 锚 JSON 增加来源指纹（**不动任何数值**）：
+
+```json
+{
+  "_note": "微网格锚（nz=30/ny=12/total_t=14000s），非生产数字，不得用于论文或与现场 CBL 比对",
+  "_generated_from": "HEAD bc155b0 + 4 个未提交 HB 改动（工作树脏态）；生成命令见 task-10-report.md",
+  "_env": "Python 3.13.7 / numpy 2.3.3 / scipy 1.16.2（对账源：docs/superpowers/plans/baseline-2026-09-25.md）",
+  "...": "原有 5 个 sha_* 与 5 个标量逐字保留"
+}
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `... -m pytest tests/contract/test_anchor_integrity.py tests/contract/test_default_path_bitwise_anchor.py -v` → 全 PASS
+Run（哨兵验证）：临时把锚 JSON 里 `eta_N` 改 1e-9 ⇒ `test_default_path_bitwise_anchor` 必须 FAIL；恢复 byte-identical
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add tests/contract/test_default_path_bitwise_anchor.py tests/contract/_default_path_anchor_hu101.json tests/contract/test_anchor_integrity.py
+git commit -m "test(consistency): 锚加固——缺锚即失败/键集守卫/来源指纹（R17-R19）"
+```
