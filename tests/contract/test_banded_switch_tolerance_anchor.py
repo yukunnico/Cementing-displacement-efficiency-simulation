@@ -13,8 +13,9 @@
   跑完整环空求解，比较 η_E / η_N；
 - 容差取 **1e-2 pp**（即 η 的 1e-4）：依据 = 本任务实测同一微网格锚算例上
   |Δη_E| = 6.0e-4 pp、|Δη_N| = 1.5e-3 pp（见 `results/内部自洽加固_2026-09-25/
-  位移台账.csv` 的"线性求解换带状Cholesky"行），取 1e-2 pp 留约 **22×** 余量，
-  既吸收"舍入被混沌放大"的规模效应，又远严于任何物理量级（1e-2 pp ≪ 判据阈值）；
+  位移台账.csv` 的"线性求解换带状Cholesky"行），取 1e-2 pp 相对实测最大位移
+  （1.525e-3 pp）留约 **6.6×** 余量，既吸收"舍入被混沌放大"的规模效应，
+  又远严于任何物理量级（1e-2 pp ≪ 判据阈值）；
 - ⚠️ 本测试**不是**"零数值影响"的证明（R10）：换求解器**必然**让端到端逐位数字变化，
   证明路径是 `test_banded_solve_equivalence.py` 的离散系统等价性 + 本容差锚 +
   逐位锚重锚（R19）。
@@ -33,7 +34,8 @@ from cemdisp.models2d.boundary_bridge import build_coupled_annulus_inlet_provide
 from cemdisp.transport1d import CasingFlowSolver
 
 # 实测依据（本锚算例，见 results/内部自洽加固_2026-09-25/位移台账.csv）：
-# |Δη_E| = 6.0e-4 pp、|Δη_N| = 1.5e-3 pp ⇒ 本容差留约 22× 余量。
+# |Δη_E| = 6.0e-4 pp、|Δη_N| = 1.5e-3 pp ⇒ 本容差相对实测最大位移（1.525e-3 pp）
+# 留约 6.6× 余量（= 1e-2 / 1.525e-3）。
 # 单位：pp（百分点）。
 TOL_PP = 1.0e-2
 

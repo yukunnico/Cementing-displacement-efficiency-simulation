@@ -590,8 +590,11 @@ class AnnulusD2DGASolver:
         self.enable_stream_function = enable_stream_function
         # Task 8（2026-09-26）：流函数线性求解器选择。默认 True = 带状 Cholesky
         # （纯数值等价提速，见 solve_stream_function 的 banded 形参）。它**不是**
-        # 死开关：新旧两条线性求解路径都被真实消费（决定解 Ψ 用哪个求解器），
-        # 故不得加进 _dead_switches 的任何判定分支（跨任务接口约束 2）。
+        # 死开关：它决定解 Ψ 用哪个求解器，且已透传到**两条**流函数路径——线性路径
+        # （`solve_stream_function`）与 HB 非线性外迭代路径
+        # （`solve_stream_function_nonlinear` 的 banded 形参，I-1 修复轮补齐；
+        # 该函数的每一处内层线性解经 `_solve_linear` 转交同一个开关）。故不得加进
+        # _dead_switches 的任何判定分支（跨任务接口约束 2）。
         self.enable_banded_solve = enable_banded_solve
         # B-3 I-1：运行时一次性告警标志（水泥相非幂律时开关静默空转，见
         # _velocity_stream_function）。__init__ 拿不到 fluids，故不能在此判定。
@@ -1776,6 +1779,11 @@ class AnnulusD2DGASolver:
 
         - ``velocity_scale = ŵ = q_half/π``（生产换算锚 ``w = w_unit·(q_half/π)``，
           R-T5-1 REVISED 推荐路径：物理速度喂反求 + 物理 (κ, τ_Y) 参数）；
+        - ``banded=self.enable_banded_solve``（Task 8 I-1 修复轮）：线性求解器开关
+          **必须**透传到非线性外迭代的每一处内层线性解（``solve_stream_function_
+          nonlinear`` 的 ``banded`` 形参 ⇒ 内层 ``_solve_linear``）。漏传会让
+          ``enable_banded_solve=False`` 在 HB 路径上静默回落到新默认 True；本方法的
+          三处线性调用（冷启动启发式、非线性入口、回退）均已透传。
         - ``Gb=(0,0)``：Phase A 浮力全部经 (4.22) 的 ``b_field``（Task 4 警告：
           不得两处同时算同一份浮力）；
         - 外迭代 ``max_outer=400``（接线配置）：悬崖邻域 ū↔G↔I₁ 耦合的 ‖ΔĪ₁‖
@@ -1836,7 +1844,7 @@ class AnnulusD2DGASolver:
             psi = solve_stream_function_nonlinear(
                 geom, c_bar, closure, b_field, Gb=(0.0, 0.0),
                 velocity_scale=velocity_scale, initial_G=initial_g,
-                max_outer=400)
+                max_outer=400, banded=self.enable_banded_solve)
         except RuntimeError as exc:
             # 回退步的 G 是迭代中途态，不缓存（下一步仍冷启动，R-T5-3 最后防线）。
             self._hb_prev_G = None

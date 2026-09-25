@@ -248,8 +248,14 @@ def _assemble_banded_interior(a_face, c_face, src, *, ny: int, nz: int,
     ⇒ 可用 LAPACK 带状 Cholesky（``?pbtrf``/``?pbtrs``）直接解，实测比
     ``scipy.sparse.linalg.spsolve`` 快约 4×，而**离散系统逐元素不变**。
 
-    装配口径（与 ``solve_stream_function`` 的稀疏装配同源，**不得各写一份公式**）
-    ---------------------------------------------------------------------------
+    装配口径（与 ``solve_stream_function`` 的稀疏装配同源）
+    ----------------------------------------------------
+    ⚠️ 系数公式在**两处**各有一份实现（本函数 vs ``solve_stream_function`` 的
+    spsolve 分支——后者按 R19 要求**逐字保留**，不得改动）⇒ 两者**会**漂移。
+    防漂移的唯一守卫是逐元素对照测试
+    ``tests/contract/test_banded_solve_equivalence.py::
+    test_banded_storage_matches_sparse_matrix_bands``（把本函数的 ``(ab, rhs)``
+    与稀疏装配的真实产物逐带比对）。改动任一侧的装配公式后**必须**跑它。
     - 全矩阵非对角为 ``+coeff``、对角 ``−(east+west+north+south)``（M-矩阵）；
       本函数装配其**取负**形式（对角正、非对角负），即对称正定的 5 点算子。
       ⚠️ 简报里给出的草图缺 ``1/r_a`` 因子（φ-槽系数实为 ``a_face/(r_a·dφ²)``）
@@ -613,7 +619,8 @@ def solve_stream_function_nonlinear(geom: Dict, c_bar, hb_closure, b_field,
                                     velocity_scale: float = 1.0,
                                     initial_G=None,
                                     omega: float = 0.5, tol: float = 1e-6,
-                                    max_outer: int = 50) -> Array:
+                                    max_outer: int = 50,
+                                    banded: bool = True) -> Array:
     """解 HB 流体 (4.22) 流函数椭圆方程——**非线性外迭代**（A-3a）。
 
     算法（brief 的五步，controller 裁定的路径）
@@ -677,6 +684,11 @@ def solve_stream_function_nonlinear(geom: Dict, c_bar, hb_closure, b_field,
         omega: 欠松弛因子 ∈ (0,1]（``1`` ⇒ 不松弛）。
         tol: 外迭代收敛容差（``Ī₁`` 场的 ∞-范数相对变化；``0`` ⇒ 只认逐位相等）。
         max_outer: 最大外迭代轮数（含首轮）≥1。
+        banded: 线性求解器选择（Task 8，默认 **True**）——**必须透传到本函数的每一处
+            内层线性解**（首轮、欠松弛重解、收敛终解），否则 ``banded=False`` 在外迭代
+            路径上静默失效（线路由 = ``annulus_d2dga`` 的 ``enable_banded_solve``）。
+            口径与 ``solve_stream_function`` 的 ``banded`` 形参完全一致：
+            True ⇒ LAPACK 带状 Cholesky；False ⇒ 历史 ``spsolve`` 逐字路径。
 
     Returns:
         Ψ 场 (ny,nz)（单位通量口径，同 :func:`solve_stream_function`）；收敛后与
@@ -761,8 +773,13 @@ def solve_stream_function_nonlinear(geom: Dict, c_bar, hb_closure, b_field,
         hb_closure.set_pressure_gradient(ig)
 
     def _solve_linear(closure) -> Array:
+        # banded 必须逐处透传（Task 8 I-1 修复轮）：本函数是 HB 非线性外迭代
+        # **唯一**的线性解入口（首轮 `psi = _solve_linear(hb_closure)`、欠松弛重解、
+        # 收敛终解），漏传会让 ``banded=False`` 在 HB 路径上静默回落到新默认 True
+        # （"静默开关"）。
         return solve_stream_function(geom, c, eta1, eta2, m, b_field,
-                                     closure=closure, ny=ny, nz=nz)
+                                     closure=closure, ny=ny, nz=nz,
+                                     banded=banded)
 
     def _mobility_now() -> Array:
         I1 = np.asarray(hb_closure.mobility(c, m, eta1, eta2, H), dtype=float)
