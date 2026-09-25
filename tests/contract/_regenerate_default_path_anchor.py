@@ -16,10 +16,18 @@
 - 无 `--confirm` 时**只打印每个键的 before/after，绝不写任何文件**；
 - 有 `--confirm` 时写盘，且**保留** `_note` / `_generated_from` / `_env` 三键、
   把 `_generated_from` 里引用的生成批次更新为当前 HEAD（git 不可用则写 `unknown`）；
+- 写盘序列化**固定 `sort_keys=True`**（见 `serialize_anchor`）：合法重锚不得重排键序，
+  否则 diff 会把每个数值行写成"删+加"，抹掉"diff 里没有数值行被改动"这一
+  可核对形式（R33）；
+- 锚文件**不存在**（首建分支）时，**必须**显式给出 `--env` 与 `--reconcile-source`，
+  否则本脚本**拒绝写盘**并以用法错误退出（码 2）——否则会写出
+  `_env="unknown"`、指针键为空的锚，当场被 `test_anchor_integrity.py` 的指纹
+  守卫判红，逼维护者手工改 JSON，正是锚加固要消灭的路径（R34）；
 - 重锚后**必须**把本脚本输出贴进
   `results/内部自洽加固_2026-09-25/位移台账.csv` 留迹（本脚本只提示，不写 results/）。
 
-退出码：0=无差异或写盘成功；1=干跑发现差异（便于 CI/脚本判"该重锚了"）。
+退出码：0=无差异或写盘成功；1=干跑发现差异（便于 CI/脚本判"该重锚了"）；
+2=首建缺指纹参数等用法错误（未写任何文件）。
 """
 import argparse
 import json
@@ -68,11 +76,26 @@ def _new_generated_from(old: str, head: str) -> str:
 
     Task 10 写的值形如 `HEAD bc155b0 + 4 个未提交 HB 改动（工作树脏态）；生成命令见 …`；
     这里只替换 sha 段（正则找到第一个"HEAD <sha7位左右>"）。
+    首建锚时 `old` 为空 ⇒ 直接写 `HEAD <sha>`（不留半截"原指纹："）。
     """
     import re
+    if not (old or "").strip():
+        return f"HEAD {head}"
     if re.search(r"HEAD [0-9a-f]{7,40}", old):
         return re.sub(r"HEAD [0-9a-f]{7,40}", f"HEAD {head}", old, count=1)
     return f"HEAD {head}；原指纹：{old}"
+
+
+def serialize_anchor(anchor: dict) -> str:
+    """锚的**唯一**序列化口径（R33）。
+
+    `sort_keys=True` 是硬要求：`{**fingerprint, **measured}` 的插入序是
+    "指纹键在前、实测键按 `_run_default_case()` 的产出序在后"，与锚文件里
+    `sorted()` 的键序不同。少了 `sort_keys`，一次**合法**重锚就会在 diff 里
+    把 10 个实测键全部写成"删+加"，正好抹掉"diff 里没有数值行被改动"这一
+    本轮赖以复核的硬约束。`test_anchor_integrity.py` 有测试锁住此性质。
+    """
+    return json.dumps(anchor, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -80,12 +103,34 @@ def main(argv: list[str] | None = None) -> int:
         description="重锚默认路径逐位锚（无 --confirm 时只打印差异，不写盘）")
     parser.add_argument("--confirm", action="store_true",
                         help="确认写盘（须已人工核对差异，并在位移台账留迹）")
+    parser.add_argument("--env", default=None,
+                        help="首建锚时必须显式给出：环境指纹，如 "
+                             "'Python 3.13.7 / numpy 2.3.3 / scipy 1.16.2'")
+    parser.add_argument("--reconcile-source", default=None,
+                        help="首建锚时必须显式给出：对账源（仓内 POSIX 相对路径，"
+                             "如 docs/superpowers/plans/baseline-2026-09-25.md）")
     args = parser.parse_args(argv)
 
+    # 首建分支（锚文件不存在 ⇒ `old` 为空）：必须显式给出两项指纹，否则会写出
+    # `_env="unknown"` + 指针键为空的锚，当场被 test_anchor_integrity.py 的指纹
+    # 守卫判红，逼维护者手工改 JSON——正是锚加固要消灭的路径（R34）。
+    # `parser.error` = 打印用法 + 非零退出（2），且在任何写盘/算例之前，
+    # 故"缺参数 ⇒ 不写盘"是结构性保证，不依赖后续分支的自觉。
+    first_build = not ANCHOR.is_file()
+    if first_build:
+        missing = [opt for opt, value in (("--env", args.env),
+                                          ("--reconcile-source", args.reconcile_source))
+                   if not (value or "").strip()]
+        if missing:
+            parser.error(
+                f"锚文件不存在（首建：{ANCHOR}）：必须显式提供 {' 与 '.join(missing)}，"
+                "否则写出的锚会缺来源指纹（_env='unknown'、_env_reconcile_source 为空），"
+                "被 tests/contract/test_anchor_integrity.py 判红；本脚本拒绝写盘。")
+
     print(f"[锚文件] {ANCHOR}")
-    if not ANCHOR.is_file():
-        print(f"[错误] 锚文件不存在：{ANCHOR}")
-        print(f"       首次写锚可加 --confirm 由本脚本创建。")
+    if first_build:
+        print("[首建] 锚文件不存在：--env/--reconcile-source 已给出并校验非空，"
+              "加 --confirm 才会写盘。")
     else:
         print(f"[旧锚] 已读取（{ANCHOR.stat().st_size} 字节）")
 
@@ -129,14 +174,17 @@ def main(argv: list[str] | None = None) -> int:
               "（重锚须与改动同批次提交）。")
         return 1
 
+    if first_build:
+        env, reconcile_source = args.env, args.reconcile_source
+    else:
+        env = old.get("_env", "unknown")
+        reconcile_source = old.get("_env_reconcile_source", "")
     fingerprint = build_fingerprint(
-        env=old.get("_env", "unknown"),
+        env=env,
         generated_from=_new_generated_from(old.get("_generated_from", ""), head),
-        reconcile_source=old.get("_env_reconcile_source", ""))
+        reconcile_source=reconcile_source)
     new_anchor = {**fingerprint, **measured}
-    ANCHOR.write_text(
-        json.dumps(new_anchor, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8")
+    ANCHOR.write_text(serialize_anchor(new_anchor), encoding="utf-8")
     print(f"\n[写盘] 已写入 {ANCHOR}（保留并更新指纹键：{sorted(fingerprint)}）")
     print(f"[留迹] 请把以上差异贴进 {LEDGER_HINT}，并与改动同批次提交。")
     return 0

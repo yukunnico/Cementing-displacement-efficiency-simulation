@@ -71,11 +71,6 @@ def expected_keys() -> set[str]:
     return {f"sha_{n}" for n in _FIELD_ATTRS} | set(_SCALAR_FIELDS)
 
 
-def makes_relpath_field() -> str:
-    """`_generated_from` 里可解析的"生成批次"字段（重锚脚本据此更新）。"""
-    return "生成批次 HEAD "
-
-
 def current_head_short() -> str:
     """当前 HEAD 短哈希；git 不可用（无 git/无仓库）时返回 `unknown`。"""
     try:

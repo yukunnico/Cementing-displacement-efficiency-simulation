@@ -167,13 +167,19 @@ def test_anchor_values_are_committed_not_just_working_tree():
 
 
 def test_committed_guard_fails_loudly_when_git_absent(monkeypatch):
-    """R26 行为守卫：环境无 git 时，入库守卫必须**显式 FAIL**，不得 skip/ERROR。
+    """R26 行为守卫：环境无 git 时，入库守卫必须**显式 FAIL**，不得 skip/xfail。
 
     真实场景：镜像/沙箱/只 checkout 子路径的 CI 容器 PATH 无 `git`。若不接住
-    `FileNotFoundError`，pytest 会报 **ERROR**，文本与真实原因（锚未入库）毫无
-    关系，读者会误判为环境坏了；若改用 skip，则是重开 R17 的假绿路径。
+    `FileNotFoundError`，pytest 会把该用例报成 **FAILED**（异常点就在用例体内），
+    只是 traceback 只剩 `FileNotFoundError`，与真实原因（锚未入库）毫无关系，
+    读者会误判为环境坏了；若改用 skip，则是重开 R17 的假绿路径。
     这里把 `subprocess.run` 替成必抛 `FileNotFoundError` 的桩，断言结果是一条
     **区分性 AssertionError**。
+
+    **禁止用 skip/xfail 兜底（I-2 子性质）**：`Skipped` / `XFailed` 是
+    `BaseException` 子类，只 `except AssertionError` 会让它们**穿透本用例**，
+    把**守卫自己**报成 SKIPPED/XFAIL（可见但非失败）——那正好重开假绿路径。
+    故下面对 `AssertionError` 之外的一切异常一律判 FAIL，并把文案写死。
     """
     import subprocess as _sp
 
@@ -189,7 +195,112 @@ def test_committed_guard_fails_loudly_when_git_absent(monkeypatch):
         msg = str(exc)
         assert "环境无 git" in msg and "无法验证锚已入库" in msg, (
             f"缺 git 的失败文案必须能区分两种原因（环境 vs 未入库），实为：{msg}")
+    except BaseException as exc:  # noqa: BLE001 —— skip/xfail 也要判为失败
+        raise AssertionError(
+            f"环境无 git 时入库守卫抛出 {type(exc).__name__}：{exc}——"
+            "禁止用 skip/xfail 兜底：那会把'验不了'伪装成'验过了'（R17 假绿路径），"
+            "并会把本守卫自己报成 SKIPPED/XFAIL 而非 FAILED") from exc
     else:
         raise AssertionError(
             "环境无 git 时入库守卫未失败——它要么静默通过（假绿），"
-            "要么抛出非 AssertionError（会被报成 ERROR 而掩盖真实原因）")
+            "要么异常没被接住而只留下 FileNotFoundError 的 traceback"
+            "（读者会误判成环境坏了，真实原因'锚未入库'被掩盖）")
+
+
+def _measured_key_lines(text: str) -> list[str]:
+    """抽出锚文本里 10 个**实测键**（`expected_keys()`）的整行，保持出现顺序。"""
+    keys = expected_keys()
+    return [line for line in text.splitlines()
+            if line.split(":", 1)[0].strip().strip('"') in keys]
+
+
+def test_regenerate_script_preserves_measured_key_lines(tmp_path):
+    """R33：一次**合法**重锚不得改动/重排 10 个实测键的文本行。
+
+    重锚脚本写盘唯一走 `serialize_anchor()`。`{**fingerprint, **measured}` 的插入序
+    是"指纹键在前、实测键按 `_run_default_case()` 产出序在后"，与锚文件里 `sorted()`
+    的键序**不同**；若序列化漏了 `sort_keys=True`，Task 8 真重锚时 diff 会把 10 个
+    实测键全部写成"删+加"——"diff 里没有数值行被改动"这一本轮赖以复核的硬约束
+    当场崩塌。故此处用同一份数据复现写盘路径，逐行比对重写前后。
+    """
+    import tests.contract._regenerate_default_path_anchor as regen
+
+    original = ANCHOR.read_text(encoding="utf-8")
+    data = json.loads(original)
+
+    # 按脚本写盘时的真实构造顺序复现：fingerprint 先入、measured 后入；
+    # measured 的顺序与 `_run_default_case()` 一致（先五场 sha_*，后五标量）。
+    fingerprint = regen.build_fingerprint(
+        env=data["_env"],
+        generated_from=data["_generated_from"],
+        reconcile_source=data["_env_reconcile_source"])
+    measured = {f"sha_{name}": data[f"sha_{name}"] for name in _FIELD_ATTRS}
+    measured.update({key: data[key] for key in _SCALAR_FIELDS})
+
+    written = tmp_path / ANCHOR.name
+    written.write_text(regen.serialize_anchor({**fingerprint, **measured}),
+                       encoding="utf-8")
+    rewritten = written.read_text(encoding="utf-8")
+
+    before, after = _measured_key_lines(original), _measured_key_lines(rewritten)
+    assert len(before) == len(expected_keys()), (
+        f"锚里实测键行数应为 {len(expected_keys())}，实为 {len(before)}（字段表与锚脱节）")
+    assert after == before, (
+        "重锚写盘改变了 10 个实测键的文本行（内容或顺序，R33）：\n"
+        f"  重写前：{before}\n  重写后：{after}\n"
+        "serialize_anchor() 必须以 sort_keys=True 序列化，否则合法重锚会在 diff 里"
+        "把每个数值行写成『删+加』，抹掉『数值行未被改动』这一可核对形式")
+
+
+def test_regenerate_refuses_first_build_without_fingerprint(monkeypatch, tmp_path):
+    """R34：首建锚缺 `--env`/`--reconcile-source` 时应**非零退出且不写盘**。
+
+    锚不存在 ⇒ `old = {}` ⇒ 旧代码会写 `_env="unknown"`、指针键为空的锚，
+    当场被本文件的指纹守卫判红，逼维护者手工改 JSON——正是锚加固要消灭的路径。
+    正向（给全两参数）也必须仍然可写，否则"拒绝一切"式修复会假绿通过。
+    """
+    import pytest as _pytest
+
+    import tests.contract._regenerate_default_path_anchor as regen
+
+    anchor = tmp_path / "_default_path_anchor_hu101.json"
+    monkeypatch.setattr(regen, "ANCHOR", anchor)
+    # 用桩替换 10s 实测端到端算例：本条只测"首建参数校验"，不该跑模型；
+    # 也让"守卫若失效"的失败保持廉价（否则负向路径会白跑 4 次 10s 算例）。
+    monkeypatch.setattr(
+        regen, "_run_default_case",
+        lambda: {**{f"sha_{name}": "0" * 64 for name in _FIELD_ATTRS},
+                 **{key: 1.0 for key in _SCALAR_FIELDS}})
+
+    def _run(argv: list[str]) -> int:
+        """跑一次脚本入口并返回退出码（正常返回 0；`parser.error` ⇒ SystemExit(2)）。"""
+        with _pytest.raises(SystemExit) as excinfo:
+            regen.main(argv)
+        code = excinfo.value.code
+        assert isinstance(code, int), f"退出码应为 int，实为 {code!r}"
+        return code
+
+    # 负向：三种缺法都必须在写盘前被拦下（usage 错误 ⇒ 码 2）。
+    assert _run([]) == 2
+    assert _run(["--confirm"]) == 2
+    assert _run(["--confirm", "--env", "Python 3.13.7"]) == 2
+    assert _run(["--confirm", "--reconcile-source",
+                 "docs/superpowers/plans/baseline-2026-09-25.md"]) == 2
+    assert not anchor.exists(), "首建缺指纹时脚本仍写了盘"
+
+    # 正向：给全两参数后必须能写出结构合法的锚。
+    # 负向靠 `parser.error` ⇒ `SystemExit(2)`；正向是 `main()` 正常 **return 0**，
+    # 两者不是同一种结束方式，故正向直接调 `main()`。
+    assert regen.main(["--confirm", "--env", "Python 3.13.7 / numpy 2.3.3",
+                       "--reconcile-source",
+                       "docs/superpowers/plans/baseline-2026-09-25.md"]) == 0
+    written = json.loads(anchor.read_text(encoding="utf-8"))
+    assert set(written) == expected_keys() | set(POINTER_KEYS) | FINGERPRINT_KEYS, (
+        f"首建锚键集不对：{sorted(set(written))}")
+    assert written["_env"] == "Python 3.13.7 / numpy 2.3.3", (
+        f"首建锚必须用 --env 的值，而非 'unknown'：{written['_env']!r}")
+    assert written["_env_reconcile_source"] == (
+        "docs/superpowers/plans/baseline-2026-09-25.md"), (
+        f"首建锚必须用 --reconcile-source 的值，而非空串："
+        f"{written['_env_reconcile_source']!r}")
+    assert written["_generated_from"].startswith("HEAD "), written["_generated_from"]
