@@ -193,6 +193,10 @@ def isotropic_flux_q0(c_bar: FloatOrArray, m: float) -> FloatOrArray:
 
     Returns:
         标量输入返回 ``float``，数组输入返回 ``Array``。
+
+    ⚠️ 消费方口径（2026-09-25 Task 2 一致化）：默认路径
+    （``enable_stream_function=True``）下 q₀ 无消费方，仅作 ``gap_solver``
+    回归锚；弥散由 I₃ 单独承载。
     """
     c = np.asarray(c_bar, dtype=float)
     c2 = c ** 2

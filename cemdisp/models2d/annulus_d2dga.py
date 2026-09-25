@@ -154,6 +154,48 @@ def _low_tail_indicators(geom: Dict[str, Array], cement: Array, ny: int) -> Dict
     return {"standoff低于0.5段占比": so_frac, "窄边效率低于0.05域占比": tail_frac}
 
 
+# A3 惯例（Task 2，2026-09-25）：置真但在当前速度场路径上**无消费者**的开关清单。
+# 规则与代码实际消费点一一对应，改消费点时必须同步改 `_dead_switches` 与本表。
+_OLD_PATH_ONLY_SWITCHES = (
+    ("enable_regime_split", "M2 局部流态修正"),
+    ("enable_true_buoyancy", "真浮力体力"),
+    ("enable_power_law_gap_law", "幂律缝隙律"),
+)
+# 新路径专属开关：enable_stream_function=False 时无消费方（既有守卫口径，保留不丢）。
+_NEW_PATH_ONLY_SWITCHES = (
+    ("enable_stream_yield_gate", "屈服门进流函数算子"),
+    ("enable_power_law_gap_correction", "幂律间隙一阶修正"),
+)
+
+
+def _dead_switches(**switches) -> list[str]:
+    """返回"置真但在当前路径上无消费者"的开关名（A3 惯例，纯函数便于测试）。
+
+    规则（与代码实际消费点一一对应；改消费点时必须同步改这里）：
+      * 旧代数路径专属开关：仅在 ``enable_stream_function=False`` 时被消费
+        （``_compute_velocity`` 在新路径早退，见 :1867-1873）；
+      * ``enable_yield_gate``：新路径下 ``wall`` 只写诊断量，需
+        ``enable_stream_yield_gate=True`` 才进流函数算子（:1870）；
+      * 新路径专属开关：仅在 ``enable_stream_function=True`` 时被消费，旧路径下同样空转；
+      * ``K_AXIAL`` 为模块常量、非构造形参，仅旧路径消费，附在告警文本里说明。
+    """
+    dead: list[str] = []
+    new_path = bool(switches.get("enable_stream_function", True))
+    if new_path:
+        for name, desc in _OLD_PATH_ONLY_SWITCHES:
+            if switches.get(name, False):
+                dead.append(f"{name}（{desc}：仅旧代数路径 enable_stream_function=False 消费）")
+        if switches.get("enable_yield_gate", True) and not switches.get(
+                "enable_stream_yield_gate", False):
+            dead.append("enable_yield_gate（wall 已算出但不进算子：需 "
+                        "enable_stream_yield_gate=True 才有动力学作用，当前仅写诊断量）")
+    else:
+        for name, desc in _NEW_PATH_ONLY_SWITCHES:
+            if switches.get(name, False):
+                dead.append(f"{name}（{desc}：仅流函数新路径 enable_stream_function=True 消费）")
+    return dead
+
+
 def _limit_phase_volume(field: Array, geom: Dict[str, Array], target_volume_m3: float, open_outlet: bool = False) -> Array:
     """按累计入环空体积限制场量，避免数值扩散凭空放大相体积。
 
@@ -558,26 +600,25 @@ class AnnulusD2DGASolver:
                 stacklevel=2,
             )
 
-        # ⚠️ 2026-09-16 A3（Task 2 评审）：静默无效开关告警。``enable_stream_yield_gate``
-        # 与 ``enable_power_law_gap_correction`` 均只被新路径（``enable_stream_function=True``）
-        # 消费；此外屈服门还需 ``enable_yield_gate=True`` 才会算出非零 wall。置真却
-        # 无可消费路径时开关静默失效——按项目惯例一次性告警，防「死开关被当活杠杆」。
-        _stream_switches = {
-            "enable_stream_yield_gate": enable_stream_yield_gate,
-            "enable_power_law_gap_correction": enable_power_law_gap_correction,
-        }
-        _dead = [name for name, on in _stream_switches.items() if on and not enable_stream_function]
-        if enable_stream_yield_gate and enable_stream_function and not enable_yield_gate:
-            _dead.append("enable_stream_yield_gate(enable_yield_gate=False)")
+        # A3 惯例（Task 2，2026-09-25 完备化）：置真但当前速度场路径无消费者的开关
+        # 一次性告警，防「死开关被当活杠杆」。原先只检查**反方向**组合（如新路径专属
+        # 开关落在旧路径上），默认路径下 enable_true_buoyancy/enable_power_law_gap_law/
+        # enable_yield_gate 等置真空转零告警；现由 `_dead_switches` 双向覆盖。
+        _dead = _dead_switches(
+            enable_stream_function=enable_stream_function,
+            enable_yield_gate=enable_yield_gate,
+            enable_stream_yield_gate=enable_stream_yield_gate,
+            enable_power_law_gap_correction=enable_power_law_gap_correction,
+            enable_regime_split=enable_regime_split,
+            enable_true_buoyancy=enable_true_buoyancy,
+            enable_power_law_gap_law=enable_power_law_gap_law,
+        )
         if _dead:
             warnings.warn(
-                f"AnnulusD2DGASolver 的开关 {', '.join(_dead)} 在当前配置下无效："
-                "流函数新路径开关（enable_stream_yield_gate/enable_power_law_gap_correction）"
-                "仅在 enable_stream_function=True 时被消费；enable_stream_yield_gate 还需 "
-                "enable_yield_gate=True 才会算出非零冻结度 wall。请修正配置或移除这些开关。",
-                UserWarning,
-                stacklevel=2,
-            )
+                "AnnulusD2DGASolver 的开关 " + "；".join(_dead)
+                + " 在当前配置下无效（开关仅在另一条速度场路径上被消费；"
+                "K_AXIAL=1/3 同属旧路径专属）。"
+                "请修正配置或移除这些开关。", UserWarning, stacklevel=2)
 
     def _build_geom(self, well_spec: WellSpec, mud_cake_thickness: Array | None = None) -> Dict[str, Array]:
         """根据井筒规格构建环空二维网格几何参数。
