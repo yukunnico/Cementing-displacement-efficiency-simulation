@@ -126,6 +126,17 @@ SHARDS: dict[str, list[str]] = {
     "P4": ["hu101__H1", "hu101__H3a_LS", "hu101__H3b_HB"],
     "P5": ["ht1_003__H1", "ht1_003__H3a_LS", "ht1_003__H3b_HB",
            "ht1_004__H1", "ht1_004__H3_spec"],
+    # 2026-09-19 追加：原 P4/P5 一个进程内串行 3/5 个 run，实测单 run 26–35 min
+    # ⇒ P5 墙钟 2.5 h。按 run 粒度重切，**原 P1–P5 定义未改动**；P6–P13 只是把
+    # P4/P5 的 run 各自独立成片（同一 run 不得同时由两片启动，各片独立 manifest）。
+    "P6": ["hu101__H1"],
+    "P7": ["hu101__H3a_LS"],
+    "P8": ["hu101__H3b_HB"],
+    "P9": ["ht1_003__H1"],
+    "P10": ["ht1_003__H3a_LS"],
+    "P11": ["ht1_003__H3b_HB"],
+    "P12": ["ht1_004__H1"],
+    "P13": ["ht1_004__H3_spec"],
 }
 
 _ROLE_BY_PHASE = {"lead": "LEAD", "intermediate": "INTERMEDIATE", "tail": "TAIL"}

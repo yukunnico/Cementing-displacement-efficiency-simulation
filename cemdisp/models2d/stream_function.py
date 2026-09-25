@@ -182,13 +182,17 @@ __all__ = ["solve_stream_function", "solve_stream_function_nonlinear",
 _WALL_CONDUCTANCE_FLOOR = 1.0e-6
 
 # A-3a 外迭代的量级常量（与 gap_solver 的求根容差/上限；见其 docstring）。
-# ⚠️ R-T6-2 REVISED（Task 6 修复轮 2）：严格 rtol **全场统一**——所有格最终都
-# 要满足严格档（屈服门槛奇点邻域的割线 2-循环由反求工具的**夹逼二分回退**
-# 兜底，见 ``gap_solver.solve_g_from_mean_velocity_batch`` 阶段 3）。修复轮 1
-# 的"整批 rtol 阶梯 + 救援格滞回"已退役：整批降级会让健康格也在首个松判据处
-# 停机、被系统性扫进冻结分支（实测退化解：τ_Y2 扫描 max|w| 逐位相同、生产场
-# 288/288 全 undefined）。
-_INVERSE_RTOL = 1.0e-12
+# ⚠️ 2026-09-18（**用户裁定**）：``_INVERSE_RTOL`` 由 1.0e-12 **放宽至 1.0e-6**。
+# 依据 = 实测收敛诊断（真实 hu101 HB 口径，1800 s/924 步）：反求的**逐点**迭代
+# 次数中位 **9**、最大 **240** ⇒ 每次调用都跑满 ``max_iter`` + 二分兜底，
+# 约 5%–7% 的屈服门槛邻域格点（``stalled`` ≈ 510–720 / 10000）把整批拖满预算。
+# 原 1e-12 比外层收敛判据（``solve_stream_function_nonlinear`` 的 ``tol=1e-6``）
+# 严 **6 个数量级**，属结构性过度求解：``F(g̃)=Ī₁·g̃−ū`` 在门槛处有 sqrt 型奇点，
+# 双精度下够不到 12 位有效数字。
+# 历史注记：R-T6-2 REVISED（Task 6 修复轮 2）退役的是"整批 rtol 阶梯 + 救援格
+# 滞回"（那会让健康格在首个松判据处停机、被系统性扫进冻结分支 ⇒ 退化解）。
+# 本次是**统一常量**的放宽、不是阶梯，不复活该退化路径。
+_INVERSE_RTOL = 1.0e-6
 _INVERSE_MAX_ITER = 200
 
 # (2.2) 两分量的物理换算因子之比：w_phys ∝ w̄/π、v_phys ∝ v̄（T9 π 推导）⇒ v̄ 需乘 π
@@ -503,8 +507,6 @@ def solve_stream_function_nonlinear(geom: Dict, c_bar, hb_closure, b_field,
                                     Gb=(0.0, 0.0), *,
                                     velocity_scale: float = 1.0,
                                     initial_G=None,
-                                    hysteresis: bool = False,
-                                    adaptive_omega: bool = False,
                                     omega: float = 0.5, tol: float = 1e-6,
                                     max_outer: int = 50) -> Array:
     """解 HB 流体 (4.22) 流函数椭圆方程——**非线性外迭代**（A-3a）。
@@ -567,16 +569,6 @@ def solve_stream_function_nonlinear(geom: Dict, c_bar, hb_closure, b_field,
             收敛的 G 场，注入后作首轮线性解的闭包状态；``None``（默认）= 冷启动
             （不注入，既有行为逐位不变）。接受标量、(ny,nz) 场或 (2,ny,nz) 向量场
             （``set_pressure_gradient`` 同口径）；含非有限值/形状非法 ⇒ ValueError。
-        hysteresis: 悬崖格滞回（修复轮 1 引入；**已被 R-T6-2 REVISED 取代**，
-            生产接线不启用——其与整批 rtol 阶梯的组合曾把本应流动的格扫进冻结
-            分支（退化解）。机制保留为默认关开关：``True`` ⇒ 本步外迭代内一旦
-            某格被判 undefined（含 |ū| ≤ 场相对数值零）即保持冻结分支（ū 置 0），
-            掩码生命周期 = 本函数一次调用（跨步重新评估）。``False``（默认）
-            = 既有行为逐位不变。
-        adaptive_omega: 自适应欠松弛（R-T6-2 阶梯 (ii)，Task 6 修复轮 1）。
-            ``True`` ⇒ 检测连续两轮 Δ 方向翻转（dot(Δ_k, Δ_{k−1})<0，2-振荡信号）
-            时 ω 减半（下限 0.05），连续 3 轮无翻转后逐级回升至上限（``omega``）。
-            ``False``（默认）= 固定 ``omega``，逐位不变。
         omega: 欠松弛因子 ∈ (0,1]（``1`` ⇒ 不松弛）。
         tol: 外迭代收敛容差（``Ī₁`` 场的 ∞-范数相对变化；``0`` ⇒ 只认逐位相等）。
         max_outer: 最大外迭代轮数（含首轮）≥1。
@@ -663,23 +655,6 @@ def solve_stream_function_nonlinear(geom: Dict, c_bar, hb_closure, b_field,
             )
         hb_closure.set_pressure_gradient(ig)
 
-    # ---- 悬崖格滞回（R-T6-2 阶梯 (iii)，Task 6 修复轮 1）---------------------
-    # 机理：被 R-T1-6 地板冻结的格经地板涓流（1e-6·I₁_牛顿）产生微小但非零的 ū，
-    # 下一轮反求为该 ū 找"恰好屈服"的 G ⇒ 格在屈服悬崖两侧来回翻转，且悬崖邻域
-    # 的 fp 分辨率间隙可让反求直接 RuntimeError。滞回：本步外迭代内，某格一旦判
-    # undefined（反求无正根 ⇒ 注入 G=0 ⇒ 地板），即**取冻结分支不回翻**（对其
-    # ū 置 0 走工具的 undefined 路径）——与 M3 屈服门"悬崖格取冻结分支"的哲学
-    # 一致（Pelipenko04 (2.6)-(2.8) 停流判据）。**跨步重新评估，不跨步冻结**
-    # （掩码生命周期 = 本函数一次调用）。禁止多数投票等非物理机制。
-    hyst_mask: np.ndarray | None = None
-
-    # 自适应欠松弛状态（R-T6-2 阶梯 (ii)；默认关 ⇒ omega_cur ≡ omega，逐位不变）
-    omega0 = float(omega)
-    omega_cur = omega0
-    _prev_delta: np.ndarray | None = None
-    _flip_streak = 0
-    _calm_streak = 0
-
     def _solve_linear(closure) -> Array:
         return solve_stream_function(geom, c, eta1, eta2, m, b_field,
                                      closure=closure, ny=ny, nz=nz)
@@ -713,11 +688,6 @@ def solve_stream_function_nonlinear(geom: Dict, c_bar, hb_closure, b_field,
         # 夹逼二分回退保证严格 rtol 下收敛）。冻结分支不再用于"反求失败格"。
         u_zero_cut = 1.0e-12 * float(np.max(np.abs(u_mag)))
         u_inv = np.where(np.abs(u_mag) <= u_zero_cut, 0.0, u_mag)
-        # 悬崖格滞回（⚠️ 已被 R-T6-2 REVISED 取代，开关保留默认关）：undefined 格
-        # 本步内保持冻结分支（ū 置 0）。生产接线**不启用**——上轮实测其与
-        # 整批 rtol 阶梯组合会把本应流动的格扫进冻结分支（全场冻死的退化解）。
-        if hysteresis and hyst_mask is not None:
-            u_inv = np.where(hyst_mask, 0.0, u_inv)
         # ② 逐格反求 G（批量闭包 + 标量求根；Gb=0 生产口径）。
         # 严格 rtol 全场统一（R-T6-2 REVISED 第 4 条）：所有格**要么**满足严格 rtol，
         # **要么**落在 fp 停滞分支（``inv.stalled``：``|Δg̃| ≤ 4·eps·g̃``，机器精度级解；
@@ -737,9 +707,6 @@ def solve_stream_function_nonlinear(geom: Dict, c_bar, hb_closure, b_field,
                 "κ/τ_Y/ū 量级是否自洽（根可能位于 fp 不可分辨邻域）。",
                 RuntimeWarning, stacklevel=2,
             )
-        if hysteresis:
-            undef = np.asarray(inv.undefined, dtype=bool).reshape(H.shape)
-            hyst_mask = undef if hyst_mask is None else (hyst_mask | undef)
         # ③ 注入（无正根格 G=0 ⇒ 闭包侧 R-T1-6 地板 + 单次告警）
         hb_closure.set_pressure_gradient(inv.G.reshape(H.shape))
         I1_new = _mobility_now()
@@ -752,27 +719,12 @@ def solve_stream_function_nonlinear(geom: Dict, c_bar, hb_closure, b_field,
             # 终解：返回的 Ψ 与闭包**当前**状态严格对应（多一次线性求解）
             I1_cur = I1_new
             return _solve_linear(_FrozenMobilityClosure(I1_cur, hb_closure))
-        # ⑤ 欠松弛 + 冻结流动度重解。adaptive_omega（阶梯 (ii)）：连续两轮
-        # Δ 方向翻转（dot(Δ_k, Δ_{k-1})<0）⇒ ω 减半（下限 0.05）压制 2-振荡爆发；
-        # 连续 3 轮无翻转 ⇒ ω 逐级回升至上限。默认关 ⇒ omega_cur ≡ omega，
-        # 松弛表达式逐字不变（逐位）。
-        if adaptive_omega and _prev_delta is not None:
-            delta = I1_new - I1_cur
-            if float(np.dot(delta.reshape(-1), _prev_delta.reshape(-1))) < 0.0:
-                _flip_streak += 1
-                _calm_streak = 0
-            else:
-                _flip_streak = 0
-                _calm_streak += 1
-            if _flip_streak >= 2:
-                omega_cur = max(omega_cur * 0.5, 0.05)
-                _flip_streak = 0
-            elif _calm_streak >= 3 and omega_cur < omega0:
-                omega_cur = min(omega_cur * 2.0, omega0)
-            _prev_delta = delta
-        elif adaptive_omega:
-            _prev_delta = I1_new - I1_cur
-        I1_cur = (1.0 - omega_cur) * I1_cur + omega_cur * I1_new
+        # ⑤ 固定 ω 欠松弛 + 冻结流动度重解。
+        # ⚠️ 2026-09-18 删除：原 `adaptive_omega`（自适应欠松弛）与 `hysteresis`
+        # （悬崖格滞回）两个开关——二者文档自述"已被 R-T6-2 REVISED 取代、生产接线
+        # 不启用"，全仓零调用者、零测试，属实验遗留。生产一直走 `omega_cur ≡ omega`
+        # 分支 ⇒ 本条松弛表达式**与删除前逐位等价**。
+        I1_cur = (1.0 - omega) * I1_cur + omega * I1_new
         psi = _solve_linear(_FrozenMobilityClosure(I1_cur, hb_closure))
     raise RuntimeError(
         f"非线性外迭代在 max_outer={max_outer} 轮内未收敛：Ī₁ 场 ∞-范数相对变化 = "

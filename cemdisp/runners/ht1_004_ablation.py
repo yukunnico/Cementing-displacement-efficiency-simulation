@@ -113,7 +113,6 @@ def run_one_level(
     e_clip_max: float = 0.55,
     enable_yield_gate: bool = False,
     enable_regime_split: bool = False,
-    dispersion_dt_scale: float = 1.0,
 ) -> AnnulusSimulationResult:
     """Run a single ablation level, returning the full simulation result.
 
@@ -155,10 +154,6 @@ def run_one_level(
         M3 屈服门槛开关，默认 False。
     enable_regime_split : bool
         M2 局部流态修正固定点迭代开关，默认 False。
-    dispersion_dt_scale : float
-        ⚠️ 已弃用（2026-09-14 Task 7），无效果死参：自创拉普拉斯弥散已从求解器
-        删除（弥散由 q₀ + I₃ 分层通量闭包承载），legacy 默认 1.0 静默透传；
-        偏离默认传值仅触发 DeprecationWarning。
     """
     loaded_well, fluids, schedule, _ = load_ht1_004_tailpipe()
     well_spec = well_spec_override if well_spec_override is not None else loaded_well
@@ -192,7 +187,6 @@ def run_one_level(
         e_clip_max=e_clip_max,
         enable_yield_gate=enable_yield_gate,
         enable_regime_split=enable_regime_split,
-        dispersion_dt_scale=dispersion_dt_scale,
     )
 
     # 传入泵注程序：使末尾 Tier0 诊断聚合的 T0-6 停泵衰减诊断可用

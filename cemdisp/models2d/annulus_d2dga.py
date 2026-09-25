@@ -300,11 +300,6 @@ class AnnulusD2DGASolver:
         e_clip_max: float = 0.55,
         enable_yield_gate: bool = True,  # 2026-09-02 默认启用可逆τw物理屈服门（替代非物理永久浓度冻结，结果网格收敛）
         yield_gate_f_safety: float = 1.15,
-        # ⚠️ 2026-09-14 Task 7 弃用形参（默认 None）：自创拉普拉斯弥散已删除。
-        dispersion_axial: float | None = None,
-        dispersion_azimuthal: float | None = None,
-        dispersion_dt_ref: float | None = None,
-        dispersion_dt_scale: float | None = None,
         enable_e_clip_ruling: bool = True,
         e_clip_measured_max: float = 0.90,
         enable_power_law_gap_law: bool = True,
@@ -372,13 +367,6 @@ class AnnulusD2DGASolver:
                 连续冻结度判据（Pelipenko04 (2.6)-(2.8) 停流区判据的连续近似）：
                 wall = clip(1 − τw_extrap/(f·τy), 0, 1)；τw ≥ f·τy 可流动
                 （wall=0），τw→0 全冻（wall→1）。
-            dispersion_axial: ⚠️ 已弃用（2026-09-14 Task 7），默认 None。自创拉普拉斯
-                弥散已删除（Z&F22 p.11 "we have no diffusive terms"），弥散由
-                q₀ + I₃ 分层通量闭合承载（(4.25)/(4.26)/(4.28)）。保留形参仅为
-                既有 runner 兼容；非 None 传值触发 DeprecationWarning 且不再生效。
-            dispersion_azimuthal: ⚠️ 已弃用，语义同 dispersion_axial。
-            dispersion_dt_ref: ⚠️ 已弃用，语义同 dispersion_axial。
-            dispersion_dt_scale: ⚠️ 已弃用，语义同 dispersion_axial。
             enable_stream_yield_gate: B-2 opt-in 开关，默认 False。
                 True 且 enable_stream_function=True 时，把 `_yield_gate_wall` 的
                 连续冻结度 wall 传进 `solve_stream_function`
@@ -436,21 +424,6 @@ class AnnulusD2DGASolver:
                 .fitted_bingham_ls_intercept_pa``。``hb_fix_cement_tau_y=False`` 时
                 提供本映射不消费（构造告警）。
         """
-        # ⚠️ 2026-09-14 Task 7 弃用检查：dispersion_* 任一非 None 即弃用警告。
-        # （显式传 None 视同默认，不警告——保证未传参的 runner/脚本行为无感。）
-        _dispersion_given = (
-            dispersion_axial is not None or dispersion_azimuthal is not None
-            or dispersion_dt_ref is not None or dispersion_dt_scale is not None
-        )
-        if _dispersion_given:
-            warnings.warn(
-                "AnnulusD2DGASolver 的 dispersion_axial/azimuthal/dt_ref/dt_scale 形参已弃用："
-                "自创拉普拉斯弥散已删除（Z&F22 p.11 \"we have no diffusive terms\"），"
-                "弥散由 q₀ + I₃ 分层通量闭合承载（式 4.25/4.26/4.28）。"
-                "显式传值不再生效，请从调用方移除这些参数。",
-                DeprecationWarning,
-                stacklevel=2,
-            )
         # ⚠️ 2026-09-15 Task 10 弃用检查：e_clip 三形参任一偏离 legacy 默认
         # （0.55/0.90/True）即一次性弃用警告。e_clip 硬截断已移除，e = 1−standoff
         # 按 Pelipenko04 (2.1) 文献口径 e∈[0,1) 直取（仅 1e-6 浮点护栏）。
@@ -495,12 +468,6 @@ class AnnulusD2DGASolver:
         self.e_clip_max: float = e_clip_max
         self.enable_yield_gate: bool = enable_yield_gate
         self.yield_gate_f_safety: float = yield_gate_f_safety
-        # ⚠️ 2026-09-14 Task 7：弥散形参已弃用——仅保留属性以兼容旧脚本读值，
-        # 不再被求解过程消费（显式传值已在上方触发 DeprecationWarning）。
-        self.dispersion_axial = dispersion_axial
-        self.dispersion_azimuthal = dispersion_azimuthal
-        self.dispersion_dt_ref = dispersion_dt_ref
-        self.dispersion_dt_scale = dispersion_dt_scale
         # 2026-09-06 e_clip 裁定已随 Task 10 截断移除一同退役（形参弃用，仅存属性）
         self.enable_e_clip_ruling = enable_e_clip_ruling
         self.e_clip_measured_max = e_clip_measured_max

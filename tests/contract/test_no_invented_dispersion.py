@@ -32,25 +32,35 @@ def test_smooth_dispersion_removed_from_module():
     assert "_smooth_dispersion" not in src
 
 
-def test_deprecation_warning_on_non_default_dispersion_args():
-    """显式传入任一 dispersion_* 形参时触发 DeprecationWarning(中文消息)。"""
-    with warnings.catch_warnings(record=True) as caught:
-        warnings.simplefilter("always")
+def test_dispersion_params_fully_removed():
+    """⚠️ 2026-09-18 收紧：4 个 dispersion_* 形参已从求解器**彻底删除**。
+
+    原契约是"形参保留 + 传值触发 DeprecationWarning"（2026-09-14 Task 7 的过渡态）。
+    自创拉普拉斯弥散既已删除，保留形参只是把死开关留在 API 面上；现改为直接删除——
+    任何传值都是 ``TypeError``，比"静默忽略 + 告警"更难误用。
+    """
+    import inspect
+    params = inspect.signature(m.AnnulusD2DGASolver.__init__).parameters
+    for name in ("dispersion_axial", "dispersion_azimuthal",
+                 "dispersion_dt_ref", "dispersion_dt_scale"):
+        assert name not in params, f"{name} 应已从 __init__ 移除"
+    # 属性面同样不得残留（旧版保留 self.dispersion_* 供脚本读值）
+    solver = m.AnnulusD2DGASolver(nz=10, ny=5, total_t=20.0)
+    for name in ("dispersion_axial", "dispersion_azimuthal",
+                 "dispersion_dt_ref", "dispersion_dt_scale"):
+        assert not hasattr(solver, name), f"self.{name} 应已移除"
+
+
+def test_removed_dispersion_params_raise_type_error():
+    """传值必须显式失败（不得再被静默吞掉）。"""
+    with pytest.raises(TypeError):
         m.AnnulusD2DGASolver(nz=10, ny=5, total_t=20.0, dispersion_dt_scale=1.0)
-    dep = [w for w in caught if issubclass(w.category, DeprecationWarning)]
-    assert dep, "显式传 dispersion_* 应触发 DeprecationWarning"
-    assert any("弥散" in str(w.message) for w in dep), "弃用消息应为中文且说明弥散已删除"
 
 
-@pytest.mark.parametrize("kwargs", [
-    {},  # 全默认(形参默认 None)
-    {"dispersion_axial": None, "dispersion_azimuthal": None,
-     "dispersion_dt_ref": None, "dispersion_dt_scale": None},  # 显式 None 视同默认
-])
-def test_no_deprecation_warning_when_args_absent(kwargs):
-    """默认构造或显式传 None:不触发 DeprecationWarning(8 个 runner 无感)。"""
+def test_no_deprecation_warning_on_default_construction():
+    """默认构造不触发任何 DeprecationWarning（8 个 runner 无感）。"""
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
-        m.AnnulusD2DGASolver(nz=10, ny=5, total_t=20.0, **kwargs)
+        m.AnnulusD2DGASolver(nz=10, ny=5, total_t=20.0)
     dep = [w for w in caught if issubclass(w.category, DeprecationWarning)]
     assert not dep, f"不应触发弃用警告: {[str(w.message) for w in dep]}"

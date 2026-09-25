@@ -78,7 +78,9 @@ def run_config(well_id: str, *, dispersion_dt_scale: float,
         cr, CasingFlowSolver(enable_gravity=True), fluids, split_cement_phases=True)
     tt = min(_total_t(schedule) + 1200.0, _stop_t(cr, fluids) + 600.0)
     kw = dict(CORRECTED_KW)
-    kw["dispersion_dt_scale"] = dispersion_dt_scale
+    # ⚠️ 2026-09-18：自创拉普拉斯弥散已删除（Task 7），`dispersion_dt_scale` 形参
+    # 已从 AnnulusD2DGASolver 移除 ⇒ 本脚本的 F1（scale）轴**退役**：scale 仅作为
+    # 结果标签保留，不再传给求解器（同组内各 scale 会得到逐位相同的 η 值）。
     kw["yield_gate_f_safety"] = yield_gate_f_safety
     res = AnnulusD2DGASolver(
         total_t=tt, nz=250, enable_cfl_adaptive=True, **kw
