@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-"""内部自洽校验台账：域内效率 / 饥饿份额恒等式 / 前缘位置 / 质量守恒（Task 6）。
+"""内部自洽校验台账：域内效率 / 饥饿份额恒等式 / 环空水泥尖端位置 / 质量守恒（Task 6）。
 
 产出
 ----
 ``results/内部自洽加固_2026-09-25/一致性台账.csv``，列为：
-``井名, 域内eta_E, 饥饿份额, 恒等式偏差, 1D尾浆到鞋时刻_s, 2D前缘_距鞋口_m, 质量守恒误差, 说明``
+``井名, 域内eta_E, 饥饿份额, 恒等式偏差, 1D尾浆到鞋时刻_s, 环空水泥尖端_距鞋口_m, 质量守恒误差, 说明``
 
 口径声明（复核者必读）
 ----------------------
@@ -18,11 +18,11 @@
    （纯水泥恒定入口 ⇒ 场近乎二值）实测 6.7e-10 ~ 1.0e-3 ⇒ 历史口径"偏差 ≤0.007"
    的出处是**基准算例**、**不是现场井**（现场井实测 0.006~0.043，8 井中 6 井 >0.01）。
    故本列只用于**同窗横向比较**，说明列逐井标注其相对 ≤0.01 的基准量级。
-3. **``2D前缘_距鞋口_m`` 是模型 s 口径**：环空求解域自 ``s=0``（鞋口、入口）向 ``s=L``
+3. **``环空水泥尖端_距鞋口_m`` 是模型 s 口径**：环空求解域自 ``s=0``（鞋口、入口）向 ``s=L``
    （悬挂器侧、出口）展开，该列 = b 加权方位列均值首达 0.5 的最大 ``s``（未达则 0.0，
    与求解器 ``_front`` 同约定）；``md = bottom − s`` 只是派生标签。旧 md 口径的列
    （``md[reached.min()]``）在现场井上恒等于域底、无判别力，已废弃（见 task-6-report.md 修复轮 1）。
-   说明列另保留求解器 metrics 的逐方位（宽/中/窄）s 口径前缘与域长作对照。
+   说明列另保留求解器 metrics 的逐方位（宽/中/窄）s 口径环空水泥尖端与域长作对照。
 4. **1D/2D 口径**：1D 用生产 runner 口径（`enable_gravity` + T1 三开关
    `mixing_contact_time` / `plug_face_zero_mixing` / `has_plug`），2D 用环空**默认**开关
    （不加 `CORRECTED_KW`）。``1D尾浆到鞋时刻_s`` 取 ``CasingFlowResult.cement_end_time_s``
@@ -84,7 +84,7 @@ TAIL_MARGIN_S = 1200.0
 BASELINE_DEVIATION = 0.01
 
 COLUMNS = ["井名", "域内eta_E", "饥饿份额", "恒等式偏差", "1D尾浆到鞋时刻_s",
-           "2D前缘_距鞋口_m", "质量守恒误差", "说明"]
+           "环空水泥尖端_距鞋口_m", "质量守恒误差", "说明"]
 
 # 与 runner 一致的 8 井（内部代号，与 Task 1/3/7 台账口径统一）
 WELLS = [
@@ -137,7 +137,7 @@ def stop_time_s(casing_result: Any, fluids: tuple) -> Optional[float]:
 
 def row_from_result(label: str, result: Any, t_stop_s: float, total_t_s: float,
                     pump_time_s: float) -> dict[str, str]:
-    """由 2D 结果组装台账行（三项自洽量 + 模型 s 口径前缘 + 逐井基准标注）。"""
+    """由 2D 结果组装台账行（三项自洽量 + 模型 s 口径环空水泥尖端 + 逐井基准标注）。"""
     geom = result.geom
     cement = np.asarray(result.cement_field, dtype=float)
     eta = domain_eta_e(cement, geom)
@@ -159,8 +159,8 @@ def row_from_result(label: str, result: Any, t_stop_s: float, total_t_s: float,
         ("eta_E与solver末行effective_efficiency一致（浮点一致到~1e-16）"
          if eta == solver_eta else
          f"⚠️eta_E与solver末行不一致：{eta:.6f} vs {solver_eta:.6f}"),
-        f"本列2D前缘为模型s口径（b加权列均值首达0.5的最大s，自鞋口起；md=bottom-s为派生标签）",
-        f"求解器s口径前缘自鞋口(m)：宽{float(last['front_wide_m']):.0f}"
+        f"本列2D环空水泥尖端为模型s口径（b加权列均值首达0.5的最大s，自鞋口起；md=bottom-s为派生标签）",
+        f"求解器s口径环空水泥尖端自鞋口(m)：宽{float(last['front_wide_m']):.0f}"
         f"/中{float(last['front_mid_m']):.0f}/窄{float(last['front_narrow_m']):.0f}；"
         f"域长{float(geom['s'][-1]):.0f}",
         deviation_note,
@@ -177,7 +177,7 @@ def row_from_result(label: str, result: Any, t_stop_s: float, total_t_s: float,
         "饥饿份额": f"{starved:.6f}",
         "恒等式偏差": f"{deviation:.6f}",
         "1D尾浆到鞋时刻_s": f"{t_stop_s:.1f}",
-        "2D前缘_距鞋口_m": f"{front_s:.2f}",
+        "环空水泥尖端_距鞋口_m": f"{front_s:.2f}",
         "质量守恒误差": _NT,
         "说明": "; ".join(notes),
     }
@@ -187,7 +187,7 @@ def failed_row(label: str, exc: BaseException) -> dict[str, str]:
     """失败行：如实记录异常类型与消息（跑不动的井不允许静默消失）。"""
     return {
         "井名": label, "域内eta_E": _NT, "饥饿份额": _NT, "恒等式偏差": _NT,
-        "1D尾浆到鞋时刻_s": _NT, "2D前缘_距鞋口_m": _NT, "质量守恒误差": _NT,
+        "1D尾浆到鞋时刻_s": _NT, "环空水泥尖端_距鞋口_m": _NT, "质量守恒误差": _NT,
         "说明": f"运行失败：{type(exc).__name__}: {exc}",
     }
 
@@ -239,7 +239,7 @@ def main() -> int:
         try:
             row = compute_row(label, loader)
             print(f"[OK]   {label}: eta_E={row['域内eta_E']} 偏差={row['恒等式偏差']} "
-                  f"前缘s={row['2D前缘_距鞋口_m']} ({time.perf_counter() - t0:.1f}s)")
+                  f"环空尖端s={row['环空水泥尖端_距鞋口_m']} ({time.perf_counter() - t0:.1f}s)")
         except Exception as exc:  # noqa: BLE001 —— 逐井隔离，失败必须留痕
             traceback.print_exc()
             row = failed_row(label, exc)
@@ -250,7 +250,7 @@ def main() -> int:
     print(f"\n台账已写入 {OUT_CSV}（{len(rows)} 口井，失败 {n_failed} 口）")
     for row in rows:
         print(f"  {row['井名']:<8} eta_E={row['域内eta_E']:<9} 饥饿={row['饥饿份额']:<9} "
-              f"偏差={row['恒等式偏差']:<10} 前缘s={row['2D前缘_距鞋口_m']:<9} "
+              f"偏差={row['恒等式偏差']:<10} 环空尖端s={row['环空水泥尖端_距鞋口_m']:<9} "
               f"守恒={row['质量守恒误差']}")
     return n_failed
 
