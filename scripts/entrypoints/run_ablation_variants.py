@@ -4,7 +4,8 @@
 + AnnulusD2DGASolver 构造参数覆盖实现变体，链路与 8 井 runner 同构。
 
 变体：i3_localized(enable_local_i3=True) / m2_regime_split(enable_regime_split=True)
-     / dispersion_zero(弥散两系数=0)
+     / dispersion_zero(已退役：dispersion_axial/azimuthal 形参已从求解器删除，
+       该变体不再覆盖任何参数 ⇒ 与基线逐位相同，标签仅作历史对照留档)
 基线 = results/<井名>_1D2D耦合模型/*_结果摘要.json（权威口径，不重跑）。
 输出 = results/消融变体_runner口径_2026-09-09/（CSV/MD 汇总 + 每变体摘要 JSON）。
 """
@@ -39,7 +40,9 @@ WELLS: dict[str, tuple[str, str, str]] = {
 VARIANTS: dict[str, dict[str, float | bool]] = {
     "i3_localized": {"enable_local_i3": True},
     "m2_regime_split": {"enable_regime_split": True},
-    "dispersion_zero": {"dispersion_axial": 0.0, "dispersion_azimuthal": 0.0},
+    # 2026-09-26：dispersion_* 形参已删（Task 7 自创弥散删除）⇒ 键已删；
+    # 该变体因此不再与基线有别（逐位相同），保留键名只为历史对照。
+    "dispersion_zero": {},
 }
 
 

@@ -7,7 +7,8 @@ from scripts.lib.mass_balance_diag import WELLS, run_variant
 V = {
   "物理屈服门": dict(enable_yield_gate=True),
   "对照_浓度冻结基线": dict(),
-  "对照_完全无壁面层": dict(c_min=0.0),
+  # 2026-09-26：`c_min` 形参已删 ⇒ 键已删；该对照现与"浓度冻结基线"逐位相同。
+  "对照_完全无壁面层": dict(),
 }
 res = {}
 for w in (sys.argv[1].split(",") if len(sys.argv)>1 else ["hu102","hu101"]):

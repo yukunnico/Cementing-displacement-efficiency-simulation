@@ -7,13 +7,16 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from scripts.lib.mass_balance_diag import WELLS, run_variant
 
+# 2026-09-26：`c_min`（2026-09-07 B2 删除）与 `dispersion_axial/azimuthal`
+# （Task 7 删除）三形参已不在签名上 ⇒ 键已删；"关壁面冻结"因此与 BASE 等价，
+# "关弥散"维度不再存在，标签保留作历史对照。
 VARIANTS = {
     "BASE": dict(),
-    "关壁面冻结": dict(c_min=0.0),
-    "关壁面冻结+关弥散": dict(c_min=0.0, dispersion_axial=0.0, dispersion_azimuthal=0.0),
-    "关壁面冻结+关弥散+关D2DGA": dict(c_min=0.0, dispersion_axial=0.0, dispersion_azimuthal=0.0,
-                                  enable_d2dga=False, enable_true_buoyancy=False, enable_d2dga_i3_flux=False),
-    "关壁面冻结+关弥散+近同心": dict(c_min=0.0, dispersion_axial=0.0, dispersion_azimuthal=0.0, e_clip_max=0.05),
+    "关壁面冻结": dict(),
+    "关壁面冻结+关弥散": dict(),
+    "关壁面冻结+关弥散+关D2DGA": dict(enable_d2dga=False, enable_true_buoyancy=False,
+                                  enable_d2dga_i3_flux=False),
+    "关壁面冻结+关弥散+近同心": dict(e_clip_max=0.05),
 }
 
 def main(wells, nzs):

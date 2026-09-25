@@ -50,11 +50,12 @@ def run_one(tag, target, e_clip, dispersion, nz, q_m3s=0.008, spacer_first_m3=0.
             return AnnulusInletState(t, q_m3s, "前置液", (("spacer", 1.0),))
         return AnnulusInletState(t, q_m3s, "纯水泥", (("tail", 1.0),))
 
-    kw = dict(e_clip_max=e_clip, c_min=0.0, enable_d2dga_i3_flux=False,
+    # 2026-09-26：`c_min`（2026-09-07 B2 删除）与 `dispersion_axial/azimuthal`
+    # （2026-09-14 Task 7 删除自创弥散）三个形参已不在求解器签名上，传了运行期即
+    # TypeError ⇒ 已删键。`dispersion` 开关随之退役，仅作口径标签。
+    kw = dict(e_clip_max=e_clip, enable_d2dga_i3_flux=False,
               enable_d2dga=False, enable_true_buoyancy=False,
               enable_cfl_adaptive=False, dt=2.0)
-    if not dispersion:
-        kw.update(dispersion_axial=0.0, dispersion_azimuthal=0.0)
     solver = AnnulusD2DGASolver(total_t=total_t, nz=nz, ny=40, **kw)
     res = solver.run(well_spec, fluids, provider)
     g = res.geom

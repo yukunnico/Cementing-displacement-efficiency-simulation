@@ -52,7 +52,9 @@ KNOBS: dict[str, dict[str, Any]] = {
     "b2_gaplaw_off": {"enable_power_law_gap_law": False},
     "b3_fsafety1.6": {"yield_gate_f_safety": 1.6},
     "b4_M1000": {"yield_regularization_M": 1000.0},
-    "b5_dispaz0.002": {"dispersion_azimuthal": 0.002},
+    # 2026-09-26：`dispersion_azimuthal` 形参已删 ⇒ 键已删；b5 旋钮
+    # 现无求解器覆盖（与"无旋钮"基线逐位相同），标签保留作历史对照。
+    "b5_dispaz0.002": {},
 }
 
 

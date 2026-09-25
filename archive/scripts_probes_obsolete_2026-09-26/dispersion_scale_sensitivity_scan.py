@@ -1,5 +1,12 @@
 """M1 弥散系数 κ 缩放敏感性扫描脚本（CFL on/off 双组存档）。
 
+归档说明（2026-09-26，Task 14 附加裁定 4）：本脚本已整体作废并 `git mv` 至
+`archive/scripts_probes_obsolete_2026-09-26/`。作废原因：它唯一的自变量
+`dispersion_dt_scale` 已随 Task 7（2026-09-14）删除自创拉普拉斯弥散而移除，
+各 scale 档输出**逐位相同**（R102 已记）⇒ 该扫描不再有任何判别力，跑它只会
+产出恒等的假对照。保留本文件是为了留下历史结论与当时的执行口径，**不再维护、
+不得引用其 scale 结论**。
+
 ⚠️ 2026-09-25 作废声明（Task 5）：本脚本扫描的 `dispersion_dt_scale` 形参已被
 Task 7（2026-09-14 源模型口径重构）**彻底删除**——自创拉普拉斯弥散及其 4 个
 `dispersion_*` 形参均已从 `AnnulusD2DGASolver` 移除（弥散改由 q₀ + I₃ 闭包承载）。
@@ -18,7 +25,9 @@ Task 4 (M1) 已将弥散系数改为按 dt 归一：_dt_norm = dispersion_dt_sca
 - scale→0 时 mixing 主要由平流数值扩散主导；
 - 前沿长度回到米级（2-5m）。
 
-对 HT1-004 井，R3 三闭包全开（enable_d2dga_auto_m / i3_flux / true_buoyancy）。
+对 HT1-004 井，R3 闭包开（i3_flux / true_buoyancy）。
+  ⚠️ 2026-09-26 订正：`enable_d2dga_auto_m` 形参已随 R0 分支删除（m 恒自动计算），
+  不再是有效闭包开关——R3 在求解器上只剩 i3_flux 与 true_buoyancy 两项。
 因 run_one_level 不透传弥散参数，采用 density_contrast_sensitivity_scan.py 的手动流水线：
 1D casing → build_coupled_annulus_inlet_provider → annulus_stop_time_s → AnnulusD2DGASolver → run → 指标 → CSV。
 
@@ -138,7 +147,7 @@ def run_one_case(scale: float, cfl_on: bool, *, nz: int, ny: int) -> dict:
     # Annulus stop time
     total_t = annulus_stop_time_s(casing_result=casing_result, fluids=fluids)
 
-    # 2D D2DGA solver：R3 三闭包全开
+    # 2D D2DGA solver：R3 闭包开（i3_flux + true_buoyancy；auto_m 形参已删）
     # ⚠️ 2026-09-25：`enable_d2dga_auto_m` 与 `dispersion_dt_scale` 两个形参均已从求解器
     # 删除（前者随 R0 分支删除；后者随 Task 7 删除自创拉普拉斯弥散），传了运行期即
     # TypeError。故本脚本的 scale 维度**已无判别力**（各 scale 输出逐位相同），
@@ -186,7 +195,7 @@ def main() -> None:
 
     print("=" * 70)
     print("M1 弥散系数 κ 缩放敏感性扫描（dispersion_dt_scale × CFL on/off）")
-    print(f"井: HT1-004   R3 三闭包全开")
+    print("井: HT1-004   R3 闭包(i3_flux + true_buoyancy；auto_m 已删)")
     print(f"网格: nz={nz}, ny={ny}, dt={DT}s (dispersion_dt_ref={DT}s)")
     print(f"scale 扫描: {scales}")
     print(f"CFL 组: {'SMOKE' if smoke else 'on/off 双组'}")

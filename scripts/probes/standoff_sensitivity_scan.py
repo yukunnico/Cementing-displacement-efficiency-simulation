@@ -1,7 +1,9 @@
 """偏心度(居中度 standoff)敏感性参数扫描脚本。
 
 对 HT1-004 井做 standoff → 有效顶替效率的定量扫描：
-- 固定 R3 三闭包全开（enable_d2dga_auto_m=True, enable_d2dga_i3_flux=True, enable_true_buoyancy=True）
+- 固定 R3 闭包全开（enable_d2dga_i3_flux=True, enable_true_buoyancy=True）
+  ⚠️ 2026-09-26 订正：`enable_d2dga_auto_m` 形参已随 R0 分支删除（m 恒自动计算），
+  不再构成有效闭包开关；R3 定义里的该位只作历史口径留档，不得当作"三闭包"读。
 - 扫 standoff ∈ {0.90, 0.80, 0.70, 0.60, 0.50, 0.40, 0.30}
 - 每次运行完整 1D-2D 流水线，提取全部指标
 - 输出 CSV 到 results/偏心度敏感性扫描/敏感性扫描结果.csv

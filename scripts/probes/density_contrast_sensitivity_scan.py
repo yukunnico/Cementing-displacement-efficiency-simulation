@@ -1,7 +1,9 @@
 """密度差（水泥浆密度 vs 钻井液密度）敏感性参数扫描脚本。
 
 对 HT1-004 井做 cement density -> 有效顶替效率的定量扫描：
-- 固定 R3 三闭包全开（enable_d2dga_auto_m=True, enable_d2dga_i3_flux=True, enable_true_buoyancy=True）
+- 固定 R3 闭包全开（enable_d2dga_i3_flux=True, enable_true_buoyancy=True）
+  ⚠️ 2026-09-26 订正：`enable_d2dga_auto_m` 形参已随 R0 分支删除（m 恒自动计算），
+  不再构成有效闭包开关；R3 定义里的该位只作历史口径留档，不得当作"三闭包"读。
 - 固定泥浆密度 1900 kg/m³，扫描水泥浆密度（lead+tail 同时平移，保持 offset=30）
 - 扫 cement_density ∈ {1600, 1750, 1900, 2000, 2100, 2200, 2350} kg/m³
 - 每次运行完整 1D-2D 流水线，提取全部指标

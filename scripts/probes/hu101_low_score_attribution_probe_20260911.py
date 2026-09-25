@@ -174,8 +174,10 @@ def main() -> None:
     # ---- D 弥散扫描 ----
     print("\n[D] 弥散系数扫描（基线 axial=0.018 / azimuthal=0.015）")
     for scale in (0.5, 2.0, 3.0):
+        # 2026-09-26：`dispersion_axial/azimuthal` 形参已删 ⇒ 键已删；
+        # D 段各档现无求解器覆盖（与基线逐位相同），scale 仅作标签。
         add(f"D_disp_x{scale:g}", "D", well_spec=well101, fluids=fluids101, schedule=sched101,
-            solver_kw={"dispersion_axial": 0.018 * scale, "dispersion_azimuthal": 0.015 * scale})
+            solver_kw={})
 
     # ---- E 网格收敛 ----
     print("\n[E] 网格收敛 nz=500")

@@ -48,7 +48,8 @@ BASELINE_CSV = PROJECT_ROOT / "results" / "最终基线_2026-08-29" / "cfl_on" /
 
 # corrected（adopted）口径，照抄 scripts/entrypoints/rerun_all_wells_corrected.py:33-39（RR）
 CORRECTED_KW = dict(
-    dispersion_dt_scale=1.0,   # M1: 弥散 dt 归一（不再随 dt 缩放）
+    # 2026-09-26：`dispersion_dt_scale`（M1）形参已随 Task 7 删除自创弥散而移除，
+    # 传了运行期即 TypeError ⇒ 键已删，corrected 口径只剩存活开关。
     enable_yield_gate=True,    # M3: 屈服门槛
     enable_regime_split=True,  # M2: 局部流态修正（层流元 R=1，中性）
     enable_local_i3=True,      # I3: 浮力弥散通量局部化

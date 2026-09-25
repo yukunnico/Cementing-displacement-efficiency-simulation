@@ -45,17 +45,20 @@ def main():
     base_well,fluids,schedule,_=load_hu101_tailpipe()
     well=replace(base_well,standoff_profile=tuple(DepthValuePoint(m,v) for m,v in ASSUMED))
     print(f"呼101 assumed 剖面, nz={NZ}\n"+"="*90)
+    # 2026-09-26：`dispersion_dt_scale`（M1）形参已删 ⇒ 三个含 M1 的配置其 M1 键已删：
+    # "M1 only" 因此退化为"全关"、"M1+M3" 等价于"M3 only"、"ALL corrected" 不含 M1。
+    # 标签保留作历史对照（其余数值不变，只少一个已死开关）。
     configs=[
         ("BASELINE(全关)", {}),
-        ("M1 only", dict(dispersion_dt_scale=1.0)),
+        ("M1 only", dict()),
         ("M3 only", dict(enable_yield_gate=True)),
         ("M2 only", dict(enable_regime_split=True)),
         ("I3 only", dict(enable_local_i3=True)),
         ("M4 only(e=.90)", dict(e_clip_max=0.90)),
-        ("M1+M3", dict(dispersion_dt_scale=1.0, enable_yield_gate=True)),
+        ("M1+M3", dict(enable_yield_gate=True)),
         ("M3+M4", dict(enable_yield_gate=True, e_clip_max=0.90)),
         ("M3+M2+M4", dict(enable_yield_gate=True, enable_regime_split=True, e_clip_max=0.90)),
-        ("ALL corrected", dict(dispersion_dt_scale=1.0, enable_yield_gate=True,
+        ("ALL corrected", dict(enable_yield_gate=True,
                                enable_regime_split=True, enable_local_i3=True, e_clip_max=0.90)),
     ]
     for label,kw in configs:

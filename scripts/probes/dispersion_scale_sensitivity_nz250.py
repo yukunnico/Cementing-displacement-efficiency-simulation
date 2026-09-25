@@ -57,7 +57,9 @@ def main() -> None:
             case_path = CASE_DIR / f"{well_id}_scale{scale:.1f}.json"
             row = load_or_run(
                 case_path, well_id,
-                compute={"extra_kw": {"dispersion_dt_scale": scale}},
+                # 2026-09-26：`dispersion_dt_scale` 形参已删 ⇒ 键已删；
+                # scale 轴退役（各 scale 输出与基线逐位相同，列仅作标签）。
+                compute={},
                 describe=f"{well_id} dispersion_dt_scale={scale}")
             rows.append({**row, "dispersion_dt_scale": scale,
                          "source": row.get("source", "computed")})

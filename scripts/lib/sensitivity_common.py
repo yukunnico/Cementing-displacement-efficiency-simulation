@@ -2,7 +2,7 @@
 
 与 rerun_all_wells_corrected.run_one 同源（CORRECTED_KW + nz=250 + CFL on +
 split_cement_phases + 套管 1D 重力项），仅允许：
-- extra_kw：追加/覆盖 AnnulusD2DGASolver 开关（如 dispersion_dt_scale=0.0）；
+- extra_kw：追加/覆盖 AnnulusD2DGASolver 开关（如 yield_gate_f_safety=1.6）；
 - well_override：替换 WellSpec（如 standoff 剖面 ±0.1 的 dataclasses.replace 结果）。
 
 注意：套管 1D（CasingFlowSolver）与入口桥接不吃 standoff/弥散开关，case 间

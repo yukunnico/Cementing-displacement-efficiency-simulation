@@ -15,7 +15,8 @@ from cemdisp.models2d.boundary_bridge import build_coupled_annulus_inlet_provide
 from cemdisp.transport1d import CasingFlowSolver
 
 CORRECTED_KW = dict(
-    dispersion_dt_scale=1.0,
+    # 2026-09-26：`dispersion_dt_scale`（M1）形参已随 Task 7 删除自创弥散而移除，
+    # 传了运行期即 TypeError ⇒ 键已删，corrected 口径只剩存活开关。
     enable_yield_gate=True,
     enable_regime_split=True,
     enable_local_i3=True,

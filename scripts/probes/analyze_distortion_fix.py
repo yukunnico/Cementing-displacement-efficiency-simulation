@@ -70,7 +70,8 @@ def run_case(label, well, fluids, schedule, *, corrected):
     total_t = min(_total_t(schedule) + 1200.0, _stop_t(cr, fluids) + 600.0)
     kw = dict(total_t=total_t, nz=NZ)
     if corrected:
-        kw.update(dispersion_dt_scale=1.0, enable_yield_gate=True,
+        # 2026-09-26：`dispersion_dt_scale` 形参已删 ⇒ 该键已删（corrected 只剩存活开关）
+        kw.update(enable_yield_gate=True,
                   enable_regime_split=True, enable_local_i3=True, e_clip_max=0.90)
     solver = AnnulusD2DGASolver(**kw)
     res = solver.run(well, fluids, inlet)
