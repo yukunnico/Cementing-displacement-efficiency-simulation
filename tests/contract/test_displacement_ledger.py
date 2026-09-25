@@ -10,6 +10,7 @@
    超出显示舍入的不一致必须报错，容差内的不一致必须在 notes 里暴露；
 5. 原始 ``位移台账.csv`` 跑一次后**逐字节不变**（R137，脚本只读）。
 """
+import csv
 import importlib
 
 import pytest
@@ -166,12 +167,44 @@ def test_raw_ledger_bytes_unchanged_by_run(tmp_path):
     """跑一次完整归并（含真实基线 md + 真实原始台账）后，原始台账逐字节不变（R137）。"""
     mod = _mod()
     before = mod.RAW_LEDGER.read_bytes()
+    raw_rows = mod.read_raw_ledger(mod.RAW_LEDGER)
     rows, _ = mod.collect(baseline_md=mod.BASELINE_MD, raw_ledger=mod.RAW_LEDGER)
     out = mod.write_summary(rows, path=tmp_path / "位移台账_汇总.csv")
     assert out.exists()
     assert mod.RAW_LEDGER.read_bytes() == before, "原始位移台账被改写（违反 R137 只读约束）"
-    # 真实产物：基线 8 + 修正（当前 1） + 未测 2
-    assert len(rows) == 8 + 1 + 2
+    # 真实产物：基线 8 + 原始台账各行 + 未测 2
+    # ⚠️ 用 len(raw_rows) 而非写死 1（修复轮 1）：原始台账是**累积**的审计行，
+    #    未来任务追加行时本契约测试不该因此变红（只该为真回归变红）。
+    assert len(rows) == 8 + len(raw_rows) + 2
     # 表头逐字等于 COLUMNS（无 BOM，UTF-8）
     first_line = out.read_text(encoding="utf-8").splitlines()[0]
     assert first_line == ",".join(mod.COLUMNS)
+
+
+def test_row_counts_come_from_sources_not_unmeasured_marker(tmp_path):
+    """修复轮 1：计数必须按**来源**（基线 md 行数 / 原始台账行数 / DEFERRED_ROWS），
+    不得按"未测"单元格文本标记判定——否则一条**合法**标了"未测"的原始行会被误当成 R136 的未测行。
+    """
+    mod = _mod()
+    # 原始台账：一行"修正行"，其 修正前/修正后 是数值（可重算），但 Δ 单元格写着"未测"
+    raw = dict(TASK8_RAW_ROW)
+    raw["井名"] = "hu102"
+    raw["修正项"] = "示例修正（Δ 单元格留空/未测）"
+    raw["Δeta_E_pp"] = mod.UNMEASURED
+    raw["Δeta_N_pp"] = mod.UNMEASURED
+    raw_path = tmp_path / "位移台账.csv"
+    with raw_path.open("w", encoding="utf-8", newline="") as fh:
+        writer = csv.DictWriter(fh, fieldnames=mod.COLUMNS)
+        writer.writeheader()
+        writer.writerow(raw)
+    baseline_path = tmp_path / "baseline.md"
+    baseline_path.write_text(SYNTHETIC_BASELINE, encoding="utf-8")
+
+    counts = mod.count_summary_rows(baseline_md=baseline_path, raw_ledger=raw_path)
+    # 该行属"修正"来源（原始台账 1 行），"未测"来源恒为 DEFERRED_ROWS 的 2 行
+    assert counts == {"baseline": 8, "fix": 1, "deferred": 2}
+    rows, _ = mod.collect(baseline_md=baseline_path, raw_ledger=raw_path)
+    assert len(rows) == sum(counts.values())
+    # 该行的 Δ 仍按重算值写入（R143），原始行的"未测"不改变汇总语义
+    fix_row = next(r for r in rows if r["修正项"] == raw["修正项"])
+    assert fix_row["Δeta_E_pp"] == "-0.0006"

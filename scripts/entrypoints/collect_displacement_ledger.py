@@ -289,14 +289,30 @@ def write_summary(rows: list[dict], path: Path = SUMMARY_CSV) -> Path:
     return path
 
 
+def count_summary_rows(*, baseline_md: Path = BASELINE_MD,
+                       raw_ledger: Path = RAW_LEDGER) -> dict[str, int]:
+    """按**来源**逐项计数（基线 / 修正 / 未测）。
+
+    ⚠️ 不按单元格文本标记计数（修复轮 1）：将来若有原始台账行**合法地**标了"未测"
+    （例如某任务自身测不到），按 ``Δeta_E_pp == "未测"`` 判定会把它误计为 R136 的未测行，
+    使"修正行"数静默少报。此处直接数三个来源：基线 md 的行数、原始台账的行数、
+    ``DEFERRED_ROWS`` 的长度。
+    """
+    return {"baseline": len(parse_baseline_table(baseline_md.read_text(encoding="utf-8-sig"))),
+            "fix": len(read_raw_ledger(raw_ledger)),
+            "deferred": len(DEFERRED_ROWS)}
+
+
 def main() -> int:
     rows, notes = collect()
-    n_baseline = sum(1 for r in rows if r["修正项"] == BASELINE_MODIFICATION)
-    n_deferred = sum(1 for r in rows if r["Δeta_E_pp"] == UNMEASURED)
-    n_fix = len(rows) - n_baseline - n_deferred
+    counts = count_summary_rows()
+    expected = sum(counts.values())
+    if len(rows) != expected:
+        raise AssertionError(f"汇总行数 {len(rows)} ≠ 三来源计数 {expected}（{counts}）")
     path = write_summary(rows)
     print(f"[ledger] 汇总 {len(rows)} 行 → {path}")
-    print(f"         （基线 {n_baseline} 行 + 修正 {n_fix} 行 + 未测 {n_deferred} 行）")
+    print(f"         （基线 {counts['baseline']} 行 + 修正 {counts['fix']} 行 "
+          f"+ 未测 {counts['deferred']} 行）")
     for note in notes:
         print(f"  ⚠ {note}")
     print(f"[ledger] 原始 {RAW_LEDGER.name} 只读，未改动（R137）")
