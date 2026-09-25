@@ -389,6 +389,10 @@ def load_ht1_001_tailpipe(
         casing_id_mm=HT1_001_CASING_ID_MM,
         liner_od_mm=HT1_001_LOWER_LINER_OD_MM,
         liner_id_mm=HT1_001_LINER_ID_MM,
+        # 2026-09-25 内部自洽加固 Task 3：接入既有的鞋口滞后体积常量（原先未传入 WellSpec，
+        # 导致 1D 管容回退到"单一内径 × 鞋深"兜底口径 70.88m³，比设计 6.4.1 分段内容积链
+        # 94.5m³ 低约 25%，前缘到鞋时刻系统性提前）。字段语义见 well_spec.py。
+        shoe_lag_volume_m3=HT1_001_SHOE_LAG_VOLUME_M3,
         hole_diameter_profile=_build_hole_profile(profile_rows),
         inclination_profile=_build_inclination_profile(profile_rows),
         standoff_profile=_build_standoff_profile(profile_rows),

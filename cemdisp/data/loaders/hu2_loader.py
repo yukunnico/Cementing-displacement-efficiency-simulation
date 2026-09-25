@@ -298,6 +298,10 @@ def load_hu2_tailpipe(
         casing_id_mm=HU2_CASING_ID_MM,
         liner_od_mm=HU2_LINER_OD_MM,
         liner_id_mm=HU2_LINER_ID_MM,
+        # 2026-09-25 内部自洽加固 Task 3：接入既有的鞋口滞后体积常量（原先未传入 WellSpec，
+        # 导致 1D 管容回退到"单一内径 × 鞋深"兜底口径 69.12m³，比 2026-08-29 校准的
+        # 实际流动路径径链累计 81.13m³ 低约 14.8%，前缘到鞋时刻系统性提前）。
+        shoe_lag_volume_m3=HU2_SHOE_LAG_VOLUME_M3,
         hole_diameter_profile=_depth_points(_build_hole_profile(caliper_rows)),
         inclination_profile=_depth_points(_build_inclination_profile(incl_rows)),
         standoff_profile=_depth_points(
