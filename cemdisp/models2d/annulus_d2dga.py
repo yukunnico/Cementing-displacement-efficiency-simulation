@@ -164,6 +164,9 @@ def _low_tail_indicators(geom: Dict[str, Array], cement: Array, ny: int) -> Dict
 # 与井次跑批都会刷告警 ⇒ 训练所有人忽略告警，与"消除静默失效"的目的相反。
 _SWITCH_DEFAULTS: Dict[str, bool] = {
     "enable_stream_function": True,
+    # Task 8（2026-09-26）：流函数线性求解器（True=带状 Cholesky / False=spsolve 历史口径）。
+    # 默认路径**真实消费** ⇒ 不属死开关，不进 _dead_switches 判定。
+    "enable_banded_solve": True,
     "enable_true_buoyancy": True,
     "enable_power_law_gap_law": True,
     "enable_yield_gate": True,
@@ -405,6 +408,9 @@ class AnnulusD2DGASolver:
         enable_stream_yield_gate: bool = _SWITCH_DEFAULTS["enable_stream_yield_gate"],  # B-2 opt-in：屈服门进流函数算子（默认关=HEAD 逐位）
         enable_power_law_gap_correction: bool = _SWITCH_DEFAULTS["enable_power_law_gap_correction"],  # B-3 opt-in：幂律间隙一阶修正（默认关）
         enable_stream_function: bool = _SWITCH_DEFAULTS["enable_stream_function"],
+        # Task 8（2026-09-26）：线性求解换带状 Cholesky（纯数值等价提速）。
+        # ⚠️ 该开关改变默认路径的**舍入级**数值结果 ⇒ 与逐位锚重锚同批次（R19）。
+        enable_banded_solve: bool = _SWITCH_DEFAULTS["enable_banded_solve"],
         # ⚠️ 2026-09-17 A-3b（Task 6）：HB 闭包接线双开关（opt-in，默认全关 ⇒ 逐位=HEAD）。
         enable_hb_closure: bool = _SWITCH_DEFAULTS["enable_hb_closure"],
         hb_fix_cement_tau_y: bool = False,
@@ -582,6 +588,11 @@ class AnnulusD2DGASolver:
         # 2026-09-15 Task 9：速度场路径开关（True = (4.22) 流函数椭圆方程，
         # False = 旧代数流动度，逐位复现 76a91c1——R7 冻结锚护栏）
         self.enable_stream_function = enable_stream_function
+        # Task 8（2026-09-26）：流函数线性求解器选择。默认 True = 带状 Cholesky
+        # （纯数值等价提速，见 solve_stream_function 的 banded 形参）。它**不是**
+        # 死开关：新旧两条线性求解路径都被真实消费（决定解 Ψ 用哪个求解器），
+        # 故不得加进 _dead_switches 的任何判定分支（跨任务接口约束 2）。
+        self.enable_banded_solve = enable_banded_solve
         # B-3 I-1：运行时一次性告警标志（水泥相非幂律时开关静默空转，见
         # _velocity_stream_function）。__init__ 拿不到 fluids，故不能在此判定。
         self._power_law_gap_correction_warned = False
@@ -1712,7 +1723,8 @@ class AnnulusD2DGASolver:
                 mud_fluid, cement_fluid, eta1, eta2, m_ratio, shear_rate, wall, ny, nz)
         else:
             psi = solve_stream_function(geom, c_bar, eta1, eta2, m_ratio, b_field,
-                                        closure=closure, wall=wall, ny=ny, nz=nz)
+                                        closure=closure, wall=wall, ny=ny, nz=nz,
+                                        banded=self.enable_banded_solve)
         w_unit, v_unit = velocity_from_stream_function(psi, geom)
         q_half = float(q_m3s) / 2.0
         w = w_unit * (q_half / np.pi)
@@ -1812,7 +1824,8 @@ class AnnulusD2DGASolver:
             # 一次牛顿线性 Ψ，按 G = H·ū/I₁_牛顿 逐格反推注入（启发式：因
             # I₁_HB ≤ I₁_牛顿 系统性低估驱动，外迭代在稳健求根下自行修正）。
             psi0 = solve_stream_function(geom, c_bar, eta1, eta2, m_ratio, b_field,
-                                         closure=None, ny=ny, nz=nz)
+                                         closure=None, ny=ny, nz=nz,
+                                         banded=self.enable_banded_solve)
             w0, v0 = velocity_from_stream_function(psi0, geom)
             u0 = np.hypot(w0, _VELOCITY_COMPONENT_RATIO * v0) * velocity_scale
             h_arr = np.asarray(geom["H"], dtype=float)
@@ -1834,7 +1847,8 @@ class AnnulusD2DGASolver:
                 stacklevel=2,
             )
             return solve_stream_function(geom, c_bar, eta1, eta2, m_ratio, b_field,
-                                         closure=None, wall=wall, ny=ny, nz=nz)
+                                         closure=None, wall=wall, ny=ny, nz=nz,
+                                         banded=self.enable_banded_solve)
         # 收敛 ⇒ 缓存收敛 G 场，供下一时间步 warm-start（阶梯 (i)）。
         self._hb_prev_G = closure.current_G
         return psi

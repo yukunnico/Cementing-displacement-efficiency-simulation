@@ -1,16 +1,16 @@
 {
   "_env": "Python 3.13.7 / numpy 2.3.3 / scipy 1.16.2",
   "_env_reconcile_source": "docs/superpowers/plans/baseline-2026-09-25.md",
-  "_generated_from": "HEAD bc155b0 + 4 个未提交 HB 改动（工作树脏态）；生成命令见 task-10-report.md",
+  "_generated_from": "HEAD 47b2bea + 4 个未提交 HB 改动（工作树脏态）；生成命令见 task-10-report.md",
   "_note": "微网格锚（nz=30/ny=12/total_t=14000s），非生产数字，不得用于论文或与现场 CBL 比对",
   "channeling": 0.27586206896540544,
-  "eta_E": 0.9203933244336414,
-  "eta_N": 0.7188836497828229,
-  "instability": 0.9561963308339436,
-  "mixing": 0.21343195862301304,
-  "sha_cement": "50513b6a17081d066c803390054ff294d139025f13bbc99944dfa5dcd5764154",
-  "sha_lead": "6c4a935d5aea7260cef6de6802515ded2b0b27c3fb937c5f088371d28b1ce254",
-  "sha_spacer": "04a4cae515a80d84d842168e7abcdaa1e22f54e4725f4f4c45720048af5aa7dc",
-  "sha_tail": "deccf7948c927567c87b5fac934fafac76dd9a4020a4d4c7ffe0ae838c78113c",
-  "sha_wall": "dc49553080f3a7d2ea33b3e2e645405553451792c11d906d275c106edc1b11d7"
+  "eta_E": 0.9203873022217786,
+  "eta_N": 0.7188988965864732,
+  "instability": 0.9562051779786022,
+  "mixing": 0.2134439860887038,
+  "sha_cement": "e2dcc963528a3ba2c9b53b8322204b9359e3d2f61f9246f699bde1a720b7943b",
+  "sha_lead": "484fd77dd05357c9a8e805487dc916cd2fed4589b66d12db50706c67b47e7a23",
+  "sha_spacer": "350dacf8f1c7a9427c6158bcff2e1a213fdadd0e3d9c2c5c39af41405986aa07",
+  "sha_tail": "6b0a417fd6f9d5ae666a1c820f220762c98d511a1cceeac01ab30aea6a10eff2",
+  "sha_wall": "07f23b84ab7aec903a3aa05ae08174d472d035a7e71891ee70ad5dd045b14331"
 }

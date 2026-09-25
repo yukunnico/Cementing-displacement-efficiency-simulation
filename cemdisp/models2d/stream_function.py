@@ -235,10 +235,90 @@ def _scalar_viscosity(eta, name: str) -> float:
     return first
 
 
+def _assemble_banded_interior(a_face, c_face, src, *, ny: int, nz: int,
+                              r_a: float, dphi: float, dxi: float):
+    """消去 φ 两端 Dirichlet 后，装配内部 SPD 系统的 LAPACK 带状存法 ``(ab, rhs, n_int)``。
+
+    背景（Task 8，2026-09-26）
+    --------------------------
+    现行 5 点矩阵按行主序 ``row = i*nz + j`` 装配时带宽 = ``nz``（生产 nz=250）；
+    换节点重排 ``m = j*(ny-2) + (i-1)``（**ξ 外层、φ 内层**）后带宽降到
+    ``ny-2``（生产 ny=40 ⇒ 38）。内部子块**精确对称正定**（对角为负的 M-矩阵取负
+    后即标准变系数 5 点 Poisson；实测 κ=3.16e4，各向异性 10⁶–10⁷）
+    ⇒ 可用 LAPACK 带状 Cholesky（``?pbtrf``/``?pbtrs``）直接解，实测比
+    ``scipy.sparse.linalg.spsolve`` 快约 4×，而**离散系统逐元素不变**。
+
+    装配口径（与 ``solve_stream_function`` 的稀疏装配同源，**不得各写一份公式**）
+    ---------------------------------------------------------------------------
+    - 全矩阵非对角为 ``+coeff``、对角 ``−(east+west+north+south)``（M-矩阵）；
+      本函数装配其**取负**形式（对角正、非对角负），即对称正定的 5 点算子。
+      ⚠️ 简报里给出的草图缺 ``1/r_a`` 因子（φ-槽系数实为 ``a_face/(r_a·dφ²)``）
+      且 Dirichlet 反代项同样漏因子 ⇒ 以本实现为准（R5：等价性测试是验收权威）。
+    - φ 两端 Dirichlet：i=0 ⇒ Ψ=0、i=ny-1 ⇒ Ψ=1（单位通量 BC）。消元后只在内部
+      节点 i∈[1,ny-2] 上立方程：Dirichlet 邻居的耦合留在**对角**、其 BC 值进**右端**。
+    - ξ 两端零通量（Neumann）：j=0 无 ξ⁻ 面、j=nz-1 无 ξ⁺ 面（面系数阵列本身缺该列）。
+
+    带状存法（LAPACK 下三角形式：``ab[i-j, j] == a[i, j]``，``i >= j``）
+    ------------------------------------------------------------------
+    - ``ab[0, m]`` 对角；``ab[1, m-1]`` 为 φ⁻ 邻格（偏移 −1，仅 i≥2 存在——
+      i=1 的 φ⁻ 邻格是 Dirichlet 节点，其耦合已并入对角、**不得**写到该槽位）；
+    - ``ab[n_int, m-n_int]`` 为 ξ⁻ 邻格（偏移 −(ny−2)，排序后恰为最远一条带）；
+    - 偏移 2..n_int-1 的结构性零槽位保持 0（Cholesky 只读下三角，上三角槽位不读）。
+
+    Args:
+        a_face: (ny-1, nz) φ-面系数（调和平均，见 ``solve_stream_function``）。
+        c_face: (ny, nz-1) ξ-面系数。
+        src: (ny, nz) 源项 ``−∇a·b``（取负形式下右端取**正** ``src``）。
+        ny/nz: 网格规模。r_a/dphi/dxi: 平均半径与两步长（r_a 为标量，与全矩阵一致）。
+
+    Returns:
+        ``(ab, rhs, n_int)``：``ab`` 形状 ``(n_int+1, n_int*nz)`` 的 Fortran 序数组
+        （列连续，LAPACK 免拷贝）；``rhs`` 长度 ``n_int*nz``；``n_int = ny-2``。
+    """
+    n_int = ny - 2
+    n_unknown = n_int * nz
+    band = n_int                       # 最远非零偏移 = ξ 邻格偏移 = ny-2
+
+    a_phi = np.asarray(a_face, dtype=float) / (r_a * dphi * dphi)   # (ny-1, nz)
+    c_xi = np.asarray(c_face, dtype=float) / (dxi * dxi)            # (ny, nz-1)
+    src = np.asarray(src, dtype=float)
+
+    # 内部节点切片：i = 1..ny-2；重排下标 m = j*n_int + (i-1)。
+    # ⚠️ 这些 (n_int, nz) 场的**展开一律用 order="F"**（首轴 i 变化最快
+    # ⇒ 位置 = (i-1) + j*n_int = m），与 C 序（位置 = (i-1)*nz + j）不同。
+    ii = slice(1, ny - 1)
+    a_w = a_phi[0:ny - 2, :]           # φ⁻ 面：i 与 i-1 之间
+    a_e = a_phi[1:ny - 1, :]           # φ⁺ 面：i 与 i+1 之间
+    c_s = np.zeros((n_int, nz))        # j-½ 面（j≥1 才有内部 ξ⁻ 邻格）
+    c_s[:, 1:] = c_xi[ii, :nz - 1]
+    c_n = np.zeros((n_int, nz))        # j+½ 面（j≤nz-2 才有内部 ξ⁺ 邻格）
+    c_n[:, :nz - 1] = c_xi[ii, :]
+
+    ab = np.zeros((band + 1, n_unknown), order="F")
+    ab[0, :] = (a_w + a_e + c_s + c_n).ravel(order="F")
+
+    # 偏移 −1：φ⁻ 邻格（仅 i≥2；i=1 行的 φ⁻ 邻格是 Dirichlet，槽位留 0）
+    band1 = np.zeros((n_int, nz))
+    band1[1:, :] = -a_w[1:, :]
+    ab[1, :n_unknown - 1] = band1.ravel(order="F")[1:]
+
+    # 偏移 −(ny−2)：ξ⁻ 邻格。ab[band, m] = A[m+band, m]，m+band 即 (i, j+1)。
+    far = np.zeros((n_int, nz))
+    far[:, :nz - 1] = -c_s[:, 1:]
+    ab[band, :n_unknown - band] = far.ravel(order="F")[:n_unknown - band]
+
+    # 右端：源项（取负形式取 +src）+ φ=1 端 Dirichlet（Ψ=1）的反代项；
+    # φ=0 端 Ψ=0 ⇒ 反代项为 0（其耦合只体现在对角）。
+    rhs_grid = src[ii, :].copy()
+    rhs_grid[-1, :] += a_phi[ny - 2, :]        # i=ny-2 的 φ⁺ 面指向 Dirichlet 节点
+    rhs = rhs_grid.ravel(order="F")
+    return ab, rhs, n_int
+
+
 def solve_stream_function(geom: Dict, c_bar, eta1, eta2, m: float, b_field,
                           *, closure: ClosureProvider | None = None,
                           wall: Array | None = None,
-                          ny=None, nz=None) -> Array:
+                          ny=None, nz=None, banded: bool = True) -> Array:
     """解 (4.22) 流函数椭圆方程，返回 Ψ 场 ``(ny, nz)``（单位通量口径）。
 
     Args:
@@ -266,6 +346,16 @@ def solve_stream_function(geom: Dict, c_bar, eta1, eta2, m: float, b_field,
             区重新分配到活跃区（窄边冻结 ⇒ 宽边流速上升）。
         ny: 可选形状自校验（与 geom["H"].shape[0] 不符即抛错）。
         nz: 可选形状自校验（与 geom["H"].shape[1] 不符即抛错）。
+        banded: 线性求解器选择（Task 8，默认 **True**）。
+            True ⇒ 消去 φ 两端 Dirichlet 后按 ``m = j*(ny-2) + (i-1)`` 重排节点，
+            用 LAPACK 带状 Cholesky（``cholesky_banded``/``cho_solve_banded``，
+            带宽 ``ny-2``）解同一离散系统（见 :func:`_assemble_banded_interior`）；
+            False ⇒ 保留历史 ``scipy.sparse.linalg.spsolve`` 逐字路径
+            （供历史逐位锚与等价性对照使用）。
+            ⚠️ 两者解**同一个**离散系统，差异仅在浮点舍入级（Ψ 相对差 < 1e-12，
+            见 ``tests/contract/test_banded_solve_equivalence.py``）；但因模型对
+            舍入扰动敏感（混沌放大），切换会让**默认路径端到端数字在舍入级位移**
+            ⇒ 必须与逐位锚的重锚**同批次**完成（R19）。
 
     Returns:
         Ψ 场 (ny, nz)，float64；Ψ(φ=0)=0、Ψ(φ=1)=1（单位通量，调用方按 Q 缩放）。
@@ -355,45 +445,60 @@ def solve_stream_function(geom: Dict, c_bar, eta1, eta2, m: float, b_field,
     flux_minus[:, 0] = b_xi[:, 0]                    # ξ 下端一阶单侧（ghost=本格）
     src += (flux_plus - flux_minus) / dxi
 
-    # ---- 5 点矩阵装配（行主序 idx = i*nz + j，全网格含 Dirichlet 行）----
-    n = ny_ * nz_
-    i_int = np.arange(1, ny_ - 1)
-    ni = i_int.size
-    II, JJ = np.meshgrid(i_int, np.arange(nz_), indexing="ij")   # (ni, nz)
-    row_int = (II * nz_ + JJ).ravel()
+    if banded:
+        # ---- 带状 Cholesky（Task 8，默认路径）--------------------------------
+        # 同一离散系统的等价解：φ 两端 Dirichlet 消元 + 节点重排（带宽 ny-2）。
+        # 不做符号分解复用（系数随 I₁ 每步变），只重建 (ab, rhs) 后一次分解+回代。
+        from scipy.linalg import cho_solve_banded, cholesky_banded
 
-    east_val = a_face[1:ny_ - 1] / (r_a * dphi * dphi)   # 面 i（i↔i+1）
-    west_val = a_face[0:ny_ - 2] / (r_a * dphi * dphi)   # 面 i-1
-    east_col = ((II + 1) * nz_ + JJ).ravel()
-    west_col = ((II - 1) * nz_ + JJ).ravel()
+        ab, rhs_banded, n_int = _assemble_banded_interior(
+            a_face, c_face, src, ny=ny_, nz=nz_, r_a=r_a, dphi=dphi, dxi=dxi)
+        factor = cholesky_banded(ab, overwrite_ab=True, lower=True)
+        sol = cho_solve_banded((factor, True), rhs_banded, overwrite_b=True)
+        psi = np.zeros((ny_, nz_))
+        psi[1:-1, :] = sol.reshape(nz_, n_int).T     # m = j*n_int + (i-1) 逆映射
+        psi[-1, :] = 1.0                             # φ=1 端 Dirichlet（单位通量 BC）
+    else:
+        # ---- 历史路径：5 点矩阵装配 + spsolve（**逐字不动**，供历史锚使用）----
+        # ---- 5 点矩阵装配（行主序 idx = i*nz + j，全网格含 Dirichlet 行）----
+        n = ny_ * nz_
+        i_int = np.arange(1, ny_ - 1)
+        ni = i_int.size
+        II, JJ = np.meshgrid(i_int, np.arange(nz_), indexing="ij")   # (ni, nz)
+        row_int = (II * nz_ + JJ).ravel()
 
-    north_val = np.zeros((ni, nz_))
-    north_val[:, :nz_ - 1] = c_face[1:ny_ - 1] / (dxi * dxi)
-    south_val = np.zeros((ni, nz_))
-    south_val[:, 1:] = c_face[1:ny_ - 1] / (dxi * dxi)
-    # 越界邻居（j=0 无南、j=nz-1 无北）值已为 0；列号钳到自身，COO 累加 0 无害。
-    north_col = (II * nz_ + np.minimum(JJ + 1, nz_ - 1)).ravel()
-    south_col = (II * nz_ + np.maximum(JJ - 1, 0)).ravel()
-    center_val = -(east_val + west_val) - (north_val + south_val)
+        east_val = a_face[1:ny_ - 1] / (r_a * dphi * dphi)   # 面 i（i↔i+1）
+        west_val = a_face[0:ny_ - 2] / (r_a * dphi * dphi)   # 面 i-1
+        east_col = ((II + 1) * nz_ + JJ).ravel()
+        west_col = ((II - 1) * nz_ + JJ).ravel()
 
-    # Dirichlet 行（i=0 与 i=ny-1 的全部 j）：对角 1.0，BC 值进右端
-    i_bc = np.concatenate([np.zeros(nz_, dtype=int), np.full(nz_, ny_ - 1, dtype=int)])
-    j_bc = np.tile(np.arange(nz_), 2)
-    row_bc = i_bc * nz_ + j_bc
-    val_bc = np.where(i_bc == 0, 0.0, 1.0)   # BC 值：Ψ(φ=0)=0、Ψ(φ=1)=1（进右端）
+        north_val = np.zeros((ni, nz_))
+        north_val[:, :nz_ - 1] = c_face[1:ny_ - 1] / (dxi * dxi)
+        south_val = np.zeros((ni, nz_))
+        south_val[:, 1:] = c_face[1:ny_ - 1] / (dxi * dxi)
+        # 越界邻居（j=0 无南、j=nz-1 无北）值已为 0；列号钳到自身，COO 累加 0 无害。
+        north_col = (II * nz_ + np.minimum(JJ + 1, nz_ - 1)).ravel()
+        south_col = (II * nz_ + np.maximum(JJ - 1, 0)).ravel()
+        center_val = -(east_val + west_val) - (north_val + south_val)
 
-    rows = np.concatenate([row_int, row_int, row_int, row_int, row_int, row_bc])
-    cols = np.concatenate([east_col, west_col, row_int, north_col, south_col, row_bc])
-    vals = np.concatenate([east_val.ravel(), west_val.ravel(), center_val.ravel(),
-                           north_val.ravel(), south_val.ravel(), np.ones(2 * nz_)])
-    matrix = sp.coo_matrix((vals, (rows, cols)), shape=(n, n)).tocsr()
+        # Dirichlet 行（i=0 与 i=ny-1 的全部 j）：对角 1.0，BC 值进右端
+        i_bc = np.concatenate([np.zeros(nz_, dtype=int), np.full(nz_, ny_ - 1, dtype=int)])
+        j_bc = np.tile(np.arange(nz_), 2)
+        row_bc = i_bc * nz_ + j_bc
+        val_bc = np.where(i_bc == 0, 0.0, 1.0)   # BC 值：Ψ(φ=0)=0、Ψ(φ=1)=1（进右端）
 
-    rhs = np.zeros(n)
-    rhs[row_bc] = val_bc
-    rhs[row_int] = -src[1:-1].ravel()
+        rows = np.concatenate([row_int, row_int, row_int, row_int, row_int, row_bc])
+        cols = np.concatenate([east_col, west_col, row_int, north_col, south_col, row_bc])
+        vals = np.concatenate([east_val.ravel(), west_val.ravel(), center_val.ravel(),
+                               north_val.ravel(), south_val.ravel(), np.ones(2 * nz_)])
+        matrix = sp.coo_matrix((vals, (rows, cols)), shape=(n, n)).tocsr()
 
-    psi = spla.spsolve(matrix, rhs)
-    psi = np.asarray(psi, dtype=float).reshape(ny_, nz_)
+        rhs = np.zeros(n)
+        rhs[row_bc] = val_bc
+        rhs[row_int] = -src[1:-1].ravel()
+
+        psi = spla.spsolve(matrix, rhs)
+        psi = np.asarray(psi, dtype=float).reshape(ny_, nz_)
     if not np.all(np.isfinite(psi)):
         raise RuntimeError("流函数方程求解失败（出现非有限值），请检查输入场的量级与正则性")
     return psi
