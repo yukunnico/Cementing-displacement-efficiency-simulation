@@ -10,8 +10,10 @@ total_t=14000s：brief 原定 200s 时入口尚为钻井液、五场恒为全零
 
 缺锚语义（R17）：**锚文件缺失 ⇒ 直接 FAIL**，不走 `pytest.skip`。
 skip 会让 CI 变绿而零验证（`pyproject.toml` 无 `addopts`、全仓无 `conftest.py` 兜底），
-而本锚是后续所有"零数值影响"结论的唯一证据载体。缺锚时的正确动作是
-`python tests/contract/_regenerate_default_path_anchor.py` 重锚并在提交中一并留痕。
+而本锚是后续所有"零数值影响"结论的唯一证据载体。缺锚时的正确动作是运行
+`python tests/contract/_regenerate_default_path_anchor.py`（该重锚脚本真实存在，
+无 `--confirm` 时只打印差异不写盘）**重锚，且重锚必须与改动同批次提交、
+并在 `results/内部自洽加固_2026-09-25/位移台账.csv` 留迹**。
 键集/指纹/缺锚语义的元守卫见 `tests/contract/test_anchor_integrity.py`。
 
 字段口径说明（2026-09-25 实测）：
@@ -23,6 +25,7 @@ skip 会让 CI 变绿而零验证（`pyproject.toml` 无 `addopts`、全仓无 `
 """
 import hashlib
 import json
+import subprocess
 from pathlib import Path
 
 import numpy as np
@@ -55,10 +58,47 @@ _SCALAR_FIELDS = {
 # 锚 JSON 里的来源指纹键（不参与数值比对，见 test_anchor_integrity.py）
 FINGERPRINT_KEYS = ("_note", "_generated_from", "_env")
 
+# 指纹键之外的**可解析指针键**（值是一个仓内相对路径，供对账/重锚脚本解析，见 R27）
+POINTER_KEYS = ("_env_reconcile_source",)
+
+# 微网格非生产数字的警告（重锚脚本与元守卫共用，避免两处各写一份）
+ANCHOR_NOTE = (
+    "微网格锚（nz=30/ny=12/total_t=14000s），非生产数字，不得用于论文或与现场 CBL 比对")
+
 
 def expected_keys() -> set[str]:
     """锚必须覆盖的键集（由字段表推导，禁止与断言行各写一份）。"""
     return {f"sha_{n}" for n in _FIELD_ATTRS} | set(_SCALAR_FIELDS)
+
+
+def makes_relpath_field() -> str:
+    """`_generated_from` 里可解析的"生成批次"字段（重锚脚本据此更新）。"""
+    return "生成批次 HEAD "
+
+
+def current_head_short() -> str:
+    """当前 HEAD 短哈希；git 不可用（无 git/无仓库）时返回 `unknown`。"""
+    try:
+        proc = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=Path(__file__).resolve().parents[2],
+            capture_output=True, text=True)
+    except FileNotFoundError:
+        return "unknown"
+    if proc.returncode != 0:
+        return "unknown"
+    return proc.stdout.strip() or "unknown"
+
+
+def build_fingerprint(env: str, generated_from: str,
+                      reconcile_source: str) -> dict:
+    """构造锚的三个来源指纹键 + 可解析对账源指针键（重锚脚本唯一写入口）。"""
+    return {
+        "_env": env,
+        "_env_reconcile_source": reconcile_source,
+        "_generated_from": generated_from,
+        "_note": ANCHOR_NOTE,
+    }
 
 
 def _run_default_case() -> dict:
@@ -85,7 +125,8 @@ def test_default_path_matches_bitwise_anchor():
     """默认路径数值必须与锚逐位一致；缺锚 ⇒ FAIL（R17，禁止 skip）。"""
     assert ANCHOR.is_file(), (
         f"逐位锚文件缺失：{ANCHOR}（R17：缺锚必须硬失败，严禁用 skip 掩盖；"
-        "重锚请运行 tests/contract/_regenerate_default_path_anchor.py）")
+        "重锚请运行 python tests/contract/_regenerate_default_path_anchor.py，"
+        "重锚须与改动同批次提交、并在 results/内部自洽加固_2026-09-25/位移台账.csv 留迹）")
     want = json.loads(ANCHOR.read_text(encoding="utf-8"))
     assert set(want) >= expected_keys(), (
         f"锚键集不齐：缺 {sorted(expected_keys() - set(want))}（R18）")
