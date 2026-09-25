@@ -158,6 +158,28 @@ def test_scanner_exempts_deliberate_negative_under_tests(tmp_path):
     assert find_bad_kwargs(tmp_path) == []
 
 
+def test_scanner_exempts_raises_reached_through_an_alias(tmp_path):
+    """第一要件认别名：`import pytest as pt` 的 `pt.raises(TypeError)` 同样豁免。"""
+    _write(tmp_path / "tests" / "negative_alias.py",
+           "import pytest as pt\n"
+           "from cemdisp.models2d import AnnulusD2DGASolver\n"
+           "def test_x():\n"
+           "    with pt.raises(TypeError):\n"
+           "        AnnulusD2DGASolver(dispersion_dt_scale=1.0)\n")
+    assert find_bad_kwargs(tmp_path) == []
+
+
+def test_scanner_exempts_bare_raises_imported_from_pytest(tmp_path):
+    """第一要件也认 `from pytest import raises` 后的裸 `raises(...)`。"""
+    _write(tmp_path / "tests" / "negative_from.py",
+           "from pytest import raises\n"
+           "from cemdisp.models2d import AnnulusD2DGASolver\n"
+           "def test_x():\n"
+           "    with raises(TypeError):\n"
+           "        AnnulusD2DGASolver(dispersion_dt_scale=1.0)\n")
+    assert find_bad_kwargs(tmp_path) == []
+
+
 def test_scanner_flags_custom_raises_context_manager_outside_tests(tmp_path):
     """反例（R112）：非 `tests/` 文件里自定义 `def raises(e)` 上下文管理器**不豁免**。"""
     _write(tmp_path / "lib.py",
@@ -168,6 +190,40 @@ def test_scanner_flags_custom_raises_context_manager_outside_tests(tmp_path):
            "    yield e\n"
            "def f():\n"
            "    with raises(TypeError):\n"
+           "        AnnulusD2DGASolver(enable_d2dga_auto_m=True)\n")
+    assert {k for *_, k in find_bad_kwargs(tmp_path)} == {"enable_d2dga_auto_m"}
+
+
+def test_scanner_flags_custom_raises_context_manager_inside_tests(tmp_path):
+    """反例（Fix round 1）：**`tests/` 目录内**自定义 `def raises(e)` 也要被抓。
+
+    仅靠"在 with 内 ∧ tests/ 下 ∧ 首参 TypeError"三条，`tests/` 里自己定义的同名
+    上下文管理器仍能蹭到豁免 ⇒ 必须再加"接收者解析到 pytest"这一要件。
+    """
+    _write(tmp_path / "tests" / "custom_raises.py",
+           "import contextlib\n"
+           "from cemdisp.models2d import AnnulusD2DGASolver\n"
+           "@contextlib.contextmanager\n"
+           "def raises(e):\n"
+           "    yield e\n"
+           "def test_y():\n"
+           "    with raises(TypeError):\n"
+           "        AnnulusD2DGASolver(enable_d2dga_auto_m=True)\n")
+    assert {k for *_, k in find_bad_kwargs(tmp_path)} == {"enable_d2dga_auto_m"}
+
+
+def test_scanner_flags_non_pytest_raises_attribute_inside_tests(tmp_path):
+    """反例：`tests/` 下 `helpers.raises(TypeError)`（接收者不是 pytest）同样被抓。"""
+    _write(tmp_path / "tests" / "helper_raises.py",
+           "import contextlib\n"
+           "from cemdisp.models2d import AnnulusD2DGASolver\n"
+           "class helpers:\n"
+           "    @staticmethod\n"
+           "    @contextlib.contextmanager\n"
+           "    def raises(e):\n"
+           "        yield e\n"
+           "def test_y():\n"
+           "    with helpers.raises(TypeError):\n"
            "        AnnulusD2DGASolver(enable_d2dga_auto_m=True)\n")
     assert {k for *_, k in find_bad_kwargs(tmp_path)} == {"enable_d2dga_auto_m"}
 

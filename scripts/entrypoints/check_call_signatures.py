@@ -29,10 +29,13 @@ Task 14 扩展（闸门"绿而无用"的修复）
   1. 只认 AST 里 `func` 名为两个目标类（`Name` 或 `Attribute`，故 `m.AnnulusD2DGASolver`
      与 `AnnulusD2DGASolver` 都算）的 `Call` 节点；
   2. 关键字的 `arg` / 展开 dict 的键不在该类 `__init__` 的真实形参集合内 ⇒ 报错；
-  3. **唯一豁免**须三条**同时**成立 —— 调用位于 `raises` 上下文内 ∧ 该 `raises` 的
-     **首个位置参数是 `TypeError`** ∧ 文件位于 `tests/` 目录下。那是"传值必须显式失败"
-     的故意反例（`tests/contract/test_no_invented_dispersion.py`）。三条缺一即算坏调用：
-     非测试文件里自定义的 `def raises(e)` 上下文管理器**不能**蹭豁免。
+  3. **唯一豁免**须三条**同时**成立 —— 调用位于 `pytest.raises(...)` 上下文内 ∧ 该
+     `raises` **解析到 pytest**（`import pytest` / `import pytest as pt` / `from pytest
+     import raises`，即接收者有 import 证据）∧ 其**首个位置参数是 `TypeError`** ∧
+     文件位于 `tests/` 目录下。那是"传值必须显式失败"的故意反例
+     （`tests/contract/test_no_invented_dispersion.py`）。三条缺一即算坏调用：
+     自定义的 `def raises(e)` 上下文管理器（无论文件在不在 `tests/` 下）、
+     `helpers.raises(...)`、`raises(ValueError)` 都**不能**蹭豁免。
      豁免数会在输出中显式打印，不做静默吞掉。
   4. 盲区显式化：`SyntaxError` / `UnicodeDecodeError` 的文件**打印跳过计数**（不静默）；
      `with` 与 `async with` 一视同仁；目标类日后若新增 `**kwargs`（`VAR_KEYWORD`），
@@ -675,15 +678,40 @@ def _under_tests(path: Path, root: Path) -> bool:
     return "tests" in rel.parts[:-1]
 
 
-def _find_exempt_raises(node: ast.Call, parents: dict[int, ast.AST],
-                        path: Path, root: Path) -> bool:
+def _is_pytest_raises(ctx: ast.AST, imports: dict[str, tuple[str, str | None]]) -> bool:
+    """该上下文管理器调用是否**解析到** `pytest.raises`（豁免的第一要件）。
+
+    认两种形态，且都要有 import 证据：
+      * `pytest.raises(...)` / `pt.raises(...)`（`import pytest` / `import pytest as pt`）
+        —— 接收者必须解析到 **pytest 模块本身**；
+      * `raises(...)`（`from pytest import raises`）—— 局部名必须来自 pytest。
+    其余一律不认：`with raises(...)` 里那个 `raises` 若是本文件自定义的
+    `def raises(e)`（或 `helpers.raises` / `self.raises` 等），即使文件在 `tests/` 下
+    也**不豁免**。
+    """
+    if not isinstance(ctx, ast.Call):
+        return False
+    func = ctx.func
+    if isinstance(func, ast.Attribute):
+        if func.attr != "raises" or not isinstance(func.value, ast.Name):
+            return False
+        return imports.get(func.value.id) == ("pytest", None)
+    if isinstance(func, ast.Name):
+        return imports.get(func.id) == ("pytest", "raises")
+    return False
+
+
+def _find_exempt_raises(node: ast.Call, parents: dict[int, ast.AST], path: Path,
+                        root: Path, imports: dict[str, tuple[str, str | None]]) -> bool:
     """三条**同时**成立才算豁免：
 
-    ① 调用位于 `with raises(...)` / `async with raises(...)` 上下文内；
+    ① 调用位于 `pytest.raises(...)` 上下文内（`with` / `async with`），且该 `raises`
+       **解析到 pytest**（含 `import pytest as pt`、`from pytest import raises` 两种别名）；
     ② 该 `raises` 的**首个位置参数**是 `TypeError`；
     ③ 文件位于 `tests/` 目录下。
 
-    非测试文件里自定义 `def raises(e)` 的上下文管理器只满足 ①，**不豁免**。
+    缺一即算坏调用：非测试文件里自定义 `def raises(e)` 的上下文管理器只满足"在 with 内"；
+    `tests/` 目录下自定义的 `def raises(e)` 同样**不豁免**（接收者解析不到 pytest）。
     """
     if not _under_tests(path, root):
         return False
@@ -692,8 +720,9 @@ def _find_exempt_raises(node: ast.Call, parents: dict[int, ast.AST],
         if isinstance(current, (ast.With, ast.AsyncWith)):
             for item in current.items:
                 ctx = item.context_expr
-                if (isinstance(ctx, ast.Call) and _call_name(ctx.func) == "raises"
-                        and ctx.args and _is_type_error_name(ctx.args[0])):
+                if (_is_pytest_raises(ctx, imports)
+                        and isinstance(ctx, ast.Call) and ctx.args
+                        and _is_type_error_name(ctx.args[0])):
                     return True
         current = parents.get(id(current))
     return False
@@ -711,18 +740,20 @@ def _scan(root: Path) -> _ScanResult:
     seen: set[tuple] = set()
 
     def record(facts: _File, node: ast.Call, cls: str, key: str,
-               origin: str, via_line: int, parents: dict[int, ast.AST]) -> None:
+               origin: str, via_line: int, parents: dict[int, ast.AST],
+               imports: dict[str, tuple[str, str | None]]) -> None:
         marker = (str(facts.path), node.lineno, cls, key)
         if marker in seen:
             return
         seen.add(marker)
         hit = _Hit(str(facts.path), node.lineno, cls, key, origin, via_line)
-        (result.exempt if _find_exempt_raises(node, parents, facts.path, root)
+        (result.exempt if _find_exempt_raises(node, parents, facts.path, root, imports)
          else result.bad).append(hit)
 
     for facts in repo.files:
         parents = {id(child): node for node in ast.walk(facts.tree)
                    for child in ast.iter_child_nodes(node)}
+        file_imports = repo.imports.get(str(facts.path), {})
         for node in ast.walk(facts.tree):
             if not isinstance(node, ast.Call):
                 continue
@@ -735,9 +766,11 @@ def _scan(root: Path) -> _ScanResult:
                     mapping, _ = repo.resolve_expr(facts, scope, kw.value)
                     for key in sorted(mapping):
                         if key not in sigs[cls]:
-                            record(facts, node, cls, key, "splat", kw.value.lineno, parents)
+                            record(facts, node, cls, key, "splat", kw.value.lineno,
+                                   parents, file_imports)
                 elif kw.arg not in sigs[cls]:
-                    record(facts, node, cls, kw.arg, "direct", node.lineno, parents)
+                    record(facts, node, cls, kw.arg, "direct", node.lineno,
+                           parents, file_imports)
     return result
 
 
