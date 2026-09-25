@@ -20,9 +20,13 @@ import pytest
 
 from cemdisp.diagnostics.physical_sanity import (
     FLUX_REL_TOL,
+    FROZEN_SPEED_FRACTION_MAX,
+    FROZEN_WALL_FULLY,
+    FROZEN_WALL_THRESHOLD,
     MONOTONE_TOL,
     RATE_RESPONSE_TOL_PP,
     VELOCITY_AMPLIFICATION_MAX,
+    case_velocity,
     sanity_checks,
     synthetic_stream_case,
 )
@@ -123,7 +127,7 @@ def test_P2_monotone_fails_on_column_backstep():
 
 def test_P3_velocity_bound_fails_on_strongly_eccentric_case():
     """反例：e=0.60 强偏心算例 —— 真实求解器调用得到的偏心放大超过 1.5 倍判据。"""
-    case = synthetic_stream_case(standoff=1.0 - 0.60)
+    case = synthetic_stream_case(standoff=1.0 - 0.60, freeze=None)
     rows = _rows(sanity_checks(_Res([np.zeros((4, 3))]), _geom(), stream_case=case))
     assert rows[P3]["通过"] is False
     assert _ratio(case) > VELOCITY_AMPLIFICATION_MAX
@@ -131,7 +135,7 @@ def test_P3_velocity_bound_fails_on_strongly_eccentric_case():
 
 def test_P3_passes_on_design_eccentricity_case():
     """正例：设计居中度算例（须真通过，否则 P-3 是恒红噪声）。"""
-    case = synthetic_stream_case()
+    case = synthetic_stream_case(freeze=None)
     rows = _rows(sanity_checks(_Res([np.zeros((4, 3))]), _geom(), stream_case=case))
     assert rows[P3]["通过"] is True
 
@@ -142,13 +146,13 @@ def test_P3_matches_analytic_eccentric_amplification():
     这条把判据与偏心度的关系钉住：1.5 倍的适用边界是 e ≈ 0.31，不是可以随便放宽的旋钮。
     """
     for e in (0.0, 0.22, 0.30):
-        case = synthetic_stream_case(standoff=1.0 - e)
+        case = synthetic_stream_case(standoff=1.0 - e, freeze=None)
         assert _ratio(case) == pytest.approx((1.0 + e) ** 2 / (1.0 + 1.5 * e ** 2), rel=2e-2)
 
 
 def test_P4_flux_conservation_fails_on_broken_dirichlet_bc():
     """反例：把 φ=1 端 Dirichlet 改成逐列不同 ⇒ 列通量不再守恒（真实 Ψ + 破坏的 BC）。"""
-    case = synthetic_stream_case()
+    case = synthetic_stream_case(freeze=None)
     psi = np.array(case["psi"], dtype=float, copy=True)
     psi[-1, :] = 1.0 + 0.1 * np.sin(np.arange(psi.shape[1], dtype=float))
     w_unit, _ = velocity_from_stream_function(psi, case["geom"])
@@ -158,7 +162,7 @@ def test_P4_flux_conservation_fails_on_broken_dirichlet_bc():
 
 
 def test_P4_flux_conservation_passes_on_solver_output():
-    case = synthetic_stream_case()
+    case = synthetic_stream_case(freeze=None)
     rows = _rows(sanity_checks(_Res([np.zeros((4, 3))]), _geom(), stream_case=case))
     assert rows[P4]["通过"] is True
 
@@ -180,11 +184,60 @@ def test_P5_passes_when_wide_quarter_leads():
     assert rows[P5]["通过"] is True
 
 
+def test_P6_passes_on_smooth_freeze_degree_case():
+    """正例：连续冻结度算例（wall=1 的完全冻结格确实静止 ⇒ 判据真通过）。"""
+    case = synthetic_stream_case(freeze="smooth")
+    rows = _rows(sanity_checks(_Res([np.zeros((4, 3))]), _geom(), frozen_case=case))
+    assert rows[P6]["通过"] is True
+    assert FROZEN_WALL_FULLY == 1.0 - 1.0e-6
+    # 实测值须同时给出完全冻结格数与过渡带披露（裁定要求同一行）
+    assert "完全冻结格" in rows[P6]["实测值"]
+    assert "过渡带" in rows[P6]["实测值"]
+
+
+def test_P6_frozen_region_fails_when_frozen_cell_mobility_forced_open():
+    """反例（裁定指定）：把**完全冻结格**的流动性强行打开 ⇒ 判据必须转红。
+
+    构造：判据仍用算例声明的 wall 掩码（窄边若干格 wall=1），但送进算子的是把这些格
+    的口子打开后的 wall ⇒ 被声明为完全冻结的格在流动（R42 死开关类的逐格版本）。
+    """
+    case = synthetic_stream_case(freeze="smooth")
+    wall = np.asarray(case["wall"], dtype=float)
+    forced_open = wall.copy()
+    forced_open[wall >= FROZEN_WALL_FULLY] = 0.0       # 所有完全冻结格全部放行
+    broken = {**case, "w_m_s": case_velocity(case, forced_open)}
+    rows = _rows(sanity_checks(_Res([np.zeros((4, 3))]), _geom(), frozen_case=broken))
+    assert rows[P6]["通过"] is False
+
+
 def test_P6_frozen_region_fails_when_wall_not_consumed():
-    """反例：wall 掩码已算出但未进算子（R42 死开关类缺陷）⇒ 冻结区并不静止。"""
-    case = synthetic_stream_case(freeze_rows="auto", apply_wall=False)
+    """反例：wall 掩码已算出但整份未进算子（R42 死开关的全局版本）⇒ 冻结区并不静止。"""
+    case = synthetic_stream_case(freeze="smooth", apply_wall=False)
     rows = _rows(sanity_checks(_Res([np.zeros((4, 3))]), _geom(), frozen_case=case))
     assert rows[P6]["通过"] is False
+
+
+def test_P6_not_measured_when_no_fully_frozen_cell():
+    """非空过守卫：只有过渡带格、没有完全冻结格 ⇒ 未测（绝不空过为通过）。"""
+    case = synthetic_stream_case(freeze="partial")
+    rows = _rows(sanity_checks(_Res([np.zeros((4, 3))]), _geom(), frozen_case=case))
+    assert rows[P6]["通过"] is None
+    assert rows[P6]["说明"].startswith("未测：")
+    assert "无完全冻结格" in rows[P6]["说明"]
+
+
+def test_P6_not_measured_when_no_frozen_cell_at_all():
+    """非空过守卫：掩码全零（无任何冻结格）⇒ 未测。"""
+    case = synthetic_stream_case(freeze="zero")
+    rows = _rows(sanity_checks(_Res([np.zeros((4, 3))]), _geom(), frozen_case=case))
+    assert rows[P6]["通过"] is None
+    assert rows[P6]["说明"].startswith("未测：")
+
+
+def test_P6_criterion_uses_soft_threshold_only_for_disclosure():
+    """判据常量：0.5 只作披露用软阈值；判定用 1−1e-6。"""
+    assert FROZEN_WALL_THRESHOLD == 0.5
+    assert FROZEN_SPEED_FRACTION_MAX == 0.01
 
 
 def test_P7_rate_response_fails_when_rate_drops_efficiency():
@@ -233,7 +286,7 @@ def test_P7_not_measured_without_rate_run():
 
 def test_P6_not_measured_when_yield_gate_is_off():
     """屈服门未启用（wall=None）⇒ 无冻结单元 ⇒ 未测，不得默认 True。"""
-    case = synthetic_stream_case(freeze_rows=None)
+    case = synthetic_stream_case(freeze=None)
     rows = _rows(sanity_checks(_Res([np.zeros((4, 3))]), _geom(), frozen_case=case))
     assert rows[P6]["通过"] is None
     assert rows[P6]["说明"].startswith("未测：")

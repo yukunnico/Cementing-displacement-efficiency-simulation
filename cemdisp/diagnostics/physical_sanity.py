@@ -49,15 +49,29 @@
 呼101 LEGACY 名义剖面 0.38~0.48（e≈0.52~0.62，代码自认"反推情景、不得作验证数字"）
 ⇒ 1.63~1.71 **超阈**。该边界写进 P-3 说明列，**不**通过调阈值掩盖。
 
-P-6 的实现现状声明（诚实披露，不改判据）
-----------------------------------------
-``enable_stream_yield_gate`` 的 ``wall`` 自 2026-09-15 Task 11 起是**连续冻结度**
-``clip(1 − τw_extrap/(f·τy), 0, 1)``（``annulus_d2dga.py:1096``），而 Pelipenko04
-的判据是二值的（τw < f·τy ⇒ 静止）。合成算例取**二值掩码**（wall∈{0,1}），这是
-production 的**最有利**配置（连续冻结度只会让 wall>0.5 的过渡带更宽、更不静止）。
-即使在最有利配置下，判据在**冻结前锋那一格**也不成立（实测 |w|/max|w| ≈ 9.4e-2，
-而冻结区内部 ≈3e-7）——原因是一阶/中心差分的 Ψ 梯度跨在 wall 的 0→1 台阶上。
-该结论如实入账（``通过=False``），并在说明列给出前锋格/内部格的分解。
+P-6 判定落在「完全冻结格」上（判据前提的字面成立处；协调者裁定 2026-09-26）
+--------------------------------------------------------------------------
+计划 P-6 写作 ``wall>0.5 处 |w| ≤ 0.01·max|w|``，其前提是 **wall 二值**。但
+``enable_stream_yield_gate`` 的 ``wall`` 自提交 **``9448572``**「fix(yield): 屈服门
+二值→连续，消除阈值悬崖（Pelipenko04 (2.6)-(2.8)）」起是**连续冻结度**
+``clip(1 − τw_extrap/(f·τy), 0, 1)``（``annulus_d2dga.py:1087-1096``；该提交的
+**目的就是消除**旧 ``np.where(immobile, 1, 0)`` 的 0/1 悬崖）。⇒ ``wall>0.5`` 是
+**软**阈值，把过渡带格判成「必须静止」等于要求模型在被刻意连续化的地方按二值行为。
+故本模块按裁定改判：
+
+* **判定部分**：``wall ≥ 1 − 1e-6``（τw = 0 的完全冻结格）处 ``|w| ≤ 0.01·max|w|``
+  （计划数值阈值逐字沿用，只用在它自己的前提字面成立处）；
+* **非空过守卫**：报告完全冻结格数；为 0 ⇒ ``通过=None`` / 未测（给出原因），绝不空过；
+* **过渡带（``0.5 < wall < 1−1e-6``）转为披露量**：格数、最高 ``|w|/max|w|``、该格
+  自身的 ``wall``，与「相对同算例未加冻结门时同格速度的抑制倍数」一并折进**同一行**。
+
+合成算例的冻结度剖面取 ``wall(φ) = sin²(π·t/2)``（``t = clip((φ−0.625)/0.25, 0, 1)``，
+自宽边 wall=0 到窄边 wall=1，两端导数为零的 C¹ 过渡）：production 的
+``τw_extrap ∝ b = 2H`` 在 φ 上只有 ~1.56× 展布（且 ``wall=1`` 只在 ``H→0`` 极限或
+``col_freeze`` 整列无流动分支出现），跨越阈值时冻结度在整个 φ 上连续变化 ⇒ 单调 C¹ 剖面
+是这一连续过渡的最小光滑代表，且使 ``wall≡1`` 的格确实静止。分段线性的过渡剖面会在
+**第一个完全冻结格**留下 O(1/Δφ) 的中心差分跨台阶泄漏（实测 1.10e-2 > 0.01）——那反映的是
+**离散格式在冻结度突变处的局限**，不是冻结区内部在流动。
 
 写盘边界：本模块只做纯后处理（零副作用），落盘由调用方负责，且只写
 ``results/内部自洽加固_2026-09-25/``。本模块**不**加入
@@ -74,7 +88,11 @@ MONOTONE_TOL = 1.0e-9              # P-2：容许的数值回退
 FLUX_REL_TOL = 1.0e-9             # P-4：逐列总通量的相对差上限
 VELOCITY_AMPLIFICATION_MAX = 1.5  # P-3：偏心放大上限
 FROZEN_SPEED_FRACTION_MAX = 0.01  # P-6：冻结区速度上限（相对 max|w|）
-FROZEN_WALL_THRESHOLD = 0.5       # P-6：判"冻结"的 wall 门槛
+FROZEN_WALL_THRESHOLD = 0.5       # P-6：判"过渡带"的软阈值（wall>0.5）
+# P-6：判"完全冻结"的阈值。`wall` 是**连续**冻结度 `clip(1−τw_extrap/(f·τy),0,1)`
+# （自 9448572「屈服门二值→连续，消除阈值悬崖」起），故 `wall=1` ⟺ τw=0 ⟺ 完全冻结；
+# `wall>0.5` 是**软**阈值，落在过渡带里的格不能按"必须静止"判。
+FROZEN_WALL_FULLY = 1.0 - 1.0e-6
 RATE_RESPONSE_TOL_PP = 1.0        # P-7：η_E 容许下降（百分点）
 
 # 检查项名（P-2 按 R138 更名：其判据落在**环空段**，"前缘"是管内段成对量）
@@ -108,6 +126,10 @@ _SYNTH_Q_M3S = 0.55 / 60.0  # 现场排量量级 0.55 m³/min
 _SYNTH_NY = 41
 _SYNTH_NZ = 21
 _SYNTH_LENGTH_M = 900.0
+# 合成冻结度剖面的斜坡区间（归一化 φ）：φ≤0.625 wall=0、φ≥0.875 wall=1，
+# 中间为 C¹（sin²）过渡。仅作"连续冻结度"的形状代表，见 synthetic_stream_case。
+_SYNTH_FREEZE_PHI0 = 0.625
+_SYNTH_FREEZE_SPAN = 0.25
 
 
 # --------------------------------------------------------------------------- #
@@ -181,7 +203,7 @@ def synthetic_stream_case(*, standoff: float = _SYNTH_STANDOFF, ny: int = _SYNTH
                           od_mm: float = _SYNTH_OD_MM, eta1: float = _SYNTH_ETA1,
                           eta2: float = _SYNTH_ETA2, m: float = _SYNTH_M,
                           c_bar: float = _SYNTH_C_BAR, Q_m3s: float = _SYNTH_Q_M3S,
-                          freeze_rows: Optional[int] = None,
+                          freeze: Optional[str] = None,
                           apply_wall: bool = True, banded: bool = True) -> dict:
     """构造单元级合成算例并解一次 (4.22)，供 P-3/P-4/P-6 直接测量。
 
@@ -193,18 +215,26 @@ def synthetic_stream_case(*, standoff: float = _SYNTH_STANDOFF, ny: int = _SYNTH
 
     Args:
         standoff: 居中度（1.0 = 完全居中）；``e = 1 − standoff``。
-        freeze_rows: 冻结的行数（自 φ=1 窄边侧起数）；``None``（默认）⇒ 不构造掩码
-            （wall=None，等价 ``enable_stream_yield_gate=False``——P-3/P-4 的基线算例）；
-            ``"auto"`` ⇒ ``max(1, ny//4)``（窄 1/4，P-6 的算例）；``0`` ⇒ 掩码全零。
+        freeze: 冻结度剖面（P-6 用；P-3/P-4 传 ``None``）：
+
+            * ``None``（默认）⇒ ``wall=None``，等价 ``enable_stream_yield_gate=False``；
+            * ``"smooth"`` ⇒ ``wall(φ) = sin²(π·t/2)``、``t = clip((φ−0.625)/0.25, 0, 1)``：
+              自宽边（φ=0.625、wall=0）到窄边（φ=0.875、wall=1）的**连续**冻结度，
+              两端导数为零（C¹）。既有 ``wall≡1`` 的完全冻结格，也有 ``0.5<wall<1``
+              的过渡带格；
+            * ``"partial"`` ⇒ ``0.9·sin²(·)``：有过渡带格但**无**完全冻结格
+              （用于"非空过"守卫：判据须判为未测）；
+            * ``"zero"`` ⇒ 掩码全零（无任何冻结格）。
         apply_wall: 是否把 ``wall`` 送进 ``solve_stream_function`` 的算子。
-            ``False`` = **反例算例**：掩码已算出但未被消费（R42 死开关类缺陷）。
+            ``False`` = **反例算例**：掩码已声明但未进算子（R42 死开关类缺陷）。
         banded: 线性求解器选择（与生产默认一致，Task 8）。
 
     Returns:
         dict，含 ``geom`` / ``psi``（单位通量 Ψ）/ ``w_unit``（模块 w̄）/ ``w_m_s``
         （物理量纲，按 ``w = w_unit·(Q/2)/π``，与 ``_velocity_stream_function`` 同式）/
         ``wall`` / ``wall_in_operator`` / ``Q_m3s`` / ``A_min_m2`` / ``standoff`` /
-        ``e`` / ``测点层级``。
+        ``e`` / ``测点层级``；另含重解所需的 ``c_bar``/``eta1``/``eta2``/``m``/``banded``
+        （供 :func:`case_velocity` 构造反例）。
     """
     from cemdisp.models2d.stream_function import (  # 延迟导入：与 annulus_d2dga 解耦
         solve_stream_function,
@@ -223,15 +253,7 @@ def synthetic_stream_case(*, standoff: float = _SYNTH_STANDOFF, ny: int = _SYNTH
             "hole_mm": np.full(int(nz), float(hole_mm)),
             "od_mm": np.full(int(nz), float(od_mm))}
 
-    if freeze_rows == "auto":
-        freeze_rows = max(1, int(ny) // 4)
-    if freeze_rows is None:
-        wall = None
-    else:
-        wall = np.zeros((int(ny), int(nz)))
-        if int(freeze_rows) > 0:
-            wall[-int(freeze_rows):, :] = 1.0
-
+    wall = _freeze_profile(freeze, phi, int(ny), int(nz))
     psi = solve_stream_function(
         geom, np.full((int(ny), int(nz)), float(c_bar)), float(eta1), float(eta2),
         float(m), np.zeros((2, int(ny), int(nz))),
@@ -247,9 +269,48 @@ def synthetic_stream_case(*, standoff: float = _SYNTH_STANDOFF, ny: int = _SYNTH
             "wall_in_operator": bool(apply_wall and wall is not None),
             "Q_m3s": float(Q_m3s), "A_min_m2": float(np.min(area_per_s)),
             "standoff": float(standoff), "e": e, "测点层级": LEVEL_SYNTHETIC,
+            "c_bar": float(c_bar), "eta1": float(eta1), "eta2": float(eta2),
+            "m": float(m), "banded": bool(banded),
             "case": (f"均匀间隙半环空 hole={hole_mm}mm/od={od_mm}mm "
                      f"居中度={standoff:.2f}(e={e:.2f}) {ny}×{nz} "
-                     f"c̄={c_bar} η₁={eta1}/η₂={eta2} Q={Q_m3s * 60000:.2f}L/min")}
+                     f"c̄={c_bar} η₁={eta1}/η₂={eta2} Q={Q_m3s * 60000:.2f}L/min"
+                     f" 冻结剖面={freeze}")}
+
+
+def _freeze_profile(freeze: Optional[str], phi: np.ndarray, ny: int, nz: int):
+    """按 ``freeze`` 名构造冻结度剖面 (ny,nz)；``None`` ⇒ 无掩码（返回 None）。"""
+    if freeze is None:
+        return None
+    if freeze == "zero":
+        return np.zeros((ny, nz))
+    t = np.clip((np.asarray(phi, dtype=float) - _SYNTH_FREEZE_PHI0) / _SYNTH_FREEZE_SPAN,
+                0.0, 1.0)
+    scale = 0.9 if freeze == "partial" else 1.0
+    if freeze not in ("smooth", "partial"):
+        raise ValueError(f"freeze 只能是 None/'smooth'/'partial'/'zero'，得到 {freeze!r}")
+    return np.repeat((scale * np.sin(np.pi * t / 2.0) ** 2)[:, None], nz, axis=1)
+
+
+def case_velocity(case: Mapping[str, Any], wall) -> np.ndarray:
+    """用**给定的** wall 掩码把同一合成算例重解一次，返回物理轴向速度场 (m/s)。
+
+    用途（反例构造）：把"判据所用的 wall 掩码"与"真正送进算子的 wall"分开，即可复现
+    "掩码声明冻结、算子却未冻结"（R42 死开关类）这一类缺陷——被声明为完全冻结的格在
+    该情形下仍在流动。缩放式与 :func:`synthetic_stream_case` 逐字同源。
+    """
+    from cemdisp.models2d.stream_function import (
+        solve_stream_function,
+        velocity_from_stream_function,
+    )
+
+    geom = case["geom"]
+    ny, nz = np.asarray(geom["H"]).shape
+    psi = solve_stream_function(
+        geom, np.full((ny, nz), float(case["c_bar"])), float(case["eta1"]),
+        float(case["eta2"]), float(case["m"]), np.zeros((2, ny, nz)),
+        wall=wall, banded=bool(case.get("banded", True)))
+    w_unit, _v = velocity_from_stream_function(psi, geom)
+    return w_unit * (float(case["Q_m3s"]) / 2.0 / np.pi)
 
 
 # --------------------------------------------------------------------------- #
@@ -313,9 +374,12 @@ def check_velocity_bound(case: Optional[Mapping[str, Any]]) -> dict:
                 _note(LEVEL_SYNTHETIC, str(case.get("case", "")),
                       f"解析放大比(1+e)²/(1+1.5e²)={((1 + e) ** 2 / (1 + 1.5 * e * e)):.4f}"
                       f"（e={e:.2f}）",
-                      f"阈值 {VELOCITY_AMPLIFICATION_MAX} 的适用边界 e≈0.31：设计居中度 "
-                      f"0.78~0.83(e=0.17~0.22) 通过、保守代理 0.65~0.70(e=0.30~0.35) 压线、"
-                      f"呼101 LEGACY 名义剖面 0.38~0.48(e≈0.52~0.62) 超阈"))
+                      f"判据适用域（**域内近似**，非全域断言）：放大比 (1+e)²/(1+1.5e²)，阈值 "
+                      f"{VELOCITY_AMPLIFICATION_MAX} 只在 e≲0.31（居中度≳0.69）成立 ⇒ "
+                      f"设计居中度 0.78~0.83(e=0.17~0.22) 在域内（本行算例 e=0.22）；"
+                      f"把居中度降到呼102 保守几何代理 0.65(e=0.35) 会转红——"
+                      f"那是**判据适用域的边界，不是模型回归**；呼101 LEGACY 名义剖面 "
+                      f"0.38~0.48(e≈0.52~0.62，代码自认「反推情景、不得作验证数字」) 已在域外"))
 
 
 def check_flux_conservation(case: Optional[Mapping[str, Any]]) -> dict:
@@ -377,11 +441,20 @@ def check_narrow_disadvantage(result: Any, geom: Mapping[str, Any]) -> dict:
 
 
 def check_frozen_region(case: Optional[Mapping[str, Any]]) -> dict:
-    """P-6：``wall>0.5`` 处 ``|w| ≤ 0.01·max|w|``（Pelipenko04 (2.6)-(2.8) 停流区）。
+    """P-6：**完全冻结格**（``wall ≥ 1 − 1e-6``，即 τw = 0）处 ``|w| ≤ 0.01·max|w|``。
 
-    ``wall=None``（屈服门未启用）或无 ``wall>0.5`` 单元 ⇒ **未测**（不得默认通过）。
+    判据的判定部分只落在"完全冻结"格上——这是计划 P-6 的 "冻结区" 前提**字面成立**之处。
+    ``wall`` 是**连续**冻结度 ``clip(1−τw_extrap/(f·τy),0,1)``（自 2026-09-15 提交
+    ``9448572``「屈服门二值→连续，消除阈值悬崖」起），故 ``wall>0.5`` 只是**软**阈值：
+    把 ``0.5<wall<1`` 的过渡带格判成"必须静止"，等于要求模型在被刻意连续化的地方按二值
+    行为。过渡带因此作为**披露量**（格数、最高 ``|w|/max|w|``、该格 ``wall``）折进同一行，
+    不进判定。
+
+    ``wall=None``（屈服门未启用）、无完全冻结格（**非空过守卫**）⇒ ``通过=None`` 未测。
+    附带报告完全冻结格相对**同算例未加冻结门**时同格速度的抑制倍数（内部静止的直接证据）。
     """
-    criterion = f"wall>{FROZEN_WALL_THRESHOLD} 处 |w| ≤ {FROZEN_SPEED_FRACTION_MAX}·max|w|"
+    criterion = (f"完全冻结格（wall ≥ {FROZEN_WALL_FULLY:.6g}，即 τw=0）处 "
+                 f"|w| ≤ {FROZEN_SPEED_FRACTION_MAX}·max|w|")
     if case is None:
         return _not_measured(CHECK_FROZEN_REGION, criterion,
                              "未提供求解器级合成算例；结果对象不导出速度场")
@@ -391,54 +464,68 @@ def check_frozen_region(case: Optional[Mapping[str, Any]]) -> dict:
                              "合成算例未启用屈服门（wall=None，等价 "
                              "enable_stream_yield_gate=False）⇒ 无冻结单元")
     wall = np.asarray(wall, dtype=float)
-    mask = wall > FROZEN_WALL_THRESHOLD
-    if not bool(np.any(mask)):
-        return _not_measured(CHECK_FROZEN_REGION, criterion,
-                             f"合成算例无 wall>{FROZEN_WALL_THRESHOLD} 的冻结单元")
+    fully = wall >= FROZEN_WALL_FULLY
+    band = (wall > FROZEN_WALL_THRESHOLD) & ~fully
+    n_fully, n_band = int(np.count_nonzero(fully)), int(np.count_nonzero(band))
     w = np.abs(np.asarray(case["w_m_s"], dtype=float))
     peak = float(np.max(w))
     if peak <= 0.0:
         return _not_measured(CHECK_FROZEN_REGION, criterion,
                              "速度场恒为零（无流动），判据退化无判别力")
-    frozen_peak = float(np.max(w[mask]))
+    band_ratio, band_wall = _band_stats(w, wall, band, peak)
+    if n_fully == 0:
+        # 非空过守卫：没有任何格满足"完全冻结"前提 ⇒ 未测，绝不空过
+        return _not_measured(
+            CHECK_FROZEN_REGION, criterion,
+            f"合成算例无完全冻结格（wall ≥ {FROZEN_WALL_FULLY:.6g}）："
+            f"wall>{FROZEN_WALL_THRESHOLD} 的过渡带 {n_band} 格最高 "
+            f"|w|/max|w|={band_ratio:.3e}，但过渡带不是「必须静止」的判定对象 ⇒ 无从判定",
+            measured=(f"完全冻结格=0；过渡带 {n_band} 格最高比值={band_ratio:.3e}"
+                      f"（该格 wall={band_wall:.4g}）"))
+    frozen_peak = float(np.max(w[fully]))
     ratio = frozen_peak / peak
     passed = ratio <= FROZEN_SPEED_FRACTION_MAX
-    front = _front_row_ratio(w, mask)
-    measured = (f"冻结区 max|w|={frozen_peak:.3e} m/s, max|w|={peak:.6g} m/s, "
-                f"比值={ratio:.3e}")
+    suppressed = _suppression(case, w, fully)
+    measured = (f"完全冻结格 {n_fully} 个：max|w|={frozen_peak:.3e} m/s, "
+                f"max|w|={peak:.6g} m/s, 比值={ratio:.3e}；"
+                f"过渡带（{FROZEN_WALL_THRESHOLD}<wall<1−1e-6）{n_band} 格："
+                f"最高 |w|/max|w|={band_ratio:.3e}（该格 wall={band_wall:.4g}）")
     return _row(CHECK_FROZEN_REGION, passed, measured, criterion,
                 _note(LEVEL_SYNTHETIC, str(case.get("case", "")),
-                      "二值掩码（wall∈{0,1}）是 production 连续冻结度（Task 11 起）的"
-                      "最有利配置",
-                      f"分解：冻结前锋格比值={front[0]:.3e}（{front[1]} 格），"
-                      f"其余冻结格最大比值={front[2]:.3e}" if front else ""))
+                      f"wall 是**连续**冻结度 clip(1−τw_extrap/(f·τy),0,1)"
+                      f"（自提交 9448572「屈服门二值→连续，消除阈值悬崖」起）；"
+                      f"wall>{FROZEN_WALL_THRESHOLD} 是**软**阈值，"
+                      f"故判定只取 wall≥{FROZEN_WALL_FULLY:.6g}（τw=0）的完全冻结格，"
+                      f"过渡带仅披露——把过渡带判成「必须静止」会要求模型"
+                      f"在被刻意连续化的地方按二值行为",
+                      f"完全冻结格相对同算例未加冻结门时同格速度抑制倍数={suppressed:.3e}"
+                      f"（内部静止的直接证据）" if suppressed else ""))
 
 
-def _front_row_ratio(w: np.ndarray, mask: np.ndarray) -> tuple:
-    """拆开"冻结前锋格"与"冻结区内部格"，返回 (前锋最大比值, 前锋格数, 内部最大比值)。
+def _band_stats(w: np.ndarray, wall: np.ndarray, band: np.ndarray, peak: float) -> tuple:
+    """过渡带（0.5<wall<1−1e-6）的最高 |w|/max|w| 与该格自身的 wall 值。"""
+    if not bool(np.any(band)):
+        return 0.0, float("nan")
+    flat = np.where(band.ravel(), w.ravel(), -1.0)
+    k = int(np.argmax(flat))
+    return float(flat[k] / peak), float(wall.ravel()[k])
 
-    前锋格 = 与未冻结行相邻的冻结行（差分的 Ψ 梯度跨在 wall 的 0→1 台阶上）；
-    内部格 = 冻结行中不与未冻结行相邻者（真正的"静止壁层"应在这里）。
+
+def _suppression(case: Mapping[str, Any], w: np.ndarray, fully: np.ndarray) -> float:
+    """完全冻结格在"加冻结门"与"未加冻结门"两种解下的速度之比（越小越静止）。
+
+    需算例提供重解所需的参数（``c_bar``/``eta1``/…）；缺失或异常时返回 0.0（不披露）。
     """
-    rows = np.where(mask.any(axis=1))[0]
-    if rows.size == 0:
-        return ()
-    masked_rows = set(int(r) for r in rows)
-    n_rows = int(mask.shape[0])
-    front_rows = [r for r in masked_rows
-                  if (r - 1 >= 0 and (r - 1) not in masked_rows)
-                  or (r + 1 < n_rows and (r + 1) not in masked_rows)]
-    inner_rows = sorted(masked_rows - set(front_rows))
-    peak = float(np.max(w))
-    front = mask.copy()
-    front[:] = False
-    for r in front_rows:
-        front[r] = mask[r]
-    inner = mask & ~front
-    front_vals, inner_vals = w[front], w[inner]
-    return (float(np.max(front_vals)) / peak if front_vals.size else 0.0,
-            int(front_vals.size),
-            float(np.max(inner_vals)) / peak if inner_vals.size else 0.0)
+    if not all(k in case for k in ("c_bar", "eta1", "eta2", "m")):
+        return 0.0
+    try:
+        ref = np.abs(case_velocity(case, None))
+    except Exception:  # noqa: BLE001 —— 纯披露量，重解失败不影响判定
+        return 0.0
+    ref_peak = float(np.max(ref[fully])) if bool(np.any(fully)) else 0.0
+    if ref_peak <= 0.0:
+        return 0.0
+    return float(np.max(w[fully]) / ref_peak)
 
 
 def check_rate_response(result: Any, rate_result: Any) -> dict:

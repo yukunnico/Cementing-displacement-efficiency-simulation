@@ -31,6 +31,9 @@
 4. **测点层级两类**（协调者裁定 R155）：P-1/P-2/P-5/P-7 在**八井结果对象**上测；
    P-3/P-4/P-6 在**单元级合成算例**上测（``AnnulusSimulationResult`` 不导出速度/通量/
    流函数场），说明列逐行标注层级，台账中这三行 ``井名`` 记为 ``合成算例``。
+   P-6 按协调者 2026-09-26 裁定改判：判定只落在**完全冻结格**（``wall ≥ 1−1e-6``，
+   即 τw=0），过渡带（``0.5<wall<1−1e-6``）转为同一行的**披露量**；无完全冻结格 ⇒
+   未测（非空过守卫）。理由：``wall`` 自提交 ``9448572`` 起是**连续**冻结度。
 5. **台账是诊断输出，不是可调参数**：任何一项不通过**如实记录**，并在脚本末尾的
    结论段与 task-9-report.md 写明；**不得**为了让台账"全绿"而放宽判据、改阈值或跳过井。
 
@@ -199,9 +202,10 @@ def write_ledger(rows: list, path: Path = OUT_CSV) -> Path:
 def main() -> int:
     print(f"物理合理性台账（短窗 nz={NZ}/ny={NY}，仅作自洽诊断）")
     print(f"输出：{OUT_CSV}")
-    case = synthetic_stream_case()
-    frozen_case = synthetic_stream_case(freeze_rows="auto")
+    case = synthetic_stream_case(freeze=None)                  # P-3/P-4 基线（无屈服门）
+    frozen_case = synthetic_stream_case(freeze="smooth")       # P-6 连续冻结度算例
     print(f"[合成算例] {case['case']}")
+    print(f"[合成算例/冻结] {frozen_case['case']}")
 
     rows: list = []
     n_failed = 0
