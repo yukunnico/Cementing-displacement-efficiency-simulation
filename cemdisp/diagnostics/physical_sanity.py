@@ -329,6 +329,12 @@ def check_bounded(result: Any) -> dict:
     measured = f"min={cmin:.6g}, max={cmax:.6g}（{len(snaps)} 个快照）"
     return _row(CHECK_BOUNDED, passed, measured, criterion,
                 _note(LEVEL_RESULT,
+                      "**本行是上游 clip 的回归/NaN 守卫，不是有界性的独立物理证据**："
+                      "快照由求解器以 ``cement = np.clip(lead + tail, 0.0, 1.0)`` 落盘"
+                      "（``annulus_d2dga.py:2396``/``:2404`` 处构造、``:2397`` 处 append；"
+                      "``lead``/``tail`` 更早亦已 clip），故模型**不可能**越界——"
+                      "实测 min=0/max=1 正是该 clip 的签名。只有 NaN（能穿过 ``np.clip``）"
+                      "或未来重构移除该 clip 才会让本行转红",
                       "NaN 会使比较为假并被判不通过" if not np.isfinite(cmin * cmax) else ""))
 
 
@@ -376,7 +382,10 @@ def check_velocity_bound(case: Optional[Mapping[str, Any]]) -> dict:
                       f"（e={e:.2f}）",
                       f"判据适用域（**域内近似**，非全域断言）：放大比 (1+e)²/(1+1.5e²)，阈值 "
                       f"{VELOCITY_AMPLIFICATION_MAX} 只在 e≲0.31（居中度≳0.69）成立 ⇒ "
-                      f"设计居中度 0.78~0.83(e=0.17~0.22) 在域内（本行算例 e=0.22）；"
+                      f"八井 standoff 剖面实测区间 [0.76, 0.83] 在域内"
+                      f"（0.76=呼2 鞋底、0.778=呼103 设计代理、0.83=呼1-003/004）；"
+                      f"本行算例取 0.78（e=0.22），是逐井最小值 0.76 之外**最不利**的一档"
+                      f"（0.76 ⇒ e=0.24 ⇒ 放大比 1.415，仍在域内）；"
                       f"把居中度降到呼102 保守几何代理 0.65(e=0.35) 会转红——"
                       f"那是**判据适用域的边界，不是模型回归**；呼101 LEGACY 名义剖面 "
                       f"0.38~0.48(e≈0.52~0.62，代码自认「反推情景、不得作验证数字」) 已在域外"))
@@ -385,10 +394,21 @@ def check_velocity_bound(case: Optional[Mapping[str, Any]]) -> dict:
 def check_flux_conservation(case: Optional[Mapping[str, Any]]) -> dict:
     """P-4：每列 ``∫2H·w̄ dφ`` 必须为同一常数（(2.2) 单位通量归一 + 差分-梯形恒等式）。
 
-    这里用**单位通量**口径的 w̄ 与 Ψ 同源的几何积分；浮力只在列内重分配轴向通量，
-    不改变列总量（``stream_function`` 模块 docstring 的"Q 缩放锚（不变量）"）。
+    ⚠️ **这是算子恒等式，不是守恒律的独立测量**（评审 Fix 2，2026-09-26）：
+    ``w̄ = ∂φΨ/(2 r_a H)``（``stream_function.py:548``）⇒ ``2H·w̄ = ∂φΨ/r_a``，而
+    "中心差分 + 梯形"这一对离散算子对**逐列**严格等于 ``(Ψ(1)−Ψ(0))/r_a``
+    （``stream_function.py:521-522`` 的差分-梯形恒等式），同时求解器在**每一列**
+    都同样施加 Ψ(φ=0)=0、Ψ(φ=1)=1（``stream_function.py:316-319`` 与
+    ``_assemble_banded_interior`` 的 Dirichlet 行）。⇒ 对**任何**内部解，本行算出的
+    逐列常数**恒成立**，**不能**在求解器输出上失败；它检验的只是"φ 两端 Dirichlet 行
+    是否被逐列一致地施加"（外加差分/梯形实现是否被改坏），**检测不到**内部通量、
+    浮力重分配或冻结门引起的通量误差。反例测试只证明它对**被破坏的边界行**敏感
+    （``test_P4_flux_conservation_fails_on_broken_dirichlet_bc``）。
     """
-    criterion = f"每列 ∫2H·w̄ dφ 相对差 ≤ {FLUX_REL_TOL:.0e}"
+    criterion = (f"每列 ∫2H·w̄ dφ 相对差 ≤ {FLUX_REL_TOL:.0e}"
+                 f"（原文：(2.2) 单位通量归一；**限定语**：该式在「中心差分+梯形+每列统一"
+                 f" φ-Dirichlet」下是代数恒等式，本行因此只验证 Dirichlet 行被逐列一致施加，"
+                 f"不测量内部/浮力/冻结门的通量误差）")
     if case is None:
         return _not_measured(CHECK_FLUX_CONSERVATION, criterion,
                              "未提供求解器级合成算例；结果对象不导出速度/通量/流函数场")
@@ -403,8 +423,14 @@ def check_flux_conservation(case: Optional[Mapping[str, Any]]) -> dict:
                 f"相对差={rel:.3e}")
     return _row(CHECK_FLUX_CONSERVATION, passed, measured, criterion,
                 _note(LEVEL_SYNTHETIC, str(case.get("case", "")),
-                      "浮力场为零 ⇒ 本算例只检验算子自身的列守恒；浮力不改变列总量，"
-                      "故该项对浮力场无关"))
+                      "**本行是算子恒等式、不是守恒测量**：w̄=∂φΨ/(2r_aH) ⇒ 2H·w̄=∂φΨ/r_a，"
+                      "中心差分+梯形逐列严格给出 (Ψ(1)−Ψ(0))/r_a，而每列 Dirichlet 值相同 ⇒ "
+                      "任何内部解都恒满足本判据，**无法在求解器输出上失败**",
+                      "因此本行**检测不到**内部通量分布、浮力重分配（``b_field``）或 "
+                      "``wall`` 冻结门引起的通量误差——那些量在本测点层级不可见",
+                      "反例测试 ``test_P4_flux_conservation_fails_on_broken_dirichlet_bc`` "
+                      "只证明它对「被破坏的 φ 端 Dirichlet 行」敏感",
+                      "浮力场为零 ⇒ 本算例亦不覆盖浮力路径"))
 
 
 def check_narrow_disadvantage(result: Any, geom: Mapping[str, Any]) -> dict:
@@ -486,8 +512,8 @@ def check_frozen_region(case: Optional[Mapping[str, Any]]) -> dict:
     ratio = frozen_peak / peak
     passed = ratio <= FROZEN_SPEED_FRACTION_MAX
     suppressed = _suppression(case, w, fully)
-    measured = (f"完全冻结格 {n_fully} 个：max|w|={frozen_peak:.3e} m/s, "
-                f"max|w|={peak:.6g} m/s, 比值={ratio:.3e}；"
+    measured = (f"完全冻结格 {n_fully} 个：冻结格内 max|w|={frozen_peak:.3e} m/s, "
+                f"全域 max|w|={peak:.6g} m/s, 比值={ratio:.3e}；"
                 f"过渡带（{FROZEN_WALL_THRESHOLD}<wall<1−1e-6）{n_band} 格："
                 f"最高 |w|/max|w|={band_ratio:.3e}（该格 wall={band_wall:.4g}）")
     return _row(CHECK_FROZEN_REGION, passed, measured, criterion,
@@ -499,7 +525,22 @@ def check_frozen_region(case: Optional[Mapping[str, Any]]) -> dict:
                       f"过渡带仅披露——把过渡带判成「必须静止」会要求模型"
                       f"在被刻意连续化的地方按二值行为",
                       f"完全冻结格相对同算例未加冻结门时同格速度抑制倍数={suppressed:.3e}"
-                      f"（内部静止的直接证据）" if suppressed else ""))
+                      f"（内部静止的直接证据）" if suppressed else "",
+                      "**本行是合成场上的算子性质，不是逐井 production 判决**：production 里 "
+                      "τw_extrap = τw_ref·b/b_ref 且 b>0（``annulus_d2dga.py:1072-1096``），"
+                      "故 wall=1（τw=0）要求该列**流得最快**的参考格静止；而参考格按定义取"
+                      "「正在流动」的格 ⇒ production 中 wall≡1 只在 ``col_freeze`` 分支出现"
+                      "（``~has_flow & cement_ever>0``，``:1101``），即整列本就静止。"
+                      "本行证明的是**算子把 wall≡1 处速度压到零**（该性质由本算例独立证实），"
+                      "而非任何一口井在 production 下的冻结行为",
+                      f"**判决对冻结度剖面形状敏感**（披露）：完全冻结格相对阈值的余量是 "
+                      f"{FROZEN_SPEED_FRACTION_MAX / ratio:.1f}×，但该余量依赖冻结区的"
+                      f"φ-展布——本行剖面为 C¹（sin²）过渡。若改用**分段线性**过渡（冻结度在"
+                      f"一格内跨完），第一个完全冻结格会因中心差分跨台阶而泄漏到 1.10e-2 "
+                      f"（实测，ramp 25→35、ny=41）> {FROZEN_SPEED_FRACTION_MAX}，本行会转红；"
+                      f"那是**离散格式在冻结度突变处的局限**，不是冻结区内部在流动",
+                      "同源参照：二值掩码下（Task 9 首版算例）冻结前锋格比值 9.38e-2（旧报告节，"
+                      "已被 §11 取代）"))
 
 
 def _band_stats(w: np.ndarray, wall: np.ndarray, band: np.ndarray, peak: float) -> tuple:

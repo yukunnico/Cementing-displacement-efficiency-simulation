@@ -24,10 +24,11 @@
    避免口径漂移。
 3. **P-7 需要两次运行**：基线 + 排量 ×1.4。排量缩放**只改施工程序的泵注步**
    （``PumpingSchedule.steps`` 的 ``rate_m3_min``，体积不变），复用的正是
-   ``scripts/entrypoints/run_sensitivity_current_20260916.py:85`` 的
-   ``scale_schedule``（该脚本已有 ``rate_x1.4`` 变体，本处不另造一套）。缩放后两次运行的
-   窗口长度不同（泵注更快 ⇒ ``total_t`` 更短）——这是"排量 ×1.4 时域内"的题中之义，
-   逐井把两个 ``total_t`` 写进说明列。
+   本脚本内联的 ``scale_schedule``（语义与 ``scripts/entrypoints/run_sensitivity_current_20260916.py:85``
+   逐字一致——只改 ``rate_m3_min``，体积不变；**不**从该脚本导入，以免把
+   ``rerun_all_wells_corrected``/``CORRECTED_KW`` 拖进本条刻意使用默认开关的脚本）。
+   缩放后两次运行的窗口长度不同（泵注更快 ⇒ ``total_t`` 更短）——这是"排量 ×1.4 时域内"的
+   题中之义，逐井把两个 ``total_t`` 写进说明列。
 4. **测点层级两类**（协调者裁定 R155）：P-1/P-2/P-5/P-7 在**八井结果对象**上测；
    P-3/P-4/P-6 在**单元级合成算例**上测（``AnnulusSimulationResult`` 不导出速度/通量/
    流函数场），说明列逐行标注层级，台账中这三行 ``井名`` 记为 ``合成算例``。
@@ -46,8 +47,9 @@ import csv
 import sys
 import time
 import traceback
+from dataclasses import replace
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 _SCRIPTS_DIR = PROJECT_ROOT / "scripts"
@@ -70,8 +72,10 @@ from cemdisp.models2d import AnnulusD2DGASolver  # noqa: E402
 from cemdisp.models2d.boundary_bridge import build_coupled_annulus_inlet_provider  # noqa: E402
 from cemdisp.transport1d import CasingFlowSolver  # noqa: E402
 
-# 口径唯一来源：与 Task 6 台账共用同一组常量与停算时刻函数（防漂移）
-from entrypoints.run_sensitivity_current_20260916 import scale_schedule  # noqa: E402
+# 口径唯一来源：与 Task 6 台账共用同一组常量与停算时刻函数（防漂移）。
+# ⚠️ 排量缩放**不**从 run_sensitivity_current_20260916 导入：那条 import 会把
+# rerun_all_wells_corrected/CORRECTED_KW 拖进本脚本，而本脚本的 2D 求解**刻意**用默认
+# 开关，两处口径容易被读成同源（评审 Fix，2026-09-26）。此处内联同一语义的 3 行变换。
 from entrypoints.verify_internal_consistency import (  # noqa: E402
     NY,
     NZ,
@@ -106,6 +110,19 @@ def render_passed(passed: Any) -> str:
     if passed is None:
         return "未测"
     return "通过" if passed else "不通过"
+
+
+def scale_schedule(schedule: Any, factor: float) -> Any:
+    """泵序逐段排量缩放（体积不变，时长随 1/factor 变化）。
+
+    与 ``scripts/entrypoints/run_sensitivity_current_20260916.scale_schedule`` **逐字同语义**
+    （只改 ``rate_m3_min``，排量 ≤ 0 的段保持不动），此处内联以免把
+    ``rerun_all_wells_corrected``/``CORRECTED_KW`` 一并拖入本脚本的 import 面
+    （本脚本的 2D 求解刻意用默认开关）。
+    """
+    return replace(schedule, steps=tuple(
+        replace(st, rate_m3_min=st.rate_m3_min * factor) if st.rate_m3_min > 0 else st
+        for st in schedule.steps))
 
 
 def run_case(loader: Any, factor: float = 1.0) -> tuple:
@@ -154,7 +171,7 @@ def well_rows(label: str, loader: Any, case: dict, frozen_case: dict) -> list:
                 f"（泵注{base_info['pump_s']:.0f}s/到鞋{base_info['stop_s']:.0f}s）"
                 f" vs 排量×{RATE_FACTOR} total_t={rate_info['total_t_s']:.0f}s"
                 f"（泵注{rate_info['pump_s']:.0f}s/到鞋{rate_info['stop_s']:.0f}s）"
-                f"；排量缩放只改泵注步（run_sensitivity_current_20260916.scale_schedule）")
+                f"；排量缩放只改泵注步（本脚本内联的 scale_schedule，语义同 run_sensitivity_current_20260916:85）")
     return rows
 
 
@@ -178,11 +195,18 @@ class _EmptyResult:
     summary: dict = {}
 
 
-def failed_rows(label: str, exc: BaseException) -> list:
-    """失败井：4 个结果对象级判据全部如实标记未测并写明失败原因（不允许静默消失）。"""
+def failed_rows(label: str, exc: BaseException,
+                criteria: Optional[dict] = None) -> list:
+    """失败井：结果对象级判据全部如实标记未测并写明失败原因（不允许静默消失）。
+
+    ``criteria``：``{检查项: 判据文本}``，由成功井（或空替身）上跑一次判据收集而得；
+    这样失败行也**带着判据文本**，读者不必回头查别的井才知道本行在判什么。
+    """
     reason = f"未测：本井运行失败 {type(exc).__name__}: {exc}"
+    criteria = criteria or {}
     return [{"井名": label, "检查项": name, "通过": "未测", "实测值": "未测",
-             "判据": "—", "说明": reason} for name in RESULT_LEVEL_CHECKS]
+             "判据": criteria.get(name, "—"), "说明": reason}
+            for name in RESULT_LEVEL_CHECKS]
 
 
 def write_ledger(rows: list, path: Path = OUT_CSV) -> Path:
@@ -204,6 +228,9 @@ def main() -> int:
     print(f"输出：{OUT_CSV}")
     case = synthetic_stream_case(freeze=None)                  # P-3/P-4 基线（无屈服门）
     frozen_case = synthetic_stream_case(freeze="smooth")       # P-6 连续冻结度算例
+    # 判据文本表：在空替身上收集一次，供失败井行原样沿用（判据不进"未测"）
+    criteria = {r["检查项"]: r["判据"] for r in sanity_checks(
+        _EmptyResult(), case["geom"], stream_case=case, frozen_case=frozen_case)}
     print(f"[合成算例] {case['case']}")
     print(f"[合成算例/冻结] {frozen_case['case']}")
 
@@ -216,7 +243,7 @@ def main() -> int:
             status = "OK"
         except Exception as exc:  # noqa: BLE001 —— 逐井隔离，失败必须留痕
             traceback.print_exc()
-            got = failed_rows(label, exc)
+            got = failed_rows(label, exc, criteria)
             n_failed += 1
             status = "FAIL"
         rows.extend(got)
@@ -250,9 +277,9 @@ def _conclusion(rows: list) -> int:
 
 
 def n_failed_count(rows: list) -> int:
-    """返回失败井数（整井 7 行全未测者）。"""
-    return sum(1 for r in rows
-               if r["说明"].startswith("未测：本井运行失败"))
+    """返回**失败井数**（按 井名 去重；一口失败井有多行，不能把行数当井数）。"""
+    return len({r["井名"] for r in rows
+                if r["说明"].startswith("未测：本井运行失败")})
 
 
 if __name__ == "__main__":
