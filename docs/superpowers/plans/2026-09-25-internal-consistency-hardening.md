@@ -1266,7 +1266,7 @@ DeprecationWarning 声明"显式传值不再生效"。**实测与代码声明一
 
 | # | 变体名 | 脚本 | 等于哪一行 | 方法（依据） | 失去意义的图/表 |
 |---|---|---|---|---|---|
-| B1-1 | `dispersion_zero` | `scripts/entrypoints/run_ablation_variants.py` | "求解器全默认（无任何覆盖）" | **结构性**：删键后 dict 字面量为空，构造实参只剩 `total_t`/`nz` ⇒ 与任何无覆盖构造同 kwargs | 该脚本自产的 `results/消融变体_runner口径_2026-09-09/`（CSV/MD/逐变体 JSON）里 `dispersion_zero` 行；**无已知论文图/表受害者**（但若被引作"弥散消融"，该结论为零） |
+| B1-1 | `dispersion_zero` | `scripts/entrypoints/run_ablation_variants.py` | **同脚本的 `i3_localized`**（两者只差一个 `enable_local_i3`；见下方 kwarg 并排） — ⚠️ **不等于**表内任何"基线"行，也不等于"求解器全默认"（见"方法"栏的边界说明） | **结构性（限于"不再覆盖任何参数"这一条）**：删键后 `VARIANTS["dispersion_zero"]` 的 dict 为空，构造实参只剩字面量 `total_t`/`nz`（`:104-105`）⇒ 与同脚本 `i3_localized` 相比**仅少 `enable_local_i3`**。<br>**未实测**：本行**不**声明"与表内某基线行逐位相同" —— 表内基线的数值来自 `_read_baseline()` 读的**权威摘要 JSON**（`:99`），那是**另一个 runner**（`cemdisp/runners/*`，带它自己的 `CORRECTED_KW`）写的，kwargs 与 `total_t`/`nz` 都无法在本表内并排核对 ⇒ 按 B.0.1 的要求，该断言在此**不成立、不作声明** | 该脚本自产的 `results/消融变体_runner口径_2026-09-09/`（CSV/MD/逐变体 JSON）里 `dispersion_zero` 行：**与同表"求解器全默认"行互为重复**（同脚本内两者 kwargs 相同）；按上栏的边界，**不得**把它读成"与权威基线无差别" |
 | B1-2 | `M1 only` | `scripts/probes/isolate_fix_mechanisms.py` | `BASELINE(全关)` | **结构性**：两行 kwargs 均为 `{}`，逐字相同 | 09-02 呼101 机制归因表；**M1 独立归因失效**（对应 2026-08-23 计划 Task 5 / 设计稿 §4 的"M1 一轮独立归因"） |
 | B1-3 | `M1+M3` | 同上 | `M3 only` | **结构性**：两行 kwargs 均为 `{enable_yield_gate: True}`，逐字相同 | 同上 |
 | B1-4 | `ALL corrected` | 同上 | **不再与同表任何行重合** | — | 我 Task 14 首轮报告把 `ALL corrected` 也列为退化行，**此处更正：该判断过强**。它只是少了已删的 M1 维，仍与 `M3+M2+M4` 不同（多 `enable_local_i3`），标签与内容仍相符 |
@@ -1275,7 +1275,22 @@ DeprecationWarning 声明"显式传值不再生效"。**实测与代码声明一
 | B1-7 | `scale ∈ {0.0, 0.5}` 全部档 | `scripts/probes/dispersion_scale_sensitivity_nz250.py`（**已归档**） | 彼此逐位相同；与外部基线 JSON 档（`scale=1.0`，`source=baseline_reuse`）的关系**未实测** | **结构性**（彼此：kwargs 逐字相同）。**未实测**：脚本断点续跑会复用旧 JSON；"与外部 JSON 也相同"只有脚本自述的同源口径，我没有跑 | 2026-08-23 计划 Task 5 的 κ 扫描验收（①mixing 0.59→0.2–0.35 ②scale→0 平台由 κ 主导 ③前沿米级）；已归档 |
 | B1-8 | 全部 8 档（`scale∈{0,0.25,0.5,1.0}` × CFL on/off） | `scripts/probes/dispersion_scale_sensitivity_scan.py`（**已归档**） | 彼此逐位相同 | **实测（R102 记录，非我本次实测）**：`.superpowers/sdd/2026-09-25-internal-consistency-hardening/progress.md:268` 记"8 次仿真输出逐位相同"；本次未复跑（脚本已归档） | 同上（M1 κ 扫描验收）；已归档 |
 | B1-9 | `关壁面冻结` | `scripts/probes/_wallfreeze_grid_mechanism_20260902.py` | `BASE` | **结构性**：两行 kwargs 均为 `dict()`；`run_variant(name, ...)` 的 `name` 只进输出标签，不进构造 | `results/_质量平衡取证_2026-09-02/阶段5_壁面冻结网格机制.json` 的两行；B2 屈服门取证链 |
-| B1-10 | `关壁面冻结+关弥散` | 同上 | `BASE` | **结构性**：同上 | 同上 |
+| B1-10 | `关壁面冻结+关弥散` | 同上 | `BASE`（**经 B1-9 传递** —— 直接的同一行是 `关壁面冻结`） | **结构性**：与 `关壁面冻结` 同为 `dict()`（经 B1-9 传递 ⇒ 亦等于 `BASE`）；`run_variant(name, ...)` 的 `name` 只进输出标签，不进构造。⚠️ 本行的**直接**同一行是 B1-9，不是 `BASE` ——"等于 `BASE`"只是传递结论，审计时应先对 B1-9 | 同上 |
+
+**B1-1 的 kwarg 并排**（唯一可当场核对的比对；均引自 `run_ablation_variants.py`）：
+
+```python
+# :104-105 —— 两个变体走同一条构造语句，只有 **overrides 不同
+solver = AnnulusD2DGASolver(total_t=total_t_s, nz=250, **overrides)
+
+# :40  i3_localized     → {"enable_local_i3": True}
+# :42  m2_regime_split  → {"enable_regime_split": True}
+# :43  dispersion_zero  → {}            ← 删键后为空：total_t/nz 之外不再传任何东西
+```
+
+⇒ `dispersion_zero` 与 `i3_localized` 的差别**只有一个 `enable_local_i3`**；与"求解器全默认"的差别只有字面量 `total_t`/`nz`（这两项是脚本的时间/网格口径，不是开关）。
+**表内基线的数值不可用于本行比对**：它由 `_read_baseline()`（`:99`）从权威摘要 JSON 读出，写它的是 `cemdisp/runners/*`（带自己的 `CORRECTED_KW`），kwargs 与 `total_t`/`nz` 都不公开在本表内。
+
 | B1-11 | `对照_完全无壁面层` | `scripts/probes/_yieldgate_verify_20260902.py` | `对照_浓度冻结基线` | **结构性**：两行 kwargs 均为 `dict()`，逐字相同 | `results/_质量平衡取证_2026-09-02/阶段6_物理屈服门验证.json` 的两行 |
 
 ### B.2 同一批脚本里**本次清理之外**发现的同类退化（另行发现，非本次清理引入）
@@ -1291,11 +1306,14 @@ DeprecationWarning 声明"显式传值不再生效"。**实测与代码声明一
 | B2-3 | `enable_power_law_gap_law=False` 在默认路径无消费者（**实测**） | `hu101_standoff_response_tuning_survey_20260911` · `b2_gaplaw_off` | 该脚本 B 段旋钮表 `b2` 行（5 个旋钮里 2 个是假对照：`b1`/`b2`） |
 | B2-4 | `e_clip_max` / `e_clip_measured_max` / `enable_e_clip_ruling` 已弃用、显式传值不再生效（构造器 DeprecationWarning 声明 + **实测**） | `hu101_standoff_response_tuning_survey_20260911` · `b1_eclip0.90`；`hu101_low_score_attribution_probe_20260911` · 整个 `C` 段（5 档 `C_eclip=…`）；`isolate_fix_mechanisms` · `M4 only(e=.90)`、`M3+M4`、`M3+M2+M4`、`ALL corrected`（该位）；`_wallfreeze_grid_mechanism_20260902` · `关壁面冻结+关弥散+近同心`；`CORRECTED_KW` 的该位（同 B2-1 的脚本清单） | 该两脚本的旋钮/扫描表中 `b1` 与整个 `C` 段；`isolate_fix_mechanisms` 的 `M4` 归因 |
 | B2-5 | 显式传"等于形参默认值"的开关 ≡ 不传（`inspect.signature` **实测**默认值：`enable_yield_gate=True`） | `isolate_fix_mechanisms` · `M3 only`、`M1+M3`、`M3+M4`、`M3+M2+M4`；`_yieldgate_verify_20260902` · `物理屈服门` | `isolate_fix_mechanisms` 的 `M3` 归因；`_yieldgate_verify_20260902` 的**整张表**（3 行全部等价 ⇒ 零信息） |
+| B2-6 | `dispersion_axial` / `dispersion_azimuthal` 已删（Task 7 删除自创拉普拉斯弥散；删前 `dispersion=False` 分支传的也是**默认值 0.0**） | `scripts/probes/_pure_plug_conservation_20260902.py` · `纯水泥_0.7_同心_无弥散`（`阶段3_纯水泥守恒实验.json` **第 1 行**）vs `纯水泥_0.7_同心_有弥散`（**第 5 行**） | 该脚本 docstring 明写"无弥散 vs 默认弥散"是要扫描的维度之一，`:94` 也确实是唯一的 `dispersion=True` 调用 —— 但它**没有对照物**：**实测**（本任务修复轮 2，`run_one(..., dispersion=False, nz=10)` vs `dispersion=True`）两次输出字典**除两个标签键外逐字节相同**（九个数值字段全等：守恒率 0.9962、η_E 0.6973、域内水泥 8.63 …）⇒ **第 5 行不是弥散对照**，读它会得出"弥散对纯水泥守恒无影响"的假结论 |
 
 **B2 的合并后果（逐脚本）**：
 
-- `run_ablation_variants.py`：3 个变体里 **2 个**（`m2_regime_split`、`dispersion_zero`）等价于"无覆盖"，
-  只有 `i3_localized` 有区分力 ⇒ 该消融表在 M2 与"弥散"两维上零信息。
+- `run_ablation_variants.py`：3 个变体里 **2 个**（`m2_regime_split`、`dispersion_zero`）**不再覆盖任何参数**，
+  只有 `i3_localized` 触及活开关 ⇒ 该消融表在 M2 与"弥散"两维上零信息。
+  ⚠️ 注意口径（见 B1-1 的边界说明）：本脚本的表内"基线"数值来自**另一个 runner** 写的权威摘要 JSON，
+  其 kwargs 无法在本表内并排 ⇒ **不得**把 `dispersion_zero` 读成"与权威基线逐位相同"；可核对的只是"同脚本内不再覆盖参数"。
 - `isolate_fix_mechanisms.py`：10 行塌成 **2 个等价类** ——
   `{I3 only, ALL corrected}`（活的部分是 `enable_local_i3`）与 `{其余 8 行}`。
 - `hu101_low_score_attribution_probe_20260911.py`：**B/C/D 三段共 9 行全部退化为 `A_基线` 副本**
