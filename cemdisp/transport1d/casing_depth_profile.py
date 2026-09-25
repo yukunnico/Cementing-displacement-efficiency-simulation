@@ -468,9 +468,51 @@ def band_width_summary(profile: CasingDepthProfile) -> dict[str, object]:
     }
 
 
+# 相名 → 统一四通道（与 scripts/entrypoints/export_depth_time_concentration.py::
+# map_fluid_to_channel 同规则、同优先级；顺序不可调换）
+_CHANNEL_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("lead", ("领浆", "中间浆")),
+    ("tail", ("尾浆", "尾管水泥浆")),
+    ("spacer", ("隔离液", "平衡液", "先导浆", "先导液", "冲洗")),
+    ("mud", ("钻井液", "泥浆", "压塞液", "保护液", "基液", "井浆")),
+)
+CHANNELS = ("lead", "tail", "spacer", "mud")
+
+
+def unify_phase_channel(fluid_name: str) -> str:
+    """泵序流体名 → 统一四通道 ``lead/tail/spacer/mud``。
+
+    两侧相名统一（2026-09-26 Q19 必做项）：管内 1D 侧写中文流体名、环空 2D 侧写
+    四通道名，不映射则无法并表。规则与导出脚本完全一致，并由测试逐名交叉校验。
+
+    Raises:
+        ValueError: 未知名，**不静默归 mud**（静默归并会伪造浓度）。
+    """
+
+    name = fluid_name.strip()
+    for channel, tokens in _CHANNEL_RULES:
+        if any(token in name for token in tokens):
+            return channel
+    if "wash" in name.lower():
+        return "spacer"
+    raise ValueError(f"无法映射相名到四通道: {fluid_name!r}（不静默归并）")
+
+
+def profile_channels(profile: CasingDepthProfile) -> dict[str, np.ndarray]:
+    """管内剖面 → 四通道聚合份额 {lead/tail/spacer/mud: (n_t, n_z)}，逐格闭合到 1。"""
+
+    out = {channel: np.zeros(profile.shares.shape[:2], dtype=float) for channel in CHANNELS}
+    for idx, name in enumerate(profile.fluid_names):
+        out[unify_phase_channel(name)] += profile.shares[:, :, idx]
+    return out
+
+
 __all__ = [
+    "CHANNELS",
     "CasingDepthProfile",
     "band_contract_violations",
     "band_width_summary",
     "build_casing_depth_profile",
+    "profile_channels",
+    "unify_phase_channel",
 ]

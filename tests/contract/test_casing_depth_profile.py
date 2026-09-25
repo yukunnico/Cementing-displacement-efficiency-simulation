@@ -32,8 +32,11 @@ from cemdisp.data.well_spec import WellSpec
 from cemdisp.transport1d.casing_flow import CasingFlowSolver
 from cemdisp.transport1d import casing_depth_profile
 from cemdisp.transport1d.casing_depth_profile import (
+    CHANNELS,
     band_contract_violations,
     band_width_summary,
+    profile_channels,
+    unify_phase_channel,
     build_casing_depth_profile,
 )
 
@@ -428,3 +431,51 @@ def test_rebuild_does_not_mutate_solver_or_result(solved):
     )
     assert snapshot(result) == before, "重建改动了 1D 求解结果（违反冻结约束）"
     assert float(solver.dispersion_alpha) == 0.25, "重建改动了 dispersion_alpha"
+
+
+# ── 7. 相名统一（交付物 6 的必做前置）────────────────────────────────
+
+
+# 呼1-004 实际出现的 11 个泵序流体名（取自真实 loader）
+_REAL_FLUID_NAMES = ("钻井液", "先导浆", "隔离液1", "隔离液2", "领浆", "尾浆",
+                     "压塞液", "替钻井液", "保护液", "基液", "井浆")
+
+
+def test_unify_phase_channel_matches_export_script(export_mod):
+    """相名统一必须与导出脚本 map_fluid_to_channel 逐名一致（两侧同口径）。"""
+
+    for name in _REAL_FLUID_NAMES:
+        assert unify_phase_channel(name) == export_mod.map_fluid_to_channel(name), (
+            f"{name!r} 映射不一致：包内 {unify_phase_channel(name)} vs "
+            f"导出脚本 {export_mod.map_fluid_to_channel(name)}"
+        )
+
+
+def test_unify_phase_channel_covers_four_channels(export_mod):
+    """真井 11 个相名必须全部落到四通道，且四通道都被用到。"""
+
+    mapped = {unify_phase_channel(name) for name in _REAL_FLUID_NAMES}
+    assert mapped == set(CHANNELS), f"四通道覆盖不全：{mapped}"
+
+
+def test_unify_phase_channel_rejects_unknown_name():
+    """未知名必须报错，**不静默归并**（静默归并会伪造浓度）。"""
+
+    with pytest.raises(ValueError, match="不静默归并"):
+        unify_phase_channel("某种没见过的流体")
+
+
+def test_profile_channels_close_to_one(solved):
+    """四通道聚合份额必须逐格闭合到 1，与相份额总和一致。"""
+
+    solver, well, fluids, schedule, result = solved
+    profile = build_casing_depth_profile(
+        solver, well, fluids, schedule, result,
+        depths_m=_depths(101), times_s=_times(21), mixing_band=True,
+    )
+    channels = profile_channels(profile)
+    assert set(channels) == set(CHANNELS)
+    total = sum(channels.values())
+    assert np.allclose(total, 1.0, atol=1.0e-12), (
+        f"四通道未闭合，max |Σ−1| = {np.abs(total - 1).max():.3e}"
+    )
