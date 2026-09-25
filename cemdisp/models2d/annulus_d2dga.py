@@ -173,7 +173,7 @@ def _dead_switches(**switches) -> list[str]:
 
     规则（与代码实际消费点一一对应；改消费点时必须同步改这里）：
       * 旧代数路径专属开关：仅在 ``enable_stream_function=False`` 时被消费
-        （``_compute_velocity`` 在新路径早退，见 :1867-1873）；
+        （``_compute_velocity`` 在新路径早退，见 :1867-1872）；
       * ``enable_yield_gate``：新路径下 ``wall`` 只写诊断量，需
         ``enable_stream_yield_gate=True`` 才进流函数算子（:1870）；
       * 新路径专属开关：仅在 ``enable_stream_function=True`` 时被消费，旧路径下同样空转；
