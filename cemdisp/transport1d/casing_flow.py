@@ -279,22 +279,30 @@ class CasingFlowSolver:
 
         # 为每个注入步骤建立"前缘"：前缘位置由累计泵入体积推动，
         # 而不是只由该流体自身注入体积决定。
+        # 到达时刻的唯一来源 = _ordered_front_arrival_times（重力修正 + 严格保序），
+        # 与 _build_shoe_timeline 的前缘事件、弥散接触时间缓存同源。
+        front_arrival_times = self._ordered_front_arrival_times(
+            scheduled_steps, arrival_pipe_volume_m3, fluids, initial_fluid, well_spec
+        )
+        # 未到达鞋口的界面（_front_arrival_time 为 None）统一回退到"上界标记"：
+        # 此前固定取泵注结束时刻，但重力修正可把**已到达**界面外推过泵注结束
+        # （实测 ht1_004 压塞液 11996.98 s > 泵注结束 11409.61 s），使回退标记
+        # 反而排到已到达前缘之前，制造相邻界面次序违例。上界标记改取
+        # max(泵注结束时刻, 已到达前缘最大值)——保持"不早于任何实际到达"的保守
+        # 语义，同时保证 fronts 序列非减。只改"从未到达"的哨兵值，不动任何
+        # 重力修正结果。
+        arrival_upper_bound_s = max(
+            [pumping_end_time_s]
+            + [t for t in front_arrival_times if t is not None]
+        )
         fronts: list[InterfaceFront] = []
         for i, scheduled in enumerate(scheduled_steps):
-            arrival_time_s = self._front_arrival_time(scheduled, scheduled_steps, arrival_pipe_volume_m3)
+            arrival_time_s = front_arrival_times[i]
             if arrival_time_s is None:
                 # 不可压缩管流下，该前缘在泵注结束前未到达鞋口（目标累计体积
                 # 超过总泵入体积）。若回退到该步骤自身 end_time，会插到更早步骤
-                # 前缘之间导致时间不单调；统一以泵注结束时刻为上界标记。
-                arrival_time_s = pumping_end_time_s
-            elif self.enable_gravity:
-                arrival_time_s = self._gravity_corrected_arrival_time(
-                    arrival_time_s,
-                    scheduled.step.fluid_name,
-                    self._displaced_fluid_name(scheduled_steps, i, initial_fluid),
-                    fluids,
-                    well_spec,
-                )
+                # 前缘之间导致时间不单调；统一以上界标记回退。
+                arrival_time_s = arrival_upper_bound_s
             final_distance_m = min(shoe_depth_m, scheduled.cumulative_volume_end_m3 / pipe_area_m2)
             fronts.append(
                 InterfaceFront(
@@ -640,6 +648,11 @@ class CasingFlowSolver:
             fluids,
             PumpingSchedule(steps=tuple(s.step for s in scheduled_steps)),
         ) if scheduled_steps else ""
+        # 前缘到达时刻的唯一来源（重力修正 + 严格保序）：与 run() 的 fronts、
+        # _build_shoe_timeline 的前缘事件同源，避免三处各自重算导致劈叉。
+        # 只有接触时间积分路径（mixing_contact_time=True）消费它 ⇒ 惰性计算，
+        # 使旧公式路径的开销与修复前逐位一致（纯性能，数值零影响）。
+        front_arrival_times: tuple[float | None, ...] | None = None
         _arrival_cache: dict[str, list[tuple[float, _ScheduledStep]]] = {}
         _arrival_cursor: dict[str, int] = {}
 
@@ -713,25 +726,22 @@ class CasingFlowSolver:
                 # 多段注入时逐个配对）。7 口无 RESTART 井全序列=截断序列；
                 # hu102 水泥前缘全在截断前缀内，语义等价。
                 if fluid_name not in _arrival_cache:
+                    if front_arrival_times is None:
+                        front_arrival_times = self._ordered_front_arrival_times(
+                            scheduled_steps, timeline_pipe_volume_m3,
+                            fluids, initial_fluid, well_spec,
+                        )
                     _arrival_cache[fluid_name] = []
                     for idx, scheduled in enumerate(scheduled_steps):
                         if scheduled.step.fluid_name != fluid_name:
                             continue
-                        front_t = self._front_arrival_time(scheduled, scheduled_steps, timeline_pipe_volume_m3)
+                        front_t = front_arrival_times[idx]
                         if front_t is None:
                             # 前缘在泵注结束前未到达鞋口（截断/滞留井）：以注入
                             # 步自身终点为上界标记（与 run() 的保守口径一致）。
                             front_t = scheduled.end_time_s
-                        elif self.enable_gravity:
-                            front_t = self._gravity_corrected_arrival_time(
-                                front_t,
-                                scheduled.step.fluid_name,
-                                self._displaced_fluid_name(scheduled_steps, idx, initial_fluid),
-                                fluids,
-                                well_spec,
-                            )
                         _arrival_cache[fluid_name].append((front_t, scheduled))
-                    # 按到达时刻排序，防重力修正重排多段次序（8 井实测已递增，恒等防御）
+                    # 保序约束已保证"注入次序 ≡ 到达次序"⇒ 本排序是恒等防御
                     _arrival_cache[fluid_name].sort(key=lambda x: x[0])
                     _arrival_cursor[fluid_name] = 0
                 cursor = _arrival_cursor[fluid_name]
@@ -818,16 +828,18 @@ class CasingFlowSolver:
         # 胶塞语义截断（幂等防御）：RESTART 后处理步不生成鞋口事件、不推进迟到体积；
         # 时间轴止于顶替序列终点（run() 已传入截断序列，此处保证直接调用亦同口径）。
         scheduled_steps, _ = self._displacement_sequence_cutoff(scheduled_steps)
+        # 前缘到达时刻与 run() 的 fronts 同源（重力修正 + 严格保序；两者对同一
+        # 界面用同一 pipe_volume 口径，实测 8 井修正前时刻逐位相同），保证
+        # fronts 与鞋口时间表不劈叉。
+        front_arrival_times = self._ordered_front_arrival_times(
+            scheduled_steps, pipe_volume_m3, fluids, initial_fluid, well_spec
+        )
         event_points: list[tuple[float, ShoeEventKind, tuple[tuple[str, float], ...] | None]] = []
         for i, scheduled in enumerate(scheduled_steps):
             displaced_fluid = self._displaced_fluid_name(scheduled_steps, i, initial_fluid)
             event_points.append((scheduled.start_time_s, self._event_kind_for_step(scheduled.step), None))
-            front_time_s = self._front_arrival_time(scheduled, scheduled_steps, pipe_volume_m3)
+            front_time_s = front_arrival_times[i]
             if front_time_s is not None:
-                if self.enable_gravity:
-                    front_time_s = self._gravity_corrected_arrival_time(
-                        front_time_s, scheduled.step.fluid_name, displaced_fluid, fluids, well_spec
-                    )
                 event_points.append((front_time_s, ShoeEventKind.FRONT_ARRIVAL, ((scheduled.step.fluid_name, 1.0),)))
             rear_time_s = self._rear_arrival_time(scheduled, scheduled_steps, pipe_volume_m3)
             if rear_time_s is not None:
@@ -1203,6 +1215,81 @@ class CasingFlowSolver:
             return max(arrival_time_s * (1.0 - gravity_factor), 0.0)
         else:
             return arrival_time_s * (1.0 + gravity_factor)
+
+    def _ordered_front_arrival_times(
+        self,
+        scheduled_steps: tuple[_ScheduledStep, ...],
+        pipe_volume_m3: float,
+        fluids: tuple[FluidSpec, ...],
+        initial_fluid: str,
+        well_spec: WellSpec,
+    ) -> tuple[float | None, ...]:
+        """按【注入次序】给出各注入步前缘到达鞋口的时刻（重力修正 + 严格保序）。
+
+        不变量：连续泵入下，界面到达次序 ≡ 注入次序。
+
+        存在理由（甲-2）：`_gravity_corrected_arrival_time` 是**逐界面独立**的
+        乘法修正，量级 ±1%~±8%，足以让相邻界面对调（实测 ht1_004 隔离液2/领浆、
+        hu102 后置液/替浆液）。对调后鞋口时间线会出现"后注入的流体先到"的非物理
+        序列，环空入口浓度随之回退（物理合理性闸门 P-2 不通过）。
+
+        算法：按注入次序遍历（K=1..N，**固定顺序**，不是按时刻排序），对每个
+        已修正时刻施加
+
+            t_K = max(t_K, t_{K-1} + Δ_min)，  Δ_min = self.dt
+
+        Δ_min 取本求解器的时间步 ``dt``——它是本模型的时间分辨率（同时也是
+        鞋口时间线弥散过渡带宽度的下限 ``max(σ_t, dt)``）；两个界面若落在同一
+        时间步内，下游按 ``ShoeTimeline.at()`` 的"最近过去事件"语义已无法区分
+        先后。故**不得**用 1e-6 这类微小量，那会制造"两界面同刻到达"的退化。
+
+        重力修正的物理内容全部保留：每个界面的提前/推迟仍由 Atwood 数、井斜
+        角投影、屈服应力抑制决定，只施加"不得越过前一个界面"的约束。被约束的
+        界面失去其修正提前量——物理含义是"它虽然自己会浮得快，但跑不过已经
+        在前面的那个界面"。
+
+        本函数是前缘时刻的**唯一来源**：``run()`` 的 fronts、
+        ``_build_shoe_timeline()`` 的 FRONT_ARRIVAL 事件、以及
+        ``_apply_dispersion_to_timeline()`` 的接触时间积分缓存三处都调用它，
+        不得各自重算（否则 fronts 与鞋口时间表会劈叉）。
+
+        Args:
+            scheduled_steps: 注入步骤序列（调用方已做胶塞语义截断）
+            pipe_volume_m3: 鞋口迟到体积（时间轴口径）
+            fluids: 全部流体规格
+            initial_fluid: 开泵前管内默认流体名
+            well_spec: 井筒规格（井斜/管内径）
+
+        Returns:
+            与 ``scheduled_steps`` 等长的元组；``_front_arrival_time`` 为 None
+            的步（泵注结束前未到鞋口）保持 None，回退口径由调用方决定。
+        """
+        raw_times = tuple(
+            self._front_arrival_time(scheduled, scheduled_steps, pipe_volume_m3)
+            for scheduled in scheduled_steps
+        )
+        if not self.enable_gravity:
+            # 无重力修正 ⇒ 原始时刻已随体积坐标递增，无需约束（保持逐位不变）
+            return raw_times
+        ordered: list[float | None] = []
+        previous_time_s: float | None = None
+        for i, raw_time_s in enumerate(raw_times):
+            if raw_time_s is None:
+                # 目标累计体积单调递增 ⇒ None 只可能出现在后缀，保序链自然终止
+                ordered.append(None)
+                continue
+            corrected = self._gravity_corrected_arrival_time(
+                raw_time_s,
+                scheduled_steps[i].step.fluid_name,
+                self._displaced_fluid_name(scheduled_steps, i, initial_fluid),
+                fluids,
+                well_spec,
+            )
+            if previous_time_s is not None and corrected < previous_time_s + self.dt:
+                corrected = previous_time_s + self.dt
+            ordered.append(corrected)
+            previous_time_s = corrected
+        return tuple(ordered)
 
     def _legacy_gravity_correction(
         self,
