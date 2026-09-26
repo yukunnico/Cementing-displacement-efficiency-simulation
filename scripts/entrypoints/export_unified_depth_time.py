@@ -6,12 +6,17 @@
 流体名（钻井液/先导浆/隔离液1/…），与 2D 侧的四通道（lead/tail/spacer/mud）
 无法并表；本脚本用 `unify_phase_channel` 把 1D 侧也归到四通道。
 
-口径：
+口径（2026-09-26 用户裁定后修正）：
 - 时间栅格 = 该井 NPZ 的 `snapshot_times_s`（物理时间，非步数）；
-- 深度 < 2D 评价域上界 → `source=1D_casing`，取管内剖面重建（带 erf 混浆带，
-  2026-09-26 Q11）的四通道聚合份额；
-- 深度 ≥ 上界 → `source=2D_annulus`，取 NPZ 快照的方位角算术平均（与既有导出
-  同口径；NPZ 不含 b 场故不做 b 加权），mud = clip(1 − 其余三通道, 0, 1)；
+- **两个 source 并存，不是沿深度互斥分区**：
+  · `1D_casing`  = 套管内，覆盖**井口 → 井底（管柱底端）全长**，包含尾管段深度；
+  · `2D_annulus` = 环空，**仅覆盖尾管段**（即 2D 评价域上界 → 管柱底端）。
+  因此尾管段深度上**同时存在两组行**，由 `source` 列区分；两者是不同流道，
+  不是同一量的两种算法。
+- 各 source 用**各自的原生深度网格**（1D 侧=均匀网格，2D 侧=NPZ 的 `md`），
+  不互相插值，避免引入插值误差；
+- 2D 侧取 NPZ 快照的方位角算术平均（与既有导出口径一致；NPZ 不含 b 场故不做
+  b 加权），mud = clip(1 − 其余三通道, 0, 1)；
 - 输出目录须由调用方指定，且**拒绝覆盖已存在文件**，绝不写入权威结果目录。
 
 用法：
@@ -104,7 +109,7 @@ def _annulus_channels(npz_path: Path) -> tuple[dict[str, np.ndarray], np.ndarray
     return channels, times, md[order]
 
 
-def export_unified_long_table(well_key: str, out_dir: Path, *, n_casing_depths: int = 200) -> dict:
+def export_unified_long_table(well_key: str, out_dir: Path, *, n_casing_depths: int = 400) -> dict:
     """单井导出统一口径长表；返回统计摘要。"""
 
     cfg, well_spec, fluids, schedule = _load_well(well_key)
@@ -118,34 +123,36 @@ def export_unified_long_table(well_key: str, out_dir: Path, *, n_casing_depths: 
     solver = CasingFlowSolver()
     result = solver.run(well_spec, fluids, schedule)
 
-    # 管内段深度网格：地面 → 2D 评价域上界（不含端点，避免与 2D 侧重复）
-    casing_depths = np.linspace(0.0, domain_top_m, n_casing_depths + 1)[:-1]
+    # 管内段：井口 → 井底全长。深度网格 = 均匀网格 ∪ 环空 md，使尾管段深度上
+    # 两个 source **落在同一批格点**（口径要求：尾管段必须能同时看到套管内数据），
+    # 且 1D 侧不引入插值——`build_casing_depth_profile` 直接在并集网格上重建。
+    shoe_m = float(well_spec.shoe_md_m)
+    casing_depths = np.union1d(np.linspace(0.0, shoe_m, n_casing_depths), md_asc)
     profile = build_casing_depth_profile(
         solver, well_spec, fluids, schedule, result,
         depths_m=casing_depths, times_s=times, mixing_band=True,
     )
     casing_channels = profile_channels(profile)
 
-    depths = np.concatenate([casing_depths, md_asc])
-    n_casing = casing_depths.size
     rows = []
     for t_idx in range(times.size):
         ts = round(float(times[t_idx]), 3)
         tm = round(ts / 60.0, 4)
-        for j, z in enumerate(depths):
+        # (1) 套管内：井口 -> 井底，全覆盖（本次口径修正点）
+        for j, z in enumerate(casing_depths):
             zd = round(float(z), 3)
-            if j < n_casing:
-                for ch in CHANNELS:
-                    rows.append((ts, tm, zd, ch, round(float(casing_channels[ch][t_idx, j]), 6),
-                                 "1D_casing"))
-            else:
-                k = j - n_casing
-                for ch in CHANNELS:
-                    rows.append((ts, tm, zd, ch, round(float(ann_channels[ch][t_idx, k]), 6),
-                                 "2D_annulus"))
+            for ch in CHANNELS:
+                rows.append((ts, tm, zd, ch,
+                             round(float(casing_channels[ch][t_idx, j]), 6), "1D_casing"))
+        # (2) 环空：仅尾管段（2D 评价域），与 (1) 在尾管段深度上并存
+        for k, z in enumerate(md_asc):
+            zd = round(float(z), 3)
+            for ch in CHANNELS:
+                rows.append((ts, tm, zd, ch,
+                             round(float(ann_channels[ch][t_idx, k]), 6), "2D_annulus"))
 
     out_dir.mkdir(parents=True, exist_ok=True)
-    csv_path = out_dir / f"{label}_全井深度时间四通道_长格式.csv"
+    csv_path = out_dir / f"{label}_套管内井口至井底_环空尾管段_四通道_长格式.csv"
     if csv_path.exists():
         raise FileExistsError(f"目标已存在，拒绝覆盖：{csv_path}")
     with csv_path.open("w", encoding="utf-8-sig", newline="") as fh:
@@ -159,10 +166,12 @@ def export_unified_long_table(well_key: str, out_dir: Path, *, n_casing_depths: 
         "csv": str(csv_path),
         "n_rows": len(rows),
         "n_times": int(times.size),
-        "n_depths": int(depths.size),
-        "n_casing_depths": int(n_casing),
+        "casing_depth_range_m": [0.0, shoe_m],
+        "annulus_depth_range_m": [float(md_asc[0]), float(md_asc[-1])],
+        "n_casing_depths": int(casing_depths.size),
+        "n_annulus_depths": int(md_asc.size),
         "domain_top_m": domain_top_m,
-        "shoe_md_m": float(well_spec.shoe_md_m),
+        "shoe_md_m": shoe_m,
         "t_min_s": float(times[0]),
         "t_max_s": float(times[-1]),
         "channels": list(CHANNELS),
