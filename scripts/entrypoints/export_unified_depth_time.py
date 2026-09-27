@@ -45,6 +45,7 @@ _CHANNEL_LABELS = {"lead": "领浆", "tail": "尾浆", "spacer": "隔离液", "m
 WELL_CONFIGS = {
     "ht1_003": {
         "well_label": "呼1-003",
+        "results_stem": "呼1-003_1D2D耦合模型",
         "loader": "cemdisp.data.loaders.ht1_003_loader:load_ht1_003_tailpipe",
         "loader_kwargs": {
             "reference_root": _FIELD_ROOT / "呼1-003" / "新",
@@ -54,12 +55,20 @@ WELL_CONFIGS = {
     },
     "ht1_004": {
         "well_label": "呼1-004",
+        "results_stem": "呼1-004_1D2D耦合模型",
         "loader": "cemdisp.data.loaders.ht1_004_loader:load_ht1_004_tailpipe",
         "loader_kwargs": {
             "reference_root": _FIELD_ROOT / "呼1-004",
             "caliper_csv_path": _FIELD_ROOT / "现场资料提取" / "ht1_004_呼1-004" / "caliper_profile.csv",
             "inclination_csv_path": _FIELD_ROOT / "现场资料提取" / "ht1_004_呼1-004" / "inclination_profile.csv",
         },
+    },
+    "hu101": {
+        "well_label": "呼101",
+        "results_stem": "呼101尾管_1D2D耦合模型",
+        "loader": "cemdisp.data.loaders.hu101_loader:load_hu101_tailpipe",
+        # 与 runner 一致：无参调用，走 loader 自身的 DEFAULT_REFERENCE_ROOT / 井径 / 井斜
+        "loader_kwargs": {},
     },
 }
 
@@ -82,13 +91,13 @@ def read_well_structure_depths(path: Path) -> np.ndarray:
     return np.sort(depths)
 
 
-def resolve_well_structure(well_key: str, out_dir: Path, override: Path | None) -> Path:
-    """井身结构表取用顺序：显式参数 > 输出目录内的用户版 > 参考文档标准版。"""
+def resolve_well_structure(well_key: str, well_dir: Path, override: Path | None) -> Path:
+    """井身结构表取用顺序：显式参数 > 本井目录内的用户版 > 参考文档标准版。"""
 
     if override is not None:
         return Path(override)
     label = WELL_CONFIGS[well_key]["well_label"]
-    user_version = Path(out_dir) / f"{label}井身结构.csv"
+    user_version = Path(well_dir) / f"{label}井身结构.csv"
     if user_version.exists():
         return user_version
     return _FIELD_ROOT / label / f"{label}井身结构.csv"
@@ -160,17 +169,15 @@ def _annulus_channels_on_grid(
 
 
 def export_unified_tables(
-    well_key: str, out_dir: Path, *, well_structure: Path | None = None
+    well_key: str, out_root: Path, *, well_structure: Path | None = None
 ) -> dict:
-    """单井导出：每个通道一个「深度 × 逐分钟」宽表。返回摘要。"""
+    """单井导出到 ``out_root/<井号>/``：每个通道一个「深度 × 逐分钟」宽表。"""
 
     cfg, well_spec, fluids, schedule = _load_well(well_key)
     label = cfg["well_label"]
-    out_dir = Path(out_dir)
-    npz_path = (
-        PROJECT_ROOT / "results" / f"{label}_1D2D耦合模型"
-        / f"{label}_1D2D耦合模型_2D场数据.npz"
-    )
+    stem = cfg["results_stem"]
+    out_dir = Path(out_root) / label
+    npz_path = PROJECT_ROOT / "results" / stem / f"{stem}_2D场数据.npz"
 
     ws_path = resolve_well_structure(well_key, out_dir, well_structure)
     depths = read_well_structure_depths(ws_path)
@@ -214,6 +221,7 @@ def export_unified_tables(
     return {
         "well": well_key,
         "label": label,
+        "well_dir": str(out_dir),
         "well_structure": str(ws_path),
         "casing_depth_range_m": [float(depths[0]), float(depths[-1])],
         "n_casing_rows": int(depths.size),

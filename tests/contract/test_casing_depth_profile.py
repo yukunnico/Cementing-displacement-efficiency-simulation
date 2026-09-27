@@ -479,3 +479,16 @@ def test_profile_channels_close_to_one(solved):
     assert np.allclose(total, 1.0, atol=1.0e-12), (
         f"四通道未闭合，max |Σ−1| = {np.abs(total - 1).max():.3e}"
     )
+
+
+def test_unify_phase_channel_handles_hu101_zhongzhiye():
+    """呼101 专有相名「中置液」必须归 mud（hu101_loader.py:408 标注其现场名为保护液）。"""
+
+    assert unify_phase_channel("中置液") == "mud"
+
+
+def test_unify_phase_channel_still_rejects_truly_unknown():
+    """补名不得把「不静默归并」的红线一起放宽。"""
+
+    with pytest.raises(ValueError, match="不静默归并"):
+        unify_phase_channel("某种真的没见过的流体")
