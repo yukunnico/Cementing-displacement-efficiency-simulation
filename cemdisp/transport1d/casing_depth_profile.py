@@ -216,6 +216,7 @@ def build_casing_depth_profile(
     depths_m: Sequence[float],
     times_s: Sequence[float],
     mixing_band: bool = True,
+    sharp_from_plug: bool = False,
 ) -> CasingDepthProfile:
     """把管内一维解重建为「深度 × 时间 × 相份额」。
 
@@ -228,6 +229,9 @@ def build_casing_depth_profile(
         depths_m: 目标深度网格（米，升序，应落在 [0, shoe]）。
         times_s: 目标时刻网格（秒）。
         mixing_band: False 时退化为锐界面（σ ≡ 0），用于与 09-09 口径对照。
+        sharp_from_plug: True 时，**胶塞面及其之后的全部界面一律取锐界面**（σ ≡ 0），
+            不再模拟胶塞后流体之间的界面作用（2026-09-28 用户裁定）。默认 False
+            以保持既有四通道表口径逐位不变。
 
     Returns:
         CasingDepthProfile。
@@ -288,6 +292,7 @@ def build_casing_depth_profile(
     sigma_t = np.zeros((n_boundary, depths.size), dtype=float)
     band_width = np.zeros((n_boundary, depths.size), dtype=float)
     plug_boundary: list[bool] = []
+    plug_index: int | None = None
 
     for k in range(n_boundary):
         arriving_name = segments[k][0]
@@ -295,6 +300,8 @@ def build_casing_depth_profile(
         # 胶塞面：穿过该阈值的流体是胶塞释放液（压塞液）→ 工艺锐界面
         is_plug = bool(solver._is_plug_release_fluid(arriving_name, fluids))
         plug_boundary.append(is_plug)
+        if is_plug and plug_index is None:
+            plug_index = k  # 界面按泵序递增，其后所有界面均属「胶塞后方」
 
         threshold_m3 = float(thresholds[k])
         t_inject = _invert_volume_to_time(steps, threshold_m3)
@@ -308,8 +315,13 @@ def build_casing_depth_profile(
             if tau is None:
                 continue
             boundary_arrival[k, j] = tau
-            if is_plug or not mixing_band:
-                continue  # 胶塞面 / 锐界面模式：σ ≡ 0，不施加夹取
+            sharp_here = (
+                (not mixing_band)
+                or is_plug
+                or (sharp_from_plug and plug_index is not None and k >= plug_index)
+            )
+            if sharp_here:
+                continue  # 胶塞面 / 胶塞后方 / 锐界面模式：σ ≡ 0，不施加夹取
             rate_m3_s = _rate_at_time(steps, tau)
             if rate_m3_s <= 0.0 or area_m2[j] <= 0.0:
                 continue

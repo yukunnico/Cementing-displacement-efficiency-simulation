@@ -234,13 +234,101 @@ def export_unified_tables(
     }
 
 
+def export_per_fluid_tables(
+    well_key: str, out_root: Path, *, well_structure: Path | None = None
+) -> dict:
+    """按流体逐个出表（2026-09-28 用户需求）。
+
+    与 ``export_unified_tables`` 的区别：
+    - **不再按四通道聚合**：套管内每个相名一个文件（含初始钻井液与胶塞后全部流体）；
+    - **两侧分目录**：``套管内/`` 与 ``环空/``，故文件内不再需要 ``source`` 列；
+    - **胶塞面及其之后一律锐界面**（``sharp_from_plug=True``）：不模拟胶塞后流体
+      之间的界面作用；
+    - 环空侧仍只有 2D 模型实际追踪的四通道（先导浆/隔离液1/隔离液2 同属 spacer，
+      模型不区分），故环空按通道出 4 个文件，非按原始相名。
+    """
+
+    cfg, well_spec, fluids, schedule = _load_well(well_key)
+    label = cfg["well_label"]
+    stem = cfg["results_stem"]
+    out_dir = Path(out_root) / label
+    npz_path = PROJECT_ROOT / "results" / stem / f"{stem}_2D场数据.npz"
+
+    ws_path = resolve_well_structure(well_key, out_dir, well_structure)
+    depths = read_well_structure_depths(ws_path)
+
+    snap_t = np.asarray(np.load(npz_path, allow_pickle=True)["snapshot_times_s"], dtype=float)
+    n_min = int(np.floor(float(snap_t[-1]) / 60.0))
+    minute_s = np.arange(n_min + 1, dtype=float) * 60.0
+
+    solver = CasingFlowSolver()
+    result = solver.run(well_spec, fluids, schedule)
+    profile = build_casing_depth_profile(
+        solver, well_spec, fluids, schedule, result,
+        depths_m=depths, times_s=minute_s, mixing_band=True, sharp_from_plug=True,
+    )
+    in_depths, annulus, _snap = _annulus_channels_on_grid(npz_path, minute_s, depths)
+
+    header = ["深度_m"] + [f"{m}min" for m in range(n_min + 1)]
+    casing_dir = out_dir / "套管内"
+    annulus_dir = out_dir / "环空"
+    casing_dir.mkdir(parents=True, exist_ok=True)
+    annulus_dir.mkdir(parents=True, exist_ok=True)
+
+    written: list[str] = []
+    for idx, name in enumerate(profile.fluid_names):
+        csv_path = casing_dir / f"{label}_套管内_{name}_逐分钟_深度时间表.csv"
+        if csv_path.exists():
+            raise FileExistsError(f"目标已存在，拒绝覆盖：{csv_path}")
+        with csv_path.open("w", encoding="utf-8-sig", newline="") as fh:
+            writer = csv.writer(fh)
+            writer.writerow(header)
+            for j, z in enumerate(depths):
+                writer.writerow([round(float(z), 3)]
+                                + [round(float(profile.shares[t, j, idx]), 6)
+                                   for t in range(minute_s.size)])
+        written.append(str(csv_path))
+
+    for channel in CHANNELS:
+        csv_path = annulus_dir / f"{label}_环空_{_CHANNEL_LABELS[channel]}_逐分钟_深度时间表.csv"
+        if csv_path.exists():
+            raise FileExistsError(f"目标已存在，拒绝覆盖：{csv_path}")
+        with csv_path.open("w", encoding="utf-8-sig", newline="") as fh:
+            writer = csv.writer(fh)
+            writer.writerow(header)
+            for j, z in enumerate(in_depths):
+                writer.writerow([round(float(z), 3)]
+                                + [round(float(annulus[channel][t, j]), 6)
+                                   for t in range(minute_s.size)])
+        written.append(str(csv_path))
+
+    return {
+        "well": well_key,
+        "label": label,
+        "well_dir": str(out_dir),
+        "well_structure": str(ws_path),
+        "casing_fluid_names": list(profile.fluid_names),
+        "n_casing_files": len(profile.fluid_names),
+        "n_annulus_files": len(CHANNELS),
+        "casing_depth_range_m": [float(depths[0]), float(depths[-1])],
+        "annulus_depth_range_m": [float(in_depths[0]), float(in_depths[-1])],
+        "n_minutes": n_min + 1,
+        "t_max_s": float(snap_t[-1]),
+        "n_snapshots": int(snap_t.size),
+        "files": written,
+    }
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="全井深度×时间四通道逐分钟导出")
     parser.add_argument("--well", required=True, choices=sorted(WELL_CONFIGS))
     parser.add_argument("--out", required=True, type=Path)
     parser.add_argument("--well-structure", type=Path, default=None)
+    parser.add_argument("--per-fluid", action="store_true",
+                        help="按流体逐个出表（套管内每相名一个文件 + 环空四通道）")
     args = parser.parse_args()
-    summary = export_unified_tables(args.well, args.out, well_structure=args.well_structure)
+    fn = export_per_fluid_tables if args.per_fluid else export_unified_tables
+    summary = fn(args.well, args.out, well_structure=args.well_structure)
     for key, value in summary.items():
         print(f"{key}: {value}")
 
