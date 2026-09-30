@@ -9,6 +9,7 @@
     - flow_rate_m3_s: 排量（立方米/秒）
     - stage_name: 施工阶段名称
     - phase_fractions: 各相体积分数（如水泥100%或钻井液100%）
+    - temperature_c: 入口温度（摄氏度），默认 NaN=未知（T1-4 温度接口位）
 
 2. pipe_exit_to_annulus_inlet()：直接将鞋口出流状态映射为环空入口
     - 用于简单的直接边界传递
@@ -56,6 +57,9 @@ class AnnulusInletState:
     flow_rate_m3_s: float
     stage_name: str
     phase_fractions: tuple[tuple[str, float], ...] = field(default_factory=tuple)
+    # T1-4 温度接口位：默认 NaN=未知（下游在拿到已知温度前不应假定任何值）。
+    # 尾置默认字段 ⇒ 既有构造点（含位置参数旧签名）零改动向后兼容。
+    temperature_c: float = float("nan")
 
 
 def pipe_exit_to_annulus_inlet(pipe_exit_state: PipeExitState) -> AnnulusInletState:
