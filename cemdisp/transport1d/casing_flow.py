@@ -38,19 +38,35 @@
   [Ref: Kelessidis et al., JPT 2006; Maglione et al., SPE 56995, 1999]
 - 轴向弥散：Taylor-Aris 型弥散模型，适用于层流条件
   [Ref: Taylor, Proc. R. Soc. A 219, 1953; Aris, Proc. R. Soc. A 235, 1956]
+
+温变流变（T1-3，2026-10-01 温压耦合 Task 8，opt-in 开关默认关 ⇒ 逐位=HEAD）：
+- ``enable_temperature_rheology=True`` 时，三个物性入口（弥散
+  ``_compute_dispersion_coefficient``、有效粘度 ``_effective_viscosity``、
+  重力修正 ``_gravity_corrected_arrival_time`` 粘度侧）经统一入口
+  ``_phase_props`` 用 `cemdisp.data.rheology_vs_temperature.fluid_at`
+  **绝对替换**派生（T-on 一次派生 + memo；off 恒等返回同一对象）；
+- 温度对象经 ``run(temperature_field=...)`` 注入（管内用 T_in 表语义 /
+  Constant，同 Task 2 接口；缺省 ``ConstantTemperatureField(t_c)``）；
+- 密度本轮不变（ρ(T,P) 属 Phase P），重力修正只接屈服应力侧。
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 import math
+from typing import TYPE_CHECKING
 
 from cemdisp.data.fluid_spec import FluidRole, FluidSpec, RheologyModel
 from cemdisp.data.pumping_schedule import PumpingSchedule, PumpingScheduleStep, PumpingStageEvent
+from cemdisp.data.rheology_vs_temperature import fluid_at
+from cemdisp.data.temperature_field import ConstantTemperatureField
 from cemdisp.data.well_spec import WellSpec
 from cemdisp.transport1d.interface_tracking import InterfaceFront
 from cemdisp.transport1d.pipe_exit_state import PipeExitState
 from cemdisp.transport1d.shoe_timeline import ShoeEvent, ShoeEventKind, ShoeTimeline
+
+if TYPE_CHECKING:
+    from cemdisp.data.temperature_field import TableTemperatureField  # run() 注解用
 
 
 @dataclass(frozen=True)
@@ -144,6 +160,10 @@ class CasingFlowSolver:
         has_plug: bool = False,
         mixing_contact_time: bool = False,
         plug_face_zero_mixing: bool = False,
+        # T1-3（2026-10-01 温压耦合 Task 8）：温变流变总开关 + 构造层恒温
+        # （开关默认关 ⇒ 逐位=HEAD；温度场对象经 run(temperature_field=...) 注入）。
+        enable_temperature_rheology: bool = False,
+        temperature_rheology_t_c: float = 60.0,
     ) -> None:
         """初始化求解器。
 
@@ -208,6 +228,20 @@ class CasingFlowSolver:
                 _apply_dispersion_to_timeline 的时间线后处理，前缘追踪/到达
                 时刻/ cement_end_time_s 等体积链全部不变。False（默认）时
                 走原路径逐位不变。
+            enable_temperature_rheology: T1-3 温变流变总开关（2026-10-01 温压
+                耦合 Task 8），默认 False（关 ⇒ 逐位 = HEAD，全测试绿）。
+                True 时三个物性入口（弥散/有效粘度/重力修正粘度侧）的流体经
+                `_phase_props` 用 `cemdisp.data.rheology_vs_temperature.fluid_at`
+                **绝对替换**派生（有公式的相切 Bingham：τy→yield_stress_pa、
+                μp→plastic_viscosity_pa_s，幂律参数清空；密度/名字/角色不变，
+                原 FluidSpec 不被就地修改）。派生按 (fluid, T) memo，T-on
+                一次派生非每步；温度对象经 run(temperature_field=...) 注入
+                （管内 T_in 表语义 / Constant，同 Task 2 接口）。
+            temperature_rheology_t_c: 构造层恒温温度（°C），默认 60.0。
+                仅 enable_temperature_rheology=True 时被消费（关时不读、不构造
+                温度场）：既是缺省温度场 ConstantTemperatureField(t_c) 的常数值，
+                也是 run(temperature_field=None) 时的回退；注入表格场
+                （TableTemperatureField）经 run(temperature_field=...)。
         """
         if not math.isfinite(dt) or dt <= 0.0:
             raise ValueError("dt 必须为大于0的有限数值")
@@ -243,6 +277,22 @@ class CasingFlowSolver:
         self.has_plug: bool = has_plug
         self.mixing_contact_time: bool = mixing_contact_time
         self.plug_face_zero_mixing: bool = plug_face_zero_mixing
+        # ------------------------------------------------------------------ #
+        # T1-3（2026-10-01 温压耦合 Task 8）：温变流变总开关。消费点：三个物性
+        # 入口（弥散/有效粘度/重力修正粘度侧）统一走 `_phase_props`（off 恒等 +
+        # (fluid,T) memo）；run() 开时挂温度场并定代表温度 _step_T_c。
+        # 关时不建场（_phase_memo 恒建为空 dict，无数值消费 ⇒ 零痕迹）。
+        # ------------------------------------------------------------------ #
+        self.enable_temperature_rheology: bool = enable_temperature_rheology
+        self.temperature_rheology_t_c: float = float(temperature_rheology_t_c)
+        self._temperature_field: ConstantTemperatureField | None = None
+        self._step_T_c: float | None = None
+        if enable_temperature_rheology:
+            # 开时先挂构造层恒温场（run(temperature_field=...) 可注入表格场覆盖）；
+            # _step_T_c = 派生代表温度（__init__ 恒温值，run() 按注入场刷新）。
+            self._temperature_field = ConstantTemperatureField(self.temperature_rheology_t_c)
+            self._step_T_c = self.temperature_rheology_t_c
+        self._phase_memo: dict = {}
         self._scheduled_steps_by_result_id: dict[int, tuple[_ScheduledStep, ...]] = {}
         self._initial_fluid_by_result_id: dict[int, str] = {}
         self._fluids_by_result_id: dict[int, tuple[FluidSpec, ...]] = {}
@@ -255,8 +305,35 @@ class CasingFlowSolver:
         well_spec: WellSpec,
         fluids: tuple[FluidSpec, ...],
         schedule: PumpingSchedule,
+        temperature_field: "ConstantTemperatureField | TableTemperatureField | None" = None,
     ) -> CasingFlowResult:
-        """运行套管内1D前沿追踪。"""
+        """运行套管内1D前沿追踪。
+
+        Args:
+            well_spec: 井身结构。
+            fluids: 流体序列。
+            schedule: 泵注程序。
+            temperature_field: 温度场对象（T1-3，可选，默认 None）——只消费
+                ``T(md_m, t_s) -> float`` 接口，Constant/Table 由调用方注入
+                （管内用 T_in 表语义同样由场对象承载）。None 且
+                ``enable_temperature_rheology=True`` ⇒ 回退构造层恒温场
+                ``ConstantTemperatureField(temperature_rheology_t_c)``；
+                T-off 时不读本参数（零痕迹）。开时 run() 把域顶 t=0 的查询值
+                记为代表温度 ``_step_T_c``（恒温场任意 (md,t) 同值；表格场即
+                初态域顶温度——同 Task 6 构造层口径），三个物性入口经
+                `_phase_props` 按该温度派生。
+        """
+        # T1-3（2026-10-01 温压耦合 Task 8）：温变流变接线——温度场注入 +
+        # 代表温度定标 + 派生缓存按 run 清。关 ⇒ 整块不执行（零痕迹，
+        # 数值路径与 HEAD 逐位一致）。
+        if self.enable_temperature_rheology:
+            self._temperature_field = (
+                temperature_field
+                if temperature_field is not None
+                else ConstantTemperatureField(self.temperature_rheology_t_c)
+            )
+            self._phase_memo.clear()  # 派生缓存按 run 清（跨 run 不复用）
+            self._step_T_c = self._temperature_field.T(well_spec.top_md_m, 0.0)
 
         pipe_area_m2 = self._pipe_cross_section_area(well_spec)
         shoe_depth_m = well_spec.shoe_md_m
@@ -431,6 +508,29 @@ class CasingFlowSolver:
 
         return state
 
+    def _phase_props(self, fluid: FluidSpec) -> FluidSpec:
+        """单相物性唯一入口（T1-3）：T-on 按代表温度 ``fluid_at`` 绝对替换派生。
+
+        三个物性入口（`_compute_dispersion_coefficient` 弥散、
+        `_effective_viscosity` 有效粘度、`_gravity_corrected_arrival_time`
+        屈服应力侧）同走本函数，并以 ``(fluid, T)`` memo 复用派生结果
+        （**T-on 一次派生非每步**：同 (fluid,T) 返回同一对象）。代表温度
+        ``_step_T_c`` 由 run() 按注入温度场定标（域顶 t=0 查询；恒温场任意
+        (md,t) 同值），未跑 run() 的直调方用构造层 ``temperature_rheology_t_c``。
+
+        T-off：恒等返回入参（不查温度场、不写任何状态 ⇒ off 路径逐位红线）。
+        """
+        if not self.enable_temperature_rheology:
+            return fluid
+        T = self._step_T_c
+        key = (fluid, T)
+        cached = self._phase_memo.get(key)
+        if cached is not None:
+            return cached
+        derived = fluid_at(fluid, T)
+        self._phase_memo[key] = derived
+        return derived
+
     def _compute_dispersion_coefficient(
         self,
         pipe_radius_m: float,
@@ -460,6 +560,9 @@ class CasingFlowSolver:
         """
         if mean_velocity_m_s < 1e-9:
             return 0.0
+
+        # T1-3 温度挂接：粘度/τy/n/K 等相关量取温变派生态（T-off 恒等 = 逐位）
+        fluid = self._phase_props(fluid)
 
         import math as _math
         from cemdisp.data.fluid_spec import RheologyModel
@@ -530,6 +633,10 @@ class CasingFlowSolver:
         Returns:
             表观黏度 [Pa·s]，恒为正数
         """
+        # T1-3 温度挂接：PV/τy/n/K 取温变派生态（须在零速/零半径回退前派生——
+        # 该回退也读 plastic_viscosity_pa_s；T-off 恒等 = 逐位）
+        fluid = self._phase_props(fluid)
+
         if mean_velocity_m_s < 1e-9 or pipe_radius_m < 1e-9:
             return fluid.plastic_viscosity_pa_s or 0.01
 
@@ -1201,7 +1308,11 @@ class CasingFlowSolver:
             gravity_factor *= max(math.cos(avg_inclination_rad), 0.0)
 
         # 屈服应力修正：屈服应力会抑制浮力滑移，减小有效浮力效应
+        # T1-3 温度挂接：只把粘度侧（τy(T)）接通——密度侧 _get_fluid_density
+        # 仍读原始 fluids（ρ(T,P) 属 Phase P，本轮不变；fluid_at 亦不改密度）。
         fluid = next((f for f in fluids if f.name == fluid_name), None)
+        if fluid is not None:
+            fluid = self._phase_props(fluid)
         if fluid is not None and fluid.yield_stress_pa is not None and fluid.yield_stress_pa > 0.0:
             pipe_radius_m = self._effective_pipe_radius_m(well_spec)
             delta_rho = abs(rho_fluid - rho_displaced)
