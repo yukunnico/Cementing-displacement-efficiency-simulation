@@ -19,7 +19,7 @@ from __future__ import annotations
 import pytest
 
 from cemdisp.data.fluid_spec import FluidRole, FluidSpec, RheologyModel
-from cemdisp.data.rheology_vs_temperature import fluid_at, get_audit, reset_audit
+from cemdisp.data.rheology_vs_temperature import _route, fluid_at, get_audit, reset_audit
 
 # 锚点断言容差（brief：τ ±0.01 Pa、μp ±0.5%）
 TAU_TOL = 0.01
@@ -321,6 +321,65 @@ class TestDispatchTable:
         ]
         assert borrow_events, "缺 borrow 审计事件"
         assert borrow_events[0].get("note") == "model_assumption"
+
+    # ------------------------------------------------------------------ #
+    # C1 回归（2026-10-01 终审修复）：role==SPACER 判定优先于名字子串
+    # ------------------------------------------------------------------ #
+    @staticmethod
+    def _synthetic_spacer() -> FluidSpec:
+        """2D 合成等效隔离液（annulus_d2dga._composite_spacer_fluid 同型）。
+
+        名字含子串「先导浆」+ role=SPACER + ρ≈1.82（域外）——修复前名字子串
+        先于 role 判定 ⇒ 误落泥浆式（τy≈10.98、T 被误 clamp [40,80]）。
+        """
+        return FluidSpec(
+            name="先导浆+隔离液1+隔离液2", role=FluidRole.SPACER,
+            density_kg_m3=1820.0, rheology_model=RheologyModel.BINGHAM,
+            plastic_viscosity_pa_s=0.05, yield_stress_pa=8.0,
+        )
+
+    def test_c1_synthetic_spacer_routes_to_spacer_family(self):
+        """合成相（名含「先导浆」、role=SPACER）→ 隔离液族 + borrow 审计。
+
+        路由必须 role==SPACER 优先于名字子串：ρ=1.82 域外就近借 1.95 式，
+        与隔离液族参照逐位同值；不得出现 model_assumption 泥浆式标注、
+        也不得有泥浆域 clamp（[40,80]）事件。
+        """
+        f = self._synthetic_spacer()
+        assert _route(f) == ("spacer", None)
+
+        out = fluid_at(f, 60.0)                       # P 缺省=0.1（p_default 审计）
+        ref = fluid_at(_spacer("参照", 1.95), 60.0, 0.1)
+        assert out.yield_stress_pa == ref.yield_stress_pa
+        assert out.plastic_viscosity_pa_s == ref.plastic_viscosity_pa_s
+        # 与泥浆式（同 T）必须不同值——修复前两者相等即为缺陷
+        assert out.yield_stress_pa != fluid_at(_mud(), 60.0).yield_stress_pa
+
+        events = get_audit()
+        assert any(e["kind"] == "borrow" and e["fluid"] == f.name for e in events)
+        assert not any(
+            e["kind"] == "model_assumption" and e["fluid"] == f.name for e in events
+        )
+        assert not any(
+            e["kind"] == "clamp" and e["fluid"] == f.name for e in events
+        )
+
+    def test_c1_standalone_lead_mud_still_mud_family(self):
+        """单独「先导浆」(role=WASH) 仍走泥浆式——子串档只对非 SPACER 生效。"""
+        f = FluidSpec(
+            name="先导浆", role=FluidRole.WASH, density_kg_m3=1750.0,
+            rheology_model=RheologyModel.BINGHAM,
+            plastic_viscosity_pa_s=0.058, yield_stress_pa=9.8,
+        )
+        assert _route(f) == ("mud", "model_assumption")
+        out = fluid_at(f, 60.0)
+        mud = fluid_at(_mud(), 60.0)
+        assert out.yield_stress_pa == mud.yield_stress_pa
+        assert out.plastic_viscosity_pa_s == mud.plastic_viscosity_pa_s
+        assert any(
+            e["kind"] == "model_assumption" and e["fluid"] == "先导浆"
+            for e in get_audit()
+        )
 
     def test_row_cement_B_band(self):
         """领/尾/中间浆 ρ∈[1.88,1.92] → cement_B_1p9（以 B 锚点证明路由）。"""

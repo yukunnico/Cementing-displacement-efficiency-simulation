@@ -141,6 +141,8 @@ def _mud_tauy(T: float) -> float:
 # 行2「先导浆、平衡液」按**名字子串**匹配（不全等）：覆盖真实井况别名
 # hu1「平衡液(先导泥浆)」（role=WASH，2026-08-29 由旧名"冲洗液"更名）。
 # 子串刻意取窄（「先导浆」「平衡液」），不误伤替浆链/隔离液等其他相。
+# ⚠️ 子串判定只对**非 SPACER** role 生效——role==SPACER（含 2D 合成相
+# "先导浆+隔离液1+隔离液2"）优先走隔离液族（C1，见 _route docstring）。
 _ASSUMPTION_NAME_PARTS = ("先导浆", "平衡液")
 _CHAIN_NAMES = frozenset({"压塞液"})                  # 替浆链：其余由 role=DISPLACEMENT 覆盖
 
@@ -154,7 +156,14 @@ _NO_REPLACE_DETAIL = {
 def _route(fluid: FluidSpec) -> tuple[str, Optional[str]]:
     """按分派表返回 (族, 附注)。族 ∈ no_replace / mud / spacer / cement。
 
-    路由优先级裁定（review 修复）：**行2 名字命中优先于 role==MUD**——
+    路由优先级裁定（2026-10-01 终审 C1 修复）：
+    - **行4/5 `role==SPACER` 优先于行2 名字子串**——2D 合成等效隔离液
+      （`annulus_d2dga._composite_spacer_fluid`，名="先导浆+隔离液1+隔离液2"、
+      role=SPACER、ρ≈1.82 域外）名字含「先导浆」子串，若子串先判会误落泥浆式
+      （τy 差 ~2.2×、T 被误 clamp 到 [40,80]，Q2b 隔离液式在 2D 生产路径失效）；
+      凡 role=SPACER 一律走隔离液族（密度档→1.95/2.05/插值/域外就近借+审计）；
+    - 行2 名字子串「先导浆/平衡液」只对**非 SPACER** role 生效：单独先导浆
+      （role=WASH）、平衡液（role=WASH/MUD）照旧泥浆式+model_assumption；
     - hu103「平衡液」role=MUD（轻泥浆，20313.doc）：仍按行2 带 model_assumption
       标注（公式同为钻井液式，差异仅在审计标注；role 不吞掉名字档）；
     - 行1「钻井液」（role=MUD，八井通用）名字不含行2 子串 → 无标注；
@@ -164,14 +173,14 @@ def _route(fluid: FluidSpec) -> tuple[str, Optional[str]]:
     role = fluid.role
     if role == FluidRole.FLUSHER or "冲洗" in name:
         return "no_replace", "flusher"
+    if role == FluidRole.SPACER:
+        return "spacer", None                  # 行4/5：role 优先于名字子串（C1）
     if any(part in name for part in _ASSUMPTION_NAME_PARTS):
-        return "mud", "model_assumption"        # 行2：先导浆、平衡液（含别名）
+        return "mud", "model_assumption"        # 行2：先导浆、平衡液（含别名，非 SPACER）
     if role == FluidRole.MUD or name == "钻井液":
         return "mud", None                      # 行1：八井通用，无标注
     if role == FluidRole.DISPLACEMENT or name in _CHAIN_NAMES:
         return "no_replace", "displacement_chain"  # 压塞液/替钻井液/井浆/基液/保护液…
-    if role == FluidRole.SPACER:
-        return "spacer", None
     if role in (FluidRole.LEAD, FluidRole.TAIL, FluidRole.INTERMEDIATE):
         return "cement", None                   # 中间浆并入水泥档（补裁③）
     return "no_replace", "unmatched"
