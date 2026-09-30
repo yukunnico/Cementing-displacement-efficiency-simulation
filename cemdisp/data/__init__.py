@@ -7,6 +7,7 @@ cemdisp.data - 标准输入数据结构模块
 - PumpingSchedule: 地面泵注施工程序（注入步骤时序）
 - ValidationData: 与单井相关的现场校验资料路径（CBL报告、施工记录等）
 - ConstantTemperatureField / TableTemperatureField: 温度场查询（温压耦合 T(md, t)）
+- fluid_at / get_audit: 温变流变公式层（绝对替换派生器 fluid_at(T, P) + 审计）
 
 这些数据结构采用 frozen dataclass 形式，确保数据不可变性和合法性校验。
 所有数据均不硬编码单井具体数值，便于多井复用。
@@ -22,6 +23,7 @@ from cemdisp.data.provenance import (
     format_injected_fluid_provenance_markdown,
 )
 from cemdisp.data.pumping_schedule import PumpingSchedule, PumpingScheduleStep
+from cemdisp.data.rheology_vs_temperature import fluid_at, get_audit, reset_audit
 from cemdisp.data.temperature_field import (
     ClampEvent,
     ConstantTemperatureField,
@@ -49,6 +51,9 @@ __all__ = [
     "WellSpec",
     "WELL_PROVENANCE",
     "build_injected_fluid_provenance_summary",
+    "fluid_at",
     "format_injected_fluid_provenance_markdown",
+    "get_audit",
     "load_delivered_pair",
+    "reset_audit",
 ]
