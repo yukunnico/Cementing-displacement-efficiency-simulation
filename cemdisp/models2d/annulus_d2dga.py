@@ -36,13 +36,23 @@ Zhang & Frigaard (2022)（JFM 947 A32）源模型重构完成（2026-09-14/15，
    ``cement_tau_y_by_role`` 显式给值）。双开关默认全关 ⇒ 逐位 = HEAD。
    Phase A 边界：只改质量流动度 I₁/I₂，通量函数 q₀ 仍走牛顿闭式（见
    ``docs/源模型口径与适用域声明.md`` §2.5）。
+9. 温变流变总开关（T1-1，2026-10-01 温压耦合 Task 6，opt-in）：
+   ``enable_temperature_rheology=True`` 时，四相在 `run()` 构造层经
+   ``fluid_at``（`cemdisp.data.rheology_vs_temperature`）按恒温场
+   ``ConstantTemperatureField(temperature_rheology_t_c)`` **绝对替换**派生
+   （有公式的相切 Bingham：τy→``yield_stress_pa``、μp→``plastic_viscosity_pa_s``）；
+   ``fluid_at`` 审计计数进 summary ``temperature_rheology_audit`` 与
+   ``[D2DGA]`` 日志行。默认关 ⇒ 逐位 = HEAD；逐步刷新 geom["T"]（表格场）、
+   props 合并、屈服门、HB memo 是 Task 7 的事，本模块不越界。
 
 出口边界条件：
 - 开放出口（open_outlet=True，默认）：允许水泥浆流出求解域到重叠段，适用于只模拟裸眼段；
 - 封闭出口（open_outlet=False）：按累计入环空体积限制场量，适用于模拟整个环空。
 
 注意：
-- 本模块不再把泥饼、温度、凝胶强度、湍流修正等工程扩展项作为核心求解的一部分；
+- 本模块不再把泥饼、温度、凝胶强度、湍流修正等工程扩展项作为核心求解的一部分
+  （温变流变自 T1-1 起以 opt-in 开关 ``enable_temperature_rheology`` 可选接入，
+  默认关=本条不变；见下文口径 9）；
 - 为兼顾下游脚本兼容性，旧参数与旧快照字段仍保留接口或占位输出，但不再影响求解结果。
 """
 
@@ -58,6 +68,12 @@ from numpy.typing import NDArray
 import pandas as pd
 
 from cemdisp.data.fluid_spec import FluidRole, FluidSpec, RheologyModel
+from cemdisp.data.rheology_vs_temperature import (
+    fluid_at,
+    get_audit as get_rheo_audit,
+    reset_audit as reset_rheo_audit,
+)
+from cemdisp.data.temperature_field import ConstantTemperatureField
 from cemdisp.data.well_spec import DepthValuePoint, WellSpec
 from cemdisp.diagnostics.displacement_metrics import _narrow_quarter_efficiency
 from cemdisp.models2d import buoyancy
@@ -184,6 +200,10 @@ _SWITCH_DEFAULTS: Dict[str, bool] = {
     "enable_d2dga_i3_flux": True,
     "enable_local_i3": False,
     "enable_hb_closure": False,
+    # T1-1（2026-10-01 温压耦合 Task 6）：温变流变总开关，默认关（关 ⇒ 逐位=HEAD）。
+    # 消费点在 `run()` 构造层（fluid_at 派生四相），两条速度场路径均消费 ⇒ 不进
+    # `_dead_switches` 任何判定分支（与 enable_banded_solve 同理：路径无关的活开关）。
+    "enable_temperature_rheology": False,
 }
 # 旧代数路径专属开关：仅在 enable_stream_function=False 时被消费。
 _OLD_PATH_ONLY_SWITCHES = (
@@ -415,6 +435,10 @@ class AnnulusD2DGASolver:
         enable_hb_closure: bool = _SWITCH_DEFAULTS["enable_hb_closure"],
         hb_fix_cement_tau_y: bool = False,
         cement_tau_y_by_role: Mapping[str, float] | None = None,
+        # T1-1（2026-10-01 温压耦合 Task 6）：温变流变总开关 + 构造层恒温
+        # （开关默认关 ⇒ 逐位=HEAD；逐步温度场是 Task 7 的事）。
+        enable_temperature_rheology: bool = _SWITCH_DEFAULTS["enable_temperature_rheology"],
+        temperature_rheology_t_c: float = 60.0,
     ) -> None:
         """初始化环空二维求解器参数。
 
@@ -528,6 +552,21 @@ class AnnulusD2DGASolver:
                 Bingham-LS 截距 = 逐相读 ``CEMENT_YIELD_STRESS[well][phase]
                 .fitted_bingham_ls_intercept_pa``。``hb_fix_cement_tau_y=False`` 时
                 提供本映射不消费（构造告警）。
+            enable_temperature_rheology: T1-1 温变流变总开关（2026-10-01 温压耦合
+                Task 6），默认 False（关 ⇒ 逐位 = HEAD，全测试绿）。
+                True 时 `run()` 在四相（mud/lead/tail/spacer，含复合隔离液）进入
+                求解前经 `cemdisp.data.rheology_vs_temperature.fluid_at` 按恒温场
+                **绝对替换**派生：有公式的相切 Bingham（τy→``yield_stress_pa``、
+                μp→``plastic_viscosity_pa_s``，幂律参数清空）；原 FluidSpec 不被
+                就地修改（`dataclasses.replace`）。派生流体经
+                ``self._temp_rheo_fluids`` 暴露，`fluid_at` 审计计数进 summary
+                ``temperature_rheology_audit`` 与 ``[D2DGA]`` 日志行。
+                ⚠️ 本任务只做开关门与构造层接线：geom["T"] 每步刷新（表格场
+                TableTemperatureField）、props 合并、屈服门、HB memo key 是
+                Task 7 的事，HB 屈服/推导逻辑零改动。
+            temperature_rheology_t_c: 构造层恒温温度（°C），默认 60.0。
+                仅 ``enable_temperature_rheology=True`` 时被消费（关时不读、
+                不构造温度场）；表格场按 (md, t) 逐步查询的接入随 Task 7。
         """
         # ⚠️ 2026-09-15 Task 10 弃用检查：e_clip 三形参任一偏离 legacy 默认
         # （0.55/0.90/True）即一次性弃用警告。e_clip 硬截断已移除，e = 1−standoff
@@ -634,6 +673,13 @@ class AnnulusD2DGASolver:
             self.cement_tau_y_by_role: Dict[str, float | str] | None = normalized
         else:
             self.cement_tau_y_by_role = None
+        # ------------------------------------------------------------------ #
+        # T1-1（2026-10-01 温压耦合 Task 6）：温变流变总开关。消费点在 `run()`
+        # 构造层（四相 fluid_at 派生，见 run() 内 `if self.enable_temperature_rheology`
+        # 块）；HB 屈服门/HB memo/推导代码零改动（Task 7 的手术面）。
+        # ------------------------------------------------------------------ #
+        self.enable_temperature_rheology: bool = enable_temperature_rheology
+        self.temperature_rheology_t_c: float = float(temperature_rheology_t_c)
         # 运行时状态（每 run 重置；见 run() 开头）
         self._active_well_name: str = ""
         self._hb_tau_y_skips: list[str] = []
@@ -2162,6 +2208,46 @@ class AnnulusD2DGASolver:
         if len(_wash_spacer_fluids) > 1:
             _ws_weights = self._wash_spacer_volume_weights(_wash_spacer_fluids, schedule)
             spacer_fluid = self._composite_spacer_fluid(_wash_spacer_fluids, _ws_weights)
+        # ------------------------------------------------------------------ #
+        # T1-1（2026-10-01 温压耦合 Task 6）：温变流变**构造层**接线——四相在进入
+        # 求解前经 fluid_at 绝对替换派生（关 ⇒ 整块不执行，数值路径与 HEAD 逐位一致）。
+        # 温度来源本任务用恒温场（表格场 TableTemperatureField 逐步接入是 Task 7）；
+        # geom["T"] 每步刷新、props 合并、屈服门、HB memo key 均不在本任务范围。
+        # ------------------------------------------------------------------ #
+        if self.enable_temperature_rheology:
+            reset_rheo_audit()
+            # 恒温场任意 (md, t) 同值；取域顶作代表查询点（Task 7 换表格场时
+            # 改为逐步 T(md, t) 并在此处派生出的流体外另设每步刷新）。
+            _temp_field = ConstantTemperatureField(self.temperature_rheology_t_c)
+            t_c = _temp_field.T(well_spec.top_md_m, 0.0)
+            _derived: Dict[str, FluidSpec] = {}
+            if mud_fluid is not None:
+                mud_fluid = fluid_at(mud_fluid, t_c)
+                _derived["mud"] = mud_fluid
+            if lead_fluid is not None:
+                lead_fluid = fluid_at(lead_fluid, t_c)
+                _derived["lead"] = lead_fluid
+            if tail_fluid is not None:
+                tail_fluid = fluid_at(tail_fluid, t_c)
+                _derived["tail"] = tail_fluid
+            if spacer_fluid is not None:
+                spacer_fluid = fluid_at(spacer_fluid, t_c)
+                _derived["spacer"] = spacer_fluid
+            # 诊断暴露：派生后的四相（rerun/报告/契约测试读取）；审计按 run 重置
+            self._temp_rheo_fluids = _derived
+            _counts: Dict[str, int] = {}
+            for _ev in get_rheo_audit():
+                _kind = str(_ev.get("kind", "unknown"))
+                _counts[_kind] = _counts.get(_kind, 0) + 1
+            self._temp_rheo_audit_counts = _counts
+            _count_line = " ".join(f"{k}={v}" for k, v in sorted(_counts.items())) or "无"
+            print(f"[D2DGA] 温变流变构造层派生 T={t_c:.1f}°C"
+                  f"（enable_temperature_rheology=True）审计: {_count_line}")
+        elif hasattr(self, "_temp_rheo_fluids"):
+            # 复用同一实例先开后关：清除上一次开 run 的暴露面，关=零痕迹
+            # （首次关时本分支不进，纯 hasattr 探测，无数值影响）。
+            del self._temp_rheo_fluids
+            del self._temp_rheo_audit_counts
         # 诊断暴露：最近一次 run 实际使用的等效隔离液（rerun/报告脚本读取）
         self._active_spacer_fluid = spacer_fluid
         geom = self._build_geom(well_spec)
@@ -2535,6 +2621,12 @@ class AnnulusD2DGASolver:
             "mixing_index": mix_idx,
             "buoyancy_number": b_number,
         }
+        # T1-1 审计接线（最小）：fluid_at 的 clamp/borrow/no_replace/p_default 等
+        # 计数进摘要（仅开关开时追加键 ⇒ 关时 summary 与 HEAD 逐键一致）。
+        if self.enable_temperature_rheology:
+            summary["temperature_rheology_audit"] = dict(
+                getattr(self, "_temp_rheo_audit_counts", {})
+            )
         result = AnnulusSimulationResult(
             well_name=well_spec.well_name,
             geom=geom,
