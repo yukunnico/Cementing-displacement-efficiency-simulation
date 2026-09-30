@@ -226,6 +226,47 @@ class TestDispatchTable:
             for e in get_audit()
         )
 
+    def test_row_hu1_balance_alias(self):
+        """hu1「平衡液(先导泥浆)」(role=WASH) → 钻井液式 + model_assumption。
+
+        review Important：全等匹配漏掉该别名会落 unmatched 不替换；
+        改子串匹配后必须命中行2（回归用例）。
+        """
+        f = FluidSpec(
+            name="平衡液(先导泥浆)", role=FluidRole.WASH, density_kg_m3=1100.0,
+            rheology_model=RheologyModel.BINGHAM,
+            plastic_viscosity_pa_s=0.02, yield_stress_pa=3.0,
+        )
+        out = fluid_at(f, 60.0)
+        mud = fluid_at(_mud(), 60.0)
+        assert out.yield_stress_pa == mud.yield_stress_pa
+        assert out.plastic_viscosity_pa_s == mud.plastic_viscosity_pa_s
+        assert out.rheology_model is RheologyModel.BINGHAM
+        assert any(
+            e["kind"] == "model_assumption" and e["fluid"] == "平衡液(先导泥浆)"
+            for e in get_audit()
+        )
+        assert not any(e["kind"] == "no_replace" for e in get_audit())
+
+    def test_row_hu103_balance_mud_role_still_assumption(self):
+        """hu103「平衡液」role=MUD → 名字档优先于 role（review minor② 裁定）。
+
+        公式同为钻井液式，差异仅在审计标注：必须带 model_assumption。
+        """
+        f = FluidSpec(
+            name="平衡液", role=FluidRole.MUD, density_kg_m3=1050.0,
+            rheology_model=RheologyModel.BINGHAM,
+            plastic_viscosity_pa_s=0.02, yield_stress_pa=2.0,
+        )
+        out = fluid_at(f, 60.0)
+        mud = fluid_at(_mud(), 60.0)
+        assert out.yield_stress_pa == mud.yield_stress_pa
+        assert out.plastic_viscosity_pa_s == mud.plastic_viscosity_pa_s
+        assert any(
+            e["kind"] == "model_assumption" and e["fluid"] == "平衡液"
+            for e in get_audit()
+        )
+
     @pytest.mark.parametrize(
         "name,role",
         [
@@ -274,10 +315,12 @@ class TestDispatchTable:
         # 系数不外推：借用=与端点完全同一式
         assert out.yield_stress_pa == ref.yield_stress_pa
         assert out.plastic_viscosity_pa_s == ref.plastic_viscosity_pa_s
-        assert any(
-            e["kind"] == "borrow" and e["fluid"] == name
-            for e in get_audit()
-        )
+        borrow_events = [
+            e for e in get_audit()
+            if e["kind"] == "borrow" and e["fluid"] == name
+        ]
+        assert borrow_events, "缺 borrow 审计事件"
+        assert borrow_events[0].get("note") == "model_assumption"
 
     def test_row_cement_B_band(self):
         """领/尾/中间浆 ρ∈[1.88,1.92] → cement_B_1p9（以 B 锚点证明路由）。"""

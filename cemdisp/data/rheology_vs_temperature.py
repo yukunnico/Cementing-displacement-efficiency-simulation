@@ -21,12 +21,13 @@
 术语：τ₀≡τy≡YP≡``yield_stress_pa``。
 
 越界一律 clamp 到域端值+审计；``get_audit()`` 查 clamp/借用/不替换等事件，
-``reset_audit()`` 清空。
+``reset_audit()`` 清空。审计列表定长 10000（超限丢最旧），接线后按步清空。
 """
 
 from __future__ import annotations
 
 import math
+from collections import deque
 from dataclasses import replace
 from typing import Optional
 
@@ -37,12 +38,16 @@ __all__ = ["fluid_at", "get_audit", "reset_audit"]
 # ---------------------------------------------------------------------------
 # 审计（模块级；fluid_at 为自由函数，同型于 temperature_field 的实例审计）
 # ---------------------------------------------------------------------------
-_AUDIT: list[dict] = []
+_AUDIT_MAX = 10000  # 上限：deque 定长，超限丢最旧（review minor④；接线后按步 reset）
+_AUDIT: deque = deque(maxlen=_AUDIT_MAX)
 
 
 def get_audit() -> list[dict]:
     """返回审计事件列表副本（kind ∈ clamp / borrow / no_replace /
-    model_assumption / extrapolate / p_default）。"""
+    model_assumption / extrapolate / p_default）。
+
+    事件数超上限（10000）时丢弃最旧、保留最新（deque 定长，内存有界）。
+    """
     return list(_AUDIT)
 
 
@@ -133,7 +138,10 @@ def _mud_tauy(T: float) -> float:
 # ---------------------------------------------------------------------------
 # 分派表（裁定定稿，含 2026-09-30 补裁）
 # ---------------------------------------------------------------------------
-_ASSUMPTION_NAMES = frozenset({"先导浆", "平衡液"})   # 钻井液式 + model_assumption
+# 行2「先导浆、平衡液」按**名字子串**匹配（不全等）：覆盖真实井况别名
+# hu1「平衡液(先导泥浆)」（role=WASH，2026-08-29 由旧名"冲洗液"更名）。
+# 子串刻意取窄（「先导浆」「平衡液」），不误伤替浆链/隔离液等其他相。
+_ASSUMPTION_NAME_PARTS = ("先导浆", "平衡液")
 _CHAIN_NAMES = frozenset({"压塞液"})                  # 替浆链：其余由 role=DISPLACEMENT 覆盖
 
 _NO_REPLACE_DETAIL = {
@@ -144,15 +152,22 @@ _NO_REPLACE_DETAIL = {
 
 
 def _route(fluid: FluidSpec) -> tuple[str, Optional[str]]:
-    """按分派表返回 (族, 附注)。族 ∈ no_replace / mud / spacer / cement。"""
+    """按分派表返回 (族, 附注)。族 ∈ no_replace / mud / spacer / cement。
+
+    路由优先级裁定（review 修复）：**行2 名字命中优先于 role==MUD**——
+    - hu103「平衡液」role=MUD（轻泥浆，20313.doc）：仍按行2 带 model_assumption
+      标注（公式同为钻井液式，差异仅在审计标注；role 不吞掉名字档）；
+    - 行1「钻井液」（role=MUD，八井通用）名字不含行2 子串 → 无标注；
+    - 其余 role=MUD 相同理：名字无「先导浆/平衡液」即按行1 无标注。
+    """
     name = fluid.name
     role = fluid.role
     if role == FluidRole.FLUSHER or "冲洗" in name:
         return "no_replace", "flusher"
+    if any(part in name for part in _ASSUMPTION_NAME_PARTS):
+        return "mud", "model_assumption"        # 行2：先导浆、平衡液（含别名）
     if role == FluidRole.MUD or name == "钻井液":
-        return "mud", None                      # 八井通用，无标注
-    if name in _ASSUMPTION_NAMES:
-        return "mud", "model_assumption"        # 先导浆、平衡液
+        return "mud", None                      # 行1：八井通用，无标注
     if role == FluidRole.DISPLACEMENT or name in _CHAIN_NAMES:
         return "no_replace", "displacement_chain"  # 压塞液/替钻井液/井浆/基液/保护液…
     if role == FluidRole.SPACER:
