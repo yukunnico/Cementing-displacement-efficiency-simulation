@@ -45,6 +45,9 @@ T2 温压敏感性扩展（2026-10-01，T2-1a 装配面）
 - ``run_variant(loader, well_fn, fluid_fn, sched_fn, run_opts, well_key="")``
   按 run_opts 决定温度开关/温度档/屈服门，并返回 **(summary, extra_metrics)**
   ——summary 原样（一个键都不加，保 T-off 字节逐位），判别量走敏感性层新表。
+- 2026-10-01（T2 时程观察层）：内核抽出为
+  ``run_variant_res(...) -> (res, cr, schedule2, extra)``，``run_variant`` 改为其
+  薄壳（数值路径逐行不变，供过程观察层取时程快照与鞋口事件时刻）。
 - 新增 ``build_temperature_fields(well_key, mode)`` / ``extra_metrics(...)``。
   详见 T2 批 scripts/entrypoints/run_sensitivity_temperature_t2_20261001.py。
 
@@ -363,23 +366,26 @@ def extra_metrics(
     return out
 
 
-def run_variant(
+def run_variant_res(
     loader,
     well_fn,
     fluid_fn,
     sched_fn,
     run_opts: dict | None = None,
     well_key: str = "",
-) -> tuple[dict, dict]:
-    """单变体一次完整流水线（1D 重跑 + 环空二维），返回 ``(summary, extra)``。
+):
+    """单变体一次完整流水线（1D 重跑 + 环空二维），返回 ``(res, cr, schedule2, extra)``。
 
-    - ``summary``：``res.summary`` **原样**（一个键都不加 ⇒ T-off 字节逐位红线）
-    - ``extra``：敏感性层判别量（见 :func:`extra_metrics`），另附
-      ``温度场备注``（如「无瞬态表」）——供下游写新 schema 汇总表。
-    - ``run_opts=None`` ⇒ 纯 T-off（温度开关 False、不注入场、屈服门沿用
-      CORRECTED_KW），与本文件 2026-09-16 首版行为逐位一致。
-    - ``well_key`` 供 :func:`build_temperature_fields` 判定 table 档可用性
-      与「无瞬态表」备注；run_opts=None（T-off）时恒不消费。
+    2026-10-01 从 :func:`run_variant` 抽出的内核（**逐行搬移、数值路径零改动**）：
+    过程观察层（T2 时程批）需要 ``res``（snapshots/metrics）与 ``cr``
+    （shoe_timeline 事件时刻），而 :func:`run_variant` 只回 summary/extra。
+
+    返回
+    ----
+    res : AnnulusSimulationResult   二维求解全量结果（含时程快照）
+    cr  : CasingFlowResult          1D 套管解（含 shoe_timeline / cement_end_time_s）
+    schedule2 : PumpingSchedule     本变体变换后的泵序（算泵注 50% 用）
+    extra : dict                    敏感性层判别量（口径同 :func:`extra_metrics`）
     """
     opts = normalize_run_opts(run_opts)
     well, fluids, schedule, _ = loader()
@@ -420,6 +426,31 @@ def run_variant(
 
     extra = extra_metrics(res, res.summary, field_1d, field_2d)
     extra["温度场备注"] = note
+    return res, cr, schedule2, extra
+
+
+def run_variant(
+    loader,
+    well_fn,
+    fluid_fn,
+    sched_fn,
+    run_opts: dict | None = None,
+    well_key: str = "",
+) -> tuple[dict, dict]:
+    """单变体一次完整流水线，返回 ``(summary, extra)``——:func:`run_variant_res` 的薄壳。
+
+    - ``summary``：``res.summary`` **原样**（一个键都不加 ⇒ T-off 字节逐位红线）
+    - ``extra``：敏感性层判别量（见 :func:`extra_metrics`），另附
+      ``温度场备注``（如「无瞬态表」）——供下游写新 schema 汇总表。
+    - ``run_opts=None`` ⇒ 纯 T-off（温度开关 False、不注入场、屈服门沿用
+      CORRECTED_KW），与本文件 2026-09-16 首版行为逐位一致。
+    - ``well_key`` 供 :func:`build_temperature_fields` 判定 table 档可用性
+      与「无瞬态表」备注；run_opts=None（T-off）时恒不消费。
+    - 需要 res/cr/schedule2 的下游（T2 时程批）直接用 :func:`run_variant_res`。
+    """
+    res, _cr, _schedule2, extra = run_variant_res(
+        loader, well_fn, fluid_fn, sched_fn, run_opts, well_key=well_key,
+    )
     return res.summary, extra
 
 
