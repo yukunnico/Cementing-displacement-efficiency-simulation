@@ -17,7 +17,10 @@ import numpy as np
 import pytest
 
 from cemdisp.data.temperature_field import (
+    GEO_GRAD_C_PER_M,
+    GEO_T0_C,
     ConstantTemperatureField,
+    GeothermalTemperatureField,
     TableTemperatureField,
     load_delivered_pair,
 )
@@ -48,6 +51,67 @@ class TestConstantTemperatureField:
     def test_integer_input_still_float(self):
         f = ConstantTemperatureField(T_c=20)
         assert isinstance(f.T(100, 60), float)
+
+
+# ---------------------------------------------------------------------------
+# GeothermalTemperatureField（T2-1a：地温静温剖面，统一式单一真源）
+# ---------------------------------------------------------------------------
+class TestGeothermalTemperatureField:
+    def test_module_constants_are_canonical(self):
+        """模块常量即统一式 T(z)=16.006+1.7598e-2·z（单一真源）。"""
+        assert GEO_T0_C == 16.006
+        assert GEO_GRAD_C_PER_M == 1.7598e-2
+
+    def test_linear_profile_formula(self):
+        f = GeothermalTemperatureField()
+        for md in (0.0, 30.0, 1000.0, 5241.0, 7660.0):
+            assert f.T(md, 0.0) == pytest.approx(16.006 + 1.7598e-2 * md)
+
+    def test_custom_params(self):
+        f = GeothermalTemperatureField(T0_c=20.0, grad_c_per_m=0.03)
+        assert f.T(100.0, 0.0) == pytest.approx(23.0)
+
+    def test_time_invariance(self):
+        """静温与时刻无关：任意 t 查询同值（时间维不消费）。"""
+        f = GeothermalTemperatureField()
+        for md in (0.0, 3000.0, 7660.0):
+            assert f.T(md, 0.0) == f.T(md, 60.0) == f.T(md, 1e9)
+
+    def test_same_interface_as_constant(self):
+        """与 ConstantTemperatureField 完全同型：oob 恒空、reset_audit 空操作。"""
+        f = GeothermalTemperatureField()
+        assert f.oob_count == 0
+        assert f.oob_events == ()
+        assert isinstance(f.T(100, 60), float)  # 整型入参仍出 float
+        f.T(-1.0, -1.0)
+        f.T(1e12, 1e12)
+        assert f.oob_count == 0 and f.oob_events == ()
+        f.reset_audit()  # 空操作不报错
+        assert f.oob_count == 0
+
+    @staticmethod
+    def _load_table_or_skip(tmp_path):
+        """交付表可加载则返回 t_in，不可加载则 skip 并注明（呼应 brief 要求）。"""
+        try:
+            t_in, _t_out = load_delivered_pair(cache_dir=tmp_path)
+        except Exception as exc:  # noqa: BLE001 —— 交付件缺失时跳过而非失败
+            pytest.skip(f"交付温度表不可加载，跳过 col0 对照：{type(exc).__name__}: {exc}")
+        return t_in
+
+    def test_matches_table_col0_within_0_05c(self, tmp_path):
+        """静温线 vs 交付表首列（col0=初始时刻）在抽查深度差 ≤0.05 °C。
+
+        呼应拟合残差 ~0.04 °C（温压耦合改进计划 §1）；表不可加载则 skip。
+        """
+        t_in = self._load_table_or_skip(tmp_path)
+        f = GeothermalTemperatureField()
+        z = t_in.depth_m
+        for row in (0, 50, 100, 166, 250, 332):
+            got = f.T(float(z[row]), 0.0)
+            assert abs(got - float(t_in.table[row, 0])) <= 0.05, (
+                f"行 {row}（z={z[row]:.1f} m）：静温 {got:.4f} vs 表 col0 "
+                f"{t_in.table[row, 0]:.4f} 超出 0.05 °C"
+            )
 
 
 # ---------------------------------------------------------------------------

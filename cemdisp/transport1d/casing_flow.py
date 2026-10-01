@@ -66,7 +66,10 @@ from cemdisp.transport1d.pipe_exit_state import PipeExitState
 from cemdisp.transport1d.shoe_timeline import ShoeEvent, ShoeEventKind, ShoeTimeline
 
 if TYPE_CHECKING:
-    from cemdisp.data.temperature_field import TableTemperatureField  # run() 注解用
+    from cemdisp.data.temperature_field import (  # run() 注解用
+        GeothermalTemperatureField,
+        TableTemperatureField,
+    )
 
 
 @dataclass(frozen=True)
@@ -305,7 +308,7 @@ class CasingFlowSolver:
         well_spec: WellSpec,
         fluids: tuple[FluidSpec, ...],
         schedule: PumpingSchedule,
-        temperature_field: "ConstantTemperatureField | TableTemperatureField | None" = None,
+        temperature_field: "ConstantTemperatureField | GeothermalTemperatureField | TableTemperatureField | None" = None,
     ) -> CasingFlowResult:
         """运行套管内1D前沿追踪。
 

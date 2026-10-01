@@ -102,7 +102,10 @@ from cemdisp.models2d.two_layer import hb_groups, mobility_i1, mobility_i2
 
 if TYPE_CHECKING:  # 仅类型注解，运行时不引入 data.pumping_schedule 依赖
     from cemdisp.data.pumping_schedule import PumpingSchedule
-    from cemdisp.data.temperature_field import TableTemperatureField  # T1-2 注解用
+    from cemdisp.data.temperature_field import (  # T1-2 注解用
+        GeothermalTemperatureField,
+        TableTemperatureField,
+    )
 
 
 Array = NDArray[np.float64]
@@ -2327,7 +2330,7 @@ class AnnulusD2DGASolver:
         fluids: Tuple[FluidSpec, ...],
         inlet_state_provider: Callable[[float], AnnulusInletState],
         schedule: "PumpingSchedule | None" = None,
-        temperature_field: "ConstantTemperatureField | TableTemperatureField | None" = None,
+        temperature_field: "ConstantTemperatureField | GeothermalTemperatureField | TableTemperatureField | None" = None,
     ) -> AnnulusSimulationResult:
         """运行论文口径的环空二维顶替求解。
 

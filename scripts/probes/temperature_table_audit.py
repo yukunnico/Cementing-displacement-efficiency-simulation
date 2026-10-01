@@ -35,6 +35,8 @@ if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
 from cemdisp.data.temperature_field import (  # noqa: E402  (需先插 sys.path)
+    GEO_GRAD_C_PER_M,
+    GEO_T0_C,
     load_delivered_pair,
 )
 
@@ -49,8 +51,10 @@ OUT_DIR = _PROJECT_ROOT / "results" / "温度表审计"
 OUT_PNG = OUT_DIR / "T表审计.png"
 
 # 地温静温拟合线（温压耦合改进计划_2026-09-30 §1 裁定；对温度表 col0 拟合残差 ~0.04°C）
-GEO_A = 16.006          # °C，地表截距
-GEO_B = 1.7598e-2       # °C/m，地温梯度
+# 常量单一真源在 cemdisp.data.temperature_field（GeothermalTemperatureField 同源），
+# 此处仅 import 别名，probe 行为/取值不变。
+GEO_A = GEO_T0_C          # °C，地表截距
+GEO_B = GEO_GRAD_C_PER_M  # °C/m，地温梯度
 
 # 本井电测静温锚点（可选读入；"偏冷 4–16°C" 口径即表 vs 这些锚点）
 ANCHOR_CSV = (

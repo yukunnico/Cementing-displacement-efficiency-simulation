@@ -25,8 +25,11 @@ from cemdisp.data.provenance import (
 from cemdisp.data.pumping_schedule import PumpingSchedule, PumpingScheduleStep
 from cemdisp.data.rheology_vs_temperature import fluid_at, get_audit, reset_audit
 from cemdisp.data.temperature_field import (
+    GEO_GRAD_C_PER_M,
+    GEO_T0_C,
     ClampEvent,
     ConstantTemperatureField,
+    GeothermalTemperatureField,
     TableTemperatureField,
     load_delivered_pair,
 )
@@ -41,6 +44,9 @@ __all__ = [
     "FluidRole",
     "FluidProvenance",
     "FluidSpec",
+    "GEO_GRAD_C_PER_M",
+    "GEO_T0_C",
+    "GeothermalTemperatureField",
     "PumpingSchedule",
     "PumpingScheduleStep",
     "RheologyModel",

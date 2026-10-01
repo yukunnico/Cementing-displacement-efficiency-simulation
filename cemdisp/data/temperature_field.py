@@ -4,6 +4,7 @@
 把交付的 333×200 温度场表封装成 ``T(md_m, t_s)`` 查询对象，供后续求解器每步取温：
 
 - ``ConstantTemperatureField``: 恒温场（关温耦合时的回退默认）
+- ``GeothermalTemperatureField``: 地温静温剖面场 T(z)=T0+grad·z（无瞬态表井的静温档）
 - ``TableTemperatureField``: 表格温度场，双线性插值（深度×时间），越界 clamp + 审计
 - ``load_delivered_pair``: 加载交付的管内/环空两表，并校验井底（最深行）共享同值
 
@@ -33,9 +34,12 @@ import pandas as pd
 
 __all__ = [
     "ConstantTemperatureField",
+    "GeothermalTemperatureField",
     "TableTemperatureField",
     "ClampEvent",
     "load_delivered_pair",
+    "GEO_T0_C",
+    "GEO_GRAD_C_PER_M",
     "EXPECTED_SHAPE",
     "TIME_STEP_S",
     "DEFAULT_T_IN_XLSX",
@@ -95,6 +99,59 @@ class ConstantTemperatureField:
 
     def reset_audit(self) -> None:
         """清空审计（恒温场无审计，保留同型接口）。"""
+
+
+# ---------------------------------------------------------------------------
+# 地温静温剖面（统一式，单一真源）
+# ---------------------------------------------------------------------------
+# 温压耦合改进计划_2026-09-30 §1 裁定：静温剖面统一取线性地温线
+# T(z) = 16.006 + 1.7598e-2·z（°C，z 单位 m）。对呼1-004 交付温度表首列
+# （col0 = 初始时刻）拟合的最大残差 ~0.04–0.05 °C。
+# 呼101/呼103 无瞬态温度表 ⇒ T-on 静温档用本剖面（变体备注打「无瞬态表」）。
+# ⚠️ 本两常量是全仓唯一真源：其它脚本一律 import，不得就地复制字面量。
+GEO_T0_C = 16.006             # °C，地表（z=0）截距
+GEO_GRAD_C_PER_M = 1.7598e-2  # °C/m，地温梯度
+
+
+class GeothermalTemperatureField:
+    """地温静温剖面场：``T(md_m, t_s) = GEO_T0_C + GEO_GRAD_C_PER_M·md_m``（°C）。
+
+    与 :class:`ConstantTemperatureField` **完全同型**的零变查询接口——
+    只消费 ``T(md, t) -> float``（时间维不参与计算，静温与时刻无关），
+    永不越界（``oob_count`` 恒 0、``oob_events`` 恒 ``()``）、``reset_audit()`` 空操作，
+    故可与 Constant / Table 互换注入 ``CasingFlowSolver.run`` / ``AnnulusD2DGASolver.run``。
+
+    默认参数即统一式 ``GEO_T0_C``/``GEO_GRAD_C_PER_M``（模块常量，单一真源）；
+    显式传参仅用于测试与敏感性档位构造。
+    """
+
+    def __init__(
+        self,
+        T0_c: float = GEO_T0_C,
+        grad_c_per_m: float = GEO_GRAD_C_PER_M,
+    ) -> None:
+        self.T0_c = float(T0_c)
+        self.grad_c_per_m = float(grad_c_per_m)
+
+    def T(self, md_m: float, t_s: float) -> float:
+        # t_s 不消费：静温剖面无时间维（与 Constant 同，查询签名保持一致）。
+        return self.T0_c + self.grad_c_per_m * float(md_m)
+
+    @property
+    def oob_count(self) -> int:
+        """越界次数（线性式对任意实数深度有定义，永不越界，恒为 0）。"""
+        return 0
+
+    @property
+    def oob_events(self) -> Tuple[ClampEvent, ...]:
+        return ()
+
+    def reset_audit(self) -> None:
+        """清空审计（静温场无审计，保留同型接口）。"""
+
+    def __repr__(self) -> str:  # pragma: no cover —— 仅调试可读性
+        return (f"GeothermalTemperatureField(T0_c={self.T0_c!r}, "
+                f"grad_c_per_m={self.grad_c_per_m!r})")
 
 
 # ---------------------------------------------------------------------------
