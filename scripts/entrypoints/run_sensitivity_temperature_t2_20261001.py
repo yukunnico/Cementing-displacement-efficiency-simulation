@@ -43,6 +43,13 @@ results/敏感性变体_温压T2_2026-10-01/
         python scripts/entrypoints/run_sensitivity_temperature_t2_20261001.py
     # 子集（冒烟/补跑）：
     #   --well 呼1-004 --variant Ton_const60_rate_x1.0
+
+断点续跑与强制重算
+------------------
+同名 ``*_判别量.json`` 存在且 ``schema_version`` 相符 ⇒ 复用不重跑。
+**改码后须 ``--force`` 或删除 ``*_判别量.json`` 才会重算**（判别量由代码
+公式算出，改码不改档名不会触发重跑，必须显式强制）。``--force`` 时忽略
+已存在 JSON、全部重算并覆盖。
 """
 from __future__ import annotations
 
@@ -91,6 +98,10 @@ WELLS: dict[str, tuple[str, str]] = {
 
 BASELINE_VARIANT = "Toff_zero"
 
+# 判别量 JSON 的 schema 版本（写入每个 *_判别量.json；_load_case 要求版本
+# 相符才复用 ⇒ 缺版本号或不符一律重算，防改码后吃到旧公式产物）
+EXTRA_SCHEMA_VERSION = 2
+
 # 汇总表 schema（列序即写盘序）
 CSV_COLUMNS = [
     "井名", "变体", "温度档", "T开关", "yield_gate", "备注",
@@ -102,7 +113,7 @@ CSV_COLUMNS = [
 ]
 
 # 分解表 schema（脚本层算术，从行数据聚合；差值列以 Δ_ 前缀）
-DECOMP_METRICS = ["η_N", "饥饿份额", "front_narrow_m", "front_wide_m",
+DECOMP_METRICS = ["η_E", "η_N", "饥饿份额", "front_narrow_m", "front_wide_m",
                   "interface_length_ratio", "屈服门活化率_b加权", "屈服门_wall占比"]
 DECOMP_COLUMNS = ["井名", "排量档", "分量", "对照"] + [f"Δ_{m}" for m in DECOMP_METRICS]
 
@@ -208,14 +219,20 @@ def _jsonable(obj):
 
 
 def _load_case(well: str, variant: str) -> tuple[dict, dict] | None:
-    """summary + 判别量 JSON 齐在才视为可复用；缺任一则须重跑。"""
+    """summary + 判别量 JSON 齐在**且 schema_version 相符**才视为可复用。
+
+    缺任一文件、缺 ``schema_version`` 键或版本号不符 ⇒ 返回 None（须重跑）。
+    改码后判别量公式变了但档名没变时，靠 bump :data:`EXTRA_SCHEMA_VERSION`
+    或 ``--force`` / 删除 ``*_判别量.json`` 触发重算。
+    """
     sj, ej = _summary_path(well, variant), _extra_path(well, variant)
     if not (sj.exists() and ej.exists()):
         return None
-    return (
-        json.loads(sj.read_text(encoding="utf-8")),
-        json.loads(ej.read_text(encoding="utf-8")),
-    )
+    summary = json.loads(sj.read_text(encoding="utf-8"))
+    extra = json.loads(ej.read_text(encoding="utf-8"))
+    if extra.get("schema_version") != EXTRA_SCHEMA_VERSION:
+        return None
+    return summary, extra
 
 
 def _baseline_of(well: str) -> dict | None:
@@ -230,11 +247,14 @@ def _baseline_of(well: str) -> dict | None:
     }
 
 
-def _run_or_reuse(well: str, loader, variant: str, transforms, run_opts) -> tuple[
-        dict, dict, object]:
-    """跑（或复用）一个变体，返回 (summary, extra, elapsed_s)。"""
+def _run_or_reuse(well: str, loader, variant: str, transforms, run_opts,
+                  force: bool = False) -> tuple[dict, dict, object]:
+    """跑（或复用）一个变体，返回 (summary, extra, elapsed_s)。
+
+    ``force=True``（CLI ``--force``）⇒ 忽略已存在 JSON，全部重算并覆盖。
+    """
     well_fn, fluid_fn, sched_fn = transforms
-    case = _load_case(well, variant)
+    case = None if force else _load_case(well, variant)
     if case is not None:
         summary, extra = case
         print(f"  [复用] {well} × {variant}", flush=True)
@@ -247,6 +267,7 @@ def _run_or_reuse(well: str, loader, variant: str, transforms, run_opts) -> tupl
     elapsed = round(time.perf_counter() - t0, 1)
     extra = dict(extra)
     extra["耗时_s"] = elapsed
+    extra["schema_version"] = EXTRA_SCHEMA_VERSION
     _summary_path(well, variant).write_text(
         json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8",
     )
@@ -371,7 +392,8 @@ def _decomposition_rows(registry, metrics_by_key) -> list[dict]:
     """同排量两分量：口径差 = Ton_const60 − Toff；温度场效应 = Ton_mode − Ton_const60。
 
     排量 1.0 的 Toff 对照取 ``Toff_zero``（rate_x1.0 与恒等变换逐位同值）。
-    差值列口径：η_N 用 pp（×100），判别量用原单位。
+    差值列口径：η_E / η_N 用 pp（×100），判别量用原单位。
+    const60 分母锚（``a``）缺档时不追加空 Δ 行（``a``/``c`` 任一为 None 即跳过）。
     """
     out: list[dict] = []
 
@@ -385,7 +407,7 @@ def _decomposition_rows(registry, metrics_by_key) -> list[dict]:
         if va is None or vb is None or va == "" or vb == "":
             return ""
         d = float(va) - float(vb)
-        return d * 100.0 if metric == "η_N" else d
+        return d * 100.0 if metric in ("η_E", "η_N") else d
 
     for well, variants in registry.items():
         names = {v[0] for v in variants}
@@ -408,7 +430,7 @@ def _decomposition_rows(registry, metrics_by_key) -> list[dict]:
             for mode in ("static", "table"):
                 name = f"Ton_{mode}_rate_x{rate}"
                 c = _vals(well, name)
-                if c is None:
+                if c is None or a is None:   # const60 缺档 ⇒ 无分母锚，不追加空 Δ 行
                     continue
                 row = {"井名": well, "排量档": rate, "分量": "温度场效应",
                        "对照": f"{name} − {const60}"}
@@ -427,7 +449,7 @@ def _write_decomp_md(rows: list[dict]) -> None:
         "- **口径差** = `Ton_const60 − Toff`（温度开关打开但取常数 60 °C 的净效应）",
         "- **温度场效应** = `Ton_{static,table} − Ton_const60`（真正来自温度场形状的部分）",
         "",
-        "Δ_η_N 单位 pp；其余 Δ 为原单位。",
+        "Δ_η_E、Δ_η_N 单位 pp；其余 Δ 为原单位。",
         "",
         "| " + " | ".join(["井名", "排量档", "分量", "对照"] + metric_cols) + " |",
         "|" + "---|" * (4 + len(metric_cols)),
@@ -447,6 +469,10 @@ def main() -> int:
     ap.add_argument("--well", choices=[*WELLS.keys(), "all"], default="all")
     ap.add_argument("--variant", default=None,
                     help="只跑/只列该变体名（冒烟与补跑用）")
+    ap.add_argument("--force", action="store_true",
+                    help="忽略已存在的 *_结果摘要.json/*_判别量.json，全部重算并"
+                         "覆盖。改码后须 --force 或删除 *_判别量.json 才会重算"
+                         "（判别量按代码公式算出，改码不改档名不会自动触发）")
     args = ap.parse_args()
 
     registry = build_temperature_variants()
@@ -470,6 +496,7 @@ def main() -> int:
         for name, well_fn, fluid_fn, sched_fn, run_opts in variants:
             _run_or_reuse(
                 well, loader, name, (well_fn, fluid_fn, sched_fn), run_opts,
+                force=args.force,
             )
 
     # 幂等重建（从全量落盘 JSON 收；子集/断点跑只出已有行）

@@ -39,6 +39,7 @@ import argparse
 import csv
 import importlib
 import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -89,6 +90,23 @@ WELLS: dict[str, dict] = {
 
 def _resolve(pair: tuple[str, str]):
     return getattr(importlib.import_module(pair[0]), pair[1])
+
+
+def _assert_not_frozen(out_dir: Path) -> None:
+    """冻结守卫：目录内已有 ``*_结果摘要.json`` 即视为已跑批冻结、拒绝写入。
+
+    在 main()/phase_zero()/phase_matrix() 等一切可被外部调用的入口**顶部、
+    任何 mkdir/写文件之前**调用。确需重生成请显式设环境变量
+    ``SENS_ALLOW_FROZEN_REGEN=1``（取值恰为 "1" 才放行；未设或其它值一律拒绝）。
+    """
+    if os.environ.get("SENS_ALLOW_FROZEN_REGEN") == "1":
+        return
+    out_dir = Path(out_dir)
+    if out_dir.exists() and any(out_dir.glob("*_结果摘要.json")):
+        raise RuntimeError(
+            f"目录已冻结（已存在 *_结果摘要.json）：{out_dir}\n"
+            "确需重生成请显式设环境变量 SENS_ALLOW_FROZEN_REGEN=1"
+        )
 
 
 def run_variant_runner_chain(loader, stop_fn, well_fn, fluid_fn, sched_fn,
@@ -182,6 +200,7 @@ def _run_one(well_key: str, loader, stop_fn, tag: str,
 
 def phase_zero(well_keys: list[str]) -> None:
     """zero 变体 + 权威验收对照（呼101/呼1-004 须 ≤0.05pp；呼103 仅归因报告）。"""
+    _assert_not_frozen(OUT_DIR)   # 入口顶部，早于任何 mkdir/写文件
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     rows = []
     for wk in well_keys:
@@ -228,6 +247,7 @@ def phase_zero(well_keys: list[str]) -> None:
 
 def phase_matrix(well_keys: list[str]) -> None:
     """19 变体（依赖 zero 已存在）；结束后从全部落盘 JSON 幂等重建合并汇总表。"""
+    _assert_not_frozen(OUT_DIR)   # 入口顶部，早于任何落盘 JSON 复用/重算与汇总写盘
     variants = build_variants()
     for wk in well_keys:
         cfg = WELLS[wk]
@@ -292,6 +312,7 @@ def main() -> None:
     ap.add_argument("--phase", choices=["zero", "matrix"], required=True)
     ap.add_argument("--well", choices=[*WELLS.keys(), "all"], default="all")
     args = ap.parse_args()
+    _assert_not_frozen(OUT_DIR)   # main() 顶部，早于任何 mkdir/写文件
     well_keys = list(WELLS) if args.well == "all" else [args.well]
     if args.phase == "zero":
         phase_zero(well_keys)

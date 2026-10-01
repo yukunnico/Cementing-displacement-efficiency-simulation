@@ -196,7 +196,7 @@ TABLE_WELLS = frozenset({"呼1-004"})
 
 
 def normalize_run_opts(run_opts: dict | None) -> dict:
-    """补默认 + 校验 run_opts（未知键/非法温度档响亮报错）。"""
+    """补默认 + 校验 run_opts（未知键/非法温度档/开关与档位双向矛盾响亮报错）。"""
     opts: dict = {
         "enable_temperature_rheology": False,
         "temperature_mode": "off",
@@ -215,6 +215,15 @@ def normalize_run_opts(run_opts: dict | None) -> dict:
         raise ValueError(
             f"temperature_mode={mode!r} 但 enable_temperature_rheology=False："
             "温度档不会被消费，请改为 True 或把 mode 设为 'off'"
+        )
+    if mode == "off" and opts["enable_temperature_rheology"]:
+        # 反向陷阱：标注 off 却打开 T 开关 ⇒ 场不注入，solver 构造层
+        # temperature_rheology_t_c=60 回退恒温场（实跑 60 °C 温变流变），
+        # 而汇总表会写 温度档=off / T开关=on 的矛盾标签（标签失真）
+        raise ValueError(
+            f"temperature_mode='off' 但 enable_temperature_rheology="
+            f"{opts['enable_temperature_rheology']!r}：标注 off 实跑会回退 "
+            "60 °C 恒温场（标签失真），请改 mode 或把开关设为 False"
         )
     yg = opts["enable_yield_gate"]
     if yg is not None and not isinstance(yg, bool):

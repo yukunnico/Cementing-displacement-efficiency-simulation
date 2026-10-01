@@ -26,13 +26,17 @@
     PYTHONIOENCODING=utf-8 PYTHONUTF8=1 conda run --no-capture-output -n shenjingwangluo \
         python scripts/entrypoints/run_sensitivity_ht1_004_20260927.py
 
-断点续跑：同名变体 JSON 已存在则复用（与 09-16 脚本同语义，新目录内安全）。
+断点续跑：同名变体 JSON 已存在则复用（与 09-16 脚本同语义）。
+⚠️ **本批目录已冻结**（2026-10-01 起）：main() 顶部有内容守卫，目录内已有
+``*_结果摘要.json`` 即 RuntimeError 拒跑；确需重生成请显式设
+``SENS_ALLOW_FROZEN_REGEN=1``（见 :func:`_assert_not_frozen`）。
 """
 from __future__ import annotations
 
 import csv
 import importlib
 import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -58,6 +62,23 @@ OUT_DIR = PROJECT_ROOT / "results" / "敏感性变体_呼1-004_2026-09-27"
 _OLD_DIR = PROJECT_ROOT / "results" / "敏感性变体_当前口径_2026-09-16"
 if _OLD_DIR in OUT_DIR.parents or OUT_DIR == _OLD_DIR:
     raise RuntimeError(f"输出目录防护触发：{OUT_DIR} 不得落在 09-16 既有产物目录内")
+
+
+def _assert_not_frozen(out_dir: Path) -> None:
+    """冻结守卫：目录内已有 ``*_结果摘要.json`` 即视为已跑批冻结、拒绝写入。
+
+    在 main() 等一切可被外部调用的入口**顶部、任何 mkdir/写文件之前**调用。
+    确需重生成请显式设环境变量 ``SENS_ALLOW_FROZEN_REGEN=1``（取值恰为 "1"
+    才放行；未设或其它值一律拒绝）。
+    """
+    if os.environ.get("SENS_ALLOW_FROZEN_REGEN") == "1":
+        return
+    out_dir = Path(out_dir)
+    if out_dir.exists() and any(out_dir.glob("*_结果摘要.json")):
+        raise RuntimeError(
+            f"目录已冻结（已存在 *_结果摘要.json）：{out_dir}\n"
+            "确需重生成请显式设环境变量 SENS_ALLOW_FROZEN_REGEN=1"
+        )
 
 
 def _run_one(loader, tag: str, well_fn, fluid_fn, sched_fn, baseline: dict | None,
@@ -106,6 +127,7 @@ def _run_one(loader, tag: str, well_fn, fluid_fn, sched_fn, baseline: dict | Non
 
 
 def main() -> None:
+    _assert_not_frozen(OUT_DIR)   # 入口顶部，早于任何 mkdir/写文件
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     loader = getattr(importlib.import_module(LOADER_MOD), LOADER_FN)
 
