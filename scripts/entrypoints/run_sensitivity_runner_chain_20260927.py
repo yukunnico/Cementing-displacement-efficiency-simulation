@@ -113,20 +113,39 @@ def _resolve(pair: tuple[str, str]):
     return getattr(importlib.import_module(pair[0]), pair[1])
 
 
+# 冻结目录（红线：零写入）——**显式 --out-dir 亦不得指向**（2026-10-06 加）
+FROZEN_DIRS: tuple[Path, ...] = (OUT_DIR,)
+
+
 def _assert_not_frozen(out_dir: Path) -> None:
     """冻结守卫：目录内已有 ``*_结果摘要.json`` 即视为已跑批冻结、拒绝写入。
 
-    在 main()/phase_zero()/phase_matrix() 等一切可被外部调用的入口**顶部、
-    任何 mkdir/写文件之前**调用。确需重生成请显式设环境变量
+    在 main()/phase_zero()/phase_matrix()/phase_pilot() 等一切可被外部调用的
+    入口**顶部、任何 mkdir/写文件之前**调用。确需重生成请显式设环境变量
     ``SENS_ALLOW_FROZEN_REGEN=1``（取值恰为 "1" 才放行；未设或其它值一律拒绝）。
+
+    **两层语义（2026-10-06 执行窗口修订）**：
+    ① **denylist 无条件生效**——out_dir 命中 :data:`FROZEN_DIRS`（本批冻结目录
+       2026-09-27）一律拒绝，显式 ``--out-dir`` 也不能绕过；
+    ② **内容守卫只对默认目录生效**——不传 ``--out-dir`` 时行为与 2026-09-27 原版
+       完全一致；传了 ``--out-dir`` 即视为「新批次目录」，不设内容守卫。
+       理由：新目录一旦跑过第一口井，其自身产物会触发旧口径的守卫，把**逐井
+       追加 / 断点续跑**整条路堵死（本轮实测：第二口井起全部被拒）。
     """
+    out_dir = Path(out_dir)
+    if out_dir.resolve() in {d.resolve() for d in FROZEN_DIRS}:
+        raise RuntimeError(
+            "目录为冻结目录（红线：零写入）：" + str(out_dir) + chr(10)
+            + "新批次请用 --out-dir 指向新日期目录"
+        )
+    if _ACTIVE_OUT_DIR is not None:
+        return                      # 显式 --out-dir：新批次目录，不做内容守卫
     if os.environ.get("SENS_ALLOW_FROZEN_REGEN") == "1":
         return
-    out_dir = Path(out_dir)
     if out_dir.exists() and any(out_dir.glob("*_结果摘要.json")):
         raise RuntimeError(
-            f"目录已冻结（已存在 *_结果摘要.json）：{out_dir}\n"
-            "确需重生成请显式设环境变量 SENS_ALLOW_FROZEN_REGEN=1"
+            "目录已冻结（已存在 *_结果摘要.json）：" + str(out_dir) + chr(10)
+            + "确需重生成请显式设环境变量 SENS_ALLOW_FROZEN_REGEN=1"
         )
 
 
