@@ -66,6 +66,16 @@ from cemdisp.transport1d import CasingFlowSolver  # noqa: E402
 
 OUT_DIR = PROJECT_ROOT / "results" / "敏感性变体_runner链_2026-09-27"
 
+# 本次运行输出目录覆盖（--out-dir；None ⇒ 用 OUT_DIR，行为与 2026-09-27 原版一致）。
+# 2026-10-06 执行窗口裁定 A 案：0.6 试点必须写**新日期目录**，而本脚本原 OUT_DIR 已冻结
+# （含 60 个 *_结果摘要.json，`_assert_not_frozen` 会拒绝重跑）。
+_ACTIVE_OUT_DIR: Path | None = None
+
+
+def _out_dir() -> Path:
+    """本次运行输出目录：--out-dir 覆盖优先，否则 = OUT_DIR（默认行为不变）。"""
+    return _ACTIVE_OUT_DIR if _ACTIVE_OUT_DIR is not None else OUT_DIR
+
 WELLS: dict[str, dict] = {
     "呼101": {
         "loader": ("cemdisp.data.loaders.hu101_loader", "load_hu101_tailpipe"),
@@ -84,6 +94,17 @@ WELLS: dict[str, dict] = {
         "stop": ("cemdisp.runners.ht1_004_tailpipe", "annulus_stop_time_s"),
         "auth": PROJECT_ROOT / "results" / "呼1-004_1D2D耦合模型" / "呼1-004_1D2D耦合模型_结果摘要.json",
         "auth_current_head": True,
+    },
+    # 2026-10-06 新增重点井。⚠️ 计划 §3 表格写的 auth 路径
+    # "results/呼1-003尾管_1D2D耦合模型/…" 在磁盘上**不存在**（ht 井目录名不带“尾管”）；
+    # 依计划「以磁盘实际文件名为准」修正为下列真实路径。
+    "呼1-003": {
+        "loader": ("cemdisp.data.loaders.ht1_003_loader", "load_ht1_003_tailpipe"),
+        "stop": ("cemdisp.runners.ht1_003_tailpipe", "annulus_stop_time_s"),
+        "auth": PROJECT_ROOT / "results" / "呼1-003_1D2D耦合模型" / "呼1-003_1D2D耦合模型_结果摘要.json",
+        # 该摘要生成于 2026-09-30（早于本轮 HEAD ca8bba7 的 T2 系列提交）⇒
+        # 不作「当前 HEAD」判据，差异仅归因报告（计划 §3 0.6「呼1-003 首建归因报告」）。
+        "auth_current_head": False,
     },
 }
 
@@ -161,7 +182,7 @@ def _final_of(summary_json: Path) -> tuple[float, float]:
 def _run_one(well_key: str, loader, stop_fn, tag: str,
              well_fn, fluid_fn, sched_fn, baseline: dict | None,
              run_opts: dict | None = None) -> dict:
-    case_json = OUT_DIR / f"{well_key}_{tag}_结果摘要.json"
+    case_json = _out_dir() / f"{well_key}_{tag}_结果摘要.json"
     if case_json.exists():                       # 断点续跑（新目录内安全）
         summary = json.loads(case_json.read_text(encoding="utf-8"))
         final, elapsed = summary["最终结果"], None
@@ -200,8 +221,8 @@ def _run_one(well_key: str, loader, stop_fn, tag: str,
 
 def phase_zero(well_keys: list[str]) -> None:
     """zero 变体 + 权威验收对照（呼101/呼1-004 须 ≤0.05pp；呼103 仅归因报告）。"""
-    _assert_not_frozen(OUT_DIR)   # 入口顶部，早于任何 mkdir/写文件
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    _assert_not_frozen(_out_dir())   # 入口顶部，早于任何 mkdir/写文件
+    _out_dir().mkdir(parents=True, exist_ok=True)
     rows = []
     for wk in well_keys:
         cfg = WELLS[wk]
@@ -230,7 +251,7 @@ def phase_zero(well_keys: list[str]) -> None:
             print(f"  ⚠ 权威摘要缺失：{cfg['auth']}", flush=True)
 
     if rows:
-        with (OUT_DIR / "验收_zero对照.csv").open("w", encoding="utf-8-sig", newline="") as fh:
+        with (_out_dir() / "验收_zero对照.csv").open("w", encoding="utf-8-sig", newline="") as fh:
             writer = csv.DictWriter(fh, fieldnames=list(rows[0].keys()))
             writer.writeheader()
             writer.writerows(rows)
@@ -241,17 +262,17 @@ def phase_zero(well_keys: list[str]) -> None:
             md.append(f"| {r['井']} | {r['zeroη_E']:.4f} | {r['zeroη_N']:.4f} "
                       f"| {r['权威η_E']:.4f} | {r['权威η_N']:.4f} "
                       f"| {r['Δη_E_pp']:+.3f} | {r['Δη_N_pp']:+.3f} | {r['判定']} |")
-        (OUT_DIR / "验收_zero对照.md").write_text("\n".join(md), encoding="utf-8")
+        (_out_dir() / "验收_zero对照.md").write_text("\n".join(md), encoding="utf-8")
         print("\n".join(md), flush=True)
 
 
 def phase_matrix(well_keys: list[str]) -> None:
     """19 变体（依赖 zero 已存在）；结束后从全部落盘 JSON 幂等重建合并汇总表。"""
-    _assert_not_frozen(OUT_DIR)   # 入口顶部，早于任何落盘 JSON 复用/重算与汇总写盘
+    _assert_not_frozen(_out_dir())   # 入口顶部，早于任何落盘 JSON 复用/重算与汇总写盘
     variants = build_variants()
     for wk in well_keys:
         cfg = WELLS[wk]
-        zero_json = OUT_DIR / f"{wk}_zero_结果摘要.json"
+        zero_json = _out_dir() / f"{wk}_zero_结果摘要.json"
         if not zero_json.exists():
             raise RuntimeError(f"{wk}: 缺 zero 基线，请先跑 --phase zero")
         z_e, z_n = _final_of(zero_json)
@@ -264,17 +285,109 @@ def phase_matrix(well_keys: list[str]) -> None:
     _rebuild_combined_table()
 
 
+# ---------------------------------------------------------------- D8-A 试点
+# 2026-10-06 执行窗口裁定（计划 §3 0.6 / §1 Q12-D8-A）：只做**镜像脚本试点**；
+# 产品化（改 8 井 runner 构造）等试点结果另裁（§6-8）。本段只跑每井
+# (zero, Ton_static) 一对：zero = T-off 恒等（镜像基线），Ton_static = 温变开启静温档。
+PILOT_TAG_TON = "Ton_static"
+
+
+def _pilot_pairs() -> list[tuple]:
+    """(tag, well_fn, fluid_fn, sched_fn, run_opts) 试点对。"""
+    return [
+        ("zero", _identity, _identity, _identity, None),
+        (PILOT_TAG_TON, _identity, _identity, _identity,
+         {"enable_temperature_rheology": True, "temperature_mode": "static",
+          "enable_yield_gate": None}),
+    ]
+
+
+def phase_pilot(well_keys: list[str]) -> None:
+    """D8-A runner 链 T-on 试点：每井 zero（对照）+ Ton_static（温变）。
+
+    验收（计划 §3 Phase 0.6）：zero 对照呼101 / 呼1-004 权威 ≤0.05pp；
+    呼1-003 首建（权威=2026-09-30 旧产物）⇒ 差异仅归因报告，不判失败。
+    """
+    _assert_not_frozen(_out_dir())
+    _out_dir().mkdir(parents=True, exist_ok=True)
+    for wk in well_keys:
+        cfg = WELLS[wk]
+        loader, stop_fn = _resolve(cfg["loader"]), _resolve(cfg["stop"])
+        print(f"=== {wk} pilot（zero + {PILOT_TAG_TON}）===", flush=True)
+        for tag, well_fn, fluid_fn, sched_fn, run_opts in _pilot_pairs():
+            _run_one(wk, loader, stop_fn, tag, well_fn, fluid_fn,
+                     sched_fn, None, run_opts)
+    # 幂等重建：表格覆盖目录内**已跑过**的全部井（支持逐井追加 / 断点续跑），
+    # 而不是只输出本次 --well 的那一口井。
+    rows = []
+    for wk in [w for w in WELLS
+               if (_out_dir() / f"{w}_zero_结果摘要.json").exists()
+               and (_out_dir() / f"{w}_{PILOT_TAG_TON}_结果摘要.json").exists()]:
+        cfg = WELLS[wk]
+        _ze, _zn = _final_of(_out_dir() / f"{wk}_zero_结果摘要.json")
+        z = {"η_E": _ze, "η_N": _zn}
+        _te, _tn = _final_of(_out_dir() / f"{wk}_{PILOT_TAG_TON}_结果摘要.json")
+        t = {"η_E": _te, "η_N": _tn}
+        auth_e = auth_n = None
+        verdict = "无权威摘要（首建）"
+        if cfg["auth"].exists():
+            auth_e, auth_n = _final_of(cfg["auth"])
+            de, dn = (z["η_E"] - auth_e) * 100.0, (z["η_N"] - auth_n) * 100.0
+            if abs(de) <= 0.05 and abs(dn) <= 0.05:
+                verdict = "PASS(|Δ|≤0.05pp)"
+            elif cfg["auth_current_head"]:
+                verdict = "FAIL(权威=当前HEAD仍超差→镜像失真,停跑排查)"
+            else:
+                verdict = "REPORT(权威非当前HEAD,差异归因)"
+        rows.append({
+            "井": wk,
+            "zeroη_E": z["η_E"], "zeroη_N": z["η_N"],
+            "Ton_staticη_E": t["η_E"], "Ton_staticη_N": t["η_N"],
+            "ΔTon−zero_ηE_pp": (t["η_E"] - z["η_E"]) * 100.0,
+            "ΔTon−zero_ηN_pp": (t["η_N"] - z["η_N"]) * 100.0,
+            "权威η_E": auth_e if auth_e is not None else "",
+            "权威η_N": auth_n if auth_n is not None else "",
+            "zero−权威_ηE_pp": (z["η_E"] - auth_e) * 100.0 if auth_e is not None else "",
+            "zero−权威_ηN_pp": (z["η_N"] - auth_n) * 100.0 if auth_n is not None else "",
+            "判定": verdict,
+        })
+    with (_out_dir() / "试点_runner链_Ton.csv").open(
+        "w", encoding="utf-8-sig", newline=""
+    ) as fh:
+        writer = csv.DictWriter(fh, fieldnames=list(rows[0].keys()))
+        writer.writeheader()
+        writer.writerows(rows)
+    md = ["# runner 链 T-on 试点（D8-A，2026-10-06）", "",
+          "口径：cemdisp/runners/<井>.py 构造的忠实镜像（1D T1 生产开关、F2 停算、"
+          "2D 纯默认 nz=250）；Ton_static = enable_temperature_rheology=True + "
+          "temperature_mode=static（无瞬态表井取静温剖面）。",
+          "⚠️ 本试点按 Phase 0.0 密度「就近取」口径（Q16）执行。", "",
+          "| 井 | zero η_E | zero η_N | Ton_static η_E | Ton_static η_N | "
+          "ΔTon−zero η_N/pp | 权威 η_N | zero−权威 η_N/pp | 判定 |",
+          "|---|---|---|---|---|---|---|---|---|"]
+    for r in rows:
+        ae = f"{r['权威η_N']:.4f}" if r["权威η_N"] != "" else "—"
+        dn = f"{r['zero−权威_ηN_pp']:+.3f}" if r["zero−权威_ηN_pp"] != "" else "—"
+        md.append(
+            f"| {r['井']} | {r['zeroη_E']:.4f} | {r['zeroη_N']:.4f} | "
+            f"{r['Ton_staticη_E']:.4f} | {r['Ton_staticη_N']:.4f} | "
+            f"{r['ΔTon−zero_ηN_pp']:+.3f} | {ae} | {dn} | {r['判定']} |"
+        )
+    (_out_dir() / "试点_runner链_Ton.md").write_text("\n".join(md), encoding="utf-8")
+    print("\n".join(md), flush=True)
+
+
 def _rebuild_combined_table() -> None:
     """从落盘 JSON 幂等重建三井合并汇总（缺档跳过）。"""
     variant_names = ["zero"] + [v[0] for v in build_variants()]
     rows = []
     for wk in WELLS:
-        zero_json = OUT_DIR / f"{wk}_zero_结果摘要.json"
+        zero_json = _out_dir() / f"{wk}_zero_结果摘要.json"
         if not zero_json.exists():
             continue
         z_e, z_n = _final_of(zero_json)
         for tag in variant_names:
-            cj = OUT_DIR / f"{wk}_{tag}_结果摘要.json"
+            cj = _out_dir() / f"{wk}_{tag}_结果摘要.json"
             if not cj.exists():
                 continue
             fr = json.loads(cj.read_text(encoding="utf-8"))["最终结果"]
@@ -289,7 +402,7 @@ def _rebuild_combined_table() -> None:
             })
     if not rows:
         return
-    with (OUT_DIR / "汇总表_敏感性变体_runner链.csv").open("w", encoding="utf-8-sig", newline="") as fh:
+    with (_out_dir() / "汇总表_敏感性变体_runner链.csv").open("w", encoding="utf-8-sig", newline="") as fh:
         writer = csv.DictWriter(fh, fieldnames=list(rows[0].keys()))
         writer.writeheader()
         writer.writerows(rows)
@@ -303,21 +416,32 @@ def _rebuild_combined_table() -> None:
         de = f"{r['Δη_E_pp']:+.2f}" if r["Δη_E_pp"] != "" else "—"
         dn = f"{r['Δη_N_pp']:+.2f}" if r["Δη_N_pp"] != "" else "—"
         md.append(f"| {r['井名']} | {r['变体']} | {r['η_E']:.4f} | {r['η_N']:.4f} | {de} | {dn} |")
-    (OUT_DIR / "汇总表_敏感性变体_runner链.md").write_text("\n".join(md), encoding="utf-8")
-    print(f"\n合并汇总重建完成：{len(rows)} 行 → {OUT_DIR}", flush=True)
+    (_out_dir() / "汇总表_敏感性变体_runner链.md").write_text("\n".join(md), encoding="utf-8")
+    print(f"\n合并汇总重建完成：{len(rows)} 行 → {_out_dir()}", flush=True)
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description="runner 链敏感性三井批（两段式）")
-    ap.add_argument("--phase", choices=["zero", "matrix"], required=True)
+    global _ACTIVE_OUT_DIR
+    ap = argparse.ArgumentParser(
+        description="runner 链敏感性批（zero / matrix / pilot 三段式）"
+    )
+    ap.add_argument("--phase", choices=["zero", "matrix", "pilot"], required=True)
     ap.add_argument("--well", choices=[*WELLS.keys(), "all"], default="all")
+    ap.add_argument("--out-dir", default=None,
+                    help="覆盖输出目录（默认 = OUT_DIR，行为与 2026-09-27 原版"
+                         "一致）。新批次必须指向新日期目录"
+                         "（红线：补跑新目录带日期后缀、禁止覆盖既有产物）")
     args = ap.parse_args()
-    _assert_not_frozen(OUT_DIR)   # main() 顶部，早于任何 mkdir/写文件
+    if args.out_dir:
+        _ACTIVE_OUT_DIR = Path(args.out_dir).resolve()
+    _assert_not_frozen(_out_dir())   # main() 顶部，早于任何 mkdir/写文件
     well_keys = list(WELLS) if args.well == "all" else [args.well]
     if args.phase == "zero":
         phase_zero(well_keys)
-    else:
+    elif args.phase == "matrix":
         phase_matrix(well_keys)
+    else:
+        phase_pilot(well_keys)
 
 
 if __name__ == "__main__":

@@ -29,9 +29,19 @@
   ``Ton_{static,const60}_rate_x{0.6,1.0,1.4}``（6，static 备注「无瞬态表」）；
   ``Ton_static_gateoff_rate_x1.0``；``Ton_static_cement_n_p0.1_rate_x1.0``。
 
+双批次（2026-10-06 执行窗口裁定，用户选 A 案）
+-----------------------------------------------
+--batch t2（默认）：2026-10-01 原 45 变体（呼1-004 23 + 呼101 11 + 呼103 11），
+**逐位不变**——不加 --out-dir 时行为与本脚本 2026-10-01 版完全相同。
+--batch phase0：2026-10-06 三重点井补跑矩阵 54 变体（呼101 14 + 呼1-003 20 +
+呼1-004 20），**必须**配 --out-dir 指向新日期目录（红线：补跑新目录带日期后缀）。
+规格 = docs/superpowers/specs/2026-10-06-phase0-supplementary-runs-design.md。
+呼103 **不入 phase0 批**（2026-10-06 裁定：退出重点井，历史资产照常引用）。
+前置 = Phase 0.0 密度「就近取」口径（Q16，2026-10-06 用户裁定）。
+
 输出
 ----
-results/敏感性变体_温压T2_2026-10-01/
+results/敏感性变体_温压T2_2026-10-01/        （batch=t2 默认）
     {井}_{变体}_结果摘要.json   res.summary 原样（schema 同 09-16 批，一个键不加）
     {井}_{变体}_判别量.json     敏感性层判别量 + 耗时_s（断点续跑据此复用）
     汇总表_温压T2.csv/.md       新 schema 主表
@@ -43,6 +53,8 @@ results/敏感性变体_温压T2_2026-10-01/
         python scripts/entrypoints/run_sensitivity_temperature_t2_20261001.py
     # 子集（冒烟/补跑）：
     #   --well 呼1-004 --variant Ton_const60_rate_x1.0
+    # Phase 0 三重点井补跑批：
+    #   --batch phase0 --out-dir results/敏感性补跑_三重点井_20261006
 
 断点续跑与强制重算
 ------------------
@@ -75,9 +87,37 @@ from entrypoints.run_sensitivity_current_20260916 import (  # noqa: E402
     scale_mud_pv,
     scale_schedule,
     shift_cement_n,
+    shift_spacer_density,
+    shift_standoff,
 )
 
 OUT_DIR = PROJECT_ROOT / "results" / "敏感性变体_温压T2_2026-10-01"
+
+# Phase 0 补跑批输出目录（2026-10-06 执行窗口；红线：补跑新目录带日期后缀）
+PHASE0_DIR = PROJECT_ROOT / "results" / "敏感性补跑_三重点井_20261006"
+
+# 批次定义：out_dir=默认输出目录，table_stem=汇总/分解表文件名主干，title=表头标题。
+# **默认批次 t2 的一切取值与 2026-10-01 原版逐字相同**（关2：默认路径行为不变）。
+BATCHES: dict[str, dict] = {
+    "t2": {
+        "out_dir": OUT_DIR,
+        "table_stem": "温压T2",
+        "title": "T2 温压敏感性",
+        "date": "2026-10-01",
+    },
+    "phase0": {
+        "out_dir": PHASE0_DIR,
+        "table_stem": "三重点井补跑",
+        "title": "三重点井温压补跑",
+        "date": "2026-10-06",
+    },
+}
+
+# 批次变体数期望值（响亮失败，防手滑改坏矩阵；键即井名）
+EXPECTED_VARIANTS: dict[str, dict[str, int]] = {
+    "t2": {"呼1-004": 23, "呼101": 11, "呼103": 11},
+    "phase0": {"呼101": 14, "呼1-003": 20, "呼1-004": 20},
+}
 
 # 三旧敏感性目录（冻结产物，红线：零写入）
 FROZEN_DIRS = (
@@ -94,6 +134,8 @@ WELLS: dict[str, tuple[str, str]] = {
     "呼1-004": ("cemdisp.data.loaders.ht1_004_loader", "load_ht1_004_tailpipe"),
     "呼101": ("cemdisp.data.loaders.hu101_loader", "load_hu101_tailpipe"),
     "呼103": ("cemdisp.data.loaders.hu103_loader", "load_hu103_tailpipe"),
+    # 2026-10-06：新增重点井呼1-003（static 档 only；无瞬态表 ⇒ 备注「无瞬态表」）
+    "呼1-003": ("cemdisp.data.loaders.ht1_003_loader", "load_ht1_003_tailpipe"),
 }
 
 BASELINE_VARIANT = "Toff_zero"
@@ -145,11 +187,93 @@ def _opts(mode: str, *, on: bool = True, yield_gate: bool | None = None) -> dict
     }
 
 
-def build_temperature_variants() -> dict[str, list[tuple]]:
-    """T2 独立注册表：井名 → [(变体名, well_fn, fluid_fn, sched_fn, run_opts), ...]。
+# standoff 9 档（与 09-16 矩阵同名档位，可跨批对照）：±0.05 / ±0.10 / −0.15 / ±0.20 / ±0.30
+#
+# ⚠️ 退化声明（Phase 0 预检发现）：呼1-003 / 呼1-004 的 standoff 剖面恒 0.83，
+# 而 shift_standoff 用 np.clip(v+δ, 0, 1) ⇒ **+0.20 与 +0.30 都被 clip 成 1.0，
+# 两变体剖面指纹完全相同**。本注册表按计划保留完整 9 档以维持三井可比，
+# 但产物/分析必须声明「27 名义格 = 25 个互异剖面」，不得把这两档当独立点。
+STANDOFF_DELTAS: tuple[tuple[str, float], ...] = (
+    ("m0.30", -0.30), ("m0.20", -0.20), ("m0.15", -0.15), ("m0.10", -0.10),
+    ("m0.05", -0.05), ("p0.05", +0.05), ("p0.10", +0.10), ("p0.20", +0.20),
+    ("p0.30", +0.30),
+)
+SPACER_DENS_DELTAS: tuple[tuple[str, float], ...] = (("p100", +100.0), ("m100", -100.0))
 
+
+def _standoff_variants() -> list[tuple]:
+    """standoff 9 档（T-on static × rate1.0），变体名与 09-16 档位一一对应。"""
+    return [
+        (f"Ton_static_standoff_{tag}_rate_x1.0",
+         (lambda w, _d=d: shift_standoff(w, _d)), _identity, _rate(1.0), _opts("static"))
+        for tag, d in STANDOFF_DELTAS
+    ]
+
+
+def _spacer_dens_variants() -> list[tuple]:
+    """隔离液密度 ±100 kg/m³（T-on static × rate1.0）。"""
+    return [
+        (f"Ton_static_spacer_dens_{tag}_rate_x1.0",
+         _identity, (lambda fs, _d=d: shift_spacer_density(fs, _d)), _rate(1.0),
+         _opts("static"))
+        for tag, d in SPACER_DENS_DELTAS
+    ]
+
+
+def _phase0_variants() -> dict[str, list[tuple]]:
+    """Phase 0 三重点井补跑矩阵（2026-10-06 执行窗口裁定）。"
+    """
+    reg: dict[str, list[tuple]] = {}
+
+    # ---- 呼101（14）：判别井；T-on static 主干 + standoff 9 档 + 密度 ±100 ----
+    reg["呼101"] = [
+        ("Toff_zero", _identity, _identity, _identity, _opts("off", on=False)),
+        ("Ton_const60_rate_x1.0", _identity, _identity, _rate(1.0), _opts("const60")),
+        ("Ton_static_rate_x1.0", _identity, _identity, _rate(1.0), _opts("static")),
+    ] + _standoff_variants() + _spacer_dens_variants()
+
+    # ---- 呼1-003（20）：首建；static only（无瞬态表）+ 排量三点 + standoff + 密度 ----
+    v: list[tuple] = [
+        ("Toff_zero", _identity, _identity, _identity, _opts("off", on=False)),
+    ]
+    # 排量非 1.0 档补同排量 T-off 对照（红线：T-on 数字必附口径差分解；
+    # 分解表的「口径差」需 Ton_const60_rate_x<r> − Toff_rate_x<r> 配对）
+    for r in (0.6, 1.4):
+        v.append((f"Toff_rate_x{r}", _identity, _identity, _rate(r), _opts("off", on=False)))
+    for r in (0.6, 1.0, 1.4):
+        v.append((f"Ton_const60_rate_x{r}", _identity, _identity, _rate(r), _opts("const60")))
+    for r in (0.6, 1.0, 1.4):
+        v.append((f"Ton_static_rate_x{r}", _identity, _identity, _rate(r), _opts("static")))
+    reg["呼1-003"] = v + _standoff_variants() + _spacer_dens_variants()
+
+    # ---- 呼1-004（20）：饱和井；主干 + standoff + 密度 + 排量加密 x0.8/x1.2 ----
+    v = [
+        ("Toff_zero", _identity, _identity, _identity, _opts("off", on=False)),
+        ("Ton_const60_rate_x1.0", _identity, _identity, _rate(1.0), _opts("const60")),
+        ("Ton_static_rate_x1.0", _identity, _identity, _rate(1.0), _opts("static")),
+    ]
+    for r in (0.8, 1.2):
+        v.append((f"Toff_rate_x{r}", _identity, _identity, _rate(r), _opts("off", on=False)))
+    for r in (0.8, 1.2):
+        v.append((f"Ton_const60_rate_x{r}", _identity, _identity, _rate(r), _opts("const60")))
+    for r in (0.8, 1.2):
+        v.append((f"Ton_static_rate_x{r}", _identity, _identity, _rate(r), _opts("static")))
+    reg["呼1-004"] = v + _standoff_variants() + _spacer_dens_variants()
+
+    return reg
+
+
+def build_temperature_variants(batch: str = "t2") -> dict[str, list[tuple]]:
+    """按批次返回注册表：井名 → [(变体名, well_fn, fluid_fn, sched_fn, run_opts), ...]。
+
+    ``batch="t2"``（默认）= 2026-10-01 原 45 变体，**逐位不变**；
+    ``batch="phase0"`` = 2026-10-06 三重点井补跑矩阵（52 变体）。
     与 09-16 legacy `build_variants()` 完全分离（命名 Toff_/Ton_ 前缀，绝不复用）。
     """
+    if batch == "phase0":
+        return _phase0_variants()
+    if batch != "t2":
+        raise ValueError(f"未知批次 {batch!r}，允许：{sorted(BATCHES)}")
     reg: dict[str, list[tuple]] = {}
 
     # ---- 呼1-004（23）：有交付瞬态表 ⇒ 含 table 档全排量扫描 ----
@@ -196,12 +320,12 @@ def build_temperature_variants() -> dict[str, list[tuple]]:
 
 
 # ---------------------------------------------------------------- 落盘/复用
-def _summary_path(well: str, variant: str) -> Path:
-    return OUT_DIR / f"{well}_{variant}_结果摘要.json"
+def _summary_path(well: str, variant: str, out_dir: Path = OUT_DIR) -> Path:
+    return out_dir / f"{well}_{variant}_结果摘要.json"
 
 
-def _extra_path(well: str, variant: str) -> Path:
-    return OUT_DIR / f"{well}_{variant}_判别量.json"
+def _extra_path(well: str, variant: str, out_dir: Path = OUT_DIR) -> Path:
+    return out_dir / f"{well}_{variant}_判别量.json"
 
 
 def _jsonable(obj):
@@ -218,14 +342,14 @@ def _jsonable(obj):
     return obj
 
 
-def _load_case(well: str, variant: str) -> tuple[dict, dict] | None:
+def _load_case(well: str, variant: str, out_dir: Path = OUT_DIR) -> tuple[dict, dict] | None:
     """summary + 判别量 JSON 齐在**且 schema_version 相符**才视为可复用。
 
     缺任一文件、缺 ``schema_version`` 键或版本号不符 ⇒ 返回 None（须重跑）。
     改码后判别量公式变了但档名没变时，靠 bump :data:`EXTRA_SCHEMA_VERSION`
     或 ``--force`` / 删除 ``*_判别量.json`` 触发重算。
     """
-    sj, ej = _summary_path(well, variant), _extra_path(well, variant)
+    sj, ej = _summary_path(well, variant, out_dir), _extra_path(well, variant, out_dir)
     if not (sj.exists() and ej.exists()):
         return None
     summary = json.loads(sj.read_text(encoding="utf-8"))
@@ -235,9 +359,9 @@ def _load_case(well: str, variant: str) -> tuple[dict, dict] | None:
     return summary, extra
 
 
-def _baseline_of(well: str) -> dict | None:
+def _baseline_of(well: str, out_dir: Path = OUT_DIR) -> dict | None:
     """本批 Toff_zero 基线（未跑则 None ⇒ Δ 列留空）。"""
-    case = _load_case(well, BASELINE_VARIANT)
+    case = _load_case(well, BASELINE_VARIANT, out_dir)
     if case is None:
         return None
     final = case[0]["最终结果"]
@@ -248,13 +372,13 @@ def _baseline_of(well: str) -> dict | None:
 
 
 def _run_or_reuse(well: str, loader, variant: str, transforms, run_opts,
-                  force: bool = False) -> tuple[dict, dict, object]:
+                  force: bool = False, out_dir: Path = OUT_DIR) -> tuple[dict, dict, object]:
     """跑（或复用）一个变体，返回 (summary, extra, elapsed_s)。
 
     ``force=True``（CLI ``--force``）⇒ 忽略已存在 JSON，全部重算并覆盖。
     """
     well_fn, fluid_fn, sched_fn = transforms
-    case = None if force else _load_case(well, variant)
+    case = None if force else _load_case(well, variant, out_dir)
     if case is not None:
         summary, extra = case
         print(f"  [复用] {well} × {variant}", flush=True)
@@ -268,10 +392,10 @@ def _run_or_reuse(well: str, loader, variant: str, transforms, run_opts,
     extra = dict(extra)
     extra["耗时_s"] = elapsed
     extra["schema_version"] = EXTRA_SCHEMA_VERSION
-    _summary_path(well, variant).write_text(
+    _summary_path(well, variant, out_dir).write_text(
         json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8",
     )
-    _extra_path(well, variant).write_text(
+    _extra_path(well, variant, out_dir).write_text(
         json.dumps(_jsonable(extra), ensure_ascii=False, indent=2), encoding="utf-8",
     )
     final = summary["最终结果"]
@@ -318,16 +442,18 @@ def _row_of(well: str, variant: str, run_opts: dict, summary: dict,
     }
 
 
-def rebuild_tables(registry: dict[str, list[tuple]]) -> None:
+def rebuild_tables(registry: dict[str, list[tuple]], out_dir: Path = OUT_DIR,
+                   table_stem: str = "温压T2", title: str = "T2 温压敏感性",
+                   date: str = "2026-10-01") -> None:
     """从落盘 JSON 幂等重建汇总表 + 分解表（缺档跳过 ⇒ 支持部分批）。"""
     rows: list[dict] = []
     metrics_by_key: dict[tuple[str, str], dict] = {}
     for well, variants in registry.items():
-        baseline = _baseline_of(well)
+        baseline = _baseline_of(well, out_dir)
         if baseline is None:
             print(f"  [提示] {well}: {BASELINE_VARIANT} 未跑，Δ 列留空", flush=True)
         for name, *_rest, run_opts in variants:
-            case = _load_case(well, name)
+            case = _load_case(well, name, out_dir)
             if case is None:
                 continue
             summary, extra = case
@@ -335,24 +461,24 @@ def rebuild_tables(registry: dict[str, list[tuple]]) -> None:
             rows.append(row)
             metrics_by_key[(well, name)] = row
     if rows:
-        with (OUT_DIR / "汇总表_温压T2.csv").open(
+        with (out_dir / f"汇总表_{table_stem}.csv").open(
             "w", encoding="utf-8-sig", newline=""
         ) as fh:
             writer = csv.DictWriter(fh, fieldnames=CSV_COLUMNS)
             writer.writeheader()
             writer.writerows(rows)
-        _write_summary_md(rows)
+        _write_summary_md(rows, out_dir, table_stem, title, date)
 
     decomp = _decomposition_rows(registry, metrics_by_key)
     if decomp:
-        with (OUT_DIR / "分解表_温压T2.csv").open(
+        with (out_dir / f"分解表_{table_stem}.csv").open(
             "w", encoding="utf-8-sig", newline=""
         ) as fh:
             writer = csv.DictWriter(fh, fieldnames=DECOMP_COLUMNS)
             writer.writeheader()
             writer.writerows(decomp)
-        _write_decomp_md(decomp)
-    print(f"重建汇总：{len(rows)} 行、分解：{len(decomp)} 行 → {OUT_DIR}", flush=True)
+        _write_decomp_md(decomp, out_dir, table_stem, title, date)
+    print(f"重建汇总：{len(rows)} 行、分解：{len(decomp)} 行 → {out_dir}", flush=True)
 
 
 def _fmt(v, nd=4) -> str:
@@ -363,9 +489,11 @@ def _fmt(v, nd=4) -> str:
     return f"{float(v):.{nd}f}"
 
 
-def _write_summary_md(rows: list[dict]) -> None:
+def _write_summary_md(rows: list[dict], out_dir: Path = OUT_DIR,
+                      table_stem: str = "温压T2", title: str = "T2 温压敏感性",
+                      date: str = "2026-10-01") -> None:
     md = [
-        "# T2 温压敏感性汇总（2026-10-01）",
+        f"# {title}汇总（{date}）",
         "",
         "口径：09-16 脚本链（CORRECTED_KW + CFL、tt=min(泵总+1200, stop_t)）；"
         "**基线 = 本批 `Toff_zero`**；判别量只在本表（solver summary 零新增键）。",
@@ -384,7 +512,7 @@ def _write_summary_md(rows: list[dict]) -> None:
             f"{_fmt(r['饥饿份额'])} | {_fmt(r['屈服门活化率_b加权'])} | "
             f"{r['备注'] or '—'} | {r['耗时_s']} |"
         )
-    (OUT_DIR / "汇总表_温压T2.md").write_text("\n".join(md), encoding="utf-8")
+    (out_dir / f"汇总表_{table_stem}.md").write_text("\n".join(md), encoding="utf-8")
 
 
 # ---------------------------------------------------------------- 分解表
@@ -440,10 +568,12 @@ def _decomposition_rows(registry, metrics_by_key) -> list[dict]:
     return out
 
 
-def _write_decomp_md(rows: list[dict]) -> None:
+def _write_decomp_md(rows: list[dict], out_dir: Path = OUT_DIR,
+                     table_stem: str = "温压T2", title: str = "T2 温压敏感性",
+                     date: str = "2026-10-01") -> None:
     metric_cols = [f"Δ_{m}" for m in DECOMP_METRICS]
     md = [
-        "# T2 温压敏感性分解表（2026-10-01）",
+        f"# {title}分解表（{date}）",
         "",
         "同排量两分量（脚本层算术，从行数据聚合）：",
         "- **口径差** = `Ton_const60 − Toff`（温度开关打开但取常数 60 °C 的净效应）",
@@ -460,12 +590,28 @@ def _write_decomp_md(rows: list[dict]) -> None:
             v = r.get(m, "")
             cells.append("—" if v == "" or v is None else f"{float(v):+.4f}")
         md.append("| " + " | ".join(cells) + " |")
-    (OUT_DIR / "分解表_温压T2.md").write_text("\n".join(md), encoding="utf-8")
+    (out_dir / f"分解表_{table_stem}.md").write_text("\n".join(md), encoding="utf-8")
 
 
 # ---------------------------------------------------------------- 主流程
+def _assert_out_dir_allowed(out_dir: Path) -> None:
+    """冻结目录防护：输出目录不得落在三个历史敏感性目录内（红线：零写入）。"""
+    for _d in FROZEN_DIRS:
+        if out_dir == _d or _d in out_dir.parents:
+            raise RuntimeError(f"输出目录防护触发：{out_dir} 落在冻结目录 {_d} 内")
+
+
 def main() -> int:
-    ap = argparse.ArgumentParser(description="T2 温压敏感性批（45 变体，断点续跑）")
+    ap = argparse.ArgumentParser(
+        description="T2 温压敏感性批（双批次，断点续跑）"
+    )
+    ap.add_argument("--batch", choices=sorted(BATCHES), default="t2",
+                    help="批次：t2=2026-10-01 原 45 变体（默认，逐位不变）；"
+                         "phase0=2026-10-06 三重点井补跑矩阵（52 变体）")
+    ap.add_argument("--out-dir", default=None,
+                    help="覆盖输出目录（默认取批次定义）。phase0 应指向"
+                         "新日期目录（红线：补跑新目录带日期后缀）；"
+                         "不带本参数时 t2 批行为与 2026-10-01 原版完全相同")
     ap.add_argument("--well", choices=[*WELLS.keys(), "all"], default="all")
     ap.add_argument("--variant", default=None,
                     help="只跑/只列该变体名（冒烟与补跑用）")
@@ -475,16 +621,27 @@ def main() -> int:
                          "（判别量按代码公式算出，改码不改档名不会自动触发）")
     args = ap.parse_args()
 
-    registry = build_temperature_variants()
+    batch = BATCHES[args.batch]
+    out_dir = Path(args.out_dir) if args.out_dir else batch["out_dir"]
+    _assert_out_dir_allowed(out_dir)
+    registry = build_temperature_variants(args.batch)
     well_keys = list(WELLS) if args.well == "all" else [args.well]
 
     # 注册表自检（响亮失败，防手滑改坏矩阵）
-    total = sum(len(v) for v in registry.values())
-    if total != 45:
-        raise RuntimeError(f"变体矩阵应为 45，实际 {total}")
+    actual = {w: len(v) for w, v in registry.items()}
+    if actual != EXPECTED_VARIANTS[args.batch]:
+        raise RuntimeError(
+            f"{args.batch} 变体矩阵应为 {EXPECTED_VARIANTS[args.batch]}，"
+            f"实际 {actual}"
+        )
 
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    out_dir.mkdir(parents=True, exist_ok=True)
     for well in well_keys:
+        if well not in registry:
+            raise SystemExit(
+                f"{well} 不在批次 {args.batch} 的注册表内"
+                f"（该批井：{sorted(registry)}）"
+            )
         mod, fn = WELLS[well]
         loader = getattr(importlib.import_module(mod), fn)
         variants = registry[well]
@@ -492,15 +649,17 @@ def main() -> int:
             variants = [v for v in variants if v[0] == args.variant]
             if not variants:
                 raise SystemExit(f"{well} 无变体 {args.variant!r}（见注册表）")
-        print(f"\n=== {well}  {len(variants)} 变体 ===", flush=True)
+        print(f"\n=== [{args.batch}] {well}  {len(variants)} 变体 ===", flush=True)
         for name, well_fn, fluid_fn, sched_fn, run_opts in variants:
             _run_or_reuse(
                 well, loader, name, (well_fn, fluid_fn, sched_fn), run_opts,
-                force=args.force,
+                force=args.force, out_dir=out_dir,
             )
 
-    # 幂等重建（从全量落盘 JSON 收；子集/断点跑只出已有行）
-    rebuild_tables(registry)
+    # 幂等重建（从本批全量落盘 JSON 收；子集/断点跑只出已有行）
+    rebuild_tables(
+        registry, out_dir, batch["table_stem"], batch["title"], batch["date"],
+    )
     return 0
 
 
