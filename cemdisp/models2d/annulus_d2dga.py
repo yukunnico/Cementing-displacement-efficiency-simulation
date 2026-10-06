@@ -371,6 +371,20 @@ class AnnulusSimulationResult:
     # T1-6: FLUSHER 独立浓度场（被动平流相，不参与 D2DGA 闭包）
     flusher_field: Array | None = field(default=None)
     flusher_snapshots: Tuple[Array, ...] = field(default_factory=tuple)
+    # ---- Phase 2（2026-10-06）关5（A2.2）/ 关4（A2.3）观测字段 ----
+    # 全部**带默认值** ⇒ 既有 4 处构造点零影响；且**不写入 summary dict**（保 T-off 字节逐位）。
+    dt_history: Tuple[float, ...] = field(default_factory=tuple)
+    """每时间步的 dt_step（s）。**长度恒等于步数**（在泵注/泵停两分支的汇合点统一收集）。"""
+    cfl_clip_events: int = 0
+    """I3 通量块中 |div_q| > alpha_cfl·ds/dt_step 的**单元-步**计数（A2.2 健康度）。"""
+    cfl_clip_steps: int = 0
+    """发生过 I3 局部裁剪的**步**数（A2.2）。"""
+    mu_reg_field: Array | None = field(default=None)
+    """末步 Papanastasiou 正则化黏度场 mu_reg（屈服门 wall 判据的输入，A2.3 共线量）。"""
+    lambda_op_last: float | None = field(default=None)
+    """**最后一次流函数解（活跃步）**的 λ_op = η₁/(d̂³πr̂ₐ*)；全程泵停/旧代数路径 ⇒ None。"""
+    shear_rate_rep_last: float | None = field(default=None)
+    """**最后一次流函数解（活跃步）**的代表剪切率 γ̇ = 6⟨|w|⟩/⟨b⟩；语义同上。"""
 
 
 class AnnulusD2DGASolver:
@@ -440,6 +454,12 @@ class AnnulusD2DGASolver:
         e_clip_measured_max: float = 0.90,
         enable_power_law_gap_law: bool = _SWITCH_DEFAULTS["enable_power_law_gap_law"],
         enable_stream_yield_gate: bool = _SWITCH_DEFAULTS["enable_stream_yield_gate"],  # B-2 opt-in：屈服门进流函数算子（默认关=HEAD 逐位）
+        # R2（2026-10-06）opt-in：μp/τy 真拆分——把屈服应力贡献 τy/γ̇ 补进**标量黏度口径**
+        # （buoyancy.fluid_apparent_viscosity），使其与**场口径**（_apparent_viscosity）同构。
+        # 默认 False ⇒ 逐位 = HEAD（关 2 红线）。⚠ 必须 **4 个站点同传**（_froude_squared_at /
+        # _buoyancy_number_at / _velocity_stream_function 的 η₁/η₂）——只传一部分会破坏
+        # λ_op↔F² 的精确相消，凭空造出虚假的浮力源变化。依据见 Phase 2 spec §1/§2。
+        include_yield_term: bool = False,
         enable_power_law_gap_correction: bool = _SWITCH_DEFAULTS["enable_power_law_gap_correction"],  # B-3 opt-in：幂律间隙一阶修正（默认关）
         enable_stream_function: bool = _SWITCH_DEFAULTS["enable_stream_function"],
         # Task 8（2026-09-26）：线性求解换带状 Cholesky（纯数值等价提速）。
@@ -648,6 +668,21 @@ class AnnulusD2DGASolver:
         # 2026-09-16 B-2：屈服门进流函数算子（opt-in，默认 False ⇒ 逐位=HEAD）。
         # 仅 enable_stream_function=True 路径消费（见 _compute_velocity/_velocity_stream_function）。
         self.enable_stream_yield_gate = enable_stream_yield_gate
+        # R2（2026-10-06）：μp/τy 真拆分开关（opt-in，默认 False ⇒ 逐位=HEAD）。
+        # 由 4 个 fluid_apparent_viscosity 站点共同消费（见 _froude_squared_at /
+        # _buoyancy_number_at / _velocity_stream_function）。语义与依据见 Phase 2 spec §1/§2。
+        self.include_yield_term: bool = include_yield_term
+        # ---- Phase 2 关5（A2.2）/ 关4（A2.3）观测位（**不进 summary**，保 T-off 字节逐位）----
+        # 语义声明：
+        #   _lambda_op_last / _shear_rate_rep_last = **最后一次流函数解（活跃步）**的值；
+        #   全程泵停或旧代数路径 ⇒ 恒 None（`_velocity_stream_function` 的 q<=0 早退分支不更新）。
+        #   初值置 None 是刻意的——避免"从未赋值却被 result 构造读取"的 AttributeError 面。
+        self._lambda_op_last: float | None = None
+        self._shear_rate_rep_last: float | None = None
+        self._last_mu_reg: Array | None = None
+        self._dt_history: list[float] = []
+        self._cfl_clip_events: int = 0
+        self._cfl_clip_steps: int = 0
         # 2026-09-16 B-3：幂律间隙一阶修正（opt-in，默认 False ⇒ 逐位=HEAD）。
         # 仅 enable_stream_function=True 路径消费（PowerLawGapClosure 注入
         # solve_stream_function 的 closure 形参）。
@@ -1512,7 +1547,9 @@ class AnnulusD2DGASolver:
         shear_rate_mud = (6.0 * float(np.mean(np.abs(w_field)))
                           / max(float(np.mean(geom["b"])), 1e-12))
         return buoyancy.froude_squared(
-            mu_displaced=buoyancy.fluid_apparent_viscosity(mud_fluid, shear_rate_mud),
+            mu_displaced=buoyancy.fluid_apparent_viscosity(
+                mud_fluid, shear_rate_mud,
+                include_yield_term=self.include_yield_term),
             w0_mps=w0_mps,
             half_gap_m=half_gap_m,
             rho_displaced=float(mud_fluid.density_kg_m3),
@@ -1560,7 +1597,8 @@ class AnnulusD2DGASolver:
         shear_rate_mud = (
             6.0 * float(np.mean(np.abs(w_field))) / max(float(np.mean(geom["b"])), 1e-12)
         )
-        mu_displaced = buoyancy.fluid_apparent_viscosity(mud_fluid, shear_rate_mud)
+        mu_displaced = buoyancy.fluid_apparent_viscosity(
+            mud_fluid, shear_rate_mud, include_yield_term=self.include_yield_term)
         # 几何半间隙 d̂ = (r_o−r_i)/2 = (hole−od)/4，直接取模型自己的半间隙场 geom["H"]
         half_gap_m = float(np.mean(geom["H"])) if "H" in geom else 0.5 * float(np.mean(geom["b"]))
         # 截面平均轴向速度 w₀ = q/A（环形截面积由 hole/od 算）
@@ -1882,10 +1920,14 @@ class AnnulusD2DGASolver:
         # γ̇ = 6⟨|w|⟩/⟨b⟩：_froude_squared_at/_buoyancy_number_at/_compute_props 同约定。
         shear_rate = (6.0 * float(np.mean(np.abs(w_prev)))
                       / max(float(np.mean(geom["b"])), 1e-12))
-        eta1 = buoyancy.fluid_apparent_viscosity(mud_fluid, shear_rate)
+        # Phase 2 关4/A2.3 观测位：本步代表剪切率（最后一次流函数解的值；见 __init__ 语义声明）
+        self._shear_rate_rep_last = float(shear_rate)
+        eta1 = buoyancy.fluid_apparent_viscosity(
+            mud_fluid, shear_rate, include_yield_term=self.include_yield_term)
         cement_fluid = lead_fluid if lead_fluid is not None else tail_fluid
         if cement_fluid is not None:
-            eta2 = buoyancy.fluid_apparent_viscosity(cement_fluid, shear_rate)
+            eta2 = buoyancy.fluid_apparent_viscosity(
+                cement_fluid, shear_rate, include_yield_term=self.include_yield_term)
         else:
             eta2 = eta1  # 无水泥相：两层退化为均一（m=1，χ 的 φ-梯度仍在）
         m_ratio = eta1 / eta2
@@ -1931,6 +1973,9 @@ class AnnulusD2DGASolver:
         half_gap_m = float(np.mean(geom["H"]))            # d̂（R20 口径）
         r_a_m = float(np.mean((geom["hole_mm"] + geom["od_mm"]) / 4.0)) / 1000.0
         lambda_op = eta1 / (half_gap_m ** 3 * np.pi * r_a_m)
+        # Phase 2 关4/A2.3 观测位：λ_op（量纲匹配因子 ∝ η₁）。与 F² 的 μ̂₁ **精确相消**（乘积不变量），
+        # 故本值仅供共线量落盘与四角交互残差报告；**不得**据它单独归因浮力源变化。
+        self._lambda_op_last = float(lambda_op)
         b_field = b_field * lambda_op
 
         # ---- 椭圆解 + (2.2) 换算 + 物理缩放（推导见 docstring）-----------------
@@ -2199,6 +2244,9 @@ class AnnulusD2DGASolver:
         # 再用 Papanastasiou 正则化项替代；对牛顿/幂律流体 tau_y=0，不影响
         mu_shear = np.maximum(mu - tau_y / gamma_safe, 1.0e-6)
         mu_reg = mu_shear + tau_y * regularization_factor
+        # Phase 2 关4/A2.3 观测位：末步 mu_reg 场（屈服门 wall 判据的输入场，含 τy/γ̇ 正则化）。
+        # 只存引用（每步新分配）⇒ 零数值影响；仅供共线量落盘，不进 summary。
+        self._last_mu_reg = mu_reg
 
         D_h = 2.0 * geom["b"]
         rho_kg_m3 = rho * 1000.0
@@ -2424,6 +2472,14 @@ class AnnulusD2DGASolver:
         self._hb_tau_y_skips = []
         self._hb_tau_y_skips_reported = False
         self._hb_prev_G = None
+        # Phase 2（2026-10-06）关5（A2.2）/ 关4（A2.3）观测累加器按 run 重置——
+        # 防 solver 实例复用导致跨 run 累积（语义：dt_history 长度 = 本 run 步数）。
+        self._dt_history = []
+        self._cfl_clip_events = 0
+        self._cfl_clip_steps = 0
+        self._last_mu_reg = None
+        self._lambda_op_last = None
+        self._shear_rate_rep_last = None
         # 2026-09-06 选相修复：多种 WASH/SPACER 并存（如平衡液+驱油隔离液）时，
         # 按泵注程序中各流体的设计体积加权重建等效代表流体——进入环空的 spacer 相
         # 由这些流体按入库体积混合而成，物性（密度/黏度/屈服）应取入库加权而非
@@ -2692,6 +2748,13 @@ class AnnulusD2DGASolver:
                     # ds 取轴向网格最小间距，保证非均匀网格下 CFL 条件保守
                     ds = float(np.min(np.diff(geom["s"])))
                     step_limit = self.alpha_cfl * ds / max(dt_step, 1.0e-9)
+                    # Phase 2 关5（A2.2）：α_cfl 局部裁剪事件计数（纯簿记，零数值影响）。
+                    # 口径：超出 step_limit 的**单元-步**数累加；本步只要发生过裁剪，
+                    # **步**数 +1。判据用途见 spec §4（I3 项被这层 clip 吃掉会使 F² 定标失真）。
+                    _n_clipped = int(np.count_nonzero(np.abs(div_q) > step_limit))
+                    if _n_clipped:
+                        self._cfl_clip_events += _n_clipped
+                        self._cfl_clip_steps += 1
                     div_q_clipped = np.clip(div_q, -step_limit, step_limit)
                     lead = lead - div_q_clipped * lead_frac * dt_step
                     tail = tail - div_q_clipped * tail_frac * dt_step
@@ -2742,6 +2805,10 @@ class AnnulusD2DGASolver:
                     dt_step = self.dt
 
             # T1-7: 统一步后时间（current_time_s + dt_step），CFL/固定 dt 分支语义一致
+            # Phase 2 关5（A2.2）：dt 时程**每个时间步恰好记一次**。此处是泵注/泵停两分支的
+            # **汇合点**（上方 :2582/:2638/:2640/:2774/:2776 各有赋值，若逐点 append 会在
+            # CFL-off 模式下双计）⇒ 统一在汇合点收集，长度恒等于步数。
+            self._dt_history.append(float(dt_step))
             record_time = min(current_time_s + dt_step, self.total_t)
             _last_step = (
                 current_time_s + dt_step >= self.total_t - 1e-9
@@ -2900,6 +2967,21 @@ class AnnulusD2DGASolver:
             summary["temperature_rheology_audit"] = dict(
                 getattr(self, "_temp_rheo_audit_counts", {})
             )
+        # Phase 2 关5（A2.2）：**不静默**——I3 通量块的 α_cfl 局部裁剪是硬非线性，
+        # 代码内既有警示（见该块注释：「若后续再放大浮力向量 f…I3 项会被这层 clip 吃掉，
+        # 使 F² 定标在 R2 上失真；届时须复核 div_q 是否触及 step_limit」）。R2 拆分正是
+        # 放大浮力向量的操作 ⇒ 一旦触及即响亮告警，防「方向对而数值坏」的数字进分解表。
+        # 注：dt 中位数相对**批次基线**的 2× 漂移判据需跨 run 对照，落在敏感性层（extra_metrics
+        # + 关5 gate），solver 侧只负责落盘原始时程。
+        if self._cfl_clip_events > 0:
+            warnings.warn(
+                f"关5 数值健康度：本 run 的 I3 浮力通量块发生 alpha_cfl 局部裁剪 "
+                f"{self._cfl_clip_events} 个单元-步（{self._cfl_clip_steps} 步）——"
+                "该裁剪是硬非线性，会吃掉 I3 项并使 F² 定标失真。请复核 div_q 是否触及 "
+                "step_limit，并把本 run 标为「数值污染候选」，不得直接进方向性结论。",
+                UserWarning,
+                stacklevel=2,
+            )
         result = AnnulusSimulationResult(
             well_name=well_spec.well_name,
             geom=geom,
@@ -2924,6 +3006,13 @@ class AnnulusD2DGASolver:
             ),
             lead_field=lead,
             tail_field=tail,
+            # Phase 2 观测位（关5 A2.2 / 关4 A2.3）；不进 summary，保 T-off 字节逐位
+            dt_history=tuple(float(v) for v in self._dt_history),
+            cfl_clip_events=int(self._cfl_clip_events),
+            cfl_clip_steps=int(self._cfl_clip_steps),
+            mu_reg_field=self._last_mu_reg,
+            lambda_op_last=self._lambda_op_last,
+            shear_rate_rep_last=self._shear_rate_rep_last,
         )
 
         # Tier 0 诊断聚合：纯后处理，注入 result.summary（dict 可安全追加）

@@ -206,12 +206,17 @@ def build_variants() -> list[tuple[str, object, object, object, dict | None]]:
 #     ⚠ 语义区分（勿与 enable_yield_gate 混）：
 #       `enable_yield_gate`       = **生产端**：wall 场算不算（默认 True；T2 的 gateoff 对照=本键）
 #       `enable_stream_yield_gate`= **消费端**：wall 进不进流函数算子（默认 False；
-#                                   唯一扯断点 annulus:2155 三目，开启即通）
+#                                   唯一扯断点 annulus 三目，开启即通）
 #     二者组合语义见 annulus `_dead_switches`（置真但 wall 到不了算子会判"死开关"告警）。
 #     ⚠ 仅 annulus 有本开关（casing 无）⇒ 只准 `annulus_kwargs_from_opts` 出此键。
+#   include_yield_term          : **R2（Phase 2）μp/τy 真拆分**（默认 False ⇒ 逐位=HEAD）；
+#                                 True ⇒ 标量黏度口径补 τy/γ̇ 并与场口径同构（含 3.0 Pa·s 上限）。
+#                                 仅 annulus 有该形参 ⇒ 只准 `annulus_kwargs_from_opts` 出此键。
+#                                 依据（文献+资料）见 Phase 2 spec §1。
 RUN_OPTS_KEYS = ("enable_temperature_rheology", "temperature_mode",
                  "enable_yield_gate", "rheology_formula", "mud_extrapolate",
-                 "pressure_mode", "pressure_caliber", "enable_stream_yield_gate")
+                 "pressure_mode", "pressure_caliber", "enable_stream_yield_gate",
+                 "include_yield_term")
 TEMPERATURE_MODES = ("off", "static", "table", "const60")
 PRESSURE_MODES = ("off", "hydrostatic")
 PRESSURE_CALIBERS = ("shoe", "mean")
@@ -282,6 +287,7 @@ def normalize_run_opts(run_opts: dict | None) -> dict:
         "pressure_mode": "off",
         "pressure_caliber": "shoe",
         "enable_stream_yield_gate": None,
+        "include_yield_term": False,
     }
     if run_opts:
         unknown = sorted(set(run_opts) - set(opts))
@@ -326,6 +332,11 @@ def normalize_run_opts(run_opts: dict | None) -> dict:
         raise TypeError(
             f"enable_stream_yield_gate 须为 bool|None，实际 {type(syg).__name__}"
         )
+    # R2（Phase 2）μp/τy 真拆分：纯 bool（无 None 态——默认即 False，语义无歧义）
+    if not isinstance(opts["include_yield_term"], bool):
+        raise TypeError(
+            f"include_yield_term 须为 bool，实际 {type(opts['include_yield_term']).__name__}"
+        )
     pmode = opts["pressure_mode"]
     if pmode not in PRESSURE_MODES:
         raise ValueError(f"pressure_mode 非法：{pmode!r}，允许：{list(PRESSURE_MODES)}")
@@ -354,6 +365,8 @@ def casing_kwargs_from_opts(opts: dict) -> dict:
 
     ⚠️ **不得**出 ``enable_stream_yield_gate`` 键：该消费端开关只在 `AnnulusD2DGASolver`
     上存在（`CasingFlowSolver` 无）——本函数返回的 dict 同样被 ``**`` 展开进 casing 构造函数。
+    ⚠️ **同样不得**出 ``include_yield_term``（R2 拆分）：`CasingFlowSolver` 无该形参，
+    且 1D 套管路径根本不存在 ``fluid_apparent_viscosity`` 调用点（全仓 4 处站点全在 annulus）。
     """
     return {
         "enable_temperature_rheology": bool(opts["enable_temperature_rheology"]),
@@ -391,6 +404,12 @@ def annulus_kwargs_from_opts(opts: dict) -> dict:
     # 因为 casing kwargs 也被 `**` 展开进 `CasingFlowSolver(...)`）。
     if opts["enable_stream_yield_gate"] is not None:
         kw["enable_stream_yield_gate"] = bool(opts["enable_stream_yield_gate"])
+    # R2（Phase 2，2026-10-06）：μp/τy 真拆分。**仅 True 时出键**——沿用上面
+    # `enable_stream_yield_gate` 的"默认值不产生额外 kwarg"模式（既有契约测试
+    # `test_default_and_t_off_opts_map_to_legacy_four_key_caliber` 的 docstring 不变量的字面口径）。
+    # False/缺键 ⇒ 不出键 ⇒ solver 用构造默认 False ⇒ 与 HEAD 逐位（关 2 红线）。
+    if opts["include_yield_term"]:
+        kw["include_yield_term"] = True
     return kw
 
 

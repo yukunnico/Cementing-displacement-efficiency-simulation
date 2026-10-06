@@ -183,8 +183,10 @@ def _opts(mode: str, *, on: bool = True, yield_gate: bool | None = None,
           mud_extrapolate: bool = False,
           pressure_mode: str = "off",
           pressure_caliber: str = "shoe",
-          stream_yield_gate: bool | None = None) -> dict:
-    """run_opts（09-16 共享装配层；R1/P-1/Phase 1.5 2026-10-06 由三键扩为八键）。
+          stream_yield_gate: bool | None = None,
+          include_yield_term: bool = False) -> dict:
+    """run_opts（09-16 共享装配层；R1/P-1/Phase 1.5 2026-10-06 由三键扩为八键；
+    Phase 2 2026-10-06 加第 9 键 `include_yield_term`）。
 
     新增各键默认 ``None``/``False``/``"off"``/``"shoe"`` ⇒ 本文件既有 20+ 变体条目的
     调用**逐位不变**（关2）。载荷语义见
@@ -193,6 +195,8 @@ def _opts(mode: str, *, on: bool = True, yield_gate: bool | None = None,
     ⚠️ ``stream_yield_gate``（**消费端**：wall 进不进流函数算子）与 ``yield_gate``
     （**生产端**：wall 场算不算）是两个开关，语义不同、勿混：T2 既有的 gateoff 对照用的是
     **后者**；前者是 Phase 1.5 新开的穿透位。
+    ⚠️ ``include_yield_term``（**R2 μp/τy 真拆分**，默认 ``False`` = 旧语义逐位）：
+    True ⇒ 标量黏度口径补 τy/γ̇ 并与场口径同构（含 3.0 Pa·s 上限）。仅 annulus 有该形参。
     """
     return {
         "enable_temperature_rheology": on,
@@ -203,6 +207,9 @@ def _opts(mode: str, *, on: bool = True, yield_gate: bool | None = None,
         "pressure_mode": pressure_mode,
         "pressure_caliber": pressure_caliber,
         "enable_stream_yield_gate": stream_yield_gate,
+        # ⚠ 必须**同时**加形参与返回键：只加形参不加键 ⇒ normalize_run_opts 静默补默认
+        # False ⇒ 标"拆分 on"的档实际按 off 跑（静默标签失真，Phase 2 对抗核查 W-1）。
+        "include_yield_term": include_yield_term,
     }
 
 

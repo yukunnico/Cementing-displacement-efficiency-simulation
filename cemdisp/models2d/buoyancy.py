@@ -51,7 +51,28 @@ def displacing_density_kg_m3(lead_fluid, tail_fluid, mud_fluid) -> float:
     return float(mud_fluid.density_kg_m3)
 
 
-def fluid_apparent_viscosity(fluid: FluidSpec, shear_rate: float) -> float:
+_YIELD_TERM_MU_CLIP_PA_S = 3.0
+"""屈服项表观黏度的**上限**（Pa·s）——**结构常数，禁作标定钮**。
+
+与 ``AnnulusD2DGA._apparent_viscosity`` 的 ``np.clip(mu, 1.0e-5, 3.0)``（场口径）**同值同义**：
+两条口径共用同一上限，避免出现第三套黏度口径。自仓内首个提交 ``0f78af9`` 起 3.0 即为场口径的
+既有常数；本模块只是把它引到标量口径上。
+
+依据（Phase 2 spec §1.2）：①口径唯一性（主）；②八井六速实测边界——最低转速（3 rpm，
+γ̇ = 5.11 s⁻¹）实测最大 μ_app ≈ 2.60 Pa·s，3.0 与最后一个可信低转速实测点同量级；
+③在模型工作域内不生效——触发条件 γ̇ < τy/(3.0−μp) ≈ 2.5~14.4 s⁻¹，落在六速最低转速之下或刚跨过；
+④文献：屈服应力流体 τy/γ̇ 在 γ̇→0 的奇异性必须有界正则化（Saramito & Wachs 2017；Papanastasiou 1987）。
+与 ``f_safety=1.15`` 同型纪律：只做区间披露，**不参与任何反标定**。
+"""
+
+
+def _clip_yield_term(mu: float) -> float:
+    """``include_yield_term=True`` 分支的上限夹逼——与 ``annulus._apparent_viscosity`` 逐字对齐。"""
+    return min(max(float(mu), 1.0e-5), _YIELD_TERM_MU_CLIP_PA_S)
+
+
+def fluid_apparent_viscosity(fluid: FluidSpec, shear_rate: float, *,
+                             include_yield_term: bool = False) -> float:
     """表观黏度。幂律/HB 用 ``K·γ̇^(n−1)``；回退到 PV。缺参数时抛错，不静默回退。
 
     Args:
@@ -59,6 +80,25 @@ def fluid_apparent_viscosity(fluid: FluidSpec, shear_rate: float) -> float:
             ``power_law_n``；牛顿/Bingham 用 ``plastic_viscosity_pa_s``。
         shear_rate: 剪切率 γ̇，单位 1/s（调用方约定与 ``_compute_props`` 一致：
             ``γ̇ = 6|w|/b``）。非正值被夹到 1e-8 避免幂律奇异。
+        include_yield_term: **R2 μp/τy 真拆分开关**（Phase 2，默认 ``False`` = 旧语义逐位不变）。
+
+            * ``False``（默认）——HEAD 行为：Bingham/牛顿只返 ``PV``；幂律/HB 只返
+              ``K·γ̇^(n−1)``（带 ``max(·, PV)`` 地板）。**本分支的两条 return 与 HEAD 位级相同**（关 2 红线）。
+            * ``True``——补上屈服应力贡献，使**标量口径与场口径同构**
+              （``annulus._apparent_viscosity:1121/:1130`` 的同一本构）：
+
+              * Bingham / 牛顿：``μ = PV + τy/γ̇``
+              * HB：``μ = τy/γ̇ + K·γ̇^(n−1)``（τy 项在前，与 ``:1130`` 字面对齐）
+              * 幂律：无 τy ⇒ 与 ``False`` 分支同式
+
+              并**无条件**施加上限 ``_clip_yield_term``（与场口径 ``:1133`` 同构）。
+
+            **本构依据**：Bingham (1916) 塑性本构 / API RP 13D 钻井液表观黏度定义
+            ``μ_app = τ/γ̇ = μp + τy/γ̇``——现场六速表即以 AV/PV/YP 报告。
+
+            **已知与场口径的差异（显式声明，不掩盖）**：场口径 γ 地板 = 1e-6（本处 1e-8），
+            且 HB 分支**无** ``max(μ, PV)`` 地板 ⇒ 两者**逐位同值仅在**「γ̇ ≥ 1e-6 且
+            （Bingham 且 τy ≥ (3−PV)·1e-6，或 HB 且 ``plastic_viscosity_pa_s is None``）」时成立。
 
     Returns:
         表观黏度，单位 Pa·s（Z&F22 ``μ̂₁``）。
@@ -67,11 +107,20 @@ def fluid_apparent_viscosity(fluid: FluidSpec, shear_rate: float) -> float:
     if fluid.rheology_model in (RheologyModel.POWER_LAW, RheologyModel.HERSCHEL_BULKLEY):
         if fluid.consistency_k is not None and fluid.power_law_n is not None:
             mu = float(fluid.consistency_k) * g ** (float(fluid.power_law_n) - 1.0)
+            if include_yield_term and fluid.yield_stress_pa:
+                # τy 项在前（与 _apparent_viscosity:1130 书写次序一致；IEEE-754 下加法可交换）
+                mu = float(fluid.yield_stress_pa) / g + mu
             if fluid.plastic_viscosity_pa_s:
                 mu = max(mu, float(fluid.plastic_viscosity_pa_s))
-            return mu
+            return _clip_yield_term(mu) if include_yield_term else mu
     if fluid.plastic_viscosity_pa_s is not None:
-        return float(fluid.plastic_viscosity_pa_s)
+        mu = float(fluid.plastic_viscosity_pa_s)
+        if include_yield_term:
+            # 无条件 clip（含 τy=0 的 Bingham 与牛顿流体）：与场口径 :1133 同构
+            if fluid.yield_stress_pa:
+                mu += float(fluid.yield_stress_pa) / g
+            return _clip_yield_term(mu)
+        return mu
     raise ValueError(f"流体 {fluid.name} 缺少可用流变参数，禁止静默回退")
 
 

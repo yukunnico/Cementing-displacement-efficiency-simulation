@@ -61,6 +61,7 @@ _ALL_ON = {
     "pressure_mode": "hydrostatic",
     "pressure_caliber": "mean",
     "enable_stream_yield_gate": True,
+    "include_yield_term": True,     # Phase 2（R2 μp/τy 真拆分）第 9 键
 }
 
 
@@ -85,6 +86,7 @@ def test_every_key_reaches_solver_attribute():
     assert s.enable_temperature_rheology is True
     assert s.enable_yield_gate is True                    # 生产端
     assert s.enable_stream_yield_gate is True             # 消费端（Phase 1.5 新穿透位）
+    assert s.include_yield_term is True                   # R2 拆分（Phase 2 新穿透位）
     assert s.mud_extrapolate is True
     assert s.pressure_caliber == "mean"
     assert s.rheology_formula_params is not None
@@ -113,6 +115,33 @@ def test_casing_kwargs_never_emit_stream_yield_gate():
     assert "enable_stream_yield_gate" not in casing_kwargs_from_opts(opts)
     assert "enable_stream_yield_gate" not in _CASING_PARAMS
     assert "enable_stream_yield_gate" in _ANNULUS_PARAMS
+    # Phase 2 同型不对称：include_yield_term 也只在 annulus 上（1D 路径无
+    # fluid_apparent_viscosity 调用点，全仓 4 处站点全在 annulus）
+    assert "include_yield_term" in annulus_kwargs_from_opts(opts)
+    assert "include_yield_term" not in casing_kwargs_from_opts(opts)
+    assert "include_yield_term" not in _CASING_PARAMS
+    assert "include_yield_term" in _ANNULUS_PARAMS
+
+
+def test_t2_opts_carries_include_yield_term_through_to_solver():
+    """Phase 2 对抗核查 **W-1** 陷阱：T2 `_opts()` 若只加形参、不加返回键，
+    `normalize_run_opts` 会**静默**补默认 False ⇒ 标"拆分 on"的档实际按 off 跑
+    （无 TypeError、无守卫，典型静默标签失真）。本测试把「标签 ⇔ 真到达 solver」钉死。"""
+    off = normalize_run_opts(_opts("static"))
+    on = normalize_run_opts(_opts("static", include_yield_term=True))
+    assert off["include_yield_term"] is False
+    assert on["include_yield_term"] is True, "T2 _opts() 的返回 dict 漏了 include_yield_term 键"
+
+    ak_on = annulus_kwargs_from_opts(on)
+    assert ak_on.get("include_yield_term") is True
+    s = AnnulusD2DGASolver(dt=2.0, nz=4, ny=4, total_t=1.0, **ak_on)
+    assert s.include_yield_term is True
+
+    # 默认档不出键（关 2：默认值不产生额外 kwarg）
+    ak_off = annulus_kwargs_from_opts(off)
+    assert "include_yield_term" not in ak_off
+    s2 = AnnulusD2DGASolver(dt=2.0, nz=4, ny=4, total_t=1.0, **ak_off)
+    assert s2.include_yield_term is False
 
 
 # --------------------------------------------------------------------------- #
@@ -132,6 +161,7 @@ def test_default_and_t_off_opts_map_to_legacy_four_key_caliber():
         assert ck["pressure_caliber"] == "shoe"
         ak = annulus_kwargs_from_opts(opts)
         assert "enable_stream_yield_gate" not in ak
+        assert "include_yield_term" not in ak, "False/缺键 ⇒ 不给键（Phase 2 关 2 不变量）"
         assert "enable_yield_gate" not in ak, "None ⇒ 不给键（沿用调用方口径）"
 
 
