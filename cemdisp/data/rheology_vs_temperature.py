@@ -10,9 +10,11 @@
 温压耦合改进计划_2026-09-30.md §3 + task-3-brief.md（含 2026-09-30 四项裁定）：
 
 - 组 A 水泥（2.1 g/cm³，20–170°C）/ 组 B 水泥（1.9 g/cm³，20–200°C）
-- 中间密度水泥：组 B↔组 A 按密度线性插值（温区交集 [20,170]°C）
-- 隔离液 1.95/2.05 含压二次曲面；ρ∈[1.95,2.05] 六系数密度插值（Q2b），
-  域外 clamp 到最近端公式+借用审计（系数不外推）
+- 中间密度水泥：**就近取**组 B/组 A **整式**（Q16，2026-10-06 用户裁定）——
+  捕获区 [1.88,2.12]，以 2.000 为界（平局取高密度端=组 A）；**不再做密度插值**
+- 隔离液 1.95/2.05 含压二次曲面；**就近取**端点**整式**（Q16）——捕获区 [1.90,2.10]
+  （= [1.95,2.05] + 半档 0.05 宽容带），以 2.000 为界（平局取 2.05 式）；
+  **不再做六系数密度插值**；捕获区外维持"就近借用端点整式 + borrow 审计"（系数不外推）
 - 钻井液（呼101 拟合，域 [40,80]°C clamp；``mud_extrapolate`` 可外推对比）
 
 单位：T=°C，P=MPa，τ/τ₀/τy=Pa，μp=**Pa·s**（锚点表 mPa·s 由测试侧 ÷1000）。
@@ -43,7 +45,7 @@ _AUDIT: deque = deque(maxlen=_AUDIT_MAX)
 
 
 def get_audit() -> list[dict]:
-    """返回审计事件列表副本（kind ∈ clamp / borrow / no_replace /
+    """返回审计事件列表副本（kind ∈ clamp / borrow / nearest / no_replace /
     model_assumption / extrapolate / p_default）。
 
     事件数超上限（10000）时丢弃最旧、保留最新（deque 定长，内存有界）。
@@ -115,6 +117,14 @@ _SPACER_2P05_TY = (10.787391, -0.0206255, 0.0320167,
                    -0.000247286, 0.000219522, -0.000253669)
 _SPACER_2P05_MP = (0.125694, -0.00108616, 0.000323974,
                    0.00000341573, -0.00000316667, 0.000000714405)
+
+# Q16（2026-10-06 用户裁定）「密度就近取」捕获区与平局界：
+#   捕获区 = 锚点区间 + 半档宽容带（带内仍算"近"，整式就近取，不插值）；
+#   捕获区以 _*_MID 为界左闭右开 ⇒ 平局（恰在中点）取**高密度端**。
+#   捕获区外 = 「远」：维持现状（隔离液借用端点整式+borrow 审计；水泥不替换），
+#   处置（是否改插值/外推）登记为待裁项，见 spec §6。
+_SPACER_LO, _SPACER_HI, _SPACER_MID = 1.90, 2.10, 2.000
+_CEMENT_LO, _CEMENT_HI, _CEMENT_MID = 1.88, 2.12, 2.000
 
 
 def _quad6(c: tuple, T: float, P: float) -> float:
@@ -213,48 +223,55 @@ def _spacer_values(fluid: FluidSpec, T: float, P_mpa: Optional[float]) -> tuple[
     T = _clamp_record(T, 20.0, 200.0, name, "T")
     P = _clamp_record(P, 0.1, 200.0, name, "P")
 
-    # 密度分派（Q2b）：[1.95,2.05] 六系数插值；端点=专属式；域外就近端借用
-    if 1.95 <= d <= 2.05:
-        if d == 1.95:
-            ty_c, mp_c = _SPACER_1P95_TY, _SPACER_1P95_MP
-        elif d == 2.05:
-            ty_c, mp_c = _SPACER_2P05_TY, _SPACER_2P05_MP
-        else:
-            w = (d - 1.95) / 0.10
-            ty_c = tuple(a + w * (b - a) for a, b in zip(_SPACER_1P95_TY, _SPACER_2P05_TY))
-            mp_c = tuple(a + w * (b - a) for a, b in zip(_SPACER_1P95_MP, _SPACER_2P05_MP))
+    # 密度分派（Q16 就近取，2026-10-06）：整式取最近锚点，不做系数插值。
+    # 捕获区左闭右开（平局 d==_SPACER_MID 取高密度端 2.05 式）。
+    if d < _SPACER_MID:
+        ty_c, mp_c = _SPACER_1P95_TY, _SPACER_1P95_MP
+        anchor = 1.95
     else:
-        # 最近端：d<1.95 → 1.95 式；d>2.05 → 2.05 式（系数不外推）
-        if d < 1.95:
-            ty_c, mp_c = _SPACER_1P95_TY, _SPACER_1P95_MP
-        else:
-            ty_c, mp_c = _SPACER_2P05_TY, _SPACER_2P05_MP
+        ty_c, mp_c = _SPACER_2P05_TY, _SPACER_2P05_MP
+        anchor = 2.05
+    if not (_SPACER_LO <= d <= _SPACER_HI):
+        # 远（捕获区外）：维持现状——就近借用端点整式 + borrow 审计（处置待裁）
         _record("borrow", name,
-                f"隔离液密度 {d:.3f} g/cm³ 不在 [1.95,2.05]，就近借用端点公式"
+                f"隔离液密度 {d:.3f} g/cm³ 超出就近取捕获区"
+                f" [{_SPACER_LO},{_SPACER_HI}]，就近借用端点公式"
                 f"（model_assumption，系数不外推）",
                 note="model_assumption")
+    elif abs(d - anchor) > 1e-12:
+        # 近但不精确命中锚点：记 nearest（供口径对照计数；锚点命中不记，避免逐步刷屏）
+        _record("nearest", name,
+                f"隔离液密度 {d:.3f} g/cm³ 就近取 {anchor} 式（不插值）",
+                requested=d, anchor=anchor)
 
     return _quad6(ty_c, T, P), _quad6(mp_c, T, P)
 
 
 def _cement_values(fluid: FluidSpec, T: float) -> Optional[tuple[float, float]]:
-    """按密度档求值；密度不匹配任何档返回 None（调用方记不替换审计）。"""
+    """按密度档求值（Q16 就近取）；密度在捕获区外返回 None（调用方记不替换审计）。
+
+    难点口径（2026-10-06 Q16）：**整式就近取**锚点公式，不再做组 B↔组 A 密度插值；
+    每个锚点用**自己的**温区——组 B [20,200]°C、组 A [20,170]°C（原插值支统一取
+    交集 [20,170] 的口径随之取消）。
+    """
     name = fluid.name
     d = fluid.density_kg_m3 / 1000.0
-
-    if 1.88 <= d <= 1.92:                       # 尾浆 1.90 档 ±0.02
+    if not (_CEMENT_LO <= d <= _CEMENT_HI):
+        return None
+    if d < _CEMENT_MID:                         # 组 B（1.90 g/cm³，温区 [20,200]）
         T = _clamp_record(T, 20.0, 200.0, name, "T")
+        if abs(d - 1.90) > 1e-12:
+            _record("nearest", name,
+                    f"水泥密度 {d:.3f} g/cm³ 就近取 1.90（组 B）式（不插值）",
+                    requested=d, anchor=1.90)
         return _cement_b_tau0(T), _cement_b_mup(T)
-    if 2.08 <= d <= 2.12:                       # 领/尾浆 2.10 档 ±0.02
-        T = _clamp_record(T, 20.0, 170.0, name, "T")
-        return _cement_a_tau0(T), _cement_a_mup(T)
-    if 1.92 < d < 2.08:                         # 领浆 1.93/1.95/2.05 等 → 密度插值
-        T = _clamp_record(T, 20.0, 170.0, name, "T")   # 组 A/B 温区交集
-        w = (d - 1.9) / 0.2
-        tb, ab = _cement_b_tau0(T), _cement_b_mup(T)
-        ta, am = _cement_a_tau0(T), _cement_a_mup(T)
-        return tb + w * (ta - tb), ab + w * (am - ab)
-    return None
+    # 组 A（2.10 g/cm³，温区 [20,170]）
+    T = _clamp_record(T, 20.0, 170.0, name, "T")
+    if abs(d - 2.10) > 1e-12:
+        _record("nearest", name,
+                f"水泥密度 {d:.3f} g/cm³ 就近取 2.10（组 A）式（不插值）",
+                requested=d, anchor=2.10)
+    return _cement_a_tau0(T), _cement_a_mup(T)
 
 
 # ---------------------------------------------------------------------------

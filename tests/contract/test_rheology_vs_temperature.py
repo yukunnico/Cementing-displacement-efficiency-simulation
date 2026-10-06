@@ -8,8 +8,10 @@ T0-2 温变流变公式全集契约测试（cemdisp.data.rheology_vs_temperature
 - 钻井液锚点（T=60）+ clamp 关系断言（T=20→40、T=100→80）+ 审计计数 +1
 - 隔离液锚点（T=20, P=0.1）：1.95 → τy≈7.28/μp≈0.0779；
   2.05 → τy≈10.28/μp≈0.1054（2026-09-30 Q1① 裁定修正锚，原 10.75/0.1233 废止）
-- 插值单调性：ρ=1.90/1.93/1.95/2.05/2.10 序列 τ₀(60°C) 严格递增
-- 分派表逐行一例：钻井液/先导浆/平衡液/替浆链不替换/隔离液插值/隔离液域外借用/
+- 密度**就近取**（Q16，2026-10-06 用户裁定）：水泥 ρ=1.90/1.93/1.95 同取组 B 式、
+  2.05/2.10 同取组 A 式（两段平台 + 2.000 处跳变）；隔离液 ρ=2.00 平局取 2.05 式；
+  捕获区外仍为“就近借用端点整式 + borrow 审计”（远，处置待裁）
+- 分派表逐行一例：钻井液/先导浆/平衡液/替浆链不替换/隔离液就近取/隔离液域外借用/
   领尾中间浆三密度档/冲洗液不替换/不匹配不替换
 - Bingham 绝对替换切换、smooth_break 占位、clamp/borrow/审计 API
 """
@@ -183,13 +185,45 @@ class TestSpacerAnchor:
 
 
 # ---------------------------------------------------------------------------
-# 中间密度插值单调性
+# 中间密度就近取（Q16，2026-10-06）：两段平台 + 2.000 跳变，不再插值
 # ---------------------------------------------------------------------------
-class TestCementInterpMonotonic:
-    def test_tau0_increases_with_density(self):
+class TestCementDensityNearestTake:
+    def test_plateaus_and_jump_at_mid(self):
+        """rho=1.90/1.93/1.95 -> 组 B 式同值；2.05/2.10 -> 组 A 式同值。"""
         rhos = [1.90, 1.93, 1.95, 2.05, 2.10]
         taus = [fluid_at(_cement("领浆", r), 60.0).yield_stress_pa for r in rhos]
-        assert all(b > a for a, b in zip(taus, taus[1:])), taus
+        tb = fluid_at(_cement("领浆", 1.90), 60.0).yield_stress_pa
+        ta = fluid_at(_cement("领浆", 2.10), 60.0).yield_stress_pa
+        assert taus[:3] == pytest.approx([tb] * 3, abs=1e-12), taus
+        assert taus[3:] == pytest.approx([ta] * 2, abs=1e-12), taus
+        assert ta > tb
+
+    @pytest.mark.parametrize("rho,anchor", [
+        pytest.param(1.9999, 1.90, id="mid-1e-4-B"),
+        pytest.param(2.0000, 2.10, id="mid-tie-takes-A"),
+        pytest.param(2.0001, 2.10, id="mid+1e-4-A"),
+        pytest.param(1.8800, 1.90, id="lo-boundary-B"),
+        pytest.param(2.1200, 2.10, id="hi-boundary-A"),
+    ])
+    def test_mid_tiebreak_and_capture_bounds(self, rho, anchor):
+        """平局取高密度端；捕获区闭区间内一律就近取。"""
+        out = fluid_at(_cement("领浆", rho), 60.0)
+        ref = fluid_at(_cement("ref", anchor), 60.0)
+        assert out.yield_stress_pa == ref.yield_stress_pa
+        assert out.plastic_viscosity_pa_s == ref.plastic_viscosity_pa_s
+
+    def test_non_anchor_density_records_nearest_audit(self):
+        fluid_at(_cement("领浆", 1.95), 60.0)
+        ev = [e for e in get_audit() if e["kind"] == "nearest"]
+        assert ev and ev[0]["anchor"] == 1.90
+
+    def test_exact_anchor_records_no_nearest_audit(self):
+        fluid_at(_cement("领浆", 1.90), 60.0)
+        assert not any(e["kind"] == "nearest" for e in get_audit())
+
+    def test_outside_capture_no_replace(self):
+        f = _cement("领浆", 1.80)
+        assert fluid_at(f, 60.0) is f
 
 
 # ---------------------------------------------------------------------------
@@ -291,24 +325,52 @@ class TestDispatchTable:
             for e in get_audit()
         )
 
-    def test_row_spacer_density_interp(self):
-        """隔离液 ρ∈[1.95,2.05] → 六系数密度插值（ρ=2.00 = 两端锚点均值，值线性）。"""
+    def test_row_spacer_density_nearest_tie_high(self):
+        """隔离液 rho=2.000 恰在中点（平局）=> 就近取高密度端 2.05 整式，不插值。"""
         out = fluid_at(_spacer("隔离液1", 2.00), 20.0, 0.1)
-        _assert_tau(out.yield_stress_pa, (7.28 + 10.28) / 2.0)
-        _assert_mup_pas(out.plastic_viscosity_pa_s, (0.0779 + 0.1054) / 2.0)
+        _assert_tau(out.yield_stress_pa, 10.28)
+        _assert_mup_pas(out.plastic_viscosity_pa_s, 0.1054)
         assert not any(e["kind"] == "borrow" for e in get_audit())
+        ev = [e for e in get_audit() if e["kind"] == "nearest"]
+        assert ev and ev[0]["anchor"] == 2.05
+
+    @pytest.mark.parametrize("rho,anchor", [
+        pytest.param(1.980, 1.95, id="1.980-near-1.95"),
+        pytest.param(1.950, 1.95, id="anchor-1.95-exact"),
+        pytest.param(2.050, 2.05, id="anchor-2.05-exact"),
+    ])
+    def test_row_spacer_density_nearest_inside(self, rho, anchor):
+        """捕获区 [1.90,2.10] 内 => 整式就近取最近锚点。"""
+        out = fluid_at(_spacer("驱油隔离液", rho), 20.0, 0.1)
+        ref = fluid_at(_spacer("ref", anchor), 20.0, 0.1)
+        assert out.yield_stress_pa == ref.yield_stress_pa
+        assert out.plastic_viscosity_pa_s == ref.plastic_viscosity_pa_s
+
+    @pytest.mark.parametrize("rho,anchor", [
+        pytest.param(1.920, 1.95, id="1.920-tolerance-band-near"),
+        pytest.param(2.100, 2.05, id="2.100-tolerance-band-near"),
+    ])
+    def test_row_spacer_tolerance_band_is_near_not_borrow(self, rho, anchor):
+        """半档宽容带（区间外 0.05）内仍算 near：取端点整式且不记 borrow。"""
+        name = "隔离液(实际)" if rho == 1.92 else "隔离液2"
+        out = fluid_at(_spacer(name, rho), 20.0, 0.1)
+        ref = fluid_at(_spacer("ref", anchor), 20.0, 0.1)
+        assert out.yield_stress_pa == ref.yield_stress_pa
+        assert out.plastic_viscosity_pa_s == ref.plastic_viscosity_pa_s
+        assert not any(
+            e["kind"] == "borrow" and e["fluid"] == name for e in get_audit()
+        ), "tolerance band is NEAR, must not record borrow"
 
     @pytest.mark.parametrize(
         "rho,ref_rho",
         [
-            pytest.param(1.75, 1.95, id="1.75就近借1.95"),
-            pytest.param(1.92, 1.95, id="1.92就近借1.95"),
-            pytest.param(2.10, 2.05, id="2.10就近借2.05"),
+            pytest.param(1.75, 1.95, id="1.75-beyond-band-borrow"),
+            pytest.param(1.82, 1.95, id="1.82-beyond-band-borrow"),
         ],
     )
     def test_row_spacer_out_of_range_borrow(self, rho, ref_rho):
         """隔离液 ρ 域外 → clamp 到最近端公式 + model_assumption 借用审计。"""
-        name = "隔离液2" if rho == 1.75 else "驱油隔离液"
+        name = "隔离液2"
         f = _spacer(name, rho)
         out = fluid_at(f, 20.0, 0.1)
         ref = fluid_at(_spacer("参照", ref_rho), 20.0, 0.1)
@@ -393,17 +455,27 @@ class TestDispatchTable:
         _assert_tau(out.yield_stress_pa, 8.190)
         _assert_mup(out.plastic_viscosity_pa_s, 249.0)
 
-    def test_row_cement_interp_band(self):
-        """领/尾/中间浆 ρ∈(1.92,2.08) → cement_interp(ρ)：期望由 A/B 锚点线性组合。"""
+    def test_row_cement_mid_band_nearest_B(self):
+        """领/尾/中间浆 rho in (1.92,2.00) -> 就近取组 B 整式（Q16 不再插值）。"""
         out = fluid_at(_cement("领浆", 1.93), 60.0)
-        _assert_tau(out.yield_stress_pa, 2.852 + 0.15 * (8.190 - 2.852))
-        _assert_mup(out.plastic_viscosity_pa_s, 91.5 + 0.15 * (249.0 - 91.5))
+        _assert_tau(out.yield_stress_pa, 2.852)
+        _assert_mup(out.plastic_viscosity_pa_s, 91.5)
+        ev = [e for e in get_audit() if e["kind"] == "nearest"]
+        assert ev and ev[0]["anchor"] == 1.90
+
+    def test_row_cement_mid_band_nearest_A(self):
+        """领/尾/中间浆 rho in [2.00,2.08) -> 就近取组 A 整式（Q16 不再插值）。"""
+        out = fluid_at(_cement("领浆", 2.05), 60.0)
+        _assert_tau(out.yield_stress_pa, 8.190)
+        _assert_mup(out.plastic_viscosity_pa_s, 249.0)
+        ev = [e for e in get_audit() if e["kind"] == "nearest"]
+        assert ev and ev[0]["anchor"] == 2.10
 
     @pytest.mark.parametrize(
         "rho,expected_tau",
         [
             pytest.param(1.90, 2.852, id="中间浆1.90→B"),
-            pytest.param(2.05, 2.852 + 0.75 * (8.190 - 2.852), id="中间浆2.05→interp"),
+            pytest.param(2.05, 8.190, id="中间浆2.05→就近取A"),
         ],
     )
     def test_row_intermediate_merged_into_cement(self, rho, expected_tau):
