@@ -178,12 +178,25 @@ def _rate(factor: float):
     return lambda s: scale_schedule(s, factor)
 
 
-def _opts(mode: str, *, on: bool = True, yield_gate: bool | None = None) -> dict:
-    """run_opts（09-16 共享装配层三键）。"""
+def _opts(mode: str, *, on: bool = True, yield_gate: bool | None = None,
+          rheology_formula: dict | None = None,
+          mud_extrapolate: bool = False,
+          pressure_mode: str = "off",
+          pressure_caliber: str = "shoe") -> dict:
+    """run_opts（09-16 共享装配层；R1/P-1 2026-10-06 由三键扩为七键）。
+
+    新增各键默认 ``None``/``False``/``"off"``/``"shoe"`` ⇒ 本文件既有 20+ 变体条目的
+    调用**逐位不变**（关2）。载荷语义见
+    ``run_sensitivity_current_20260916.params_from_spec`` / ``build_pressure_field``。
+    """
     return {
         "enable_temperature_rheology": on,
         "temperature_mode": mode,
         "enable_yield_gate": yield_gate,
+        "rheology_formula": rheology_formula,
+        "mud_extrapolate": mud_extrapolate,
+        "pressure_mode": pressure_mode,
+        "pressure_caliber": pressure_caliber,
     }
 
 

@@ -22,8 +22,22 @@ from cemdisp.data.provenance import (
     build_injected_fluid_provenance_summary,
     format_injected_fluid_provenance_markdown,
 )
+from cemdisp.data.pressure_field import (
+    ANNULUS_ROLES,
+    G_STANDARD,
+    ConstantPressureField,
+    HydrostaticPressureField,
+    PressureField,
+    PressureOutOfRangeEvent,
+    insitu_column_density,
+)
 from cemdisp.data.pumping_schedule import PumpingSchedule, PumpingScheduleStep
-from cemdisp.data.rheology_vs_temperature import fluid_at, get_audit, reset_audit
+from cemdisp.data.rheology_vs_temperature import (
+    RheologyFormulaParams,
+    fluid_at,
+    get_audit,
+    reset_audit,
+)
 from cemdisp.data.temperature_field import (
     GEO_GRAD_C_PER_M,
     GEO_T0_C,
@@ -37,7 +51,9 @@ from cemdisp.data.validation_data import ValidationData
 from cemdisp.data.well_spec import DepthValuePoint, EvaluationWindow, WellSpec
 
 __all__ = [
+    "ANNULUS_ROLES",
     "ClampEvent",
+    "ConstantPressureField",
     "ConstantTemperatureField",
     "DepthValuePoint",
     "EvaluationWindow",
@@ -47,8 +63,13 @@ __all__ = [
     "GEO_GRAD_C_PER_M",
     "GEO_T0_C",
     "GeothermalTemperatureField",
+    "G_STANDARD",
+    "HydrostaticPressureField",
+    "PressureField",
+    "PressureOutOfRangeEvent",
     "PumpingSchedule",
     "PumpingScheduleStep",
+    "RheologyFormulaParams",
     "RheologyModel",
     "SectionProvenance",
     "TableTemperatureField",
@@ -60,6 +81,7 @@ __all__ = [
     "fluid_at",
     "format_injected_fluid_provenance_markdown",
     "get_audit",
+    "insitu_column_density",
     "load_delivered_pair",
     "reset_audit",
 ]

@@ -15,7 +15,7 @@
    列预期符号与实测符号。
 
 附：**口径差对照表**（计划 §3.7 全网格温点上「公式值 vs 原 loader 静态参数」
-逐相全表 + 分派表 9 行逐相标注）→ ``results/温度耦合验证/口径差对照表.md``。
+逐相全表 + 分派表 9 行逐相标注）→ ``<out-dir>/口径差对照表.md``。
 
 生产 runner 口径声明
 --------------------
@@ -41,7 +41,8 @@ json.dumps ensure_ascii=False, indent=2）。
 * provider/取 provenance 用原始 raw 元组（只消费名字/角色/密度，两侧同源）。
 * 参照跑 = 全 T-off（enable_temperature_rheology=False，不注入温度场）。
 
-产物（results/温度耦合验证/）：三级验证报告.md、口径差对照表.md、4 份摘要 JSON。
+产物（默认 ``results/温度耦合验证/``，可用 ``--out-dir`` 覆盖）：三级验证报告.md、
+口径差对照表.md、4 份摘要 JSON。
 
 用法::
 
@@ -78,11 +79,23 @@ from cemdisp.models2d.boundary_bridge import build_coupled_annulus_inlet_provide
 from cemdisp.runners.ht1_004_tailpipe import annulus_stop_time_s
 from cemdisp.transport1d import CasingFlowSolver
 
-OUT_DIR = _ROOT / "results" / "温度耦合验证"
+DEFAULT_OUT_DIR = _ROOT / "results" / "温度耦合验证"
+# ⚠️ `results/温度耦合验证/` 是 **tracked 冻结产物**（v1，口径差表 P=0.1 MPa 缺省口径）——
+# P-1 落地后 v1 作废，重跑**必须**换新目录（红线：禁止覆盖既有产物）：
+#     python scripts/entrypoints/verify_temperature_coupling.py --out-dir results/温度耦合验证_P1_<日期>
+OUT_DIR = DEFAULT_OUT_DIR
 BASELINE_JSON = _ROOT / "results" / "_baseline_T_off" / "基线摘要_T_off.json"
 AUDIT_KEY = "temperature_rheology_audit"
 WS_ROLES = (FluidRole.WASH, FluidRole.SPACER)
 T_REF = 60.0  # 关2 参照派生温度（= ConstantTemperatureField(60)）
+
+
+def _out_rel() -> str:
+    """`OUT_DIR` 相对仓库根的显示路径——正文/日志一律经此派生，切目录后不得残留旧路径。"""
+    try:
+        return OUT_DIR.relative_to(_ROOT).as_posix()
+    except ValueError:  # 目录在仓外
+        return str(OUT_DIR)
 
 # 计划 §3.7 回归锚点网格（100+ 取 100.1，与 tests/contract/test_rheology_vs_temperature.py 同口径）
 CEM_GRID: list[tuple[str, float]] = [
@@ -253,8 +266,16 @@ def _pct(formula: float, loader: float) -> str:
     return f"{(formula - loader) / loader * 100.0:+.1f}%"
 
 
-def build_caliber_table() -> tuple[str, list[dict]]:
-    """生成口径差对照表 markdown + 代表温点关键数字列表。"""
+def build_caliber_table(
+    p_mpa: float | None = None,
+    p_source: str = "",
+) -> tuple[str, list[dict]]:
+    """生成口径差对照表 markdown + 代表温点关键数字列表。
+
+    ``p_mpa``（P-1，2026-10-06）：隔离液族的**真实压力** [MPa]。``None`` ⇒ 常压 0.1 MPa
+    缺省（v1 口径，记 ``p_default`` 审计）；给值 ⇒ 隔离液族按该压力求值（v2 口径），
+    并在表中增列「@P」对照。**效应面只有隔离液族**——水泥/钻井液公式纯温度，不吃 P。
+    """
     _, fluids, _, _ = load_ht1_004_tailpipe()
     row_of: dict[str, tuple[str, str]] = {}
     for row_id, desc, names in DISPATCH_ROWS:
@@ -269,8 +290,14 @@ def build_caliber_table() -> tuple[str, list[dict]]:
         "Task 3 实现）；loader 侧 = `ht1_004_loader._build_fluids()` 静态常量——两侧来源独立。\n"
         "- 网格 = 计划 §3.7 全网格温点：水泥/隔离液族 20/60/100−(=100.0)/100+(=100.1)/120/155/170 °C；"
         "泥浆族 40/50/60/70/80 °C。\n"
-        "- 隔离液压力 P：与生产 T-on 路径同口径 **P 未传入 → 常压 0.1 MPa 缺省**"
-        "（压力耦合属 Phase P，未接线）。\n"
+        + (
+            ("- 隔离液压力 P：**P-1 已接线** —— 本表按 `HydrostaticPressureField` 的鞋深单点"
+             f" **P={p_mpa:.4f} MPa**（{p_source}）求值；表中「@P」列 = 该压力下的公式值，"
+             "未标 P 的列 = v1 常压缺省 0.1 MPa 口径（**v1 已作废，仅留对照**）。\n")
+            if p_mpa is not None else
+            "- 隔离液压力 P：与生产 T-on 路径同口径 **P 未传入 → 常压 0.1 MPa 缺省**"
+            "（压力耦合属 Phase P，未接线）。\n"
+        ) +
         "- μp 单位 Pa·s、τy 单位 Pa；Δ = 公式 − loader；Δ% = (公式−loader)/loader。\n"
         "- 「不替换」行（分派表行3/行9）：T-on 对该相原样返回 loader 常数 ⇒ Δ≡0。\n"
     )
@@ -300,25 +327,38 @@ def build_caliber_table() -> tuple[str, list[dict]]:
             })
             continue
         grid = MUD_GRID if family == "mud" else CEM_GRID
-        md.append("\n| 温点 | 公式τy | loader YP | Δτy | Δτy% | 公式μp | loader PV | Δμp | Δμp% |")
-        md.append("|---|---|---|---|---|---|---|---|---|")
+        show_p = (family == "spacer" and p_mpa is not None)
+        cols = ("| 温点 | 公式τy | loader YP | Δτy | Δτy% | 公式μp | loader PV | Δμp | Δμp% |"
+                + (" 公式τy@P | Δτy%@P | 公式μp@P | Δμp%@P |" if show_p else ""))
+        md.append("\n" + cols)
+        md.append("|---" * (9 + (4 if show_p else 0)) + "|")
         reset_audit()
         rep_t = REP_T[family]
         for label, t in grid:
             out = fluid_at(f, t)
             ft = float(out.yield_stress_pa)
             fm = float(out.plastic_viscosity_pa_s)
+            ftp = fmp = None
+            extra = ""
+            if show_p:
+                outp = fluid_at(f, t, p_mpa)
+                ftp = float(outp.yield_stress_pa)
+                fmp = float(outp.plastic_viscosity_pa_s)
+                extra = (f" {ftp:.4f} | {_pct(ftp, loader_tauy)} |"
+                         f" {fmp:.6f} | {_pct(fmp, loader_mup)} |")
             md.append(
                 f"| {label} °C | {ft:.4f} | {loader_tauy} | "
                 f"{ft - loader_tauy:+.4f} | {_pct(ft, loader_tauy)} | "
                 f"{fm:.6f} | {loader_mup} | {fm - loader_mup:+.6f} | "
-                f"{_pct(fm, loader_mup)} |"
+                f"{_pct(fm, loader_mup)} |" + extra
             )
             if abs(t - rep_t) < 1e-9:
                 rep_rows.append({
                     "phase": f.name, "family": family, "row": row_id,
                     "T": t, "tauy_f": ft, "tauy_l": loader_tauy,
                     "mup_f": fm, "mup_l": loader_mup,
+                    "tauy_f_p": ftp, "mup_f_p": fmp,
+                    "p_mpa": p_mpa if show_p else None,
                 })
         md.append("")
 
@@ -551,7 +591,7 @@ def write_report(ctx: dict) -> str:
         "`PYTHONIOENCODING=utf-8 PYTHONUTF8=1`")
     add("- 脚本：`scripts/entrypoints/verify_temperature_coupling.py`"
         "（本报告由该脚本一次性生成）")
-    add("- 产物：`results/温度耦合验证/`（本报告、口径差对照表.md、4 份摘要 JSON）\n")
+    add(f"- 产物：`{_out_rel()}/`（本报告、口径差对照表.md、4 份摘要 JSON）\n")
 
     add("## 三关结论\n")
     add("| 关 | 判据 | 结果 | 证据 |")
@@ -664,7 +704,7 @@ def write_report(ctx: dict) -> str:
 
     # ---- 口径差 ----
     add("## 口径差对照表（§3.7 全网格，公式 vs loader）\n")
-    add("- 全表见 `results/温度耦合验证/口径差对照表.md`。")
+    add(f"- 全表见 `{_out_rel()}/口径差对照表.md`。")
     add("- 代表温点关键数字（泥浆族=80 °C 井内 clamp 端；水泥/隔离液=120 °C，P=0.1 MPa）：\n")
     add("| 相 | 分派行 | τy 公式 vs loader | Δ% | μp 公式 vs loader | Δ% |")
     add("|---|---|---|---|---|---|")
@@ -688,7 +728,24 @@ def write_report(ctx: dict) -> str:
 # --------------------------------------------------------------------------- #
 # main
 # --------------------------------------------------------------------------- #
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
+    global OUT_DIR
+    import argparse
+    ap = argparse.ArgumentParser(description="T1-5 三级验证 + 口径差对照表")
+    ap.add_argument(
+        "--out-dir", default=None,
+        help="输出目录（默认 results/温度耦合验证，**该目录为冻结 v1 产物**；"
+             "P-1 后重跑请给新目录，如 results/温度耦合验证_P1_20261006）",
+    )
+    ap.add_argument(
+        "--no-pressure", action="store_true",
+        help="口径差表退回 v1 的常压 0.1 MPa 缺省口径（默认按 P-1 静压场求值）",
+    )
+    args = ap.parse_args(argv)
+    if args.out_dir:
+        OUT_DIR = Path(args.out_dir)
+        if not OUT_DIR.is_absolute():
+            OUT_DIR = _ROOT / OUT_DIR
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     ts = datetime.now().isoformat(timespec="seconds")
     print(f"== T1-5 三级验证开始 {ts} ==", flush=True)
@@ -771,8 +828,21 @@ def main() -> int:
     overall = "全过" if (gate1["verdict"] == "过" and gate2["verdict"] == "过"
                         and gate3["verdict"] == "过") else "未过（原样列数字，不修不调）"
 
-    # ---------- 口径差对照表 ----------
-    caliber_md, rep_rows = build_caliber_table()
+    # ---------- 口径差对照表（v2：P-1 真实静压口径）----------
+    p_mpa: float | None = None
+    p_source = "压力场未接线（v1 口径）"
+    if not args.no_pressure:
+        from cemdisp.data.pressure_field import (
+            HydrostaticPressureField, insitu_column_density,
+        )
+        _well_p, _fluids_p, _sched_p, _ = load_ht1_004_tailpipe()
+        _rho_bar = insitu_column_density(_fluids_p, _sched_p)
+        _pf = HydrostaticPressureField.from_well(_well_p, _rho_bar)
+        p_mpa = float(_pf.P(float(_well_p.shoe_md_m), 0.0))
+        p_source = (f"HydrostaticPressureField 鞋深单点，ρ̄={_rho_bar:.2f} kg/m³"
+                    "（在场相密度按设计泵注体积加权）")
+        print(f"[P-1] 呼1-004 鞋深静压 P={p_mpa:.4f} MPa（ρ̄={_rho_bar:.2f}）", flush=True)
+    caliber_md, rep_rows = build_caliber_table(p_mpa, p_source)
     (OUT_DIR / "口径差对照表.md").write_text(caliber_md, encoding="utf-8")
 
     # ---------- 报告 ----------
@@ -791,7 +861,7 @@ def main() -> int:
         "为生产语义（各跑自算停算时刻），差异表单列 stop_t_s 行披露。",
         "代表温点口径：泥浆族取 80 °C（井内 T≥98.7 °C 恒 clamp 到域端 80）；"
         "水泥/隔离液取 120 °C（井内温区 [98.7, 150.8] 中段），隔离液 P=0.1 MPa 常压缺省。",
-        "本脚本只新增自身与 `results/温度耦合验证/**`；求解器/既有 results 零改动。",
+        f"本脚本只新增自身与 `{_out_rel()}/**`；求解器/既有 results 零改动。",
     ]
     ctx = {
         "timestamp": ts,
@@ -843,6 +913,10 @@ def main() -> int:
             print(f"{r['phase']} @{r['T']:.0f}°C: "
                   f"τy {r['tauy_f']:.4f} vs {r['tauy_l']} ({_pct(r['tauy_f'], r['tauy_l'])}) / "
                   f"μp {r['mup_f']:.6f} vs {r['mup_l']} ({_pct(r['mup_f'], r['mup_l'])})")
+            if r.get("tauy_f_p") is not None:
+                print(f"    @P={r['p_mpa']:.4f} MPa: "
+                      f"τy {r['tauy_f_p']:.4f} ({_pct(r['tauy_f_p'], r['tauy_l'])}) / "
+                      f"μp {r['mup_f_p']:.6f} ({_pct(r['mup_f_p'], r['mup_l'])})")
     print(f"\n产物：{OUT_DIR}")
     return 0 if overall == "全过" else 1
 

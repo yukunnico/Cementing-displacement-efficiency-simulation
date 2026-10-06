@@ -58,7 +58,7 @@ from typing import TYPE_CHECKING
 
 from cemdisp.data.fluid_spec import FluidRole, FluidSpec, RheologyModel
 from cemdisp.data.pumping_schedule import PumpingSchedule, PumpingScheduleStep, PumpingStageEvent
-from cemdisp.data.rheology_vs_temperature import fluid_at
+from cemdisp.data.rheology_vs_temperature import RheologyFormulaParams, fluid_at
 from cemdisp.data.temperature_field import ConstantTemperatureField
 from cemdisp.data.well_spec import WellSpec
 from cemdisp.transport1d.interface_tracking import InterfaceFront
@@ -167,6 +167,16 @@ class CasingFlowSolver:
         # （开关默认关 ⇒ 逐位=HEAD；温度场对象经 run(temperature_field=...) 注入）。
         enable_temperature_rheology: bool = False,
         temperature_rheology_t_c: float = 60.0,
+        # R1（2026-10-06）：温变流变公式系数/域界参数化 + 钻井液外推对照档。
+        # 默认 None/False ⇒ 与 HEAD 数值路径**逐位一致**（关2 红线）。
+        rheology_formula_params: RheologyFormulaParams | None = None,
+        mud_extrapolate: bool = False,
+        # P-1（2026-10-06）：静液柱压力场注入位 + 取 P 深度口径。
+        # ⚠️ casing `_phase_props(self, fluid)` **无 geom/t** 形参（与 annulus 三参不同），
+        # 故 P 在 run() 内一次性算成标量 `_step_P_mpa`（鞋深单点），不在 `_phase_props`
+        # 内现算——不得照抄 annulus 的 `_representative_pressure_mpa(geom, t)` 形态。
+        pressure_field: "PressureField | None" = None,
+        pressure_caliber: str = "shoe",
     ) -> None:
         """初始化求解器。
 
@@ -288,6 +298,19 @@ class CasingFlowSolver:
         # ------------------------------------------------------------------ #
         self.enable_temperature_rheology: bool = enable_temperature_rheology
         self.temperature_rheology_t_c: float = float(temperature_rheology_t_c)
+        # R1（2026-10-06）：公式系数/域界（None ⇒ `fluid_at` 默认参）+ 钻井液外推档。
+        # 只在 T-on 路径被消费（T-off 走 `_phase_props` 恒等返回 ⇒ 零痕迹）。
+        self.rheology_formula_params: RheologyFormulaParams | None = rheology_formula_params
+        self.mud_extrapolate: bool = bool(mud_extrapolate)
+        # P-1（2026-10-06）：静液柱压力场（鞋深单点标量，见 ctor docstring）。
+        # 无场 ⇒ `_step_P_mpa` 恒 None ⇒ `fluid_at` 走 `p_default` ⇒ 与 HEAD 逐位（关2）。
+        if pressure_caliber not in ("shoe", "mean"):
+            raise ValueError(
+                f"pressure_caliber 非法：{pressure_caliber!r}，允许：['shoe', 'mean']"
+            )
+        self.pressure_field = pressure_field
+        self.pressure_caliber: str = str(pressure_caliber)
+        self._step_P_mpa: float | None = None
         self._temperature_field: ConstantTemperatureField | None = None
         self._step_T_c: float | None = None
         if enable_temperature_rheology:
@@ -337,6 +360,12 @@ class CasingFlowSolver:
             )
             self._phase_memo.clear()  # 派生缓存按 run 清（跨 run 不复用）
             self._step_T_c = self._temperature_field.T(well_spec.top_md_m, 0.0)
+            # P-1（C-16）：casing `_phase_props` 无 geom/t ⇒ 在 run 内一次性定标
+            # （鞋深单点；静压场与 t 无关 ⇒ 与 annulus 逐步值同口径）。无场 ⇒ None。
+            self._step_P_mpa = (
+                None if self.pressure_field is None
+                else float(self.pressure_field.P(float(well_spec.shoe_md_m), 0.0))
+            )
 
         pipe_area_m2 = self._pipe_cross_section_area(well_spec)
         shoe_depth_m = well_spec.shoe_md_m
@@ -526,11 +555,15 @@ class CasingFlowSolver:
         if not self.enable_temperature_rheology:
             return fluid
         T = self._step_T_c
-        key = (fluid, T)
+        P = self._step_P_mpa
+        # memo 键含 T、P 与 params（R1/P-1）——P 无场时为 None ⇒ 键与关2 旧口径同族。
+        key = (fluid, T, P, self.rheology_formula_params)
         cached = self._phase_memo.get(key)
         if cached is not None:
             return cached
-        derived = fluid_at(fluid, T)
+        derived = fluid_at(fluid, T, P,
+                           params=self.rheology_formula_params,
+                           mud_extrapolate=self.mud_extrapolate)
         self._phase_memo[key] = derived
         return derived
 

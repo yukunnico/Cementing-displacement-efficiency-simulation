@@ -62,12 +62,14 @@ import importlib
 import json
 import sys
 import time
-from dataclasses import replace
+from dataclasses import fields, replace
 from pathlib import Path
 
 import numpy as np
 
 from cemdisp.data.fluid_spec import FluidRole, FluidSpec
+from cemdisp.data.pressure_field import HydrostaticPressureField, insitu_column_density
+from cemdisp.data.rheology_vs_temperature import RheologyFormulaParams
 from cemdisp.data.pumping_schedule import PumpingSchedule
 from cemdisp.data.temperature_field import (
     ConstantTemperatureField,
@@ -188,14 +190,77 @@ def build_variants() -> list[tuple[str, object, object, object, dict | None]]:
 
 
 # ---------------------------------------------------------------- T2 装配面
-# run_opts 三键（T2 施工口径 2026-10-01）：
+# run_opts 键（R1 2026-10-06 由三键扩为五键；**默认值 = 旧行为**）：
 #   enable_temperature_rheology : 总开关（False ⇒ 数值路径与 HEAD 逐位）
 #   temperature_mode            : "off" | "static" | "table" | "const60"
 #   enable_yield_gate           : None=沿用 CORRECTED_KW（True）/ False=Q10乙通道代理
-RUN_OPTS_KEYS = ("enable_temperature_rheology", "temperature_mode", "enable_yield_gate")
+#   rheology_formula            : None=默认公式系数；dict 见 `params_from_spec`
+#                                 （R1 公式系数扰动档；L2 流变响应验收的操作面）
+#   mud_extrapolate             : False=钻井液 T>80°C clamp 到域端（现状）；
+#                                 True=按公式外推（深段泥浆 clamp 对照档）
+#   pressure_mode               : "off"=不注入压力场（P=None ⇒ p_default 审计，逐位=HEAD）；
+#                                 "hydrostatic"=注入 `HydrostaticPressureField`（P-1）
+#   pressure_caliber            : "shoe"（默认，域底单点）/ "mean"（域内均值对照档）
+RUN_OPTS_KEYS = ("enable_temperature_rheology", "temperature_mode",
+                 "enable_yield_gate", "rheology_formula", "mud_extrapolate",
+                 "pressure_mode", "pressure_caliber")
 TEMPERATURE_MODES = ("off", "static", "table", "const60")
+PRESSURE_MODES = ("off", "hydrostatic")
+PRESSURE_CALIBERS = ("shoe", "mean")
 # 有交付瞬态温度表的井（table 档专用；呼101/呼103 无表 ⇒ 只能 static/const60/off）
 TABLE_WELLS = frozenset({"呼1-004"})
+
+
+_PARAMS_FIELDS = frozenset(f.name for f in fields(RheologyFormulaParams))
+"""`RheologyFormulaParams` 的合法字段名（`params_from_spec` 校验用）。"""
+
+
+def params_from_spec(spec: dict | None) -> RheologyFormulaParams | None:
+    """``run_opts["rheology_formula"]`` 载荷 → `RheologyFormulaParams`（R1）。
+
+    载荷（均可省略，``None`` ⇒ 返回 ``None`` = 用 `fluid_at` 默认参）::
+
+        {"scale": {"<字段名>": 乘子, ...},   # 逐字段缩放：tuple 字段逐元素乘、float 字段直接乘
+         "set":   {"<字段名>": 值, ...}}      # 逐字段直接替换（在 scale 之后施加，优先级更高）
+
+    未知字段名 / 空载荷 / 非数值一律**响亮报错**（防"配错了但静默按默认跑"）。
+    例：组 A τ₀ 系数 +10% ⇒ ``{"scale": {"ca_tau0_q": 1.1}}``。
+    """
+    if spec is None:
+        return None
+    if not isinstance(spec, dict):
+        raise TypeError(f"rheology_formula 须为 dict|None，实际 {type(spec).__name__}")
+    unknown_keys = sorted(set(spec) - {"scale", "set"})
+    if unknown_keys:
+        raise KeyError(f"rheology_formula 含未知子键 {unknown_keys}，允许：['scale', 'set']")
+    changes: dict = {}
+    for sub in ("scale", "set"):
+        table = spec.get(sub)
+        if table is None:
+            continue
+        if not isinstance(table, dict):
+            raise TypeError(f"rheology_formula[{sub!r}] 须为 dict，实际 {type(table).__name__}")
+        for field_name, value in table.items():
+            if field_name not in _PARAMS_FIELDS:
+                raise KeyError(
+                    f"rheology_formula[{sub!r}] 含未知字段 {field_name!r}；"
+                    f"合法字段：{sorted(_PARAMS_FIELDS)}"
+                )
+            current = getattr(RheologyFormulaParams(), field_name)
+            if sub == "scale":
+                factor = float(value)
+                if isinstance(current, tuple):
+                    changes[field_name] = tuple(float(c) * factor for c in current)
+                else:
+                    changes[field_name] = float(current) * factor
+            else:
+                if isinstance(current, tuple):
+                    changes[field_name] = tuple(float(c) for c in value)
+                else:
+                    changes[field_name] = float(value)
+    if not changes:
+        raise ValueError("rheology_formula 载荷为空（既无 scale 也无 set）")
+    return replace(RheologyFormulaParams(), **changes)
 
 
 def normalize_run_opts(run_opts: dict | None) -> dict:
@@ -204,6 +269,10 @@ def normalize_run_opts(run_opts: dict | None) -> dict:
         "enable_temperature_rheology": False,
         "temperature_mode": "off",
         "enable_yield_gate": None,
+        "rheology_formula": None,
+        "mud_extrapolate": False,
+        "pressure_mode": "off",
+        "pressure_caliber": "shoe",
     }
     if run_opts:
         unknown = sorted(set(run_opts) - set(opts))
@@ -231,24 +300,71 @@ def normalize_run_opts(run_opts: dict | None) -> dict:
     yg = opts["enable_yield_gate"]
     if yg is not None and not isinstance(yg, bool):
         raise TypeError(f"enable_yield_gate 须为 bool|None，实际 {type(yg).__name__}")
+    if not isinstance(opts["mud_extrapolate"], bool):
+        raise TypeError(
+            f"mud_extrapolate 须为 bool，实际 {type(opts['mud_extrapolate']).__name__}"
+        )
+    # R1 交叉守卫：温度关时公式参**不会被消费**（fluid_at 根本不被调用）——
+    # 与 temperature_mode 的"标签失真"同型，一律响亮报错而非静默空转。
+    if opts["rheology_formula"] is not None and not opts["enable_temperature_rheology"]:
+        raise ValueError(
+            "rheology_formula 已给但 enable_temperature_rheology=False："
+            "T-off 路径不调用 fluid_at ⇒ 公式参不会被消费，请开温度开关"
+        )
+    params_from_spec(opts["rheology_formula"])   # 载荷合法性前置校验（错字段/空载荷响亮报错）
+    pmode = opts["pressure_mode"]
+    if pmode not in PRESSURE_MODES:
+        raise ValueError(f"pressure_mode 非法：{pmode!r}，允许：{list(PRESSURE_MODES)}")
+    pcal = opts["pressure_caliber"]
+    if pcal not in PRESSURE_CALIBERS:
+        raise ValueError(f"pressure_caliber 非法：{pcal!r}，允许：{list(PRESSURE_CALIBERS)}")
+    # P-1 交叉守卫（同 temperature_mode 的"标签失真"陷阱）：压力场只在 T-on 路径被
+    # 消费（`_phase_props` 的派生分支内）⇒ 温度关时给 pressure_mode 会静默空转。
+    if pmode != "off" and not opts["enable_temperature_rheology"]:
+        raise ValueError(
+            f"pressure_mode={pmode!r} 但 enable_temperature_rheology=False："
+            "压力场不会被消费（T-off 不调用 fluid_at），请开温度开关"
+        )
     return opts
 
 
 def casing_kwargs_from_opts(opts: dict) -> dict:
-    """1D CasingFlowSolver 的 run_opts 消费（仅温度总开关）。"""
-    return {"enable_temperature_rheology": bool(opts["enable_temperature_rheology"])}
+    """1D CasingFlowSolver 的 run_opts 消费（温度总开关 + R1 公式参）。
+
+    ⚠️ **键名映射（必须在此显式改名）**：run_opts 键 ``rheology_formula`` →
+    求解器形参 ``rheology_formula_params``。本函数返回的 dict 由 :func:`run_variant_res`
+    ``**`` 直接展开进构造函数，键名不等即运行期 ``TypeError: unexpected keyword``。
+    仓库签名闸门（``scripts/entrypoints/check_call_signatures.py``）对"函数返回的 dict"
+    是盲区（实测 ``find_bad_kwargs`` 对 ``**f(opts)`` 形态返回空）⇒ 由
+    ``tests/contract/test_run_opts_wiring.py`` 补闸（返回键集 ⊆ ``__init__`` 形参集）。
+    """
+    return {
+        "enable_temperature_rheology": bool(opts["enable_temperature_rheology"]),
+        "rheology_formula_params": params_from_spec(opts["rheology_formula"]),
+        "mud_extrapolate": bool(opts["mud_extrapolate"]),
+        # P-1：只映射**标量口径**；`pressure_field` 是需 (well, fluids, schedule) 的
+        # **对象**，无法在只拿到 opts 的本函数里构造 ⇒ 由 `run_variant_res` 用
+        # `build_pressure_field(...)` 另路合并（见该函数）。
+        "pressure_caliber": str(opts["pressure_caliber"]),
+    }
 
 
 def annulus_kwargs_from_opts(opts: dict) -> dict:
-    """2D AnnulusD2DGASolver 的 run_opts 消费（温度总开关 + 屈服门覆盖）。
+    """2D AnnulusD2DGASolver 的 run_opts 消费（温度总开关 + R1 公式参 + 屈服门覆盖）。
 
     屈服门：``enable_yield_gate=None`` ⇒ **不给键**（沿用调用方既有口径——
     09-16 链的 CORRECTED_KW=True、runner 链的构造默认 True）；给 False ⇒ 出键
     覆盖为 False（Q10 乙通道代理）。调用方须先把本返回值与自己的基线 kw 合并
     成一个 dict 再 ``**`` 展开（两处都含同名键会触发 multiple-values TypeError）。
+
+    ⚠️ 键名映射同 :func:`casing_kwargs_from_opts`（``rheology_formula`` →
+    ``rheology_formula_params``）。
     """
     kw: dict = {
         "enable_temperature_rheology": bool(opts["enable_temperature_rheology"]),
+        "rheology_formula_params": params_from_spec(opts["rheology_formula"]),
+        "mud_extrapolate": bool(opts["mud_extrapolate"]),
+        "pressure_caliber": str(opts["pressure_caliber"]),   # pressure_field 由调用方合并
     }
     if opts["enable_yield_gate"] is not None:
         kw["enable_yield_gate"] = bool(opts["enable_yield_gate"])
@@ -295,6 +411,23 @@ def build_temperature_fields(
         t_out.reset_audit()
         return t_in, t_out, ""
     raise ValueError(f"未知温度档 {mode!r}，允许：{list(TEMPERATURE_MODES)}")
+
+
+def build_pressure_field(well, fluids, schedule, mode: str):
+    """按压力档造压力场对象（P-1，2026-10-06）。
+
+    - ``off`` → ``None``：不注入 ⇒ solver 侧 ``pressure_field is None`` ⇒ ``fluid_at``
+      收到 ``P=None`` ⇒ 记 ``p_default`` 审计 ⇒ **逐位 = HEAD**（关2 红线）。
+    - ``hydrostatic`` → ``HydrostaticPressureField.from_well(well, ρ̄)``，其中
+      ``ρ̄ = insitu_column_density(fluids, schedule)`` = **在场相密度按设计泵注体积加权**
+      （Q9/D5 口径③；口径声明与已知偏差见 `cemdisp.data.pressure_field` docstring）。
+    """
+    if mode == "off":
+        return None
+    if mode == "hydrostatic":
+        rho_bar = insitu_column_density(fluids, schedule)
+        return HydrostaticPressureField.from_well(well, rho_bar)
+    raise ValueError(f"未知压力档 {mode!r}，允许：{list(PRESSURE_MODES)}")
 
 
 def extra_metrics(
@@ -394,12 +527,16 @@ def run_variant_res(
     field_1d, field_2d, note = build_temperature_fields(
         well_key, opts["temperature_mode"]
     )
+    # P-1：压力场是**对象**（需 well/fluids/schedule）⇒ 不能进 kwargs 映射函数，
+    # 在此另路构造并传给两个 solver（评审 C-08：否则 pressure_mode 静默丢弃）。
+    p_field = build_pressure_field(well2, fluids2, schedule2, opts["pressure_mode"])
 
     casing = CasingFlowSolver(
         enable_gravity=True,
         mixing_contact_time=True,
         plug_face_zero_mixing=True,
         has_plug=True,
+        pressure_field=p_field,
         **casing_kwargs_from_opts(opts),
     )
     if opts["enable_temperature_rheology"] and field_1d is not None:
@@ -412,7 +549,8 @@ def run_variant_res(
     )
     tt = min(_total_t(schedule2) + 1200.0, _stop_t(cr, fluids2))
     # 先合并成单个 dict 再展开：CORRECTED_KW 与 run_opts 都可能含 enable_yield_gate
-    solver_kw = {**CORRECTED_KW, **annulus_kwargs_from_opts(opts)}
+    solver_kw = {**CORRECTED_KW, **annulus_kwargs_from_opts(opts),
+                 "pressure_field": p_field}
     solver = AnnulusD2DGASolver(
         total_t=tt, nz=NZ, enable_cfl_adaptive=True, **solver_kw,
     )

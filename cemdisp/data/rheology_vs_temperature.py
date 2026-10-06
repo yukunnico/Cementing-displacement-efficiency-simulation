@@ -30,12 +30,86 @@ from __future__ import annotations
 
 import math
 from collections import deque
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from typing import Optional
 
 from cemdisp.data.fluid_spec import FluidRole, FluidSpec, RheologyModel
 
-__all__ = ["fluid_at", "get_audit", "reset_audit"]
+__all__ = ["RheologyFormulaParams", "fluid_at", "get_audit", "reset_audit"]
+
+
+# ---------------------------------------------------------------------------
+# R1（2026-10-06）：公式系数参数化
+# ---------------------------------------------------------------------------
+@dataclass(frozen=True)
+class RheologyFormulaParams:
+    """温变流变公式的**系数与域界**（R1 参数化；`fluid_at(..., params=...)`）。
+
+    默认值 = 2026-10-01 逐字录入的公式系数，**逐位不变**：`params=None` ⇒ 用模块级
+    `_DEFAULT_PARAMS` 单例 ⇒ 与 HEAD 数值路径逐位一致（关2 红线）。
+
+    本类只承载**数值**，不改任何运算次序。改系数一律经本对象显式传入
+    （`dataclasses.replace` 派生或直接构造），默认路径永不吃扰动。
+
+    ⚠️ 表达式次序约束（逐位红线的实现前提，改动前必读）
+    ---------------------------------------------------
+    各 `_*_values` 求值函数的表达式次序**不得重写**：多项式必须保持
+    ``q0*T*T + q1*T + q2``（原式 ``a*T*T - b*T + c`` 的 ``-b`` 存为 ``q1``；
+    IEEE754 下 ``x - y ≡ x + (-y)``，故逐位相同）。**禁止 Horner 化**——
+    实测（210 温点网格）：加法形式 0 处变位，Horner 形式 109/210 处变位。
+    """
+
+    # --- 断点（忠实两段式：T≤break_T 低温式、T>break_T 高温式；100°C 不平滑）---
+    break_T: float = 100.0
+    # --- 组 A 水泥（2.1 g/cm³，20–170°C，纯温度）---
+    ca_tau0_q: tuple = (0.002793, -0.391702, 21.6378)   # T≤100 二次
+    ca_tau0_l: tuple = (0.624883, -51.7949)             # T>100 一次
+    ca_mup: tuple = (0.53129, -0.012495, -0.00204)      # amp·e^(rate·T) + off
+    ca_T_lo: float = 20.0
+    ca_T_hi: float = 170.0
+    # --- 组 B 水泥（1.9 g/cm³，20–200°C，纯温度）---
+    cb_tau0_q: tuple = (4.433e-4, -0.07843, 5.962)
+    cb_tau0_l: tuple = (0.03206, 1.979)
+    cb_mup: tuple = (1.355e-5, -6.570e-4, 0.08215)
+    cb_T_lo: float = 20.0
+    cb_T_hi: float = 200.0
+    # --- 隔离液二次曲面（含压力）：系数序 (常数, T, P, T², T·P, P²) ---
+    sp_1p95_ty: tuple = (7.379374, -0.001857, 0.0225351,
+                         -0.000157779, -0.00000615055, -0.0000993563)
+    sp_1p95_mp: tuple = (0.0912039, -0.000719380, 0.000167466,
+                         0.00000277807, -0.00000322380, 0.00000119469)
+    sp_2p05_ty: tuple = (10.787391, -0.0206255, 0.0320167,
+                         -0.000247286, 0.000219522, -0.000253669)
+    sp_2p05_mp: tuple = (0.125694, -0.00108616, 0.000323974,
+                         0.00000341573, -0.00000316667, 0.000000714405)
+    sp_T_lo: float = 20.0
+    sp_T_hi: float = 200.0
+    sp_P_lo: float = 0.1
+    sp_P_hi: float = 200.0
+    sp_p_default: float = 0.1          # P 未传入时的常压缺省（记 p_default 审计）
+    # Q16（2026-10-06 用户裁定）「密度就近取」捕获区与平局界：
+    #   捕获区 = 锚点区间 + 半档宽容带（带内仍算"近"，整式就近取，不插值）；
+    #   捕获区以 _mid 为界左闭右开 ⇒ 平局（恰在中点）取**高密度端**。
+    #   捕获区外 = 「远」：维持现状（隔离液借用端点整式+borrow 审计；水泥不替换）。
+    sp_lo: float = 1.90
+    sp_hi: float = 2.10
+    sp_mid: float = 2.000
+    sp_anchor_lo: float = 1.95
+    sp_anchor_hi: float = 2.05
+    cm_lo: float = 1.88
+    cm_hi: float = 2.12
+    cm_mid: float = 2.000
+    cm_anchor_a: float = 2.10           # 组 A 锚点（平局取高端）
+    cm_anchor_b: float = 1.90           # 组 B 锚点
+    # --- 钻井液（呼101 实测拟合，纯温度，域 [40,80]°C clamp）---
+    mud_mup: tuple = (0.297154, -0.02310525)
+    mud_tauy: tuple = (21.346710, -0.00830631)
+    mud_T_lo: float = 40.0
+    mud_T_hi: float = 80.0
+
+
+_DEFAULT_PARAMS = RheologyFormulaParams()
+"""默认参单例（`params=None` ⇒ 本对象；与 HEAD 逐位一致）。"""
 
 # ---------------------------------------------------------------------------
 # 审计（模块级；fluid_at 为自由函数，同型于 temperature_field 的实例审计）
@@ -79,52 +153,46 @@ def _clamp_record(value: float, lo: float, hi: float, name: str, param: str) -> 
 # ---------------------------------------------------------------------------
 # 组 A 水泥（2.1 g/cm³，20–170°C，纯温度）
 # ---------------------------------------------------------------------------
-def _cement_a_tau0(T: float) -> float:
+def _cement_a_tau0(T: float, p: RheologyFormulaParams) -> float:
     """τ₀(T)：20≤T≤100 二次式；100<T≤170 一次式（T 已 clamp 进域）。"""
-    if T <= 100.0:
-        return 0.002793 * T * T - 0.391702 * T + 21.6378
-    return 0.624883 * T - 51.7949
+    if T <= p.break_T:
+        q0, q1, q2 = p.ca_tau0_q
+        return q0 * T * T + q1 * T + q2
+    l1, l0 = p.ca_tau0_l
+    return l1 * T + l0
 
 
-def _cement_a_mup(T: float) -> float:
+def _cement_a_mup(T: float, p: RheologyFormulaParams) -> float:
     """μp(T) = 0.53129·e^(−0.012495·T) − 0.00204 [Pa·s]。"""
-    return 0.53129 * math.exp(-0.012495 * T) - 0.00204
+    amp, rate, off = p.ca_mup
+    return amp * math.exp(rate * T) + off
 
 
 # ---------------------------------------------------------------------------
 # 组 B 水泥（1.9 g/cm³，20–200°C，纯温度）
 # ---------------------------------------------------------------------------
-def _cement_b_tau0(T: float) -> float:
+def _cement_b_tau0(T: float, p: RheologyFormulaParams) -> float:
     """τ₀(T)：20≤T≤100 二次式；100<T≤200 一次式（T 已 clamp 进域）。"""
-    if T <= 100.0:
-        return 4.433e-4 * T * T - 0.07843 * T + 5.962
-    return 0.03206 * T + 1.979
+    if T <= p.break_T:
+        q0, q1, q2 = p.cb_tau0_q
+        return q0 * T * T + q1 * T + q2
+    l1, l0 = p.cb_tau0_l
+    return l1 * T + l0
 
 
-def _cement_b_mup(T: float) -> float:
+def _cement_b_mup(T: float, p: RheologyFormulaParams) -> float:
     """μp(T) = 1.355×10⁻⁵·T² − 6.570×10⁻⁴·T + 0.08215 [Pa·s]。"""
-    return 1.355e-5 * T * T - 6.570e-4 * T + 0.08215
+    q0, q1, q2 = p.cb_mup
+    return q0 * T * T + q1 * T + q2
 
 
 # ---------------------------------------------------------------------------
 # 隔离液二次曲面（含压力）：系数序 (常数, T, P, T², T·P, P²)
 # ---------------------------------------------------------------------------
-_SPACER_1P95_TY = (7.379374, -0.001857, 0.0225351,
-                   -0.000157779, -0.00000615055, -0.0000993563)
-_SPACER_1P95_MP = (0.0912039, -0.000719380, 0.000167466,
-                   0.00000277807, -0.00000322380, 0.00000119469)
-_SPACER_2P05_TY = (10.787391, -0.0206255, 0.0320167,
-                   -0.000247286, 0.000219522, -0.000253669)
-_SPACER_2P05_MP = (0.125694, -0.00108616, 0.000323974,
-                   0.00000341573, -0.00000316667, 0.000000714405)
-
-# Q16（2026-10-06 用户裁定）「密度就近取」捕获区与平局界：
-#   捕获区 = 锚点区间 + 半档宽容带（带内仍算"近"，整式就近取，不插值）；
-#   捕获区以 _*_MID 为界左闭右开 ⇒ 平局（恰在中点）取**高密度端**。
-#   捕获区外 = 「远」：维持现状（隔离液借用端点整式+borrow 审计；水泥不替换），
-#   处置（是否改插值/外推）登记为待裁项，见 spec §6。
-_SPACER_LO, _SPACER_HI, _SPACER_MID = 1.90, 2.10, 2.000
-_CEMENT_LO, _CEMENT_HI, _CEMENT_MID = 1.88, 2.12, 2.000
+# R1（2026-10-06）：四组六系数 + Q16 密度捕获区/平局界 + 两类温区，全部收进
+# `RheologyFormulaParams`（默认值逐字不变）；此处不再保留模块级副本，
+# 以免"改参只改一处、另一处漂移"（同 `_SWITCH_DEFAULTS` 单一真源教训）。
+# 原 Q16 注释随字段迁入 dataclass docstring 与字段注释。
 
 
 def _quad6(c: tuple, T: float, P: float) -> float:
@@ -135,14 +203,16 @@ def _quad6(c: tuple, T: float, P: float) -> float:
 # ---------------------------------------------------------------------------
 # 钻井液（呼101 实测拟合，纯温度）
 # ---------------------------------------------------------------------------
-def _mud_mup(T: float) -> float:
+def _mud_mup(T: float, p: RheologyFormulaParams) -> float:
     """μp(T) = 0.297154·e^(−0.02310525·T) [Pa·s]。"""
-    return 0.297154 * math.exp(-0.02310525 * T)
+    amp, rate = p.mud_mup
+    return amp * math.exp(rate * T)
 
 
-def _mud_tauy(T: float) -> float:
+def _mud_tauy(T: float, p: RheologyFormulaParams) -> float:
     """τy(T) = 21.346710·e^(−0.00830631·T) [Pa]。"""
-    return 21.346710 * math.exp(-0.00830631 * T)
+    amp, rate = p.mud_tauy
+    return amp * math.exp(rate * T)
 
 
 # ---------------------------------------------------------------------------
@@ -199,43 +269,46 @@ def _route(fluid: FluidSpec) -> tuple[str, Optional[str]]:
 # ---------------------------------------------------------------------------
 # 各族求值（返回 (τy [Pa], μp [Pa·s])；域越界已 clamp+审计）
 # ---------------------------------------------------------------------------
-def _mud_values(T: float, extrapolate: bool, name: str) -> tuple[float, float]:
-    if T < 40.0 or T > 80.0:
+def _mud_values(T: float, extrapolate: bool, name: str,
+                p: RheologyFormulaParams) -> tuple[float, float]:
+    if T < p.mud_T_lo or T > p.mud_T_hi:
         if extrapolate:
             _record("extrapolate", name,
-                    f"T={T} 超出实测域 [40, 80]，按公式外推（mud_extrapolate=True）")
-            return _mud_tauy(T), _mud_mup(T)
-        T = _clamp_record(T, 40.0, 80.0, name, "T")
-    return _mud_tauy(T), _mud_mup(T)
+                    f"T={T} 超出实测域 [{p.mud_T_lo:g}, {p.mud_T_hi:g}]，"
+                    "按公式外推（mud_extrapolate=True）")
+            return _mud_tauy(T, p), _mud_mup(T, p)
+        T = _clamp_record(T, p.mud_T_lo, p.mud_T_hi, name, "T")
+    return _mud_tauy(T, p), _mud_mup(T, p)
 
 
-def _spacer_values(fluid: FluidSpec, T: float, P_mpa: Optional[float]) -> tuple[float, float]:
+def _spacer_values(fluid: FluidSpec, T: float, P_mpa: Optional[float],
+                   p: RheologyFormulaParams) -> tuple[float, float]:
     name = fluid.name
     d = fluid.density_kg_m3 / 1000.0  # g/cm³
 
     # P：缺省=常压 0.1 MPa（温度阶段；压力模块接入后由调用方传 P(z,t)）
     if P_mpa is None:
-        P = 0.1
-        _record("p_default", name, "P 未传入，按常压 0.1 MPa 求值")
+        P = p.sp_p_default
+        _record("p_default", name, f"P 未传入，按常压 {p.sp_p_default} MPa 求值")
     else:
         P = float(P_mpa)
 
-    T = _clamp_record(T, 20.0, 200.0, name, "T")
-    P = _clamp_record(P, 0.1, 200.0, name, "P")
+    T = _clamp_record(T, p.sp_T_lo, p.sp_T_hi, name, "T")
+    P = _clamp_record(P, p.sp_P_lo, p.sp_P_hi, name, "P")
 
     # 密度分派（Q16 就近取，2026-10-06）：整式取最近锚点，不做系数插值。
-    # 捕获区左闭右开（平局 d==_SPACER_MID 取高密度端 2.05 式）。
-    if d < _SPACER_MID:
-        ty_c, mp_c = _SPACER_1P95_TY, _SPACER_1P95_MP
-        anchor = 1.95
+    # 捕获区左闭右开（平局 d==sp_mid 取高密度端 2.05 式）。
+    if d < p.sp_mid:
+        ty_c, mp_c = p.sp_1p95_ty, p.sp_1p95_mp
+        anchor = p.sp_anchor_lo
     else:
-        ty_c, mp_c = _SPACER_2P05_TY, _SPACER_2P05_MP
-        anchor = 2.05
-    if not (_SPACER_LO <= d <= _SPACER_HI):
+        ty_c, mp_c = p.sp_2p05_ty, p.sp_2p05_mp
+        anchor = p.sp_anchor_hi
+    if not (p.sp_lo <= d <= p.sp_hi):
         # 远（捕获区外）：维持现状——就近借用端点整式 + borrow 审计（处置待裁）
         _record("borrow", name,
                 f"隔离液密度 {d:.3f} g/cm³ 超出就近取捕获区"
-                f" [{_SPACER_LO},{_SPACER_HI}]，就近借用端点公式"
+                f" [{p.sp_lo},{p.sp_hi}]，就近借用端点公式"
                 f"（model_assumption，系数不外推）",
                 note="model_assumption")
     elif abs(d - anchor) > 1e-12:
@@ -247,7 +320,8 @@ def _spacer_values(fluid: FluidSpec, T: float, P_mpa: Optional[float]) -> tuple[
     return _quad6(ty_c, T, P), _quad6(mp_c, T, P)
 
 
-def _cement_values(fluid: FluidSpec, T: float) -> Optional[tuple[float, float]]:
+def _cement_values(fluid: FluidSpec, T: float,
+                   p: RheologyFormulaParams) -> Optional[tuple[float, float]]:
     """按密度档求值（Q16 就近取）；密度在捕获区外返回 None（调用方记不替换审计）。
 
     难点口径（2026-10-06 Q16）：**整式就近取**锚点公式，不再做组 B↔组 A 密度插值；
@@ -256,22 +330,22 @@ def _cement_values(fluid: FluidSpec, T: float) -> Optional[tuple[float, float]]:
     """
     name = fluid.name
     d = fluid.density_kg_m3 / 1000.0
-    if not (_CEMENT_LO <= d <= _CEMENT_HI):
+    if not (p.cm_lo <= d <= p.cm_hi):
         return None
-    if d < _CEMENT_MID:                         # 组 B（1.90 g/cm³，温区 [20,200]）
-        T = _clamp_record(T, 20.0, 200.0, name, "T")
-        if abs(d - 1.90) > 1e-12:
+    if d < p.cm_mid:                            # 组 B（1.90 g/cm³，温区 [20,200]）
+        T = _clamp_record(T, p.cb_T_lo, p.cb_T_hi, name, "T")
+        if abs(d - p.cm_anchor_b) > 1e-12:
             _record("nearest", name,
-                    f"水泥密度 {d:.3f} g/cm³ 就近取 1.90（组 B）式（不插值）",
-                    requested=d, anchor=1.90)
-        return _cement_b_tau0(T), _cement_b_mup(T)
+                    f"水泥密度 {d:.3f} g/cm³ 就近取 {p.cm_anchor_b:.2f}（组 B）式（不插值）",
+                    requested=d, anchor=p.cm_anchor_b)
+        return _cement_b_tau0(T, p), _cement_b_mup(T, p)
     # 组 A（2.10 g/cm³，温区 [20,170]）
-    T = _clamp_record(T, 20.0, 170.0, name, "T")
-    if abs(d - 2.10) > 1e-12:
+    T = _clamp_record(T, p.ca_T_lo, p.ca_T_hi, name, "T")
+    if abs(d - p.cm_anchor_a) > 1e-12:
         _record("nearest", name,
-                f"水泥密度 {d:.3f} g/cm³ 就近取 2.10（组 A）式（不插值）",
-                requested=d, anchor=2.10)
-    return _cement_a_tau0(T), _cement_a_mup(T)
+                f"水泥密度 {d:.3f} g/cm³ 就近取 {p.cm_anchor_a:.2f}（组 A）式（不插值）",
+                requested=d, anchor=p.cm_anchor_a)
+    return _cement_a_tau0(T, p), _cement_a_mup(T, p)
 
 
 # ---------------------------------------------------------------------------
@@ -300,6 +374,7 @@ def fluid_at(
     *,
     mud_extrapolate: bool = False,
     smooth_break: bool = False,
+    params: Optional[RheologyFormulaParams] = None,
 ) -> FluidSpec:
     """按温度（及压力）派生该相的流变参数（绝对替换口径）。
 
@@ -311,6 +386,9 @@ def fluid_at(
     mud_extrapolate : True 时钻井液越出 [40,80]°C 按公式外推（对比用）
     smooth_break : 断点平滑开关占位——默认 False=忠实两段式；
                    True 尚未实现，抛 NotImplementedError
+    params : 公式系数/域界（R1，2026-10-06）。``None`` ⇒ 模块级默认参单例
+             ``_DEFAULT_PARAMS``，与 2026-10-01 逐字录入的公式**逐位一致**；
+             扰动一律显式传入（`dataclasses.replace` 派生），默认路径永不吃扰动。
 
     返回
     ----
@@ -321,6 +399,7 @@ def fluid_at(
         raise NotImplementedError(
             "smooth_break 为占位开关（默认 False=忠实两段式；True 尚未实现）"
         )
+    p = _DEFAULT_PARAMS if params is None else params
     T = float(T_c)
     family, note = _route(fluid)
 
@@ -329,17 +408,17 @@ def fluid_at(
         return fluid
 
     if family == "mud":
-        tauy, mup = _mud_values(T, mud_extrapolate, fluid.name)
+        tauy, mup = _mud_values(T, mud_extrapolate, fluid.name, p)
         if note == "model_assumption":
             _record("model_assumption", fluid.name, "暂按钻井液公式（model_assumption）")
         return _derive(fluid, tauy, mup)
 
     if family == "spacer":
-        tauy, mup = _spacer_values(fluid, T, P_mpa)
+        tauy, mup = _spacer_values(fluid, T, P_mpa, p)
         return _derive(fluid, tauy, mup)
 
     # cement（LEAD/TAIL/INTERMEDIATE）
-    values = _cement_values(fluid, T)
+    values = _cement_values(fluid, T, p)
     if values is None:
         _record("no_replace", fluid.name,
                 f"水泥相密度 {fluid.density_kg_m3 / 1000.0:.3f} g/cm³ 不匹配任何档（不替换）")

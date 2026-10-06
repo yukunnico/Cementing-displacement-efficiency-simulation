@@ -68,7 +68,7 @@ from __future__ import annotations
 import math
 import warnings
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Callable, Dict, Mapping, Sequence, Tuple
+from typing import TYPE_CHECKING, Callable, Dict, Mapping, Optional, Sequence, Tuple
 
 import numpy as np
 from numpy.typing import NDArray
@@ -76,6 +76,7 @@ import pandas as pd
 
 from cemdisp.data.fluid_spec import FluidRole, FluidSpec, RheologyModel
 from cemdisp.data.rheology_vs_temperature import (
+    RheologyFormulaParams,
     fluid_at,
     get_audit as get_rheo_audit,
     reset_audit as reset_rheo_audit,
@@ -452,6 +453,16 @@ class AnnulusD2DGASolver:
         # （开关默认关 ⇒ 逐位=HEAD；逐步温度场是 Task 7 的事）。
         enable_temperature_rheology: bool = _SWITCH_DEFAULTS["enable_temperature_rheology"],
         temperature_rheology_t_c: float = 60.0,
+        # R1（2026-10-06）：温变流变公式系数/域界参数化 + 钻井液外推对照档。
+        # 默认 None/False ⇒ 与 HEAD 数值路径**逐位一致**（关2 红线）；
+        # 一切扰动走运行侧显式传入（见 RheologyFormulaParams docstring）。
+        rheology_formula_params: Optional[RheologyFormulaParams] = None,
+        mud_extrapolate: bool = False,
+        # P-1（2026-10-06）：静液柱压力场注入位 + 取 P 深度口径。
+        # 默认 None/"shoe" ⇒ `fluid_at` 收到 P=None ⇒ 走 `p_default` 审计 ⇒ 与 HEAD 逐位。
+        # 场对象只消费 `P(md_m,t_s) -> MPa` 接口（Constant/Hydrostatic 由调用方注入）。
+        pressure_field: "PressureField | None" = None,
+        pressure_caliber: str = "shoe",
     ) -> None:
         """初始化环空二维求解器参数。
 
@@ -698,6 +709,20 @@ class AnnulusD2DGASolver:
         # ------------------------------------------------------------------ #
         self.enable_temperature_rheology: bool = enable_temperature_rheology
         self.temperature_rheology_t_c: float = float(temperature_rheology_t_c)
+        # R1（2026-10-06）：公式系数/域界（None ⇒ `fluid_at` 默认参）+ 钻井液外推档。
+        # 两者只在 T-on 路径被消费（T-off 不进 `_phase_props` 派生分支 ⇒ 零痕迹）。
+        self.rheology_formula_params: Optional[RheologyFormulaParams] = rheology_formula_params
+        self.mud_extrapolate: bool = bool(mud_extrapolate)
+        # P-1（2026-10-06）：静液柱压力场。只在 T-on 路径被消费（`_phase_props` 派生
+        # 分支内取 P）；T-off 恒等返回 ⇒ 零痕迹。`pressure_caliber`:
+        #   "shoe" = 域内最深 md 处 P（计划 §1 Q9/D5 口径②的**主口径**，保守取最大压力）
+        #   "mean" = 域内各 md 处 P 的算术均值（**对照档**开关）
+        if pressure_caliber not in ("shoe", "mean"):
+            raise ValueError(
+                f"pressure_caliber 非法：{pressure_caliber!r}，允许：['shoe', 'mean']"
+            )
+        self.pressure_field = pressure_field
+        self.pressure_caliber: str = str(pressure_caliber)
         # T1-2 温度场对象：开时先挂构造层恒温场（run(temperature_field=...) 可注入
         # 表格场覆盖）；_step_T_c = 本步派生代表温度（HB memo key 的温度维）；
         # _phase_memo = _phase_props 派生缓存 {(fluid, T): derived}（同 (fluid,T)
@@ -1168,6 +1193,41 @@ class AnnulusD2DGASolver:
             return first
         return float(np.mean(values))
 
+    def _representative_pressure_mpa(self, geom: Dict[str, Array],
+                                     t: float | None = None) -> float | None:
+        """本步物性派生用的代表压力 P [MPa]；**无压力场 ⇒ None**（P-1）。
+
+        ⚠️ 无场时**必须返回 None，不得返回 0.0**：``0.0`` 会被 `_spacer_values` 当成
+        真实压力走 T/P 域 clamp（记 ``clamp`` 事件），而 ``None`` 才走常压缺省
+        （记 ``p_default`` 事件）⇒ 这是关2「无 ``pressure_field`` 时 ``p_default``
+        审计语义逐位保留」红线的实现要件（现有关键测试
+        ``test_temperature_phase_props.py`` 硬钉 SPACER 派生 == ``fluid_at(base, 60.0)``）。
+
+        口径（``pressure_caliber``）：
+        - ``"shoe"``（默认）= 域内**最深 md** 处 P —— 计划 §1 Q9/D5 口径②主口径（保守）；
+        - ``"mean"`` = 域内各 md 处 P 的算术均值 —— 对照档开关。
+        """
+        field = self.pressure_field
+        if field is None:
+            return None
+        md = np.asarray(geom["md"], dtype=float)
+        tt = float(t) if t is not None else 0.0
+        if self.pressure_caliber == "mean":
+            return float(np.mean([field.P(float(m), tt) for m in md]))
+        return float(field.P(float(np.max(md)), tt))
+
+    def _well_level_pressure_mpa(self, well_spec: WellSpec) -> float | None:
+        """构造层（循环前）用井级标量 P = ``P(鞋深, 0)``；无场 ⇒ None。
+
+        构造层尚无 ``geom``（geom 在循环内建立）⇒ 不能用 `_representative_pressure_mpa`。
+        静压场与 t 无关、且 ``geom["md"]`` 的最大值即鞋深 ⇒ 与循环内逐步值同值，
+        两处经同一 memo 键命中同一对象（评审 A3.1「构造层=逐步派生」）。
+        """
+        field = self.pressure_field
+        if field is None:
+            return None
+        return float(field.P(float(well_spec.shoe_md_m), 0.0))
+
     def _phase_props(self, fluid: FluidSpec | None, geom: Dict[str, Array],
                      t: float | None) -> FluidSpec | None:
         """单相物性唯一入口（T1-2）：T-on 按本步代表温度 ``fluid_at`` 绝对替换派生。
@@ -1186,11 +1246,16 @@ class AnnulusD2DGASolver:
             return fluid
         T = self._representative_temperature(geom, t)
         self._step_T_c = T
-        key = (fluid, T)
+        P = self._representative_pressure_mpa(geom, t)
+        # memo 键含 T、P **与 params**（R1 参数化面）——params 每实例恒定，但直调
+        # `_phase_props` 的契约测试/同实例换档场景下必须区分，否则吃陈旧派生对象。
+        key = (fluid, T, P, self.rheology_formula_params)
         cached = self._phase_memo.get(key)
         if cached is not None:
             return cached
-        derived = fluid_at(fluid, T)
+        derived = fluid_at(fluid, T, P,
+                           params=self.rheology_formula_params,
+                           mud_extrapolate=self.mud_extrapolate)
         self._phase_memo[key] = derived
         return derived
 
@@ -2390,18 +2455,30 @@ class AnnulusD2DGASolver:
             # 构造层代表查询点：域顶 t=0（恒温场任意 (md,t) 同值；表格场即初态
             # 域顶温度）——每步 T(md,t) 的逐步派生在循环体内经 `_phase_props`。
             t_c = self._temperature_field.T(well_spec.top_md_m, 0.0)
+            # P-1（D-06 裁定）：构造层**同传 P**，令 `_temp_rheo_fluids` 暴露物性 ≡
+            # 逐步消费物性（杜绝"1D/2D 不同源"同型病灶）。构造层尚无 geom ⇒ 用井级
+            # 标量 P(鞋深, 0)；静压场与 t 无关 ⇒ 与循环内逐步值同值 ⇒ memo 同键同对象。
+            p_c = self._well_level_pressure_mpa(well_spec)
             _derived: Dict[str, FluidSpec] = {}
             if mud_fluid is not None:
-                mud_fluid = fluid_at(mud_fluid, t_c)
+                mud_fluid = fluid_at(mud_fluid, t_c, p_c,
+                                     params=self.rheology_formula_params,
+                                     mud_extrapolate=self.mud_extrapolate)
                 _derived["mud"] = mud_fluid
             if lead_fluid is not None:
-                lead_fluid = fluid_at(lead_fluid, t_c)
+                lead_fluid = fluid_at(lead_fluid, t_c, p_c,
+                                      params=self.rheology_formula_params,
+                                      mud_extrapolate=self.mud_extrapolate)
                 _derived["lead"] = lead_fluid
             if tail_fluid is not None:
-                tail_fluid = fluid_at(tail_fluid, t_c)
+                tail_fluid = fluid_at(tail_fluid, t_c, p_c,
+                                      params=self.rheology_formula_params,
+                                      mud_extrapolate=self.mud_extrapolate)
                 _derived["tail"] = tail_fluid
             if spacer_fluid is not None:
-                spacer_fluid = fluid_at(spacer_fluid, t_c)
+                spacer_fluid = fluid_at(spacer_fluid, t_c, p_c,
+                                        params=self.rheology_formula_params,
+                                        mud_extrapolate=self.mud_extrapolate)
                 _derived["spacer"] = spacer_fluid
             # 诊断暴露：派生后的四相（rerun/报告/契约测试读取；循环内每步刷新为
             # 当步派生值 ⇒ 与求解所用一致）；审计按 run 重置。
