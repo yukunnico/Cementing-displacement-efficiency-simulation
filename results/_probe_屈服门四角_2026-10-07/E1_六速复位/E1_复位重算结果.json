@@ -1,0 +1,312 @@
+{
+  "meta": {
+    "date": "2026-10-07",
+    "task": "E-1 六速CSV按notes复位口径重算（Phase2 spec §10）",
+    "caliber": "notes含φ<转速>:<读数>对⇒以note重建；否则列名；字段数不符者若多出字段全空⇒右对齐复位，否则剔除；>300等非数值读数逐条剔除",
+    "conversion": "τ=0.511θ Pa, γ̇=1.703N s⁻¹, μ_app=τ/γ̇",
+    "note_on_original_numbers": "原2.6005/8.7017/5.401经核验为μ_app口径（=τ/γ̇）而非τ：2.6005=0.511×26/5.109(hu1 L5错位θ6误入θ3)；8.7017=0.511×174/10.218(hu1 L5错位θ100误入θ6)；5.401=0.511×108/10.218(ht1_004 L9第三方θ100误入θ6)"
+  },
+  "四个关键数字_复位口径": {
+    "总有效条数": 407,
+    "3rpm档最大τ_Pa": 8.176,
+    "3rpm档最大μ_app_Pa_s（与原2.6005同口径可比）": 1.6003,
+    "全转速最大τ_Pa": 153.3,
+    "全转速最大μ_app_Pa_s（与原8.7017同口径可比）": 1.6003,
+    "呼1-004最大τ_Pa": 151.256,
+    "呼1-004最大μ_app_Pa_s（与原5.401同口径可比）": 0.9002
+  },
+  "对照_naive错位口径_复现原数": {
+    "总条数": 399,
+    "3rpm最大mu_app": 2.6005,
+    "全转速最大mu_app": 8.7017,
+    "ht1004最大mu_app": 5.4011,
+    "3rpm最大tau": 13.286,
+    "全转速最大tau": 153.3
+  },
+  "对照_原始报告数": {
+    "总条数": 389,
+    "3rpm": 2.6005,
+    "全转速": 8.7017,
+    "ht1004": 5.401
+  },
+  "敏感性_strict剔除14字段行": {
+    "总条数": 373,
+    "3rpm最大mu_app": 1.0002,
+    "全转速最大mu_app": 1.0002,
+    "ht1004最大mu_app": 0.9002
+  },
+  "关键条溯源_复位": {
+    "tau_max_3rpm": {
+      "well": "hu1_呼探1",
+      "line": 5,
+      "fluid": "领浆:隔离液:泥浆=1:1:1(白油基泥浆)",
+      "speed": 3,
+      "theta": 16.0,
+      "tau_pa": 8.176,
+      "mu_app_pa_s": 1.6003,
+      "method": "右对齐复位"
+    },
+    "muapp_max_3rpm": {
+      "well": "hu1_呼探1",
+      "line": 5,
+      "fluid": "领浆:隔离液:泥浆=1:1:1(白油基泥浆)",
+      "speed": 3,
+      "theta": 16.0,
+      "tau_pa": 8.176,
+      "mu_app_pa_s": 1.6003,
+      "method": "右对齐复位"
+    },
+    "tau_max_all": {
+      "well": "ht1_001_呼探1-001",
+      "line": 4,
+      "fluid": "领浆",
+      "speed": 600,
+      "theta": 300.0,
+      "tau_pa": 153.3,
+      "mu_app_pa_s": 0.15,
+      "method": "列名"
+    },
+    "muapp_max_all": {
+      "well": "hu1_呼探1",
+      "line": 5,
+      "fluid": "领浆:隔离液:泥浆=1:1:1(白油基泥浆)",
+      "speed": 3,
+      "theta": 16.0,
+      "tau_pa": 8.176,
+      "mu_app_pa_s": 1.6003,
+      "method": "右对齐复位"
+    },
+    "ht1004_muapp_max": {
+      "well": "ht1_004_呼1-004",
+      "line": 2,
+      "fluid": "油基钻井液",
+      "speed": 3,
+      "theta": 9.0,
+      "tau_pa": 4.599,
+      "mu_app_pa_s": 0.9002,
+      "method": "列名"
+    }
+  },
+  "逐井表": {
+    "ht1_001_呼探1-001": {
+      "n_pairs_复位": 30,
+      "n_pairs_naive": 30,
+      "tau_max_pa": 153.3,
+      "muapp_max_pa_s": 0.7001,
+      "max_muapp_at_speed": 3,
+      "tau_max_naive": 153.3,
+      "muapp_max_naive": 0.7001
+    },
+    "ht1_002_呼探1-002": {
+      "n_pairs_复位": 54,
+      "n_pairs_naive": 54,
+      "tau_max_pa": 136.948,
+      "muapp_max_pa_s": 0.7001,
+      "max_muapp_at_speed": 3,
+      "tau_max_naive": 136.948,
+      "muapp_max_naive": 0.7001
+    },
+    "ht1_003_呼1-003": {
+      "n_pairs_复位": 48,
+      "n_pairs_naive": 48,
+      "tau_max_pa": 122.129,
+      "muapp_max_pa_s": 1.0002,
+      "max_muapp_at_speed": 3,
+      "tau_max_naive": 122.129,
+      "muapp_max_naive": 1.0002
+    },
+    "ht1_004_呼1-004": {
+      "n_pairs_复位": 68,
+      "n_pairs_naive": 66,
+      "tau_max_pa": 151.256,
+      "muapp_max_pa_s": 0.9002,
+      "max_muapp_at_speed": 3,
+      "tau_max_naive": 151.256,
+      "muapp_max_naive": 5.4011
+    },
+    "hu101_呼101": {
+      "n_pairs_复位": 74,
+      "n_pairs_naive": 74,
+      "tau_max_pa": 137.97,
+      "muapp_max_pa_s": 1.0002,
+      "max_muapp_at_speed": 3,
+      "tau_max_naive": 137.97,
+      "muapp_max_naive": 1.0002
+    },
+    "hu102_呼102": {
+      "n_pairs_复位": 16,
+      "n_pairs_naive": 16,
+      "tau_max_pa": 83.293,
+      "muapp_max_pa_s": 0.6001,
+      "max_muapp_at_speed": 3,
+      "tau_max_naive": 83.293,
+      "muapp_max_naive": 0.6001
+    },
+    "hu103_呼103": {
+      "n_pairs_复位": 73,
+      "n_pairs_naive": 73,
+      "tau_max_pa": 135.415,
+      "muapp_max_pa_s": 0.7501,
+      "max_muapp_at_speed": 6,
+      "tau_max_naive": 135.415,
+      "muapp_max_naive": 0.7501
+    },
+    "hu1_呼探1": {
+      "n_pairs_复位": 44,
+      "n_pairs_naive": 38,
+      "tau_max_pa": 133.371,
+      "muapp_max_pa_s": 1.6003,
+      "max_muapp_at_speed": 3,
+      "tau_max_naive": 133.371,
+      "muapp_max_naive": 8.7017
+    }
+  },
+  "note复位行": [
+    {
+      "well": "ht1_004_呼1-004",
+      "line": 9,
+      "fluid": "领浆(第三方复检)",
+      "n_pairs": 5,
+      "raw": [
+        "400:256",
+        "200:194",
+        "100:108",
+        "6:10",
+        "4:6"
+      ]
+    },
+    {
+      "well": "ht1_004_呼1-004",
+      "line": 10,
+      "fluid": "尾浆(第三方复检)",
+      "n_pairs": 5,
+      "raw": [
+        "300:248",
+        "200:181",
+        "100:102",
+        "6:9",
+        "3:5"
+      ]
+    }
+  ],
+  "右对齐复位行": [
+    {
+      "well": "hu1_呼探1",
+      "line": 2,
+      "fluid": "领浆:隔离液:泥浆=1:1:1(柴油基泥浆)",
+      "n_pairs": 6
+    },
+    {
+      "well": "hu1_呼探1",
+      "line": 3,
+      "fluid": "柴油基泥浆:隔离液=1:1",
+      "n_pairs": 6
+    },
+    {
+      "well": "hu1_呼探1",
+      "line": 4,
+      "fluid": "柴油基:隔离液=1:1(68degC)",
+      "n_pairs": 6
+    },
+    {
+      "well": "hu1_呼探1",
+      "line": 5,
+      "fluid": "领浆:隔离液:泥浆=1:1:1(白油基泥浆)",
+      "n_pairs": 4
+    },
+    {
+      "well": "hu1_呼探1",
+      "line": 6,
+      "fluid": "白油基:隔离液=1:1",
+      "n_pairs": 6
+    },
+    {
+      "well": "hu1_呼探1",
+      "line": 7,
+      "fluid": "白油基:隔离液=1:1(68degC)",
+      "n_pairs": 6
+    }
+  ],
+  "整行剔除记录": [
+    {
+      "well": "hu103_呼103",
+      "line": 7,
+      "fluid": "驱油隔离液",
+      "issue": "confidence/notes 列内容互换（θ 列完好，不影响计数）"
+    }
+  ],
+  "逐条剔除_超量程": [
+    {
+      "well": "ht1_002_呼探1-002",
+      "line": 4,
+      "fluid": "领浆(2.10)",
+      "speed": 600,
+      "raw": ">300",
+      "reason": "读数非数值（超量程 >300）"
+    },
+    {
+      "well": "ht1_002_呼探1-002",
+      "line": 5,
+      "fluid": "中间浆(1.95)",
+      "speed": 600,
+      "raw": ">300",
+      "reason": "读数非数值（超量程 >300）"
+    },
+    {
+      "well": "ht1_002_呼探1-002",
+      "line": 6,
+      "fluid": "尾浆(1.95)",
+      "speed": 600,
+      "raw": ">300",
+      "reason": "读数非数值（超量程 >300）"
+    },
+    {
+      "well": "ht1_002_呼探1-002",
+      "line": 9,
+      "fluid": "回接_领浆(2.05)",
+      "speed": 600,
+      "raw": ">300",
+      "reason": "读数非数值（超量程 >300）"
+    },
+    {
+      "well": "ht1_002_呼探1-002",
+      "line": 10,
+      "fluid": "回接_中间浆(1.90)",
+      "speed": 600,
+      "raw": ">300",
+      "reason": "读数非数值（超量程 >300）"
+    },
+    {
+      "well": "ht1_002_呼探1-002",
+      "line": 11,
+      "fluid": "回接_尾浆(1.90)",
+      "speed": 600,
+      "raw": ">300",
+      "reason": "读数非数值（超量程 >300）"
+    },
+    {
+      "well": "ht1_004_呼1-004",
+      "line": 7,
+      "fluid": "领浆(132C↓93C)",
+      "speed": 600,
+      "raw": ">300",
+      "reason": "读数非数值（超量程 >300）"
+    },
+    {
+      "well": "ht1_004_呼1-004",
+      "line": 8,
+      "fluid": "尾浆(132C↓93C)",
+      "speed": 600,
+      "raw": ">300",
+      "reason": "读数非数值（超量程 >300）"
+    }
+  ],
+  "3.0上限支撑性": {
+    "原始_3rpm档最大mu_app": 2.6005,
+    "复位_3rpm档最大mu_app": 1.6003,
+    "复位_全转速最大mu_app": 1.6003,
+    "strict_复位_全转速最大mu_app": 1.0002,
+    "上限_3.0": 3.0,
+    "结论": "复位后实测最大 μ_app = 1.6003 Pa·s < 3.0，量级仍与 3.0 同一档（3.0/最大实测 ≈ 1.9 倍），buoyancy.py『3.0 与最后一个可信低转速实测点同量级』表述在复位口径下仍成立（数值由 2.60 降为 1.60）；上限结论不受影响（spec 主依据为口径唯一性，实测边界仅为支撑项）"
+  }
+}

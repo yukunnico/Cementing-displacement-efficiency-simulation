@@ -1,0 +1,16 @@
+D:\users\desktop\research\控压固井项目\cement model_温压耦合分支\results\_probe_屈服门四角_2026-10-07\probe_four_corner_20261007.py:299: UserWarning: AnnulusD2DGASolver 的开关 enable_regime_split（M2 局部流态修正：仅旧代数路径 enable_stream_function=False 消费） 在当前配置下无效（开关仅在另一条速度场路径上被消费；K_AXIAL=1/3 同属旧路径专属）。请修正配置或移除这些开关。
+  solver = AnnulusD2DGASolver(
+[D2DGA] 温变流变构造层派生 T=111.0°C（enable_temperature_rheology=True）审计: clamp=1 nearest=1
+[D2DGA] 开始环空二维模拟 total_t=13743s nz=250 ny=40
+  [D2DGA] 进度 0% (3s/13743s, dt=2.790s)
+  [D2DGA] 进度 10% (1377s/13743s, dt=3.349s)
+  [D2DGA] 进度 20% (2750s/13743s, dt=3.349s)
+  [D2DGA] 进度 30% (4123s/13743s, dt=3.349s)
+  [D2DGA] 进度 40% (5499s/13743s, dt=3.349s)
+  [D2DGA] 进度 50% (6872s/13743s, dt=3.349s)
+  [D2DGA] 进度 60% (8248s/13743s, dt=3.349s)
+  [D2DGA] 进度 70% (9620s/13743s, dt=1.710s)
+  [D2DGA] 进度 80% (10995s/13743s, dt=2.015s)
+  [D2DGA] 进度 90% (12371s/13743s, dt=2.815s)
+  [D2DGA] 进度 100% (13743s/13743s, dt=2.706s)
+[hu101_fs1.15_FT_hydro] η_E=0.9416624709 η_N=0.6692990941 饥饿=0.023977 wall占比=0.7478 步数=5192 dt中位=2.647824925140128 clip=0 耗时=91.7s

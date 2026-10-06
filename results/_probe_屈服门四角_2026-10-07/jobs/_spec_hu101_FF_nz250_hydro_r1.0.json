@@ -1,0 +1,1 @@
+{"tag": "hu101_FF_nz250_hydro_r1.0", "well": "呼101", "split": false, "gate": null, "nz": 250, "rate": 1.0, "f_safety": null, "pressure_mode": "hydrostatic", "anchor": {"kind": "t2csv", "mode": "hard"}}

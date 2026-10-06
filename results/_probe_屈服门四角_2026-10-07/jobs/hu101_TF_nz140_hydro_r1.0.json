@@ -1,0 +1,170 @@
+{
+ "tag": "hu101_TF_nz140_hydro_r1.0",
+ "井名": "呼101",
+ "变体": "Ton_static_rate_x1",
+ "配置": {
+  "split(include_yield_term)": true,
+  "gate(enable_stream_yield_gate)": null,
+  "nz": 140,
+  "ny": 40,
+  "rate": 1.0,
+  "f_safety": null,
+  "pressure_mode": "hydrostatic",
+  "pressure_caliber": "shoe",
+  "CORRECTED_KW": {
+   "enable_yield_gate": true,
+   "enable_regime_split": true,
+   "enable_local_i3": true
+  },
+  "tt_s": 13742.727272727272,
+  "opts": {
+   "enable_temperature_rheology": true,
+   "temperature_mode": "static",
+   "enable_yield_gate": null,
+   "rheology_formula": null,
+   "mud_extrapolate": false,
+   "pressure_mode": "hydrostatic",
+   "pressure_caliber": "shoe",
+   "enable_stream_yield_gate": null,
+   "include_yield_term": true
+  }
+ },
+ "η_E": 0.9323917409976328,
+ "η_N": 0.5505539983661236,
+ "elapsed_s": 35.3,
+ "extra": {
+  "饥饿份额": 0.05787437211263105,
+  "front_narrow_m": 1100.8345323741007,
+  "front_wide_m": 2468.0,
+  "interface_length_ratio": 0.766169,
+  "屈服门活化率_b加权": 0.24703935777908265,
+  "屈服门_wall占比": 0.7735714285714286,
+  "stop_t_s": 13742.727272727272,
+  "温度审计_oob": 0,
+  "温度流变审计": {
+   "clamp": 1,
+   "nearest": 1
+  }
+ },
+ "A2.1": {
+  "逐站点": {
+   "_buoyancy_number_at|钻井液|split=T": {
+    "n": 1,
+    "mu_min": 0.33343607641646006,
+    "mu_max": 0.33343607641646006,
+    "mu_mean": 0.33343607641646006,
+    "gamma_min": 38.318243820860346,
+    "gamma_max": 38.318243820860346
+   },
+   "_froude_squared_at|钻井液|split=T": {
+    "n": 6914,
+    "mu_min": 0.15691014628581032,
+    "mu_max": 0.33343607641646006,
+    "mu_mean": 0.22778031752690597,
+    "gamma_min": 38.318243820860346,
+    "gamma_max": 99.74775248880545
+   },
+   "_velocity_stream_function|钻井液|split=T": {
+    "n": 3457,
+    "mu_min": 0.15691014628581032,
+    "mu_max": 0.3334224282343951,
+    "mu_mean": 0.22776572656686897,
+    "gamma_min": 38.32006841593135,
+    "gamma_max": 99.74775248880545
+   },
+   "_velocity_stream_function|领浆|split=T": {
+    "n": 3457,
+    "mu_min": 0.41148600261001556,
+    "mu_max": 0.9122333017193893,
+    "mu_mean": 0.6124960403302165,
+    "gamma_min": 38.32006841593135,
+    "gamma_max": 99.74775248880545
+   }
+  },
+  "split_μ_min": 0.15691014628581032,
+  "split_μ_max": 0.9122333017193893,
+  "split_调用数": 13829,
+  "m_field": {
+   "n": 3457,
+   "min": 0.3564534689591793,
+   "max": 0.42760648643796767,
+   "mean": 0.37101470362464506
+  },
+  "A2.1_断言": "PASS（split μ ∈ [1e-5, 3.0]）"
+ },
+ "A2.2": {
+  "步数": 3457,
+  "dt_median_s": 4.0,
+  "dt_min_s": 2.6067316892022063,
+  "dt_max_s": 4.0,
+  "dt_p05_s": 3.9175808317014194,
+  "dt_p95_s": 4.0,
+  "dt_顶格步占比": 0.835984958056118,
+  "dt_顶格上限_s": 4.0,
+  "cfl_clip_events": 0,
+  "cfl_clip_steps": 0,
+  "wall占比时程_点数": 3457,
+  "wall占比时程_frac_min": 0.0,
+  "wall占比时程_frac_max": 0.975,
+  "wall占比时程_bw首": 0.0,
+  "wall占比时程_bw末": 0.24245748243201903,
+  "守恒残差": {
+   "末步_lead_field": {
+    "低于0": 0.0,
+    "高于1": 0.0
+   },
+   "末步_tail_field": {
+    "低于0": 0.0,
+    "高于1": 0.0
+   },
+   "末步_spacer_field": {
+    "低于0": 0.0,
+    "高于1": 0.0
+   },
+   "末步_flusher_field": {
+    "低于0": 0.0,
+    "高于1": 0.0
+   },
+   "末步_总相和": {
+    "min": 4.345523095777815e-16,
+    "max": 1.0000114846855637,
+    "超1幅值": 1.148468556366744e-05
+   },
+   "快照_最大越界": 0.0
+  }
+ },
+ "A2.3": {
+  "lambda_op_last": 96364.71214636201,
+  "shear_rate_rep_last": 38.32006841593135,
+  "mu_reg_field": {
+   "min": 0.19753344527700173,
+   "max": 2.914814538953568,
+   "mean": 0.8970779458463711
+  },
+  "wall_field": {
+   "min": 0.0,
+   "max": 0.8624807447148821,
+   "mean": 0.3228014158895233,
+   "frac_pos": 0.7735714285714286
+  }
+ },
+ "summary_浮力数_b": 3.285068300042377,
+ "provenance": {
+  "git_HEAD": "e3b5dee6cfe07b0a08886d92dfee7c080d79762b",
+  "job": {
+   "tag": "hu101_TF_nz140_hydro_r1.0",
+   "well": "呼101",
+   "split": true,
+   "gate": null,
+   "nz": 140,
+   "rate": 1.0,
+   "f_safety": null,
+   "pressure_mode": "hydrostatic",
+   "anchor": null
+  },
+  "time": "2026-10-07 01:19:33",
+  "python": "3.13.7",
+  "cemdisp": "D:\\users\\desktop\\research\\控压固井项目\\cement model_温压耦合分支\\cemdisp\\__init__.py"
+ },
+ "npz": "results\\_probe_屈服门四角_2026-10-07\\jobs\\hu101_TF_nz140_hydro_r1.0.npz"
+}

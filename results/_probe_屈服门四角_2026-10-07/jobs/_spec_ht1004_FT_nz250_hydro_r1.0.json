@@ -1,0 +1,1 @@
+{"tag": "ht1004_FT_nz250_hydro_r1.0", "well": "呼1-004", "split": false, "gate": true, "nz": 250, "rate": 1.0, "f_safety": null, "pressure_mode": "hydrostatic", "anchor": {"kind": "probe_gate", "mode": "soft"}}

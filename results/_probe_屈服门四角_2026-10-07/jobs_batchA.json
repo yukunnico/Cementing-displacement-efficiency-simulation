@@ -1,0 +1,16 @@
+[
+ {"tag": "hu101_FF_nz250_hydro_r1.0", "well": "呼101", "split": false, "gate": null, "nz": 250, "rate": 1.0, "f_safety": null, "pressure_mode": "hydrostatic",
+  "anchor": {"kind": "t2csv", "mode": "hard"}},
+ {"tag": "hu101_FT_nz250_hydro_r1.0", "well": "呼101", "split": false, "gate": true, "nz": 250, "rate": 1.0, "f_safety": null, "pressure_mode": "hydrostatic",
+  "anchor": {"kind": "probe_gate", "mode": "soft"}},
+ {"tag": "hu101_TF_nz100_hydro_r1.0", "well": "呼101", "split": true, "gate": null, "nz": 100, "rate": 1.0, "f_safety": null, "pressure_mode": "hydrostatic",
+  "anchor": null},
+ {"tag": "hu101_TF_nz140_hydro_r1.0", "well": "呼101", "split": true, "gate": null, "nz": 140, "rate": 1.0, "f_safety": null, "pressure_mode": "hydrostatic",
+  "anchor": null},
+ {"tag": "hu101_TF_nz250_hydro_r1.0", "well": "呼101", "split": true, "gate": null, "nz": 250, "rate": 1.0, "f_safety": null, "pressure_mode": "hydrostatic",
+  "anchor": null},
+ {"tag": "hu101_FF_nz100_hydro_r1.0", "well": "呼101", "split": false, "gate": null, "nz": 100, "rate": 1.0, "f_safety": null, "pressure_mode": "hydrostatic",
+  "anchor": null},
+ {"tag": "hu101_FF_nz140_hydro_r1.0", "well": "呼101", "split": false, "gate": null, "nz": 140, "rate": 1.0, "f_safety": null, "pressure_mode": "hydrostatic",
+  "anchor": null}
+]

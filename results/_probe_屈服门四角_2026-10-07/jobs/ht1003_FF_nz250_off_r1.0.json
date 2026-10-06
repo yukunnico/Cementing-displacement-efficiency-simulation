@@ -1,0 +1,184 @@
+{
+ "tag": "ht1003_FF_nz250_off_r1.0",
+ "井名": "呼1-003",
+ "变体": "Ton_static_rate_x1.0",
+ "配置": {
+  "split(include_yield_term)": false,
+  "gate(enable_stream_yield_gate)": null,
+  "nz": 250,
+  "ny": 40,
+  "rate": 1.0,
+  "f_safety": null,
+  "pressure_mode": "off",
+  "pressure_caliber": "shoe",
+  "CORRECTED_KW": {
+   "enable_yield_gate": true,
+   "enable_regime_split": true,
+   "enable_local_i3": true
+  },
+  "tt_s": 10255.164835164836,
+  "opts": {
+   "enable_temperature_rheology": true,
+   "temperature_mode": "static",
+   "enable_yield_gate": null,
+   "rheology_formula": null,
+   "mud_extrapolate": false,
+   "pressure_mode": "off",
+   "pressure_caliber": "shoe",
+   "enable_stream_yield_gate": null,
+   "include_yield_term": false
+  }
+ },
+ "η_E": 0.9988906804059143,
+ "η_N": 0.9945337366118805,
+ "elapsed_s": 49.3,
+ "extra": {
+  "饥饿份额": 0.0,
+  "front_narrow_m": 2310.4610000000002,
+  "front_wide_m": 2310.4610000000002,
+  "interface_length_ratio": 0.0,
+  "屈服门活化率_b加权": 0.005242810667226233,
+  "屈服门_wall占比": 0.139,
+  "stop_t_s": 10255.164835164836,
+  "温度审计_oob": 0,
+  "温度流变审计": {
+   "clamp": 1,
+   "nearest": 2,
+   "p_default": 1,
+   "borrow": 1
+  }
+ },
+ "A2.1": {
+  "逐站点": {
+   "_buoyancy_number_at|钻井液|split=F": {
+    "n": 1,
+    "mu_min": 0.04679753464156249,
+    "mu_max": 0.04679753464156249,
+    "mu_mean": 0.04679753464156249,
+    "gamma_min": 138.47788742759516,
+    "gamma_max": 138.47788742759516
+   },
+   "_froude_squared_at|钻井液|split=F": {
+    "n": 5868,
+    "mu_min": 0.04679753464156249,
+    "mu_max": 0.04679753464156249,
+    "mu_mean": 0.046797534641562985,
+    "gamma_min": 68.36261941765464,
+    "gamma_max": 139.15543618542094
+   },
+   "_velocity_stream_function|钻井液|split=F": {
+    "n": 2934,
+    "mu_min": 0.04679753464156249,
+    "mu_max": 0.04679753464156249,
+    "mu_mean": 0.04679753464155993,
+    "gamma_min": 68.36261941765464,
+    "gamma_max": 139.15543618542094
+   },
+   "_velocity_stream_function|领浆|split=F": {
+    "n": 2934,
+    "mu_min": 0.102988735048662,
+    "mu_max": 0.102988735048662,
+    "mu_mean": 0.1029887350486592,
+    "gamma_min": 68.36261941765464,
+    "gamma_max": 139.15543618542094
+   }
+  },
+  "split_μ_min": null,
+  "split_μ_max": null,
+  "split_调用数": 0,
+  "m_field": {
+   "n": 2934,
+   "min": 0.385532863113025,
+   "max": 0.40734438701743425,
+   "mean": 0.39906521129259276
+  },
+  "A2.1_断言": "N/A（split=False）"
+ },
+ "A2.2": {
+  "步数": 2934,
+  "dt_median_s": 4.0,
+  "dt_min_s": 0.9571887615420565,
+  "dt_max_s": 4.0,
+  "dt_p05_s": 2.1503685917317945,
+  "dt_p95_s": 4.0,
+  "dt_顶格步占比": 0.5378323108384458,
+  "dt_顶格上限_s": 4.0,
+  "cfl_clip_events": 0,
+  "cfl_clip_steps": 0,
+  "wall占比时程_点数": 2934,
+  "wall占比时程_frac_min": 0.0,
+  "wall占比时程_frac_max": 0.1431,
+  "wall占比时程_bw首": 0.0,
+  "wall占比时程_bw末": 0.005420668793276058,
+  "守恒残差": {
+   "末步_lead_field": {
+    "低于0": 0.0,
+    "高于1": 0.0
+   },
+   "末步_tail_field": {
+    "低于0": 0.0,
+    "高于1": 0.0
+   },
+   "末步_spacer_field": {
+    "低于0": 0.0,
+    "高于1": 0.0
+   },
+   "末步_flusher_field": {
+    "低于0": 0.0,
+    "高于1": 0.0
+   },
+   "末步_总相和": {
+    "min": 0.9984830279727108,
+    "max": 1.000001101635724,
+    "超1幅值": 1.1016357239768126e-06
+   },
+   "快照_最大越界": 0.0
+  }
+ },
+ "A2.3": {
+  "lambda_op_last": 19225.375815105013,
+  "shear_rate_rep_last": 138.47906716082397,
+  "mu_reg_field": {
+   "min": 0.25964195192912365,
+   "max": 0.405261783390366,
+   "mean": 0.3029907631918061
+  },
+  "wall_field": {
+   "min": 0.0,
+   "max": 0.1274723935391202,
+   "mean": 0.0063360477297332175,
+   "frac_pos": 0.139
+  }
+ },
+ "summary_浮力数_b": 5.85322639456148,
+ "provenance": {
+  "git_HEAD": "e3b5dee6cfe07b0a08886d92dfee7c080d79762b",
+  "job": {
+   "tag": "ht1003_FF_nz250_off_r1.0",
+   "well": "呼1-003",
+   "split": false,
+   "gate": null,
+   "nz": 250,
+   "rate": 1.0,
+   "f_safety": null,
+   "pressure_mode": "off",
+   "anchor": {
+    "kind": "phase0",
+    "mode": "hard"
+   }
+  },
+  "time": "2026-10-07 01:30:35",
+  "python": "3.13.7",
+  "cemdisp": "D:\\users\\desktop\\research\\控压固井项目\\cement model_温压耦合分支\\cemdisp\\__init__.py"
+ },
+ "npz": "results\\_probe_屈服门四角_2026-10-07\\jobs\\ht1003_FF_nz250_off_r1.0.npz",
+ "anchor": {
+  "η_E": 0.9988906804059143,
+  "η_N": 0.9945337366118805,
+  "source": "phase0:呼1-003_Ton_static_rate_x1.0_结果摘要.json",
+  "mode": "hard",
+  "Δη_E": 0.0,
+  "Δη_N": 0.0,
+  "PASS": true
+ }
+}
