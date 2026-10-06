@@ -187,6 +187,59 @@ run_opts 再加 `pressure_mode ∈ {"off","hydrostatic"}`（默认 `"off"`）、
 两 commit 均为**加法式**（新参默认 = 旧行为）。`git revert` 单 commit 即回到 HEAD 口径；
 新产物目录可整目录删除，不影响任何既有产物。
 
+---
+
+## 6. Phase 1.5 追加：激活管道骨架（2026-10-06 同窗口执行）
+
+计划 §3 Phase 1.5「独立小 PR」。用户 2026-10-06 裁定 Δ5/Δ9/Δ10/C-14 全部按推荐口径追认，
+本波继续。
+
+### 改动面
+
+| 位置 | 改动 |
+|---|---|
+| `RUN_OPTS_KEYS` | += `"enable_stream_yield_gate"`（第 8 键） |
+| `normalize_run_opts` 默认 dict | += `"enable_stream_yield_gate": None`（**None ⇒ 不给键**，沿用 annulus 构造默认 False）；类型闸 bool｜None |
+| `annulus_kwargs_from_opts` | `is not None` 时出键 |
+| `casing_kwargs_from_opts` | **禁出此键**（casing 无该形参；出键=运行期 TypeError，见 C-01 不对称版） |
+| T2 `_opts()` | += `stream_yield_gate: bool \| None = None` |
+
+### 语义区分（计划 §3 Phase 1.5 点名要求写入 docstring）
+
+| 开关 | 端 | 含义 | 默认 | T2 既有对照用的是 |
+|---|---|---|---|---|
+| `enable_yield_gate` | **生产端** | wall 场**算不算** | True | ✅ 本键（gateoff 对照） |
+| `enable_stream_yield_gate` | **消费端** | wall **进不进**流函数算子 | False | ✗ |
+
+二者组合的死活判定见 `annulus._dead_switches`（置真但 wall 到不了算子 ⇒ 判"死开关"告警）。
+
+### 执行窗口发现的语义要点（**重要**）
+
+`enable_stream_yield_gate` **不是 T-on 专属开关**——它把 wall 接进算子，**在 T-off 下同样改变
+流场**（实测：合成小算例 T-off 下置真 ⇒ `effective_efficiency` 变化）。故契约测试的判据是
+两段式：
+
+- **不给键 / 给键=默认值** ⇒ 与基线**逐位相同**（计划 §3 Phase 1.5 的"无此键时行为逐位不变"）；
+- **给键=True** ⇒ 结果**必须变** —— 这正是"确实到达算子"的证据（反制评审 A1.2 的
+  "添加了 ≠ 在运行"）。
+
+### 验收
+
+| 项 | 结果 |
+|---|---|
+| `test_signature_defaults_match_table`（计划点名） | **绿**（本波不动 `_SWITCH_DEFAULTS`） |
+| 全 8 键穿透（A1.2） | `test_every_key_reaches_solver_attribute` —— 构造后逐属性断言 |
+| casing 不对称 | `test_casing_kwargs_never_emit_stream_yield_gate`（`inspect` 证明 casing 无该形参） |
+| 关2 无键逐位 | `test_no_key_is_bitwise_zero_trace_and_key_true_is_live` |
+| 两门不互代偿 | `test_two_gates_are_distinct_and_not_substitutable` |
+| 全量 | `tests/contract` **940 passed / 1 failed**（唯一失败=预存冻结锚，在 17F 基线内） |
+
+新增契约测试文件 `tests/contract/test_run_opts_wiring.py`（8 条）。
+
+⚠️ 该文件**未**写真调 `CasingFlowSolver(enable_stream_yield_gate=...)` 的反例：
+`test_entrypoint_signatures.py` 的「豁免集冻结为**唯一**一处蓄意反例」是刻意收窄的守卫，
+不应为一条断言扩容——改用 `inspect` 证明，效力等价。
+
 
 ---
 
