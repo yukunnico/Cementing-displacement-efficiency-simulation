@@ -1,0 +1,92 @@
+{
+  "well": "hu101（呼101）静温档 GeothermalTemperatureField",
+  "domain": {
+    "top_md_m": 5400.0,
+    "bottom_md_m": 7868.0,
+    "shoe_md_m": 7868.0
+  },
+  "geo_grad_c_per_m": 0.017598,
+  "A_same_source_shoe": {
+    "rows": [
+      {
+        "t_s": 5906.0,
+        "T_1d_shoe_c": 154.467064,
+        "T_field_shoe_c": 154.467064,
+        "T_2d_column_shoe_c": 154.467064,
+        "same_source_diff_1d_vs_field_c": 0.0,
+        "same_source_diff_1d_vs_2d_column_c": 0.0
+      },
+      {
+        "t_s": 7374.0,
+        "T_1d_shoe_c": 154.467064,
+        "T_field_shoe_c": 154.467064,
+        "T_2d_column_shoe_c": 154.467064,
+        "same_source_diff_1d_vs_field_c": 0.0,
+        "same_source_diff_1d_vs_2d_column_c": 0.0
+      },
+      {
+        "t_s": 8466.0,
+        "T_1d_shoe_c": 154.467064,
+        "T_field_shoe_c": 154.467064,
+        "T_2d_column_shoe_c": 154.467064,
+        "same_source_diff_1d_vs_field_c": 0.0,
+        "same_source_diff_1d_vs_2d_column_c": 0.0
+      },
+      {
+        "t_s": 11364.545454545454,
+        "T_1d_shoe_c": 154.467064,
+        "T_field_shoe_c": 154.467064,
+        "T_2d_column_shoe_c": 154.467064,
+        "same_source_diff_1d_vs_field_c": 0.0,
+        "same_source_diff_1d_vs_2d_column_c": 0.0
+      }
+    ],
+    "all_zero_vs_field": true,
+    "all_zero_vs_2d_column": true
+  },
+  "B_old_caliber_contrast": {
+    "T_1d_domaintop_fallback_c": 111.03519999999999,
+    "T_2d_domainmean_representative_c": 132.75113199999998,
+    "old_fracture_c": 21.715931999999995,
+    "T_1d_shoe_depthwise_c": 154.467064,
+    "new_gap_shoe_minus_domaintop_c": 43.431864000000004,
+    "domaintop_in_primary_consumption": false,
+    "note": "2D 域均代表标量按 F-3 原样保留（不『归一化』）；同源=同场同点，鞋口三方差恒 0；域顶仅回退路径。"
+  },
+  "C_dispersion_volume_chain": {
+    "n_dispersion_events": 4,
+    "closure_residual_m_min": 0.0,
+    "closure_residual_m_max": 0.0,
+    "sample": [
+      {
+        "t_event_s": 6050.6892415800885,
+        "md_pathwise_m": 4078.352190914661,
+        "t_pathwise_s": 3085.6318047817476,
+        "closure_residual_m": 0.0
+      },
+      {
+        "t_event_s": 7091.903441669863,
+        "md_pathwise_m": 4009.7729762603594,
+        "t_pathwise_s": 4016.4275812523974,
+        "closure_residual_m": 0.0
+      },
+      {
+        "t_event_s": 8398.926126210345,
+        "md_pathwise_m": 3652.817413905133,
+        "t_pathwise_s": 5540.926126210345,
+        "closure_residual_m": 0.0
+      },
+      {
+        "t_event_s": 11902.551747386839,
+        "md_pathwise_m": 4420.09330058462,
+        "t_pathwise_s": 8884.2276042248,
+        "closure_residual_m": 0.0
+      }
+    ]
+  },
+  "summary": {
+    "shoe_same_source_diff_zero": true,
+    "old_fracture_reproduced": true,
+    "fracture_semantics_shifted": true
+  }
+}

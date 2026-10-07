@@ -172,9 +172,10 @@ class CasingFlowSolver:
         rheology_formula_params: RheologyFormulaParams | None = None,
         mud_extrapolate: bool = False,
         # P-1（2026-10-06）：静液柱压力场注入位 + 取 P 深度口径。
-        # ⚠️ casing `_phase_props(self, fluid)` **无 geom/t** 形参（与 annulus 三参不同），
-        # 故 P 在 run() 内一次性算成标量 `_step_P_mpa`（鞋深单点），不在 `_phase_props`
-        # 内现算——不得照抄 annulus 的 `_representative_pressure_mpa(geom, t)` 形态。
+        # 4a（2026-10-07）起 `_phase_props(fluid, md_m, t_s)` 收到 md_m 时直接
+        # `pressure_field.P(md, 0)` 现场求值（静压与 t 无关，温度场同模式）；
+        # md_m 缺省 ⇒ 回退 run() 一次性标量定标 `_step_P_mpa`（鞋深单点）——
+        # 与 annulus 的 `_representative_pressure_mpa(geom, t)` 形态仍不同（无 geom）。
         pressure_field: "PressureField | None" = None,
         pressure_caliber: str = "shoe",
     ) -> None:
@@ -293,7 +294,9 @@ class CasingFlowSolver:
         # ------------------------------------------------------------------ #
         # T1-3（2026-10-01 温压耦合 Task 8）：温变流变总开关。消费点：三个物性
         # 入口（弥散/有效粘度/重力修正粘度侧）统一走 `_phase_props`（off 恒等 +
-        # (fluid,T) memo）；run() 开时挂温度场并定代表温度 _step_T_c。
+        # (fluid,T) memo）；4a（2026-10-07）起入口携带 (md,t)、`_phase_props` 直接
+        # 对场引用现场求值 T(md,t)；run() 开时挂温度场并保留标量定标 _step_T_c
+        # 作**回退路径**（无 md 直调 ⇒ 逐位 = 改前）。
         # 关时不建场（_phase_memo 恒建为空 dict，无数值消费 ⇒ 零痕迹）。
         # ------------------------------------------------------------------ #
         self.enable_temperature_rheology: bool = enable_temperature_rheology
@@ -319,6 +322,10 @@ class CasingFlowSolver:
             self._temperature_field = ConstantTemperatureField(self.temperature_rheology_t_c)
             self._step_T_c = self.temperature_rheology_t_c
         self._phase_memo: dict = {}
+        # 4a（2026-10-07）关5 诊断落盘：弥散入口 (md,t) 体积链反推记录
+        # [(事件时刻 s, 沿程中点 md m, 沿程中点时刻 s, 体积链闭合残差 m)]。
+        # 仅 T-on 追加（T-off 恒空 ⇒ 不进 CasingFlowResult/summary ⇒ 零痕迹）。
+        self._dispersion_depthwise_records: list[tuple[float, float, float, float]] = []
         self._scheduled_steps_by_result_id: dict[int, tuple[_ScheduledStep, ...]] = {}
         self._initial_fluid_by_result_id: dict[int, str] = {}
         self._fluids_by_result_id: dict[int, tuple[FluidSpec, ...]] = {}
@@ -344,10 +351,11 @@ class CasingFlowSolver:
                 （管内用 T_in 表语义同样由场对象承载）。None 且
                 ``enable_temperature_rheology=True`` ⇒ 回退构造层恒温场
                 ``ConstantTemperatureField(temperature_rheology_t_c)``；
-                T-off 时不读本参数（零痕迹）。开时 run() 把域顶 t=0 的查询值
-                记为代表温度 ``_step_T_c``（恒温场任意 (md,t) 同值；表格场即
-                初态域顶温度——同 Task 6 构造层口径），三个物性入口经
-                `_phase_props` 按该温度派生。
+                T-off 时不读本参数（零痕迹）。4a（2026-10-07）起三个物性入口
+                携带各自 (md,t)，`_phase_props` 对场引用**现场求值** T(md,t)
+                （1D 与 2D 同吃一个 T(md,t) 场——"1D 域顶单点标量"的 21.7°C
+                断裂语义由此消除，spec §2/测绘项12）；域顶 t=0 查询值仍记入
+                ``_step_T_c``，但仅作**回退路径**（无 md 直调 ⇒ 逐位 = 改前）。
         """
         # T1-3（2026-10-01 温压耦合 Task 8）：温变流变接线——温度场注入 +
         # 代表温度定标 + 派生缓存按 run 清。关 ⇒ 整块不执行（零痕迹，
@@ -359,9 +367,14 @@ class CasingFlowSolver:
                 else ConstantTemperatureField(self.temperature_rheology_t_c)
             )
             self._phase_memo.clear()  # 派生缓存按 run 清（跨 run 不复用）
+            self._dispersion_depthwise_records = []  # 4a 关5 诊断随 run 重建
+            # 4a：场对象引用（self._temperature_field / self.pressure_field）是消费
+            # 主体——`_phase_props` 在物理消费点按 (md,t) 现场求值；下面两个标量定标
+            # 仅保留为**回退路径**（无 md 直调，如未跑 run 的单元调用），Constant 场
+            # 下两者求值同值 ⇒ 逐位 = 改前（关2）。域顶标量语义不再是主消费口径。
             self._step_T_c = self._temperature_field.T(well_spec.top_md_m, 0.0)
-            # P-1（C-16）：casing `_phase_props` 无 geom/t ⇒ 在 run 内一次性定标
-            # （鞋深单点；静压场与 t 无关 ⇒ 与 annulus 逐步值同口径）。无场 ⇒ None。
+            # P-1（C-16）：鞋深单点标量回退（静压场与 t 无关 ⇒ 与 annulus 逐步值同
+            # 口径）；4a 起有 md 时 `_phase_props` 直接 P(md,0) 现查。无场 ⇒ None。
             self._step_P_mpa = (
                 None if self.pressure_field is None
                 else float(self.pressure_field.P(float(well_spec.shoe_md_m), 0.0))
@@ -540,22 +553,43 @@ class CasingFlowSolver:
 
         return state
 
-    def _phase_props(self, fluid: FluidSpec) -> FluidSpec:
-        """单相物性唯一入口（T1-3）：T-on 按代表温度 ``fluid_at`` 绝对替换派生。
+    def _phase_props(
+        self,
+        fluid: FluidSpec,
+        md_m: float | None = None,
+        t_s: float | None = None,
+    ) -> FluidSpec:
+        """单相物性唯一入口（T1-3；4a 起按消费点 (md,t) 对场引用现场求值）。
 
         三个物性入口（`_compute_dispersion_coefficient` 弥散、
         `_effective_viscosity` 有效粘度、`_gravity_corrected_arrival_time`
-        屈服应力侧）同走本函数，并以 ``(fluid, T)`` memo 复用派生结果
-        （**T-on 一次派生非每步**：同 (fluid,T) 返回同一对象）。代表温度
-        ``_step_T_c`` 由 run() 按注入温度场定标（域顶 t=0 查询；恒温场任意
-        (md,t) 同值），未跑 run() 的直调方用构造层 ``temperature_rheology_t_c``。
+        屈服应力侧）同走本函数，并以 ``(fluid, T, P, params)`` memo 复用派生
+        结果（同键返回同一对象）。4a（2026-10-07 逐深温度）：调用方给出物理
+        消费点 ``(md_m, t_s)`` 时，温度/压力直接对场对象求值 ``T(md,t)`` /
+        ``P(md,0)``（静压与 t 无关）——1D 与 2D 环空吃**同一 T(md,t) 场**，
+        "1D 域顶单点标量"的 21.7°C 断裂语义自然消除（spec §2 / 测绘项12）。
 
-        T-off：恒等返回入参（不查温度场、不写任何状态 ⇒ off 路径逐位红线）。
+        回退路径（标量定标）：``md_m`` 缺省 ⇒ 用 run() 定标的 ``_step_T_c``
+        （域顶 t=0）/ ``_step_P_mpa``（鞋深单点），语义与 4a 改前**逐位一致**；
+        未跑 run() 的直调方用构造层 ``temperature_rheology_t_c``。
+
+        T-off：恒等返回入参（不查温度场、不写任何状态 ⇒ off 路径逐位红线，
+        与 md_m 取值无关）。
+
+        memo 键：4a 后键中的 T/P 可为现场求值结果；1D 每 run 派生次数≈事件数
+        （数十），无键爆炸问题（测绘项2 评估）；键仍为标量组，不进列场。
         """
         if not self.enable_temperature_rheology:
             return fluid
-        T = self._step_T_c
-        P = self._step_P_mpa
+        if md_m is not None and self._temperature_field is not None:
+            T = float(self._temperature_field.T(
+                float(md_m), 0.0 if t_s is None else float(t_s)))
+        else:
+            T = self._step_T_c  # 回退：标量定标路径（4a 前语义）
+        if md_m is not None and self.pressure_field is not None:
+            P = float(self.pressure_field.P(float(md_m), 0.0))
+        else:
+            P = self._step_P_mpa
         # memo 键含 T、P 与 params（R1/P-1）——P 无场时为 None ⇒ 键与关2 旧口径同族。
         key = (fluid, T, P, self.rheology_formula_params)
         cached = self._phase_memo.get(key)
@@ -572,8 +606,14 @@ class CasingFlowSolver:
         pipe_radius_m: float,
         fluid: FluidSpec,
         mean_velocity_m_s: float,
+        md_m: float | None = None,
+        t_s: float | None = None,
     ) -> float:
         """管内轴向弥散系数（Taylor-Aris 系列 + 对流尺度上限截断）。
+
+        4a 弥散入口（沿程口径）：``(md_m, t_s)`` 为调用方由 timeline 体积链
+        反推的界面沿程中点，透传给 `_phase_props` 现场求值 T(md,t)；缺省
+        ⇒ 标量回退路径（逐位 = 改前）。
 
         T1-8: Newtonian → Taylor-Aris; Power-law → Batot et al. (2016) 式(28);
         Bingham → Fan & Wang (1966); HB → 等效 Bingham 近似。
@@ -590,6 +630,8 @@ class CasingFlowSolver:
             pipe_radius_m: 套管内半径 [m]
             fluid: 管内流体规格
             mean_velocity_m_s: 截面平均速度 [m/s]
+            md_m: 4a 物性求值深度 [m]（None ⇒ `_step_T_c` 标量回退）
+            t_s: 4a 物性求值时刻 [s]（None ⇒ 0.0，与静压场口径一致）
 
         Returns:
             有效轴向弥散系数 D_eff [m²/s]（仅对流弥散部分）
@@ -598,7 +640,8 @@ class CasingFlowSolver:
             return 0.0
 
         # T1-3 温度挂接：粘度/τy/n/K 等相关量取温变派生态（T-off 恒等 = 逐位）
-        fluid = self._phase_props(fluid)
+        # 4a：沿程中点 (md,t) 现场求值；缺省走标量回退。
+        fluid = self._phase_props(fluid, md_m, t_s)
 
         import math as _math
         from cemdisp.data.fluid_spec import RheologyModel
@@ -654,8 +697,14 @@ class CasingFlowSolver:
         fluid: FluidSpec,
         mean_velocity_m_s: float,
         pipe_radius_m: float,
+        md_m: float | None = None,
+        t_s: float | None = None,
     ) -> float:
         """计算流体在给定剪切率下的表观黏度。
+
+        4a 有效黏度入口：``(md_m, t_s)`` 透传 `_phase_props`（生产 8 井
+        has_plug=True ⇒ 上游 `_interface_instability_factor` 短路，本入口的
+        T-hook 生产不可达、仅探针/非胶塞井可达——测绘项3；签名仍改齐）。
 
         使用 Dai 2024 eq. A.11: μ_eff = τ₀/(u/D) + k·(u/D)^(n-1)，
         剪切率取壁面剪切率近似 γ_w = 8U/(2R)。
@@ -665,13 +714,15 @@ class CasingFlowSolver:
             fluid: 流体规格
             mean_velocity_m_s: 截面平均速度 [m/s]
             pipe_radius_m: 管内半径 [m]
+            md_m: 4a 物性求值深度 [m]（None ⇒ 标量回退）
+            t_s: 4a 物性求值时刻 [s]（None ⇒ 0.0）
 
         Returns:
             表观黏度 [Pa·s]，恒为正数
         """
         # T1-3 温度挂接：PV/τy/n/K 取温变派生态（须在零速/零半径回退前派生——
         # 该回退也读 plastic_viscosity_pa_s；T-off 恒等 = 逐位）
-        fluid = self._phase_props(fluid)
+        fluid = self._phase_props(fluid, md_m, t_s)
 
         if mean_velocity_m_s < 1e-9 or pipe_radius_m < 1e-9:
             return fluid.plastic_viscosity_pa_s or 0.01
@@ -712,6 +763,8 @@ class CasingFlowSolver:
         fluid_prev: FluidSpec,
         pipe_radius_m: float,
         mean_velocity_m_s: float,
+        md_m: float | None = None,
+        t_s: float | None = None,
     ) -> float:
         """界面失稳增强因子（垂直井适配）。
 
@@ -730,12 +783,14 @@ class CasingFlowSolver:
             fluid_prev: 前置流体（被顶替流体）
             pipe_radius_m: 管内半径 [m]
             mean_velocity_m_s: 截面平均速度 [m/s]
+            md_m: 4a 物性求值深度 [m]（透传 `_effective_viscosity`；None ⇒ 标量回退）
+            t_s: 4a 物性求值时刻 [s]（None ⇒ 0.0）
 
         Returns:
             界面失稳增强因子 [1, max_mixing_enhancement]
         """
         if self.has_plug:
-            return 1.0
+            return 1.0  # 4a 注意：has_plug=True 时短路在前，本入口 T-hook 生产不可达
 
         rho_h = max(fluid_next.density_kg_m3, fluid_prev.density_kg_m3)
         rho_l = min(fluid_next.density_kg_m3, fluid_prev.density_kg_m3)
@@ -745,8 +800,9 @@ class CasingFlowSolver:
             return 1.0  # 等密度，无失稳
 
         # 有效黏度（几何平均，Dai 2024 eq. A.12）
-        mu_next = self._effective_viscosity(fluid_next, mean_velocity_m_s, pipe_radius_m)
-        mu_prev = self._effective_viscosity(fluid_prev, mean_velocity_m_s, pipe_radius_m)
+        # 4a：与弥散入口同一 (md,t) 求值点（口径一致性）
+        mu_next = self._effective_viscosity(fluid_next, mean_velocity_m_s, pipe_radius_m, md_m, t_s)
+        mu_prev = self._effective_viscosity(fluid_prev, mean_velocity_m_s, pipe_radius_m, md_m, t_s)
         mu_mean = math.sqrt(max(mu_next * mu_prev, 1e-12))
 
         # Reynolds number
@@ -784,6 +840,18 @@ class CasingFlowSolver:
         timeline_pipe_volume_m3 = self._timeline_pipe_volume(
             well_spec, well_spec.shoe_md_m * math.pi * pipe_radius_m ** 2
         )
+        # ---- 4a（2026-10-07）弥散入口 (md,t) 供参：沿程口径，体积链反推 ----
+        # 与重力入口（鞋口终点单点）分开定义——两口径不得共用一个"前缘深度"
+        # 定义（spec 测绘风险条）。界面在 t=event.time_s 到鞋口 ⇒ 其出发体积坐标
+        # = V(t_arrival) − 管容（活塞流）；沿程中点时刻 = (出发+到达)/2，md 由
+        # 同一体积链 `_cumulative_volume_at` 反推。不用路线 B 配对的 t_inject：
+        # 配对着游标在跳过分支**之后**消耗（HEAD 次序），前移会改变配对分配而
+        # 破坏关2 逐位——评估点必须在 D_eff（跳过分支前）就可用。
+        pipe_area_m2 = self._pipe_cross_section_area(well_spec)
+        shoe_depth_m = well_spec.shoe_md_m
+        # 体积链闭合残差 [m]（关5）：管容/等效截面 − 鞋深。单径等截面井 ≈ 0（仅
+        # 浮点）；shoe_lag/双内径井反映管容-截面口径差。T-on 时逐事件落盘。
+        closure_residual_m = timeline_pipe_volume_m3 / pipe_area_m2 - shoe_depth_m
         # 初始管内流体名：与 _build_shoe_timeline 的重力修正配对口径一致
         #（_displaced_fluid_name 首步回退到该名）。弥散函数收不到 initial_fluid，
         # 由截断序列步原样重建 PumpingSchedule 后复用 _initial_fluid_name 重推。
@@ -813,7 +881,33 @@ class CasingFlowSolver:
                 continue
 
             U = event.flow_rate_m3_s / (math.pi * pipe_radius_m ** 2)
-            D_eff = self._compute_dispersion_coefficient(pipe_radius_m, fluid, U)
+            # 4a：弥散入口沿程中点 (md,t)（体积链反推，见循环前的口径注释）。
+            # 反推量仅作为 `_phase_props` 求值点透传——T-off 恒等不消费 ⇒
+            # 零数值影响；Constant 场任意 (md,t) 同值 ⇒ 逐位 = 改前（关2）。
+            t_arrival_evt = event.time_s
+            v_departure_m3 = max(
+                self._cumulative_volume_at(scheduled_steps, t_arrival_evt)
+                - timeline_pipe_volume_m3,
+                0.0,
+            )
+            t_departure_s = self._time_at_volume(scheduled_steps, v_departure_m3)
+            t_rep_s = 0.5 * (t_departure_s + t_arrival_evt)
+            md_rep_m = min(
+                max(
+                    (self._cumulative_volume_at(scheduled_steps, t_rep_s) - v_departure_m3)
+                    / pipe_area_m2,
+                    0.0,
+                ),
+                well_spec.shoe_md_m,
+            )
+            if self.enable_temperature_rheology:
+                # 关5 落盘：(事件时刻, 沿程 md, 沿程 t, 体积链闭合残差 m)。
+                # 残差 = 管容/等效截面 − 鞋深：等截面井≈0（仅浮点），双内径/
+                # shoe_lag 井 = 体积链口径差（如实落盘，不静默归一）。
+                self._dispersion_depthwise_records.append(
+                    (t_arrival_evt, md_rep_m, t_rep_s, closure_residual_m)
+                )
+            D_eff = self._compute_dispersion_coefficient(pipe_radius_m, fluid, U, md_rep_m, t_rep_s)
 
             # 找到前一个流体（在弥散系数计算前确定，供混浆增强注入使用）。
             # 跳过同名事件：同一流体分多段注入时，相邻事件可能同名
@@ -846,7 +940,7 @@ class CasingFlowSolver:
                 prev_fluid_spec = fluid_by_name.get(prev_fluid)
                 if prev_fluid_spec is not None:
                     instability = self._interface_instability_factor(
-                        fluid, prev_fluid_spec, pipe_radius_m, U
+                        fluid, prev_fluid_spec, pipe_radius_m, U, md_rep_m, t_rep_s
                     )
                     D_eff *= instability
 
@@ -1240,6 +1334,28 @@ class CasingFlowSolver:
         return front_step.start_time_s
 
     @staticmethod
+    def _time_at_volume(
+        scheduled_steps: tuple[_ScheduledStep, ...],
+        target_volume_m3: float,
+    ) -> float:
+        """4a 体积链反推：地面累计泵入体积坐标 → 时刻（活塞流线性内插）。
+
+        与 `_front_arrival_time`/`_inject_start_time` 同款体积→时刻反解
+        （同源），区别只在目标坐标**不带管容偏移**。越界防御（保证返回有限值）：
+        落入零排量步时取该步末；超出总泵入体积时取末步结束时刻（保守近似，
+        供弥散入口沿程中点用）。
+        """
+        for scheduled in scheduled_steps:
+            if target_volume_m3 <= scheduled.cumulative_volume_end_m3 + 1.0e-12:
+                if scheduled.step.rate_m3_min <= 0.0:
+                    return scheduled.end_time_s
+                volume_into_step_m3 = max(
+                    target_volume_m3 - scheduled.cumulative_volume_start_m3, 0.0
+                )
+                return scheduled.start_time_s + volume_into_step_m3 / scheduled.step.rate_m3_min * 60.0
+        return scheduled_steps[-1].end_time_s if scheduled_steps else 0.0
+
+    @staticmethod
     def _contact_time_integrated_sigma(
         t_arrival: float,
         t_inject: float,
@@ -1346,9 +1462,14 @@ class CasingFlowSolver:
         # 屈服应力修正：屈服应力会抑制浮力滑移，减小有效浮力效应
         # T1-3 温度挂接：只把粘度侧（τy(T)）接通——密度侧 _get_fluid_density
         # 仍读原始 fluids（ρ(T,P) 属 Phase P，本轮不变；fluid_at 亦不改密度）。
+        # 4a 重力入口（鞋口终点单点口径，与弥散"沿程中点"口径**分开**定义）：
+        # 求值点 = (鞋深 well_spec.shoe_md_m, 该界面到达时刻 arrival_time_s)——
+        # 两值现成（测绘项3）；与 2D 环空同吃 T(md,t) 场 ⇒ 鞋口 1D/2D 温差 → 0
+        # （4c 同源，spec §2）。well_spec 缺失 ⇒ md None ⇒ 标量回退路径。
         fluid = next((f for f in fluids if f.name == fluid_name), None)
         if fluid is not None:
-            fluid = self._phase_props(fluid)
+            shoe_md_m = float(well_spec.shoe_md_m) if well_spec is not None else None
+            fluid = self._phase_props(fluid, shoe_md_m, arrival_time_s)
         if fluid is not None and fluid.yield_stress_pa is not None and fluid.yield_stress_pa > 0.0:
             pipe_radius_m = self._effective_pipe_radius_m(well_spec)
             delta_rho = abs(rho_fluid - rho_displaced)
@@ -1462,6 +1583,15 @@ class CasingFlowSolver:
         """
         fluid_density = self._get_fluid_density(fluid_name, fluids)
         fluid = next((f for f in fluids if f.name == fluid_name), None)
+        # 4a（B8 路①）：legacy 重力 raw τy 消费点补包 `_phase_props`（口径=鞋深
+        # +到达时刻，与现代重力同型；此前无包=口径不一致修补，测绘项4）。
+        # T-off 恒等 ⇒ 逐位；触发面仅 enable_buoyancy_physics=False（:1327 分派）。
+        if fluid is not None:
+            fluid = self._phase_props(
+                fluid,
+                float(well_spec.shoe_md_m) if well_spec is not None else None,
+                arrival_time_s,
+            )
 
         # 基础重力因子
         gravity_scale = self.g_constant / 9.81
@@ -1593,6 +1723,17 @@ class CasingFlowSolver:
         fluids = self._fluids_by_result_id.get(id(result), ())
         initial_fluid = self._initial_fluid_by_result_id.get(id(result), default_fluid_name)
         current_fluid = next((f for f in fluids if f.name == default_fluid_name), None)
+        # 4a（B8 路②）：停泵沉降 raw τy 消费点补包 `_phase_props`（此前无包=口径
+        # 不一致修补，测绘项4）。求值口径：沉降柱位于管内近鞋口段 ⇒ md=鞋深，
+        # t=查询时刻 time_s（停泵时段起点附近，静压/静温场对 t 不敏感）。
+        # well_spec 缺失（手工构造 result）⇒ md=None ⇒ 标量回退。T-off 恒等 ⇒ 逐位；
+        # 密度侧 current_density 仍读原始 fluids（ρ(T,P) 属 Phase P 不变）。
+        if current_fluid is not None:
+            current_fluid = self._phase_props(
+                current_fluid,
+                float(well_spec.shoe_md_m) if well_spec is not None else None,
+                time_s,
+            )
         current_density = self._get_fluid_density(default_fluid_name, fluids)
         initial_density = self._get_fluid_density(initial_fluid, fluids)
 
