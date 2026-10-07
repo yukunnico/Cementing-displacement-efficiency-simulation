@@ -1,0 +1,126 @@
+{
+ "tag": "呼1-004_Ttablext_r0.6_col",
+ "井名": "呼1-004",
+ "变体": "Ttable_ext_rate_x0.6",
+ "配置": {
+  "mode": "table_ext",
+  "note": "扩展表(表末21600s)",
+  "depthwise": true,
+  "split(include_yield_term)": false,
+  "gate(enable_stream_yield_gate)": false,
+  "nz": 250,
+  "ny": 40,
+  "rate": 0.6,
+  "pressure_mode": "off",
+  "pressure_caliber": "shoe",
+  "CORRECTED_KW": {
+   "enable_yield_gate": true,
+   "enable_regime_split": true,
+   "enable_local_i3": true
+  },
+  "tt_s": 19016.017281054297,
+  "stop_t_s": 19016.017281054297,
+  "opts": {
+   "enable_temperature_rheology": true,
+   "temperature_mode": "table_ext",
+   "enable_yield_gate": null,
+   "rheology_formula": null,
+   "mud_extrapolate": false,
+   "pressure_mode": "off",
+   "pressure_caliber": "shoe",
+   "enable_stream_yield_gate": false,
+   "include_yield_term": false
+  }
+ },
+ "η_E": 0.9996677785834569,
+ "η_N": 0.9983401955192636,
+ "elapsed_s": 169.0,
+ "extra": {
+  "饥饿份额": 0.0,
+  "front_narrow_m": 2416.7929999999997,
+  "front_wide_m": 2416.7929999999997,
+  "interface_length_ratio": 0.0,
+  "屈服门活化率_b加权": 0.0,
+  "屈服门_wall占比": 0.0,
+  "stop_t_s": 19016.017281054297,
+  "温度审计_oob": 0,
+  "温度流变审计": {
+   "clamp": 1,
+   "nearest": 1,
+   "p_default": 1,
+   "borrow": 1
+  }
+ },
+ "health": {
+  "步数": 4781,
+  "dt_median_s": 4.0,
+  "cfl_clip_events": 0,
+  "cfl_clip_steps": 0,
+  "col_memo_size": 719,
+  "col_batches": 33487,
+  "uniform_field_hits": 0,
+  "col_audit_counts": {
+   "clamp": 1202533,
+   "nearest": 2400313,
+   "p_default": 2400564,
+   "borrow": 2400313,
+   "no_replace": 1506,
+   "model_assumption": 251
+  },
+  "oob_1d": 0,
+  "oob_2d": 0,
+  "oob_col_1d": 0,
+  "oob_col_2d": 0,
+  "守恒残差": {
+   "末步_lead_field": {
+    "低于0": 0.0,
+    "高于1": 0.0
+   },
+   "末步_tail_field": {
+    "低于0": 0.0,
+    "高于1": 0.0
+   },
+   "末步_spacer_field": {
+    "低于0": 0.0,
+    "高于1": 0.0
+   },
+   "末步_flusher_field": {
+    "低于0": 0.0,
+    "高于1": 0.0
+   },
+   "末步_总相和": {
+    "min": 0.9992877818221343,
+    "max": 1.0,
+    "超1幅值": 0.0
+   },
+   "快照_最大越界": 0.0
+  }
+ },
+ "coverage": {
+  "stop_t_s": 19016.017281054297,
+  "table_end_s": 21600.0,
+  "assert": "PASS"
+ },
+ "summary_浮力数_b": 5.1943636245364075,
+ "provenance": {
+  "git_HEAD": "b70593c5d420dcf6a96dd51f70cbee6697e04562",
+  "job": {
+   "tag": "呼1-004_Ttablext_r0.6_col",
+   "well": "呼1-004",
+   "mode": "table_ext",
+   "depthwise": true,
+   "anchor": null,
+   "split": false,
+   "gate": false,
+   "nz": 250,
+   "rate": 0.6,
+   "pressure_mode": "off",
+   "pressure_caliber": "shoe"
+  },
+  "time": "2026-10-07 18:21:08",
+  "python": "3.13.7",
+  "cemdisp": "D:\\users\\desktop\\research\\控压固井项目\\cement model_温压耦合分支\\cemdisp\\__init__.py"
+ },
+ "npz": "results\\_probe_4d七井_2026-10-07\\jobs\\呼1-004_Ttablext_r0.6_col.npz",
+ "problems": []
+}

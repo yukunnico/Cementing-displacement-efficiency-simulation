@@ -1,0 +1,110 @@
+{
+ "tag": "呼101_Toff",
+ "井名": "呼101",
+ "变体": "Toff_rate_x1.0",
+ "配置": {
+  "mode": "off",
+  "note": "",
+  "depthwise": false,
+  "split(include_yield_term)": false,
+  "gate(enable_stream_yield_gate)": false,
+  "nz": 250,
+  "ny": 40,
+  "rate": 1.0,
+  "pressure_mode": "off",
+  "pressure_caliber": "shoe",
+  "CORRECTED_KW": {
+   "enable_yield_gate": true,
+   "enable_regime_split": true,
+   "enable_local_i3": true
+  },
+  "tt_s": 13742.727272727272,
+  "stop_t_s": 13742.727272727272,
+  "opts": {
+   "enable_temperature_rheology": false,
+   "temperature_mode": "off",
+   "enable_yield_gate": null,
+   "rheology_formula": null,
+   "mud_extrapolate": false,
+   "pressure_mode": "off",
+   "pressure_caliber": "shoe",
+   "enable_stream_yield_gate": false,
+   "include_yield_term": false
+  }
+ },
+ "η_E": 0.9710579278250023,
+ "η_N": 0.8294178490449289,
+ "elapsed_s": 98.0,
+ "extra": {
+  "饥饿份额": 0.00565872983174416,
+  "front_narrow_m": 1655.2449799196788,
+  "front_wide_m": 2468.0,
+  "interface_length_ratio": 0.394231,
+  "屈服门活化率_b加权": 0.01185023262804421,
+  "屈服门_wall占比": 0.0763,
+  "stop_t_s": 13742.727272727272,
+  "温度审计_oob": 0,
+  "温度流变审计": null
+ },
+ "health": {
+  "步数": 4810,
+  "dt_median_s": 2.9515683258173304,
+  "cfl_clip_events": 0,
+  "cfl_clip_steps": 0,
+  "col_memo_size": 0,
+  "col_batches": 0,
+  "uniform_field_hits": 0,
+  "col_audit_counts": {},
+  "oob_1d": 0,
+  "oob_2d": 0,
+  "oob_col_1d": 0,
+  "oob_col_2d": 0,
+  "守恒残差": {
+   "末步_lead_field": {
+    "低于0": 0.0,
+    "高于1": 0.0
+   },
+   "末步_tail_field": {
+    "低于0": 0.0,
+    "高于1": 0.0
+   },
+   "末步_spacer_field": {
+    "低于0": 0.0,
+    "高于1": 0.0
+   },
+   "末步_flusher_field": {
+    "低于0": 0.0,
+    "高于1": 0.0
+   },
+   "末步_总相和": {
+    "min": 0.2701796796092676,
+    "max": 1.0001331845263226,
+    "超1幅值": 0.00013318452632260502
+   },
+   "快照_最大越界": 0.0
+  }
+ },
+ "coverage": null,
+ "summary_浮力数_b": 18.88836489489284,
+ "provenance": {
+  "git_HEAD": "b70593c5d420dcf6a96dd51f70cbee6697e04562",
+  "job": {
+   "tag": "呼101_Toff",
+   "well": "呼101",
+   "mode": "off",
+   "depthwise": false,
+   "anchor": null,
+   "split": false,
+   "gate": false,
+   "nz": 250,
+   "rate": 1.0,
+   "pressure_mode": "off",
+   "pressure_caliber": "shoe"
+  },
+  "time": "2026-10-07 18:10:53",
+  "python": "3.13.7",
+  "cemdisp": "D:\\users\\desktop\\research\\控压固井项目\\cement model_温压耦合分支\\cemdisp\\__init__.py"
+ },
+ "npz": "results\\_probe_4d七井_2026-10-07\\jobs\\呼101_Toff.npz",
+ "problems": []
+}

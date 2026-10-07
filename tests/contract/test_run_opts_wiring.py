@@ -37,9 +37,12 @@ from cemdisp.data.pressure_field import HydrostaticPressureField  # noqa: E402
 from cemdisp.models2d.annulus_d2dga import AnnulusD2DGASolver  # noqa: E402
 from cemdisp.transport1d.casing_flow import CasingFlowSolver  # noqa: E402
 from entrypoints.run_sensitivity_current_20260916 import (  # noqa: E402
+    ANCHORED_WELLS,
     RUN_OPTS_KEYS,
+    TEMPERATURE_MODES,
     annulus_kwargs_from_opts,
     build_pressure_field,
+    build_temperature_fields,
     casing_kwargs_from_opts,
     normalize_run_opts,
 )
@@ -256,3 +259,86 @@ def test_build_pressure_field_modes():
     assert np.isfinite(fld.P(well.shoe_md_m, 0.0))
     with pytest.raises(ValueError):
         build_pressure_field(well, fluids, sched, "nope")
+
+
+# --------------------------------------------------------------------------- #
+# 5. Phase 4d 新温度档：anchored / table_ext（spec 2026-10-07-phase4d-…）
+# --------------------------------------------------------------------------- #
+
+_SPEC_TABLE = {   # spec §1 表（逐字）：井 → (k, 锚点集)
+    "呼101": (0.90, ((5700.0, 123.0), (7868.0, 150.0))),
+    "呼1-003": (0.85, ((5290.0, 123.0), (7618.0, 150.0))),
+    "呼1-004": (0.85, ((5241.0, 124.0), (7660.0, 155.0))),
+    "呼102": (0.90, ((7120.0, 147.8), (7735.0, 149.0))),
+    "呼探1-002": (0.90, ((5292.5, 111.0), (7554.0, 148.0))),
+    "呼探1-001": (0.85, ((5460.159, 110.0), (5900.0, 118.0),
+                         (7000.0, 137.0), (7746.0, 150.0))),
+}
+
+
+def test_temperature_modes_registry_grew_without_touching_default():
+    """新档入注册表；缺省温度档仍 = "off"（关2：无新键 ⇒ 缺省行为逐位不变）。"""
+    assert "anchored" in TEMPERATURE_MODES and "table_ext" in TEMPERATURE_MODES
+    assert set(("off", "static", "table", "const60")) <= set(TEMPERATURE_MODES)
+    assert normalize_run_opts(None)["temperature_mode"] == "off"
+    assert normalize_run_opts(None)["enable_temperature_rheology"] is False
+    # run_opts 键面未扩（本波不接 run_opts，计划 §3-2 留 5d）
+    assert "enable_depthwise_temperature" not in RUN_OPTS_KEYS
+
+
+def test_anchored_registry_matches_spec_table():
+    """ANCHORED_WELLS 与 spec §1 表逐字一致（k + 锚点集），且 k ∈ (0,1]。"""
+    assert set(ANCHORED_WELLS) == set(_SPEC_TABLE)
+    for wk, (k, anchors) in _SPEC_TABLE.items():
+        k_reg, anchors_reg, basis = ANCHORED_WELLS[wk]
+        assert k_reg == k, f"{wk} k 不符"
+        assert tuple(anchors_reg) == anchors, f"{wk} 锚点集不符"
+        assert isinstance(basis, str) and basis
+        assert 0.0 < k_reg <= 1.0
+
+
+def test_anchored_field_built_per_well():
+    """每注册井 ⇒ AnchoredProfileField，k/锚点正确，且 1D/2D 为**独立实例**。"""
+    from cemdisp.data.temperature_field import AnchoredProfileField
+    for wk, (k, anchors) in _SPEC_TABLE.items():
+        f1, f2, note = build_temperature_fields(wk, "anchored")
+        assert isinstance(f1, AnchoredProfileField)
+        assert isinstance(f2, AnchoredProfileField)
+        assert f1 is not f2                      # 审计分离
+        assert f1.temperature_factor_k == k
+        np.testing.assert_array_equal(f1.md_anchor_m, [a[0] for a in anchors])
+        np.testing.assert_array_equal(f2.T_anchor_c, [a[1] for a in anchors])
+        assert note == ""
+
+
+def test_anchored_no_anchor_well_falls_back_to_geothermal():
+    """无锚井（唯一锚深度 < 2）⇒ Geothermal 回退 + 备注（不硬造锚）。"""
+    from cemdisp.data.temperature_field import GeothermalTemperatureField
+    f1, f2, note = build_temperature_fields("呼探1", "anchored")
+    assert isinstance(f1, GeothermalTemperatureField)
+    assert isinstance(f2, GeothermalTemperatureField)
+    assert "Geothermal" in note and "无静温锚" in note
+
+
+def test_anchored_unknown_well_raises():
+    """注册表外且不在无锚名单 ⇒ 响亮报错（防静默回退）。"""
+    with pytest.raises(ValueError):
+        build_temperature_fields("呼103", "anchored")
+
+
+def test_table_ext_rejects_other_wells():
+    """table_ext 仅呼1-004 ⇒ 其它井响亮报错（不静默降级到交付表）。"""
+    with pytest.raises(ValueError):
+        build_temperature_fields("呼101", "table_ext")
+
+
+def test_table_ext_loads_extended_shape_or_skips():
+    """扩展表（333×362，表末 21600 s）可加载；xlsx 不入库 ⇒ 缺件时 skip。"""
+    from entrypoints.run_sensitivity_current_20260916 import EXT4D_T_IN_XLSX
+    if not EXT4D_T_IN_XLSX.exists():
+        pytest.skip("扩展表 xlsx 未生成（.gitignore 管辖；由 run_ext4d.m 重生成）")
+    f1, f2, note = build_temperature_fields("呼1-004", "table_ext")
+    assert f1.table.shape == (333, 362)
+    assert f2.table.shape == (333, 362)
+    assert float(f1.time_s[-1]) == pytest.approx(21600.0)
+    assert note

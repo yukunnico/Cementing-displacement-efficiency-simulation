@@ -1,0 +1,122 @@
+{
+ "tag": "呼探1-001_Tanchored_col",
+ "井名": "呼探1-001",
+ "变体": "Tanchored_rate_x1.0",
+ "配置": {
+  "mode": "anchored",
+  "note": "",
+  "depthwise": true,
+  "split(include_yield_term)": false,
+  "gate(enable_stream_yield_gate)": false,
+  "nz": 250,
+  "ny": 40,
+  "rate": 1.0,
+  "pressure_mode": "off",
+  "pressure_caliber": "shoe",
+  "CORRECTED_KW": {
+   "enable_yield_gate": true,
+   "enable_regime_split": true,
+   "enable_local_i3": true
+  },
+  "tt_s": 13219.714285714286,
+  "stop_t_s": 13219.714285714286,
+  "opts": {
+   "enable_temperature_rheology": true,
+   "temperature_mode": "anchored",
+   "enable_yield_gate": null,
+   "rheology_formula": null,
+   "mud_extrapolate": false,
+   "pressure_mode": "off",
+   "pressure_caliber": "shoe",
+   "enable_stream_yield_gate": false,
+   "include_yield_term": false
+  }
+ },
+ "η_E": 0.9669152799123838,
+ "η_N": 0.9520235080462092,
+ "elapsed_s": 56.0,
+ "extra": {
+  "饥饿份额": 0.016542132240342088,
+  "front_narrow_m": 2212.296939759036,
+  "front_wide_m": 2230.5803855421686,
+  "interface_length_ratio": 0.00823,
+  "屈服门活化率_b加权": 0.08425033658445469,
+  "屈服门_wall占比": 0.3836,
+  "stop_t_s": 13219.714285714286,
+  "温度审计_oob": 5,
+  "温度流变审计": {
+   "clamp": 1,
+   "nearest": 1,
+   "p_default": 1,
+   "borrow": 1
+  }
+ },
+ "health": {
+  "步数": 3423,
+  "dt_median_s": 4.0,
+  "cfl_clip_events": 0,
+  "cfl_clip_steps": 0,
+  "col_memo_size": 19,
+  "col_batches": 19,
+  "uniform_field_hits": 0,
+  "col_audit_counts": {
+   "clamp": 3190,
+   "nearest": 3441,
+   "p_default": 3190,
+   "borrow": 2940,
+   "no_replace": 1506,
+   "model_assumption": 251
+  },
+  "oob_1d": 5,
+  "oob_2d": 0,
+  "oob_col_1d": 0,
+  "oob_col_2d": 0,
+  "守恒残差": {
+   "末步_lead_field": {
+    "低于0": 0.0,
+    "高于1": 0.0
+   },
+   "末步_tail_field": {
+    "低于0": 0.0,
+    "高于1": 0.0
+   },
+   "末步_spacer_field": {
+    "低于0": 0.0,
+    "高于1": 0.0
+   },
+   "末步_flusher_field": {
+    "低于0": 0.0,
+    "高于1": 0.0
+   },
+   "末步_总相和": {
+    "min": 0.4477703460602579,
+    "max": 1.0002495677120862,
+    "超1幅值": 0.0002495677120861739
+   },
+   "快照_最大越界": 0.0
+  }
+ },
+ "coverage": null,
+ "summary_浮力数_b": 37.65193150465199,
+ "provenance": {
+  "git_HEAD": "b70593c5d420dcf6a96dd51f70cbee6697e04562",
+  "job": {
+   "tag": "呼探1-001_Tanchored_col",
+   "well": "呼探1-001",
+   "mode": "anchored",
+   "depthwise": true,
+   "anchor": null,
+   "split": false,
+   "gate": false,
+   "nz": 250,
+   "rate": 1.0,
+   "pressure_mode": "off",
+   "pressure_caliber": "shoe"
+  },
+  "time": "2026-10-07 18:17:53",
+  "python": "3.13.7",
+  "cemdisp": "D:\\users\\desktop\\research\\控压固井项目\\cement model_温压耦合分支\\cemdisp\\__init__.py"
+ },
+ "npz": "results\\_probe_4d七井_2026-10-07\\jobs\\呼探1-001_Tanchored_col.npz",
+ "problems": []
+}

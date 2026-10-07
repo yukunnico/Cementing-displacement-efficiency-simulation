@@ -1310,6 +1310,16 @@ class AnnulusD2DGASolver:
         只消费 ``T(md_m, t_s) -> float`` 接口——场对象（Constant/Table，环空
         用 T_out 表语义）由 `run(temperature_field=...)` 调用方注入，本模块不
         区分表来源。T-on 才被调用。
+
+        取值路径（Phase 4d 增补，F-4 聚合口径）：场对象若带批量列入口
+        ``T_column(md_values, t_s)``（`AnchoredProfileField` / `TableTemperatureField`）
+        则**整批一次查**——每批至多 1 条越界代表事件；否则回退逐点 ``T``
+        （`Constant`/`Geothermal` 无该方法）。两条路径**逐位同值**
+        （契约测试 `test_column_values_match_scalar_path` 与
+        `TestColumnQuery::test_column_matches_scalar_bitwise` 均要求 atol=0），
+        ⇒ 场值不变，仅越界审计的记账粒度变化（诊断字段，不进 summary）。
+        动机：静温锚场域外节点（如呼101 域顶 5400 m 低于锚域 5700 m）在逐点
+        路径下会逐步逐点 append，nz×步数 量级无界增长。
         """
         field = self._temperature_field
         if field is None:
@@ -1317,6 +1327,9 @@ class AnnulusD2DGASolver:
             # 回退构造层恒温场，与 run() 缺省注入同源。
             field = ConstantTemperatureField(self.temperature_rheology_t_c)
             self._temperature_field = field
+        col = getattr(field, "T_column", None)
+        if callable(col):
+            return np.asarray(col(md, float(t_s)), dtype=float)
         return np.array([field.T(float(md_i), float(t_s)) for md_i in md], dtype=float)
 
     def _refresh_geom_temperature(self, geom: Dict[str, Array], t_s: float) -> None:

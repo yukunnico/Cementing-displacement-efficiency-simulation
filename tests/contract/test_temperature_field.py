@@ -273,6 +273,87 @@ class TestClampAndAudit:
 
 
 # ---------------------------------------------------------------------------
+# T_column（F-4 批量列聚合入口；Phase 4d 前置）
+# ---------------------------------------------------------------------------
+class TestColumnQuery:
+    def test_column_matches_scalar_bitwise(self):
+        """逐列批量值与逐点标量调用**逐位**同值（向量化不改运算次序）。"""
+        f = _synthetic_field()
+        mds = np.array([0.0, 2.5, 5.0, 9.9, 10.0, 15.0, 20.0])
+        for t in (0.0, 30.0, 61.5, 180.0):
+            got = f.T_column(mds, t)
+            want = np.array([f.T(float(m), t) for m in mds])
+            assert np.array_equal(got, want), f"t={t} 逐位失配"
+        assert f.oob_count == 0  # 域内查询不记事件
+
+    def test_column_shape_preserved(self):
+        f = _synthetic_field()
+        assert f.T_column([1.0, 2.0, 3.0], 60.0).shape == (3,)
+        assert f.T_column(np.zeros((2, 3)), 60.0).shape == (2, 3)
+        assert f.T_column(np.array([5.0]), 0.0).shape == (1,)
+
+    def test_column_returns_float_even_with_int_inputs(self):
+        f = _synthetic_field()
+        got = f.T_column(np.array([0, 10, 20]), 0)
+        assert got.dtype == np.float64
+
+    def test_column_one_event_per_batch(self):
+        """一批内 100 个域外点 ⇒ 事件列表只 +1，域外点数进聚合计数。"""
+        f = _synthetic_field()
+        mds = np.concatenate([np.full(50, -100.0), np.full(50, 1e6)])
+        f.T_column(mds, 60.0)
+        assert f.oob_count == 1
+        assert f.oob_column_clamped_total == 100
+        ev = f.oob_events[0]
+        # 代表事件 = 偏移边界最远的域外点（此处 1e6 侧更远）
+        assert ev.md_m == pytest.approx(1e6)
+        assert ev.md_clamped_m == pytest.approx(f.depth_m[-1])
+
+    def test_column_repeated_batches_grow_linearly(self):
+        """逐批聚合：n 批 ⇒ 事件 n 条（而非 n×nz）——防逐列×逐步 append 爆表。"""
+        f = _synthetic_field()
+        mds = np.full(30, -5.0)
+        for _ in range(7):
+            f.T_column(mds, 60.0)
+        assert f.oob_count == 7
+        assert f.oob_column_clamped_total == 210
+
+    def test_column_time_oob_single_event_no_total(self):
+        """时间越界：每批 1 条代表事件，但**不计入**域外点数（同 Anchored 口径——
+        该计数只统计深度域外）。"""
+        f = _synthetic_field()
+        f.T_column(np.array([0.0, 10.0, 20.0]), 1e9)
+        assert f.oob_count == 1
+        assert f.oob_column_clamped_total == 0
+        assert f.oob_events[0].t_clamped_s == pytest.approx(f.time_s[-1])
+
+    def test_column_in_domain_batch_no_audit(self):
+        f = _synthetic_field()
+        f.T_column(np.array([0.0, 5.0, 20.0]), 120.0)
+        assert f.oob_count == 0
+        assert f.oob_events == ()
+        assert f.oob_column_clamped_total == 0
+
+    def test_reset_audit_clears_column_total(self):
+        f = _synthetic_field()
+        f.T_column(np.array([-1.0, 30.0]), 0.0)
+        assert f.oob_column_clamped_total == 2
+        f.reset_audit()
+        assert f.oob_count == 0
+        assert f.oob_column_clamped_total == 0
+
+    def test_scalar_path_unchanged(self):
+        """批量入口不改标量路径的既有语义（关 1/关 2 红线：逐位保持）。"""
+        f = _synthetic_field()
+        f.T_column(np.array([-1000.0]), 0.0)   # 批量越界
+        assert f.oob_count == 1
+        assert f.T(-1000.0, 0.0) == pytest.approx(f.table[0, 0], abs=1e-12)
+        assert f.oob_count == 2                 # 标量仍逐查询计数
+        ev = f.oob_events[1]
+        assert ev.md_m == -1000.0 and ev.md_clamped_m == pytest.approx(f.depth_m[0])
+
+
+# ---------------------------------------------------------------------------
 # npz 缓存
 # ---------------------------------------------------------------------------
 class TestNpzCache:

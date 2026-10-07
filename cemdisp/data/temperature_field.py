@@ -399,6 +399,13 @@ class TableTemperatureField:
     time_s : 时间轴（s），长度须等于 n_time；缺省按 ``j * TIME_STEP_S`` 生成
     expected_shape : 期望形状，默认交付口径 (333, 200)；仅测试可用小形状
     source : 来源文件路径（可选，仅用于审计/溯源）
+
+    审计（Phase 4 设计规格 §0 F-4）
+    ------------------------------
+    标量路径 :meth:`T` **逐查询**记 ``ClampEvent``（既有行为，未改动）；
+    批量列查询 :meth:`T_column` **逐批聚合计数**——每批至多追加 1 条代表事件
+    （偏移表域边界最远的域外深度点），域外点数另累计于
+    :attr:`oob_column_clamped_total`，防逐列×逐步 append 爆表。
     """
 
     def __init__(
@@ -458,21 +465,29 @@ class TableTemperatureField:
         self.time_s = t
         self.source = Path(source) if source is not None else None
         self._oob_events: List[ClampEvent] = []
+        self._oob_column_clamped_total: int = 0
 
     # -- 审计 ---------------------------------------------------------------
     @property
     def oob_count(self) -> int:
-        """越界（被 clamp）查询次数。"""
+        """越界（被 clamp）查询次数（F-4 口径：标量路径逐查询计数；列批量路径
+        逐批计数，每批至多 1 条代表事件，域外点数另见 oob_column_clamped_total）。"""
         return len(self._oob_events)
 
     @property
     def oob_events(self) -> Tuple[ClampEvent, ...]:
-        """越界查询记录（按发生顺序）。"""
+        """越界查询记录（标量路径逐条；批量路径为逐批代表事件）。"""
         return tuple(self._oob_events)
 
+    @property
+    def oob_column_clamped_total(self) -> int:
+        """批量列查询累计域外（被 clamp）查询点数——F-4 聚合计数。"""
+        return self._oob_column_clamped_total
+
     def reset_audit(self) -> None:
-        """清空越界审计。"""
+        """清空越界审计（事件列表与批量聚合计数）。"""
         self._oob_events.clear()
+        self._oob_column_clamped_total = 0
 
     # -- 查询 ---------------------------------------------------------------
     def T(self, md_m: float, t_s: float) -> float:
@@ -509,6 +524,62 @@ class TableTemperatureField:
         top = t00 + ft * (t01 - t00)
         bot = t10 + ft * (t11 - t10)
         return float(top + fz * (bot - top))
+
+    def T_column(self, md_values, t_s: float = 0.0) -> np.ndarray:
+        """批量列查询（F-4 聚合计数入口）：返回与输入同形状的 °C float 数组。
+
+        与逐点调用 :meth:`T` **逐位同值**（同一插值算式与运算次序，向量化后
+        逐元素 IEEE-754 相同）；越界一次计数——每批至多追加 1 条代表
+        ``ClampEvent``（取偏离表域边界最远的域外深度点），深度域外点数累加进
+        :attr:`oob_column_clamped_total`。既有标量路径不受影响。
+
+        与 :meth:`AnchoredProfileField.T_column` 同型（同一 F-4 聚合口径）；
+        供二维逐列温度（`enable_depthwise_temperature`）批量取温使用，避免
+        逐步×逐列调用 :meth:`T` 使 ``_oob_events`` 无界增长。
+        """
+        arr = np.asarray(md_values, dtype=float)
+        flat = arr.ravel()
+        z = self.depth_m
+        ts = self.time_s
+        lo_md, hi_md = float(z[0]), float(z[-1])
+        lo_t, hi_t = float(ts[0]), float(ts[-1])
+        tt = float(t_s)
+
+        md_c = np.clip(flat, lo_md, hi_md)
+        tt_c = min(max(tt, lo_t), hi_t)
+        below = flat < lo_md
+        above = flat > hi_md
+        n_oob_md = int(np.count_nonzero(below)) + int(np.count_nonzero(above))
+        t_out = tt_c != tt
+        if n_oob_md or t_out:
+            if n_oob_md:
+                dist = np.where(below, lo_md - flat, 0.0) + np.where(above, flat - hi_md, 0.0)
+                rep_md = float(flat[int(np.argmax(dist))])
+            else:
+                rep_md = float(flat[0]) if flat.size else 0.0
+            self._oob_events.append(
+                ClampEvent(
+                    md_m=rep_md,
+                    t_s=tt,
+                    md_clamped_m=min(max(rep_md, lo_md), hi_md),
+                    t_clamped_s=tt_c,
+                )
+            )
+            self._oob_column_clamped_total += n_oob_md
+
+        i = np.clip(np.searchsorted(z, md_c, side="right") - 1, 0, len(z) - 2)
+        j = min(max(int(np.searchsorted(ts, tt_c, side="right")) - 1, 0), len(ts) - 2)
+
+        fz = (md_c - z[i]) / (z[i + 1] - z[i])
+        ft = (tt_c - ts[j]) / (ts[j + 1] - ts[j])
+
+        t00 = self.table[i, j]
+        t01 = self.table[i, j + 1]
+        t10 = self.table[i + 1, j]
+        t11 = self.table[i + 1, j + 1]
+        top = t00 + ft * (t01 - t00)
+        bot = t10 + ft * (t11 - t10)
+        return (top + fz * (bot - top)).reshape(arr.shape)
 
     # -- 构造（文件 + npz 缓存） --------------------------------------------
     @classmethod

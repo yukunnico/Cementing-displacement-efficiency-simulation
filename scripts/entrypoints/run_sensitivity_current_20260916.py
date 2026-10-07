@@ -72,9 +72,11 @@ from cemdisp.data.pressure_field import HydrostaticPressureField, insitu_column_
 from cemdisp.data.rheology_vs_temperature import RheologyFormulaParams
 from cemdisp.data.pumping_schedule import PumpingSchedule
 from cemdisp.data.temperature_field import (
+    AnchoredProfileField,
     ConstantTemperatureField,
     GeothermalTemperatureField,
     load_delivered_pair,
+    load_extended_pair_4d,
 )
 from cemdisp.data.well_spec import WellSpec
 from cemdisp.models2d import AnnulusD2DGASolver
@@ -217,11 +219,53 @@ RUN_OPTS_KEYS = ("enable_temperature_rheology", "temperature_mode",
                  "enable_yield_gate", "rheology_formula", "mud_extrapolate",
                  "pressure_mode", "pressure_caliber", "enable_stream_yield_gate",
                  "include_yield_term")
-TEMPERATURE_MODES = ("off", "static", "table", "const60")
+TEMPERATURE_MODES = ("off", "static", "table", "const60", "anchored", "table_ext")
 PRESSURE_MODES = ("off", "hydrostatic")
 PRESSURE_CALIBERS = ("shoe", "mean")
 # 有交付瞬态温度表的井（table 档专用；呼101/呼103 无表 ⇒ 只能 static/const60/off）
 TABLE_WELLS = frozenset({"呼1-004"})
+
+# ---------------------------------------------------------------- 4d 锚定静温场
+# 「anchored」档（Phase 4d 主批，spec `2026-10-07-phase4d-seven-well-batch-design.md` §1）
+# 锚点族 = **场景 A 电测/作业史静温**；逐行出处见
+# `results/_probe_4d七井_2026-10-07/七井锚点盘点表.md`（机读盘点脚本
+# `anchor_inventory_20261007.py`，在三重点井上逐字复现其在 `_probe_4d锚点_2026-10-07`
+# 的三井对账表场景 A 锚点集）。锚点**内联为常量**：不在运行时读 `参考文档/`（版本控制外）。
+#
+# k 取值：三重点井 = 用户 2026-10-07 裁定；非重点井 = 用户 2026-10-07 裁定
+# 「notes 明示优先」（呼探1-002 取井底主段明示值 0.90，见 spec §1.1-1 登记）。
+# 值一律落在 [0.80, 0.95] 观测带内（计划 §8-13 未触发）。
+ANCHORED_WELLS: dict[str, tuple[float, tuple[tuple[float, float], ...], str]] = {
+    "呼101": (0.90, ((5700.0, 123.0), (7868.0, 150.0)),
+              "无 notes 明示系数；观测区间 argmin（用户裁定）"),
+    "呼1-003": (0.85, ((5290.0, 123.0), (7618.0, 150.0)),
+                "notes 明示「领浆温度系数0.85」（用户裁定）"),
+    "呼1-004": (0.85, ((5241.0, 124.0), (7660.0, 155.0)),
+                "notes 明示「领浆温度系数0.85」（用户裁定）"),
+    "呼102": (0.90, ((7120.0, 147.8), (7735.0, 149.0)),
+              "notes 明示「水泥浆试验温度(0.9x温度系数)」（用户裁定：明示优先）"),
+    "呼探1-002": (0.90, ((5292.5, 111.0), (7554.0, 148.0)),
+                  "notes 明示「循环温度133℃(系数0.90)」井底主段（用户裁定：明示优先）"),
+    "呼探1-001": (0.85, ((5460.159, 110.0), (5900.0, 118.0), (7000.0, 137.0), (7746.0, 150.0)),
+                  "notes 明示「温度系数0.85」（用户裁定：明示优先）"),
+}
+# 无锚井（唯一锚深度 < 2，AnchoredProfileField 不可构造）⇒ Geothermal 回退 + 口径声明。
+# 呼探1 的 `temperature_pressure_profile.csv` 只有 3 个带温度行且同落在 md=7601 m
+# （153.8/159/167 °C），无 nd 维可分段（盘点表 §2「呼探1」节）。
+ANCHORED_NO_ANCHOR_WELLS = frozenset({"呼探1"})
+
+# 呼1-004 时程扩展温度表（333×362，表末 21600 s；4d 扩表产物）。
+# ⚠ `*_ext4d.xlsx` 受 `.gitignore` 的 `**/*.xlsx` 管辖**不入库**——由已入库的
+# `run_ext4d.m` + `HT1_004_T.m` 可重生成（MATLAB R2025b，见 `_probe_4d扩表_2026-10-07/对账报告_4d扩表.md`）。
+# 缺失即响亮报错：**不静默降级到交付表**（交付表末 11940 s，会把 r0.6/0.8 的 stop_t
+# clamp 掉——正是 4d 要消除的污染）。
+EXT4D_DIR = (Path(__file__).resolve().parents[2] / "results"
+             / "_probe_4d扩表_2026-10-07" / "sandbox" / "HT1-004压力计算")
+EXT4D_T_IN_XLSX = EXT4D_DIR / "T_in_ext4d.xlsx"
+EXT4D_T_OUT_XLSX = EXT4D_DIR / "T_out_ext4d.xlsx"
+EXT4D_TIME_AXIS_MIN = EXT4D_DIR / "T_ext4d_time_axis_min.csv"
+EXT4D_WELLS = frozenset({"呼1-004"})   # 扩展表只覆盖呼1-004（同交付表）
+TABLE_EXT_WELLS = EXT4D_WELLS
 
 
 _PARAMS_FIELDS = frozenset(f.name for f in fields(RheologyFormulaParams))
@@ -420,8 +464,10 @@ _TABLE_PAIR_CACHE: dict = {}
 
 def build_temperature_fields(
     well_key: str, mode: str
-) -> tuple[ConstantTemperatureField | GeothermalTemperatureField | None,
-           ConstantTemperatureField | GeothermalTemperatureField | None,
+) -> tuple[ConstantTemperatureField | GeothermalTemperatureField
+           | AnchoredProfileField | None,
+           ConstantTemperatureField | GeothermalTemperatureField
+           | AnchoredProfileField | None,
            str]:
     """按 (井, 温度档) 造 (1D 场, 2D 场, 备注)。
 
@@ -432,6 +478,11 @@ def build_temperature_fields(
     - ``static`` → (Geothermal, Geothermal, 备注)：统一地温式 T(z)=16.006+1.7598e-2·z；
       呼101/呼103 无瞬态表 ⇒ 备注打「无瞬态表」
     - ``table`` → (T_in, T_out, "")：仅呼1-004（load_delivered_pair）
+    - ``anchored`` → (Anchored, Anchored, 备注)：**4d 七井静温锚定场**（注册表
+      ``ANCHORED_WELLS``，k 与锚点集见 Phase 4d spec §1）；无锚井
+      （``ANCHORED_NO_ANCHOR_WELLS``）⇒ Geothermal 回退 + 备注（口径声明，不硬造锚）
+    - ``table_ext`` → (T_in, T_out, 备注)：仅呼1-004 的**时程扩展表**
+      （333×362，表末 21600 s；`load_extended_pair_4d`）——r0.6/0.8 解禁档专用
     """
     if mode == "off":
         return None, None, ""
@@ -452,7 +503,55 @@ def build_temperature_fields(
         t_in.reset_audit()
         t_out.reset_audit()
         return t_in, t_out, ""
+    if mode == "anchored":
+        return _build_anchored_pair(well_key)
+    if mode == "table_ext":
+        if well_key not in TABLE_EXT_WELLS:
+            raise ValueError(
+                f"{well_key}: 无时程扩展温度表，table_ext 档仅支持 "
+                f"{sorted(TABLE_EXT_WELLS)}"
+            )
+        for p in (EXT4D_T_IN_XLSX, EXT4D_T_OUT_XLSX, EXT4D_TIME_AXIS_MIN):
+            if not p.exists():
+                raise FileNotFoundError(
+                    f"扩展温度表缺件：{p}（不入库，须由 run_ext4d.m 重生成；"
+                    "禁止静默降级到交付表——交付表末 11940 s 会 clamp r0.6/0.8）"
+                )
+        t_in, t_out = load_extended_pair_4d(
+            EXT4D_T_IN_XLSX, EXT4D_T_OUT_XLSX, EXT4D_TIME_AXIS_MIN
+        )
+        return t_in, t_out, "扩展表(表末21600s)"
     raise ValueError(f"未知温度档 {mode!r}，允许：{list(TEMPERATURE_MODES)}")
+
+
+def _build_anchored_pair(
+    well_key: str,
+) -> tuple[AnchoredProfileField | GeothermalTemperatureField,
+           AnchoredProfileField | GeothermalTemperatureField,
+           str]:
+    """「anchored」档：按井造 (1D 场, 2D 场, 备注)。
+
+    - 注册表内有该井 ⇒ 造 `AnchoredProfileField(anchors, k, regime="circulating")`，
+      1D/2D **各造独立实例**（审计计数互不污染；与 table 档的共享+reset 口径不同，
+      因 anchored 无跨 run 共享对象）。
+    - 无锚井（`ANCHORED_NO_ANCHOR_WELLS`）⇒ **Geothermal 回退 + 备注**（口径声明，
+      不硬造锚；计划 §4-4d-2）。
+    - 注册表外且不在无锚名单 ⇒ 抛 ValueError（防"配了井名但静默回退"，同 table 档口径）。
+    """
+    if well_key in ANCHORED_NO_ANCHOR_WELLS:
+        note = "无静温锚(<2 唯一 md)⇒Geothermal 回退"
+        return GeothermalTemperatureField(), GeothermalTemperatureField(), note
+    spec = ANCHORED_WELLS.get(well_key)
+    if spec is None:
+        raise ValueError(
+            f"{well_key}: 无 4d 锚定场注册项（ANCHORED_WELLS 未含，且不在 "
+            f"ANCHORED_NO_ANCHOR_WELLS={sorted(ANCHORED_NO_ANCHOR_WELLS)}）"
+        )
+    k, anchors, _basis = spec
+    mk = lambda: AnchoredProfileField(  # noqa: E731
+        anchors, k, regime="circulating", source=f"4d七井锚点:{well_key}"
+    )
+    return mk(), mk(), ""
 
 
 def build_pressure_field(well, fluids, schedule, mode: str):

@@ -1,0 +1,1 @@
+{"tag": "呼101_Tstatic_nocol_ANCHOR", "well": "呼101", "mode": "static", "depthwise": false, "anchor": {"kind": "file", "mode": "hard"}, "split": false, "gate": false, "nz": 250, "rate": 1.0, "pressure_mode": "off", "pressure_caliber": "shoe"}

@@ -325,4 +325,7 @@ class TestExistingUnchanged:
         f = _synthetic_table()
         assert f.T(-1000.0, f.time_s[2]) == pytest.approx(f.table[0, 2], abs=1e-12)
         assert f.oob_count == 1  # Table 标量路径仍逐查询记账（未变）
-        assert not hasattr(f, "T_column")  # 聚合入口只在新类上
+        # Phase 4d 主批 §4-1：Table 已补 F-4 聚合入口（原断言"无 T_column"是 4d 前期
+        # 的状态快照，随该前置落地翻转为"存在且与标量路径逐位一致"）
+        assert hasattr(f, "T_column")
+        assert f.T_column([f.depth_m[1]], f.time_s[2])[0] == f.table[1, 2]
