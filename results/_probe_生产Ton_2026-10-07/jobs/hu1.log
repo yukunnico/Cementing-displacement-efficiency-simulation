@@ -1,0 +1,18 @@
+Traceback (most recent call last):
+  File "D:\users\desktop\research\控压固井项目\cement model_温压耦合分支\results\_probe_生产Ton_2026-10-07\run_production_ton_20261007.py", line 219, in <module>
+    main()
+    ~~~~^^
+  File "D:\users\desktop\research\控压固井项目\cement model_温压耦合分支\results\_probe_生产Ton_2026-10-07\run_production_ton_20261007.py", line 211, in main
+    run_well(args.well)
+    ~~~~~~~~^^^^^^^^^^^
+  File "D:\users\desktop\research\控压固井项目\cement model_温压耦合分支\results\_probe_生产Ton_2026-10-07\run_production_ton_20261007.py", line 114, in run_well
+    p_field = build_pressure_field(well, fluids, schedule, "hydrostatic")
+  File "D:\users\desktop\research\控压固井项目\cement model_温压耦合分支\scripts\entrypoints\run_sensitivity_current_20260916.py", line 593, in build_pressure_field
+    return HydrostaticPressureField.from_well(well, rho_bar)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "D:\users\desktop\research\控压固井项目\cement model_温压耦合分支\cemdisp\data\pressure_field.py", line 176, in from_well
+    return cls(well.well_name, grid, cum, ((0.0, float(rho_kg_m3)),),
+               bottom_md_m=well.bottom_md_m, g=g)
+  File "D:\users\desktop\research\控压固井项目\cement model_温压耦合分支\cemdisp\data\pressure_field.py", line 148, in __init__
+    raise ValueError("md 网格须严格升序；tvd 网格须非降")
+ValueError: md 网格须严格升序；tvd 网格须非降

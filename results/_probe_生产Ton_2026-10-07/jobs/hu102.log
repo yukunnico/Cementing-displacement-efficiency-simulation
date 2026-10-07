@@ -1,0 +1,14 @@
+[D2DGA] 温变流变构造层派生 T=122.5°C（enable_temperature_rheology=True）审计: clamp=1 no_replace=1
+[D2DGA] 开始环空二维模拟 total_t=11737s nz=250 ny=40
+  [D2DGA] 进度 0% (1s/11737s, dt=1.357s)
+  [D2DGA] 进度 10% (1174s/11737s, dt=1.357s)
+  [D2DGA] 进度 20% (2348s/11737s, dt=1.018s)
+  [D2DGA] 进度 30% (3522s/11737s, dt=0.872s)
+  [D2DGA] 进度 40% (4695s/11737s, dt=0.872s)
+  [D2DGA] 进度 50% (5869s/11737s, dt=1.018s)
+  [D2DGA] 进度 60% (7042s/11737s, dt=0.726s)
+  [D2DGA] 进度 70% (8217s/11737s, dt=0.726s)
+  [D2DGA] 进度 80% (9390s/11737s, dt=0.726s)
+  [D2DGA] 进度 90% (10564s/11737s, dt=0.726s)
+  [D2DGA] 进度 100% (11737s/11737s, dt=0.587s)
+[呼102] etaE=0.949771 etaN=0.645941 stop_t=11737s elapsed=209.6s
