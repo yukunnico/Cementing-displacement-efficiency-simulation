@@ -483,6 +483,13 @@ class AnnulusD2DGASolver:
         # 场对象只消费 `P(md_m,t_s) -> MPa` 接口（Constant/Hydrostatic 由调用方注入）。
         pressure_field: "PressureField | None" = None,
         pressure_caliber: str = "shoe",
+        # Phase 4b（2026-10-07 逐列温度）opt-in：2D 环空逐列（nz）物性派生。
+        # 默认 False ⇒ 逐位 = HEAD（关2 红线）；仅在 enable_temperature_rheology=True
+        # 时被消费。开启后 `_representative_temperature` 返回 (nz,) 列场（均匀场
+        # 快捷路径原样短路回标量），`_phase_props` 以列版返回形态（F-1：dict 承载
+        # (nz,) 数组值）派生逐列物性。代表标量口径（λ_op/γ̇_rep/F²/b_num/诊断/装配
+        # 标量）一律维持现行域均口径不变（F-3）。
+        enable_depthwise_temperature: bool = False,
     ) -> None:
         """初始化环空二维求解器参数。
 
@@ -615,6 +622,19 @@ class AnnulusD2DGASolver:
                 ``ConstantTemperatureField(t_c)`` 的常数值，也是
                 ``run(temperature_field=None)`` 时的回退；注入表格场
                 （TableTemperatureField）经 ``run(temperature_field=...)``。
+            enable_depthwise_temperature: Phase 4b 逐列温度开关（2026-10-07），
+                默认 False（关 ⇒ 逐位 = HEAD；关2 红线）。True 且
+                ``enable_temperature_rheology=True`` 时：``_representative_temperature``
+                对非均匀 geom["T"] 返回 (nz,) 列场（均匀场快捷路径原样短路回标量 ⇒
+                Constant 场下与标量路径逐位）；``_phase_props`` 对非均匀列经
+                ``fluid_at`` 逐列绝对替换派生，返回列版形态 dict（F-1，物性唯一
+                入口不破）：含域均代表标量派生（scalar 键，F²/b_num/λ_op/HB memo/
+                诊断继续消费，F-3）与逐列流变参数数组（μp/τy/n/K，(1,nz) 广播形，
+                喂 `_compute_props` 场公式与 η₁/η₂/m 列场 → two_layer/stream_function
+                数组化闭包）。列派生缓存按列内容键、每 run 清（F-2：静温档每 run
+                一次逐列派生）；fluid_at 审计环按批排空聚合（F-4）。
+                表格场的"按表节点预计算参数序列"未实现（4d 面），列缓存超出上限
+                即整清重算（代价=逐步全列重派生，如实声明）。
         """
         # ⚠️ 2026-09-15 Task 10 弃用检查：e_clip 三形参任一偏离 legacy 默认
         # （0.55/0.90/True）即一次性弃用警告。e_clip 硬截断已移除，e = 1−standoff
@@ -758,6 +778,16 @@ class AnnulusD2DGASolver:
             )
         self.pressure_field = pressure_field
         self.pressure_caliber: str = str(pressure_caliber)
+        # Phase 4b（2026-10-07）：逐列温度开关（opt-in，默认 False ⇒ 逐位=HEAD）。
+        # 只在 enable_temperature_rheology=True 路径被消费；置真但 T-off ⇒ 死开关告警
+        # （A3 惯例：置真却无可消费路径 ⇒ 一次性告警，防"死开关被当活杠杆"）。
+        self.enable_depthwise_temperature: bool = bool(enable_depthwise_temperature)
+        if self.enable_depthwise_temperature and not enable_temperature_rheology:
+            warnings.warn(
+                "enable_depthwise_temperature=True 但 enable_temperature_rheology=False："
+                "逐列物性派生无消费路径（T-off 恒等返回入参），本开关静默无效。",
+                UserWarning, stacklevel=2,
+            )
         # T1-2 温度场对象：开时先挂构造层恒温场（run(temperature_field=...) 可注入
         # 表格场覆盖）；_step_T_c = 本步派生代表温度（HB memo key 的温度维）；
         # _phase_memo = _phase_props 派生缓存 {(fluid, T): derived}（同 (fluid,T)
@@ -769,6 +799,17 @@ class AnnulusD2DGASolver:
             self._temperature_field = ConstantTemperatureField(self.temperature_rheology_t_c)
             self._step_T_c = self.temperature_rheology_t_c
         self._phase_memo: dict = {}
+        # ---- Phase 4b 逐列派生状态（仅 enable_depthwise_temperature=True 消费；
+        # 关 ⇒ 恒空/恒零 ⇒ 零痕迹）----
+        # _col_memo：列参数缓存 {(fluid, 列T舍入1e-9字节, P, params): dict(列参)}。
+        # 按 run 清（同 _phase_memo 的"跨 run 不复用"）；**不**按步清——F-2 静温档
+        # "每 run 一次逐列派生"由此实现（列内容相同 ⇒ 命中）。表格档列每步变 ⇒ 超
+        # _col_memo_cap 整清重算（memo 键爆炸=验收失败项；表节点预计算属 4d 面）。
+        self._col_memo: dict = {}
+        self._col_memo_cap: int = 4096
+        self._uniform_field_hits: int = 0            # 均匀场快捷路径命中计数（关2 证据）
+        self._col_audit_counts: Dict[str, int] = {}  # fluid_at 审计按列批聚合（F-4）
+        self._col_batches: int = 0                   # 列派生批次数（memo miss 数）
         # 运行时状态（每 run 重置；见 run() 开头）
         self._active_well_name: str = ""
         self._hb_tau_y_skips: list[str] = []
@@ -1052,7 +1093,12 @@ class AnnulusD2DGASolver:
 
     @staticmethod
     def _fluid_yield_stress(fluid: FluidSpec) -> float:
-        """返回流体的屈服应力。幂律和牛顿流体返回 0。"""
+        """返回流体的屈服应力。幂律和牛顿流体返回 0。
+
+        Phase 4b：列版 bundle ⇒ float 或 (1,nz) 列场（None ⇒ 0.0，同标量语义）。"""
+        if AnnulusD2DGASolver._is_col_bundle(fluid):
+            ty = fluid["yield_stress_pa"]
+            return 0.0 if ty is None else ty
         if fluid.yield_stress_pa is not None:
             return fluid.yield_stress_pa
         return 0.0
@@ -1147,6 +1193,9 @@ class AnnulusD2DGASolver:
             表观粘度数组
         """
         gamma = np.maximum(np.asarray(gamma, dtype=float), 1.0e-6)
+        if self._is_col_bundle(fluid):
+            # Phase 4b：列版参数走同一表达式（spec §8：场算子零改动，只换上游供参）
+            return self._apparent_viscosity_bundle(fluid, gamma)
         if fluid.rheology_model == fluid.rheology_model.NEWTONIAN:
             assert fluid.plastic_viscosity_pa_s is not None
             mu = np.full_like(gamma, fluid.plastic_viscosity_pa_s, dtype=float)
@@ -1168,15 +1217,85 @@ class AnnulusD2DGASolver:
         return np.clip(mu, 1.0e-5, 3.0)
 
     @staticmethod
+    def _apparent_viscosity_bundle(bundle: Dict[str, object], gamma: Array) -> Array:
+        """Phase 4b：`_apparent_viscosity` 的列参版——四支路表达式逐字一致，
+        参数为 float（全列同值，逐位=标量支路）或 (1,nz) 列场（沿 y 广播）。"""
+        gamma = np.maximum(np.asarray(gamma, dtype=float), 1.0e-6)
+        model = bundle["model"]
+        pv = bundle["plastic_viscosity_pa_s"]
+        ty = bundle["yield_stress_pa"]
+        n = bundle["power_law_n"]
+        k = bundle["consistency_k"]
+        if model == RheologyModel.NEWTONIAN:
+            assert pv is not None
+            mu = np.full_like(gamma, pv, dtype=float)
+        elif model == RheologyModel.BINGHAM:
+            assert pv is not None
+            assert ty is not None
+            mu = pv + ty / gamma
+        elif model == RheologyModel.POWER_LAW:
+            assert n is not None
+            assert k is not None
+            mu = k * gamma ** (n - 1.0)
+        elif model == RheologyModel.HERSCHEL_BULKLEY:
+            assert ty is not None
+            assert n is not None
+            assert k is not None
+            mu = ty / gamma + k * gamma ** (n - 1.0)
+        else:
+            raise ValueError(f"Unsupported rheology model: {model}")
+        return np.clip(mu, 1.0e-5, 3.0)
+
+    def _eta_column(self, bundle: Dict[str, object], shear_rate: float):
+        """Phase 4b 标量端 η₁/η₂ 列版（:1924-1932 站点）：逐字镜像
+        ``buoyancy.fluid_apparent_viscosity`` 的分支/地板/clip 语义（含
+        ``include_yield_term`` 拆分旗标——四站点同传红线在列形态下的落点），
+        参数取列 ⇒ 返回 (1,nz) 列场或全列同值时 float。"""
+        g = max(float(shear_rate), 1e-8)  # buoyancy 同值 floor（§1.3 保 1e-8 不动）
+        model = bundle["model"]
+        pv = bundle["plastic_viscosity_pa_s"]
+        ty = bundle["yield_stress_pa"]
+        n = bundle["power_law_n"]
+        k = bundle["consistency_k"]
+        _has_ty = ty is not None and bool(np.any(np.asarray(ty, dtype=float) > 0.0))
+        if model in (RheologyModel.POWER_LAW, RheologyModel.HERSCHEL_BULKLEY):
+            if k is not None and n is not None:
+                mu = k * g ** (n - 1.0)
+                if self.include_yield_term and _has_ty:
+                    mu = ty / g + mu  # τy 项在前，与 _apparent_viscosity :1130 字面对齐
+                if pv is not None:
+                    mu = np.maximum(mu, pv)  # 列版 max(·,PV) 地板（逐列同语义）
+                if self.include_yield_term:
+                    return np.clip(mu, 1.0e-5, 3.0)  # 无条件 clip（与标量口径 §10 A-1 同构）
+                return mu
+        if pv is not None:
+            mu = pv if isinstance(pv, np.ndarray) else float(pv)
+            if self.include_yield_term:
+                if _has_ty:
+                    mu = mu + ty / g
+                return np.clip(mu, 1.0e-5, 3.0)
+            return mu
+        raise ValueError(
+            f"列版流体 {bundle.get('name', '?')!r} 缺 plastic_viscosity_pa_s/幂律参数"
+            "（buoyancy.fluid_apparent_viscosity 缺参抛错口径一致，不静默回退）")
+
+    @staticmethod
     def _phase_power_law_params(fluid) -> tuple[float, float]:
         """把任意流变模型映射为 (幂律指数 n, 稠度 K[Pa·s^n])，供 M2 混合 n/k 加权。
 
         NEWTONIAN/BINGHAM -> n=1, K=plastic_viscosity_pa_s；
         POWER_LAW/HERSCHEL_BULKLEY -> (power_law_n, consistency_k)。
         HB 的屈服应力由 tau_y 场单独携带，不在这里折进 K。
+
+        Phase 4b：列版 bundle ⇒ (float|(1,nz), float|(1,nz))，分支语义逐字同标量版。
         """
         if fluid is None:
             return 1.0, 1.0e-6
+        if AnnulusD2DGASolver._is_col_bundle(fluid):
+            _rm = fluid["model"]
+            if _rm == RheologyModel.POWER_LAW or _rm == RheologyModel.HERSCHEL_BULKLEY:
+                return fluid["power_law_n"], fluid["consistency_k"]
+            return 1.0, fluid["plastic_viscosity_pa_s"]
         rm = fluid.rheology_model
         if rm == RheologyModel.POWER_LAW or rm == RheologyModel.HERSCHEL_BULKLEY:
             return float(fluid.power_law_n), float(fluid.consistency_k)
@@ -1212,6 +1331,12 @@ class AnnulusD2DGASolver:
         （免均值浮点漂移 ⇒ Constant 场下与手写同参数参照自洽逐位），非均匀场取
         深度均值。geom 无 "T" 键（直接调用方未跑刷新）⇒ 按注入温度场在域中部、
         给定时刻现查（``t`` 缺省 0）。
+
+        Phase 4b（``enable_depthwise_temperature=True``）：非均匀场返回 ``(nz,)``
+        列场（逐列物性派生的输入，与 ``geom["md"]`` 对齐）；**均匀场快捷路径原样
+        短路回标量**（关2 红线 ⇒ Constant 场下与标量路径逐位），命中计数落
+        ``_uniform_field_hits``（关2 证据观测）。缺 "T" 键的回查分支保持标量语义
+        （直接调用方/列模式无关）。
         """
         arr = geom.get("T")
         if arr is None:
@@ -1225,7 +1350,12 @@ class AnnulusD2DGASolver:
         values = np.asarray(arr, dtype=float).ravel()
         first = float(values[0])
         if np.all(values == first):
+            # 均匀场快捷路径：短路回标量（逐位红线，勿改成均值）+ 命中计数（纯观测）
+            self._uniform_field_hits += 1
             return first
+        if self.enable_depthwise_temperature:
+            # Phase 4b 逐列模式：列场原样返回（消费方经 _phase_props 判形）
+            return values
         return float(np.mean(values))
 
     def _representative_pressure_mpa(self, geom: Dict[str, Array],
@@ -1274,25 +1404,147 @@ class AnnulusD2DGASolver:
 
         T-off：恒等返回入参（不查温度场、不写任何状态 ⇒ off 路径逐位红线）。
         None 相原样返回 None。
+
+        Phase 4b（``enable_depthwise_temperature=True``）：本步代表温度为**非均匀
+        列场**（``_representative_temperature`` 返回 (nz,)）时，返回列版形态 dict
+        （F-1：列场经本函数返回形态承载，不建旁路物性通道）——
+        ``{"_col_bundle": True, "scalar": <域均代表派生 FluidSpec（= 标量路径本步
+        结果，F²/b_num/λ_op/HB memo/诊断继续消费，F-3）>, "fluid": <派生链基体>,
+        "T_col": (nz,), "model":…, "plastic_viscosity_pa_s"/"yield_stress_pa"/
+        "power_law_n"/"consistency_k": float 或 (1,nz)（全列同值收拢为 float）,
+        "density_kg_m3": float, "name": str}``；均匀列 ⇒ 快捷路径已短路回标量 ⇒
+        返回标量 FluidSpec（逐位 = 标量路径，关2 红线）。列派生按 (fluid, 列T, P,
+        params) 内容键缓存于 ``_col_memo``（按 run 清；F-2 静温档每 run 一次逐列
+        派生）；列批次后 fluid_at 审计环**排空聚合**（F-4：``_col_audit_counts``，
+        环只服务标量路径）。
         """
         if fluid is None:
             return None
         if not self.enable_temperature_rheology:
             return fluid
+        # 列版返回形态在链上再入时解包（"scalar"=今日链同位置对象 ⇒ 标量语义逐位）
+        fluid_base = fluid["scalar"] if self._is_col_bundle(fluid) else fluid
         T = self._representative_temperature(geom, t)
-        self._step_T_c = T
         P = self._representative_pressure_mpa(geom, t)
+        if isinstance(T, np.ndarray):
+            # ---- Phase 4b 逐列路径（非均匀列场）----
+            # 代表标量（域均口径，F-3）：与标量分支"非均匀⇒深度均值"逐位同式。
+            T_rep = float(np.mean(np.asarray(T, dtype=float)))
+            self._step_T_c = T_rep
+            key = (fluid_base, T_rep, P, self.rheology_formula_params)
+            derived = self._phase_memo.get(key)
+            if derived is None:
+                derived = fluid_at(fluid_base, T_rep, P,
+                                   params=self.rheology_formula_params,
+                                   mud_extrapolate=self.mud_extrapolate)
+                self._phase_memo[key] = derived
+            col = self._column_bundle_for(fluid_base, np.asarray(T, dtype=float), P)
+            return {
+                "_col_bundle": True,
+                "fluid": fluid_base,
+                "scalar": derived,
+                "T_col": T,
+                "name": str(getattr(fluid_base, "name", "")),
+                **col,
+            }
+        # ---- 标量路径（Phase 4b 关闭，或均匀场快捷路径短路）：以下逐位 = 现状 ----
+        self._step_T_c = T
         # memo 键含 T、P **与 params**（R1 参数化面）——params 每实例恒定，但直调
         # `_phase_props` 的契约测试/同实例换档场景下必须区分，否则吃陈旧派生对象。
-        key = (fluid, T, P, self.rheology_formula_params)
+        key = (fluid_base, T, P, self.rheology_formula_params)
         cached = self._phase_memo.get(key)
         if cached is not None:
             return cached
-        derived = fluid_at(fluid, T, P,
+        derived = fluid_at(fluid_base, T, P,
                            params=self.rheology_formula_params,
                            mud_extrapolate=self.mud_extrapolate)
         self._phase_memo[key] = derived
         return derived
+
+    # ------------------------------------------------------------------ #
+    # Phase 4b（2026-10-07）：列版物性形态（F-1~F-4）支撑工具
+    # ------------------------------------------------------------------ #
+    @staticmethod
+    def _is_col_bundle(x) -> bool:
+        """`_phase_props` 列版返回形态（dict）判定；标量模式恒 False ⇒ 零痕迹。"""
+        return isinstance(x, dict) and bool(x.get("_col_bundle"))
+
+    def _scalar_of(self, x):
+        """列版 bundle ⇒ 域均代表标量 FluidSpec（F-3 消费位）；标量入原样返回（逐位）。"""
+        return x["scalar"] if self._is_col_bundle(x) else x
+
+    @staticmethod
+    def _fluid_density(fluid) -> float:
+        """相密度（kg/m³）：bundle ⇒ 其标量口径（fluid_at 绝对替换不改密度 ⇒ 列全等）。"""
+        if isinstance(fluid, dict) and fluid.get("_col_bundle"):
+            return float(fluid["density_kg_m3"])
+        return float(fluid.density_kg_m3)
+
+    @staticmethod
+    def _k_floor(k):
+        """`max(k, 1e-12)` 的列安全版：标量保持原语义逐位，数组走 np.maximum
+        （spec F-4 "math.max 陷阱"坑位，`_compute_props` :1453 型位点）。"""
+        return np.maximum(k, 1.0e-12) if isinstance(k, np.ndarray) else max(k, 1.0e-12)
+
+    def _column_bundle_for(self, fluid_base: FluidSpec, T_col: Array,
+                           P: "float | None") -> Dict[str, object]:
+        """列参数派生（含 `_col_memo` 缓存与审计环排空聚合，F-2/F-4）。"""
+        ckey = (fluid_base, np.round(np.asarray(T_col, dtype=float), 9).tobytes(),
+                P, self.rheology_formula_params)
+        cached = self._col_memo.get(ckey)
+        if cached is not None:
+            return cached
+        col = self._derive_column_params(fluid_base, T_col, P)
+        if len(self._col_memo) >= self._col_memo_cap:
+            # 表格档列每步变 ⇒ 键无界增长（memo 键爆炸=验收失败项）：整清重算，
+            # 代价=下轮全列重派生（表节点预计算序列属 4d 面，此处如实声明）。
+            self._col_memo.clear()
+        self._col_memo[ckey] = col
+        return col
+
+    def _derive_column_params(self, fluid_base: FluidSpec, T_col: Array,
+                              P: "float | None") -> Dict[str, object]:
+        """逐列 `fluid_at` 绝对替换 ⇒ (1,nz) 列参数字典（全列同值收拢为标量）。"""
+        deriveds = [fluid_at(fluid_base, float(T_i), P,
+                             params=self.rheology_formula_params,
+                             mud_extrapolate=self.mud_extrapolate)
+                    for T_i in np.asarray(T_col, dtype=float)]
+        # F-4：列批次每相 nz 条审计事件必然打爆定长 10000 环 ⇒ 每批排空聚合
+        #（语义 = 现环的汇总；含同步早于本批的标量代表派生事件——汇总口径一致）。
+        for _ev in get_rheo_audit():
+            _kind = str(_ev.get("kind", "unknown"))
+            self._col_audit_counts[_kind] = self._col_audit_counts.get(_kind, 0) + 1
+        reset_rheo_audit()
+        self._col_batches += 1
+        models = {d.rheology_model for d in deriveds}
+        if len(models) != 1:
+            raise ValueError(
+                f"Phase 4b 列派生模型跨列不一致（{sorted(str(m) for m in models)}）："
+                "列版形态假定同一相全列同模型，请核查温度域跨界路由（如实停止，不静默混列）。")
+        densities = {float(d.density_kg_m3) for d in deriveds}
+        if len(densities) != 1:
+            raise ValueError("Phase 4b 列派生密度跨列不一致（fluid_at 不应改密度）——如实停止。")
+
+        def _pack(getter) -> object:
+            vals = [getter(d) for d in deriveds]
+            if all(v is None for v in vals):
+                return None
+            if any(v is None for v in vals):
+                raise ValueError(
+                    f"Phase 4b 列派生字段存在性跨列不一致（{getter!r}）——如实停止。")
+            arr = np.asarray(vals, dtype=float)
+            if bool(np.all(arr == arr[0])):
+                return float(arr[0])  # 全列同值（如 no_replace 相/均匀场）⇒ 标量口径
+            return arr.reshape(1, -1)  # (1,nz)：与 (ny,nz) 场广播对齐（列序=geom["md"]）
+
+        return {
+            "model": models.pop(),
+            "plastic_viscosity_pa_s": _pack(lambda d: d.plastic_viscosity_pa_s),
+            "yield_stress_pa": _pack(lambda d: d.yield_stress_pa),
+            "power_law_n": _pack(lambda d: d.power_law_n),
+            "consistency_k": _pack(lambda d: d.consistency_k),
+            "density_kg_m3": densities.pop(),
+        }
 
     def _phase_cement_tau_y(self, fluid: FluidSpec) -> float:
         """水泥相（lead/tail）在混合 τy 场中的屈服贡献（T1-2 裁定）。
@@ -1404,13 +1656,14 @@ class AnnulusD2DGASolver:
             mu += tail * self._apparent_viscosity(tail_fluid, gamma)
         if spacer_fluid is not None:
             mu += spacer * self._apparent_viscosity(spacer_fluid, gamma)
-        rho = mud * (mud_fluid.density_kg_m3 / 1000.0)
+        # Phase 4b：密度经 `_fluid_density`（bundle ⇒ 标量口径；fluid_at 不改密度 ⇒ 逐位=现状）
+        rho = mud * (self._fluid_density(mud_fluid) / 1000.0)
         if lead_fluid is not None:
-            rho += lead * (lead_fluid.density_kg_m3 / 1000.0)
+            rho += lead * (self._fluid_density(lead_fluid) / 1000.0)
         if tail_fluid is not None:
-            rho += tail * (tail_fluid.density_kg_m3 / 1000.0)
+            rho += tail * (self._fluid_density(tail_fluid) / 1000.0)
         if spacer_fluid is not None:
-            rho += spacer * (spacer_fluid.density_kg_m3 / 1000.0)
+            rho += spacer * (self._fluid_density(spacer_fluid) / 1000.0)
         # 新增：混合屈服应力（相体积加权）。
         # A-3b（R-T6-1(a)）：水泥相（lead/tail）贡献经 `_cement_phase_yield_stress`——
         # 默认（hb_fix_cement_tau_y=False）逐位等于 `_fluid_yield_stress`（HEAD）；
@@ -1450,8 +1703,10 @@ class AnnulusD2DGASolver:
         n_tail, k_tail = self._phase_power_law_params(tail_fluid)
         n_sp, k_sp = self._phase_power_law_params(spacer_fluid)
         n_mix = mud * n_mud + lead * n_lead + tail * n_tail + spacer * n_sp
-        log_k_mix = (mud * np.log(max(k_mud, 1e-12)) + lead * np.log(max(k_lead, 1e-12))
-                     + tail * np.log(max(k_tail, 1e-12)) + spacer * np.log(max(k_sp, 1e-12)))
+        # spec F-4 "math.max 陷阱"坑位：列参时 python max 对数组报错 ⇒ _k_floor
+        # （标量路径保持原 `max(k, 1e-12)` 语义逐位；数组走 np.maximum）
+        log_k_mix = (mud * np.log(self._k_floor(k_mud)) + lead * np.log(self._k_floor(k_lead))
+                     + tail * np.log(self._k_floor(k_tail)) + spacer * np.log(self._k_floor(k_sp)))
         kappa_mix = np.exp(log_k_mix)
         return mu, rho, mud, tau_y, m_field, eta1, eta2, n_mix, kappa_mix
 
@@ -1922,18 +2177,35 @@ class AnnulusD2DGASolver:
                       / max(float(np.mean(geom["b"])), 1e-12))
         # Phase 2 关4/A2.3 观测位：本步代表剪切率（最后一次流函数解的值；见 __init__ 语义声明）
         self._shear_rate_rep_last = float(shear_rate)
+        # F-3（Phase 4b 边界）：η₁/η₂ 先按**域均代表标量**口径计算（逐位 = 现状——
+        # λ_op、F²、HB memo/闭包参数、诊断继续吃这套标量，μ̂₁ 相消不变量不动）。
         eta1 = buoyancy.fluid_apparent_viscosity(
-            mud_fluid, shear_rate, include_yield_term=self.include_yield_term)
+            self._scalar_of(mud_fluid), shear_rate,
+            include_yield_term=self.include_yield_term)
         cement_fluid = lead_fluid if lead_fluid is not None else tail_fluid
         if cement_fluid is not None:
             eta2 = buoyancy.fluid_apparent_viscosity(
-                cement_fluid, shear_rate, include_yield_term=self.include_yield_term)
+                self._scalar_of(cement_fluid), shear_rate,
+                include_yield_term=self.include_yield_term)
         else:
             eta2 = eta1  # 无水泥相：两层退化为均一（m=1，χ 的 φ-梯度仍在）
         m_ratio = eta1 / eta2
+        # Phase 4b 逐列模式：η₁/η₂/m 另取列口径喂两层闭包（F-3 允许面②/③；均匀场
+        # 快捷路径下 _phase_props 返回标量 ⇒ 本块整体短路为标量值 ⇒ 逐位 = 现状）。
+        eta1_use, eta2_use, m_use = eta1, eta2, m_ratio
+        if self._is_col_bundle(mud_fluid) or (
+                cement_fluid is not None and self._is_col_bundle(cement_fluid)):
+            eta1_use = (self._eta_column(mud_fluid, shear_rate)
+                        if self._is_col_bundle(mud_fluid) else eta1)
+            if cement_fluid is not None and self._is_col_bundle(cement_fluid):
+                eta2_use = self._eta_column(cement_fluid, shear_rate)
+            elif self._is_col_bundle(mud_fluid):
+                eta2_use = eta1_use  # 无水泥相：均一退化（m=1），与标量分支同语义
+            m_use = eta1_use / eta2_use
 
         # ---- F²（(2.6)，与旧路径同口径现算）-----------------------------------
-        f2 = self._froude_squared_at(geom, q_m3s, w_prev, mud_fluid)
+        # F-3：F² 维持域均标量口径 ⇒ 恒用代表标量流体（标量模式 _scalar_of 恒等 ⇒ 逐位）。
+        f2 = self._froude_squared_at(geom, q_m3s, w_prev, self._scalar_of(mud_fluid))
         beta_deg_local = float(np.mean(geom.get("inc_deg", np.zeros(nz))))
         # _buoyancy_force_vector 返回序 = 代码口径 (方位形状, 轴向形状)；
         # (4.13) 的 f_φ=轴向(r_a·cosβ/F²) 进 b 的 φ-槽、f_ξ=方位(sinπφ·sinβ/F²)
@@ -1945,13 +2217,16 @@ class AnnulusD2DGASolver:
         # ρ₁ = 1（被顶替液密度标定）、ρ₂ = ρ̂₂/ρ̂₁（无量纲顶替液密度）；
         # Δρ = ρ₁ − ρ₂（论文符号，重顶替轻时为负）；I₁/I₂ 用全量纲闭式 (4.21a,b)
         # （I₂∝H⁴、I₁·H∝H⁴ ⇒ I₂/(H·I₁) 为 H⁰ 无量纲场，R28 同款消去）。
-        rho1_kg_m3 = float(mud_fluid.density_kg_m3)
-        rho2_kg_m3 = float(buoyancy.displacing_density_kg_m3(lead_fluid, tail_fluid, mud_fluid))
+        rho1_kg_m3 = self._fluid_density(mud_fluid)
+        rho2_kg_m3 = float(buoyancy.displacing_density_kg_m3(
+            self._scalar_of(lead_fluid), self._scalar_of(tail_fluid),
+            self._scalar_of(mud_fluid)))
         rho2_nd = rho2_kg_m3 / rho1_kg_m3
         rho_nd = 1.0 + c_bar * (rho2_nd - 1.0)                     # (1−c̄)·ρ₁ + c̄·ρ₂
-        i1_field = np.asarray(mobility_i1(c_bar, m_ratio, eta1=eta1, eta2=eta2,
+        # 两层闭包（(4.21a,b)）：列模式下 η/m 走列口径（表达式原样广播，不重写闭包数学）
+        i1_field = np.asarray(mobility_i1(c_bar, m_use, eta1=eta1_use, eta2=eta2_use,
                                           H=geom["H"]), dtype=float)
-        i2_field = np.asarray(mobility_i2(c_bar, m_ratio, eta1=eta1, eta2=eta2,
+        i2_field = np.asarray(mobility_i2(c_bar, m_use, eta1=eta1_use, eta2=eta2_use,
                                           H=geom["H"]), dtype=float)
         chi = rho_nd + (rho2_nd - 1.0) * i2_field / np.maximum(geom["H"] * i1_field, 1.0e-30)
 
@@ -1989,7 +2264,9 @@ class AnnulusD2DGASolver:
         # 两者口径不同。属一阶近似包络内的已知不一致，不单独修正。
         if self.enable_power_law_gap_correction:
             n_rep = 1.0
-            n_cement = getattr(cement_fluid, "power_law_n", None) if cement_fluid is not None else None
+            _cement_rep = (self._scalar_of(cement_fluid)
+                           if cement_fluid is not None else None)
+            n_cement = getattr(_cement_rep, "power_law_n", None) if _cement_rep is not None else None
             if n_cement:
                 n_rep = float(n_cement)
             elif not self._power_law_gap_correction_warned:
@@ -2000,7 +2277,7 @@ class AnnulusD2DGASolver:
                 self._power_law_gap_correction_warned = True
                 warnings.warn(
                     "enable_power_law_gap_correction=True 但水泥相非幂律"
-                    f"（power_law_n is None，流体={getattr(cement_fluid, 'name', None)!r}）："
+                    f"（power_law_n is None，流体={getattr(_cement_rep, 'name', None)!r}）："
                     "幂律间隙修正静默空转（n_rep 回落 1.0、因子恒 1）。"
                     "若本井 LEAD/TAIL 为 Bingham/牛顿，该开关不产生任何效应——"
                     "勿把由此得到的零差异读作「物理中性」。",
@@ -2018,11 +2295,15 @@ class AnnulusD2DGASolver:
         # 同时算同一份浮力）。不收敛 ⇒ 显式告警 + 回退牛顿线性闭包（R-T5-3）。
         # 默认关 ⇒ 下方线性调用逐位 = HEAD。
         if self.enable_hb_closure and cement_fluid is not None:
+            # F-2 过渡声明（测绘项5建议3/风险6）：HB 非线性路径整体保持**标量代表口径**
+            # （查表闭包按标量 (m,B,τy1,τy2) 构造，列版闭包族未实现；memo 键只收标量 T）。
+            # HB 关闭（生产默认）⇒ 列场经下方线性 solve_stream_function 完整生效。
             psi = self._solve_stream_function_hb(
                 geom, c_bar, b_field, float(q_m3s),
-                mud_fluid, cement_fluid, eta1, eta2, m_ratio, shear_rate, wall, ny, nz)
+                mud_fluid, cement_fluid, eta1, eta2, m_ratio,
+                shear_rate, wall, ny, nz)
         else:
-            psi = solve_stream_function(geom, c_bar, eta1, eta2, m_ratio, b_field,
+            psi = solve_stream_function(geom, c_bar, eta1_use, eta2_use, m_use, b_field,
                                         closure=closure, wall=wall, ny=ny, nz=nz,
                                         banded=self.enable_banded_solve)
         w_unit, v_unit = velocity_from_stream_function(psi, geom)
@@ -2119,6 +2400,11 @@ class AnnulusD2DGASolver:
                 UserWarning,
                 stacklevel=2,
             )
+        # Phase 4b（F-2 过渡）：HB 非线性路径整体保持标量代表口径——列版 bundle
+        # 在此解包（memo 键只收标量、查表闭包不列化；见 `_velocity_stream_function`
+        # 调用位声明）。标量模式下 _scalar_of 恒等 ⇒ 逐位 = HEAD。
+        mud_fluid = self._scalar_of(mud_fluid)
+        cement_fluid = self._scalar_of(cement_fluid)
         closure = self._hb_closure_for(mud_fluid, cement_fluid, shear_rate)
         q_half = float(q_m3s) / 2.0
         velocity_scale = q_half / np.pi
@@ -2283,20 +2569,26 @@ class AnnulusD2DGASolver:
         # density_contrast < 0 表示顶替液更轻，加剧宽边窜流
         # Task 3: 顶替液密度统一走 buoyancy.displacing_density_kg_m3（全仓唯一口径，
         # 0.67×领浆 + 0.33×尾浆），消除与 summary 段浮力数口径不一致导致的 b 符号翻转。
-        rho_disp = buoyancy.displacing_density_kg_m3(lead_fluid, tail_fluid, mud_fluid)
+        # Phase 4b：本块全部标量代表口径（F-3；_scalar_of 标量模式恒等 ⇒ 逐位）
+        rho_disp = buoyancy.displacing_density_kg_m3(
+            self._scalar_of(lead_fluid), self._scalar_of(tail_fluid),
+            self._scalar_of(mud_fluid))
 
         if self.enable_true_buoyancy and self.enable_d2dga:
             # T1-3b: 体力向量注入流动度（式 2.5b/4.24），替换 (2φ−1) 简化代理
             beta_deg_local = float(np.mean(geom.get("inc_deg", np.zeros(self.nz))))
             # Task 4: F² 按 Z&F22 (2.6) 现算（原先内部硬编码 1.0 → 浮力缺席动力学），
             # 量级 O(10⁻³)（八井 [1.2e-3, 3.1e-2]）；ŵ₀ = q/A、μ̂₁ 取泥浆、d̂ = mean(geom["H"])。
-            f2_local = self._froude_squared_at(geom, q_m3s, w_prev, mud_fluid)
+            f2_local = self._froude_squared_at(geom, q_m3s, w_prev,
+                                               self._scalar_of(mud_fluid))
             # Task 5: 领先阶轴向浮力数 b（Z&F22 p.8）按 summary 同口径现算（`_buoyancy_number_at`），
             # 经 `_mobility_profile` 接进 (4.14)/(4.22) 动力学——浮力第一次以 b 幅值参与 pref；
             # b>0（重顶替轻）⇒ 轴向浮力项抬高窄边流动度份额。
-            b_num_local = self._buoyancy_number_at(geom, q_m3s, w_prev, mud_fluid,
-                                                   lead_fluid, tail_fluid)
-            rho_displaced = mud_fluid.density_kg_m3 / 1000.0
+            b_num_local = self._buoyancy_number_at(geom, q_m3s, w_prev,
+                                                   self._scalar_of(mud_fluid),
+                                                   self._scalar_of(lead_fluid),
+                                                   self._scalar_of(tail_fluid))
+            rho_displaced = self._fluid_density(mud_fluid) / 1000.0
             delta_rho = (rho - rho_displaced)  # g/cc 局部密度差
             # Task 5: 流动度构造（幂律缝隙律 base + (4.23) 闭包 + (4.14)/(4.22) 浮力形状）
             # 抽为纯函数，便于单测；返回未饱和乘积 base·buoyancy_shape。
@@ -2310,7 +2602,8 @@ class AnnulusD2DGASolver:
             base = self._mobility_base(c_bar, geom, i1_base, eta1, eta2, n_mix)
             phi = geom["phi"][:, None]
             ebar = geom["e"][None, :]
-            density_contrast = (rho_disp - mud_fluid.density_kg_m3) / mud_fluid.density_kg_m3
+            _rho_mud = self._fluid_density(mud_fluid)
+            density_contrast = (rho_disp - _rho_mud) / _rho_mud
             stable = float(np.clip(8.0 * density_contrast, -0.35, 0.45))
             buoyancy_shape = 1.0 + stable * ebar * (2.0 * phi - 1.0)
             mobility = base * buoyancy_shape
@@ -2480,6 +2773,13 @@ class AnnulusD2DGASolver:
         self._last_mu_reg = None
         self._lambda_op_last = None
         self._shear_rate_rep_last = None
+        # Phase 4b（2026-10-07）逐列温度观测/缓存按 run 重置（纯簿记，零数值影响；
+        # 关时恒空/恒零 ⇒ 零痕迹）。_col_memo 跨步保留 = F-2 静温档"每 run 一次逐列
+        # 派生"的实现位；按 run 清 ⇒ 同实例换场/换井不吃陈旧列。
+        self._col_memo.clear()
+        self._uniform_field_hits = 0
+        self._col_audit_counts = {}
+        self._col_batches = 0
         # 2026-09-06 选相修复：多种 WASH/SPACER 并存（如平衡液+驱油隔离液）时，
         # 按泵注程序中各流体的设计体积加权重建等效代表流体——进入环空的 spacer 相
         # 由这些流体按入库体积混合而成，物性（密度/黏度/屈服）应取入库加权而非
@@ -2544,6 +2844,11 @@ class AnnulusD2DGASolver:
                 _kind = str(_ev.get("kind", "unknown"))
                 _counts[_kind] = _counts.get(_kind, 0) + 1
             self._temp_rheo_audit_counts = _counts
+            # Phase 4b（F-4）：列批次排空只聚合列派生自身的事件 ⇒ 构造层事件在
+            # 上方 `_temp_rheo_audit_counts` 捕获后清空环（仅逐列模式；标量模式
+            # 环行为逐位不变）。summary 审计键 = 构造层捕获，不受影响。
+            if self.enable_depthwise_temperature:
+                reset_rheo_audit()
             _count_line = " ".join(f"{k}={v}" for k, v in sorted(_counts.items())) or "无"
             print(f"[D2DGA] 温变流变构造层派生 T={t_c:.1f}°C"
                   f"（enable_temperature_rheology=True）审计: {_count_line}")
@@ -2619,8 +2924,10 @@ class AnnulusD2DGASolver:
                 lead_fluid = self._phase_props(lead_fluid, geom, current_time_s)
                 tail_fluid = self._phase_props(tail_fluid, geom, current_time_s)
                 spacer_fluid = self._phase_props(spacer_fluid, geom, current_time_s)
+                # 诊断暴露保持标量派生口径（F-3：诊断/装配标量不变；列模式下
+                # bundle ⇒ 解包为域均代表标量，标量模式恒等 ⇒ 逐位）
                 self._temp_rheo_fluids = {
-                    name: fluid for name, fluid in (
+                    name: self._scalar_of(fluid) for name, fluid in (
                         ("mud", mud_fluid), ("lead", lead_fluid),
                         ("tail", tail_fluid), ("spacer", spacer_fluid),
                     ) if fluid is not None
@@ -2708,8 +3015,9 @@ class AnnulusD2DGASolver:
                     beta_deg_local = float(np.mean(geom["inc_deg"])) if "inc_deg" in geom else 0.0
                     # Task 4: F² 按 Z&F22 (2.6) 现算，与 _compute_velocity 内同一口径
                     # （排量取最近一次有效泵注 q，速度取本步 w），量级 O(10⁻³)。
+                    # F-3：I3 经 F² 站吃域均标量口径（列模式解包；标量模式恒等 ⇒ 逐位）
                     f2_local = self._froude_squared_at(
-                        geom, last_pump_rate_m3s, w_prev, mud_fluid)
+                        geom, last_pump_rate_m3s, w_prev, self._scalar_of(mud_fluid))
                     f_phi_arr, f_xi_arr = self._buoyancy_force_vector(
                         geom, beta_deg_local, f2_local)
                     # 顶替液粘度 eta2 + 密度差 Δρ（顶替液 - 被顶替液），kg/m³。
@@ -2933,8 +3241,11 @@ class AnnulusD2DGASolver:
         #   ③ w₀ 旧取"最后一步"速度场均值 → 改为截面平均速度 q/A（末态泵注排量/环形截面积）。
         # Task 5: 口径实现下沉到 `_buoyancy_number_at`（动力学逐时间步与 summary 共用，
         # 保证 b 的两处口径逐位一致）；半间隙 d̂ = mean(geom["H"])（R20 口径，b=2H 自洽）。
+        # F-3：summary 浮力数 b 维持域均标量口径（列模式解包；标量模式恒等 ⇒ 逐位）
         b_number = self._buoyancy_number_at(
-            geom, last_pump_rate_m3s, w_prev, mud_fluid, lead_fluid, tail_fluid,
+            geom, last_pump_rate_m3s, w_prev,
+            self._scalar_of(mud_fluid), self._scalar_of(lead_fluid),
+            self._scalar_of(tail_fluid),
         )
 
         summary: Dict[str, object] = {
@@ -3022,8 +3333,10 @@ class AnnulusD2DGASolver:
         # 零变化）。
         _diag_fluids = fluids
         if self.enable_temperature_rheology:
+            # F-3：诊断收域均代表标量派生（列模式解包 bundle；标量模式恒等 ⇒ 逐位）
             _diag_fluids = tuple(
-                self._phase_props(f, geom, current_time_s) for f in fluids
+                self._scalar_of(self._phase_props(f, geom, current_time_s))
+                for f in fluids
             )
         try:
             from cemdisp.diagnostics.tier0_diagnostics import compute_all_tier0_diagnostics

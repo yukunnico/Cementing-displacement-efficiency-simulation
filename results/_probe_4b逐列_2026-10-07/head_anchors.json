@@ -1,0 +1,105 @@
+[
+ {
+  "case": "toff_no_field",
+  "eta_E": 0.3946295373348512,
+  "eta_N": 0.36065145369450724,
+  "buoyancy_b": 308.41786014961826,
+  "cement_sha256": "cdff15e5fe098888fa105854609b97429a1e72a15f3f4c2b299691afca5a0a3b",
+  "mu_sha256": "1225f1cf2905e075ef68b14c4a99767ce4c5d8d78cbe4ca558ae0d94f23467bf",
+  "step_T_c": null
+ },
+ {
+  "case": "ton_constant60",
+  "eta_E": 0.40503766614396924,
+  "eta_N": 0.3466329656571022,
+  "buoyancy_b": 91.33759550293782,
+  "cement_sha256": "a5a0ac156cb46f5f068fb0ab1cdd7a16938175cf8790b350fe65d5c5e66219c7",
+  "mu_sha256": "1225f1cf2905e075ef68b14c4a99767ce4c5d8d78cbe4ca558ae0d94f23467bf",
+  "step_T_c": 60.0,
+  "rep_T": 60.0,
+  "compute_props_sha256": [
+   "02d7d61e3608a9bec983b226a07b8ce88444a5fc0ec947a00ef58ba1ba54b331",
+   "9c1230c26a0f12bfa6c323d5d6e6baa95ec6aaa61f94fa14edf242618057c70e",
+   "07c6736dd542b33c6736aca402427957781e2bd5b71da47eac73c6cec9fe69a9",
+   "cb1a222f4cdc618fe4715d3f36f6748480f3dc8fe73d16a3843cf378ff18b04f",
+   "078adf21b908a4e5935d7c7c6bf7865c27542dc87470f4292c67a3adc519392e",
+   "5f48f5e565357e7364d8366da82af95f246bf04e094e6748c27b70be5781c8ab",
+   "a577809c8d12ed6f97074b3c58b469fc8aaabce92cd4d71fd50d2eb1aa70d21e",
+   "825fae38cced1bd686db1cf9e5f1ed4a53d370281f30467164fe15b0834b66f0",
+   "a43548966ad56af3db2fad43f0b4daf0d1619f3084e01d3fe5e72f42c7850898"
+  ],
+  "phase_props": {
+   "mud": {
+    "PV": 0.07428696678437698,
+    "TY": 12.968444096844806,
+    "N": null,
+    "K": null
+   },
+   "lead": {
+    "PV": 0.09151000000000001,
+    "TY": 2.85208,
+    "N": null,
+    "K": null
+   },
+   "tail": {
+    "PV": 0.09151000000000001,
+    "TY": 2.85208,
+    "N": null,
+    "K": null
+   },
+   "spacer": {
+    "PV": 0.0580395677469,
+    "TY": 6.702165213137,
+    "N": null,
+    "K": null
+   }
+  }
+ },
+ {
+  "case": "ton_ramp",
+  "eta_E": 0.40497080139046954,
+  "eta_N": 0.33133718679127844,
+  "buoyancy_b": 57.538683764440414,
+  "cement_sha256": "b3b38f021162f837c8952e98ec4ecb4954dbb774ca1b4114b53ef5e07924795b",
+  "mu_sha256": "1225f1cf2905e075ef68b14c4a99767ce4c5d8d78cbe4ca558ae0d94f23467bf",
+  "step_T_c": 12.740000000000002,
+  "rep_T": 12.740000000000002,
+  "compute_props_sha256": [
+   "723cfb9333d31cfd07fef9bd48a0b9efbd9da53b29dde497d7f30162ac2d4269",
+   "9c1230c26a0f12bfa6c323d5d6e6baa95ec6aaa61f94fa14edf242618057c70e",
+   "07c6736dd542b33c6736aca402427957781e2bd5b71da47eac73c6cec9fe69a9",
+   "007c2c16fc40ce9eeea2db6ceb4e83f0a9e778b2bb78b87af8bc91cc78ee1b4b",
+   "52ad7108412b035f939959d699fdf506fa56752b9d365893b3cba2370ae55d96",
+   "28ec58b4c2360969f813735789c648d6ad2a4729a35ede2251790a2f55b6ec4d",
+   "ae488801a62a70a35115152c615fea21f6d803cc1e354daa08fc9d3d92f85252",
+   "825fae38cced1bd686db1cf9e5f1ed4a53d370281f30467164fe15b0834b66f0",
+   "2df55a0f540b92e4a9a5bd04150e6ea19f7500c4efe478cddbbe35fd5a32dbee"
+  ],
+  "phase_props": {
+   "mud": {
+    "PV": 0.11792402049149639,
+    "TY": 15.312128540630088,
+    "N": null,
+    "K": null
+   },
+   "lead": {
+    "PV": 0.07443,
+    "TY": 4.57072,
+    "N": null,
+    "K": null
+   },
+   "tail": {
+    "PV": 0.07443,
+    "TY": 4.57072,
+    "N": null,
+    "K": null
+   },
+   "spacer": {
+    "PV": 0.07793783894690001,
+    "TY": 7.281362615337001,
+    "N": null,
+    "K": null
+   }
+  }
+ }
+]

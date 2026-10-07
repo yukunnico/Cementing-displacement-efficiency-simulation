@@ -56,10 +56,10 @@ FloatOrArray = float | Array
 
 def mobility_i1(
     c_bar: FloatOrArray,
-    m: float,
-    eta1: float = 1.0,
-    eta2: float = 1.0,
-    H: float = 1.0,
+    m: FloatOrArray,
+    eta1: FloatOrArray = 1.0,
+    eta2: FloatOrArray = 1.0,
+    H: FloatOrArray = 1.0,
 ) -> FloatOrArray:
     """牛顿平均流动度 I₁(c̄, m)（Z&F22 式 4.21a；归一化口径 = Bararpour 2025 式 2.24）。
 
@@ -84,19 +84,25 @@ def mobility_i1(
         标量输入返回 ``float``，数组输入返回 ``Array``。
     """
     c = np.asarray(c_bar, dtype=float)
-    sq_m = math.sqrt(m)
+    # Phase 4b（2026-10-07）：math.sqrt→np.sqrt——IEEE-754 正确舍入平方根对 float64
+    # 逐位同值（关2 红线，契约测试钉死标量档）；同时允许 m/eta1/eta2 传入
+    # (1,nz)/(ny,nz) 逐列场（列版两层闭包 = 逐列独立 (4.21)，列间耦合仍由椭圆算子）。
+    sq_m = np.sqrt(m)
     out = (sq_m * c**3 + (1.0 - c**3) / sq_m) / 3.0
     # 量纲换算（Z&F22 (4.21a) ↔ 归一化闭式的代数恒等因子）；默认形参下因子=1.0，逐位无扰。
-    out = out * (H**3 / math.sqrt(eta1 * eta2))
-    return float(out) if np.isscalar(c_bar) else out.astype(float, copy=False)
+    out = out * (H**3 / np.sqrt(eta1 * eta2))
+    # 任一数值入参为数组 ⇒ 场出（测绘项10：m 数组而 c_bar 标量时 float(out) 会 TypeError）
+    if np.ndim(out) == 0 and np.isscalar(c_bar):
+        return float(out)
+    return np.asarray(out, dtype=float)
 
 
 def mobility_i2(
     c_bar: FloatOrArray,
-    m: float,
-    eta1: float = 1.0,
-    eta2: float = 1.0,
-    H: float = 1.0,
+    m: FloatOrArray,
+    eta1: FloatOrArray = 1.0,
+    eta2: FloatOrArray = 1.0,
+    H: FloatOrArray = 1.0,
 ) -> FloatOrArray:
     """牛顿浮力流动度 I₂(c̄, m)（Z&F22 式 4.21b；归一化口径 = Bararpour 2025 式 2.25）。
 
@@ -121,11 +127,14 @@ def mobility_i2(
         标量输入返回 ``float``，数组输入返回 ``Array``。
     """
     c = np.asarray(c_bar, dtype=float)
-    sq_m = math.sqrt(m)
+    # Phase 4b：同 mobility_i1——np.sqrt 对标量逐位同值 + m/eta 允许逐列场。
+    sq_m = np.sqrt(m)
     out = (2.0 * sq_m * c**3 * (1.0 - c) + c * (1.0 - c) ** 2 * (1.0 + 2.0 * c) / sq_m) / 6.0
     # 量纲换算（Z&F22 (4.21b) ↔ 归一化闭式的代数恒等因子）；默认形参下因子=1.0，逐位无扰。
-    out = out * (H**4 / math.sqrt(eta1 * eta2))
-    return float(out) if np.isscalar(c_bar) else out.astype(float, copy=False)
+    out = out * (H**4 / np.sqrt(eta1 * eta2))
+    if np.ndim(out) == 0 and np.isscalar(c_bar):
+        return float(out)
+    return np.asarray(out, dtype=float)
 
 
 def buoyancy_flux_distribution_i3(

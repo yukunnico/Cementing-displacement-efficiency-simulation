@@ -224,13 +224,22 @@ def _uniform_spacing(x, name: str) -> float:
     return float(d)
 
 
-def _scalar_viscosity(eta, name: str) -> float:
-    """两层闭包前提：每流体单一黏度（Z&F22 (4.21)）。数组输入必须全场一致，禁止静默平均。"""
+def _scalar_viscosity(eta, name: str, shape: "tuple[int, int] | None" = None):
+    """两层闭包前提：每流体单一黏度（Z&F22 (4.21)）。数组输入必须全场一致，禁止静默平均。
+
+    Phase 4b（2026-10-07）放宽：``shape=(ny, nz)`` 给出时，非均匀但可广播到该形状的
+    列场（``(1,nz)`` 或 ``(ny,nz)``）**原样透传**——列版两层闭包 = 逐列独立 (4.21)、
+    列间耦合仍由椭圆算子承载（spec F-1/测绘项11 合法性论证）。标量入标量出、
+    全场一致数组取首值两条捷径**逐位不变**（关2 红线）；``shape=None`` 时与旧行为
+    完全一致（非均匀一律 raise）。
+    """
     arr = np.asarray(eta, dtype=float)
     if arr.ndim == 0:
         return float(arr)
     first = float(arr.reshape(-1)[0])
     if not np.allclose(arr, first, rtol=1e-12, atol=0.0):
+        if shape is not None and arr.ndim == 2 and arr.shape in ((1, shape[1]), shape):
+            return arr
         raise ValueError(f"{name} 必须为标量或全场一致（两层闭包 (4.21) 以每流体单一黏度为前提）")
     return first
 
@@ -331,9 +340,10 @@ def solve_stream_function(geom: Dict, c_bar, eta1, eta2, m: float, b_field,
         geom: 几何字典，需含 ``phi``(ny,)、``H``(ny,nz)（Z&F22 半隙口径，
             见模块 docstring 的核实结论）、``s``(nz,)、``hole_mm``/``od_mm``。
         c_bar: (ny,nz) 间隙平均水泥体积分数 c̄ = y_i/H ∈ [0,1]。
-        eta1: 流体 1（被顶替液，壁面带）黏度，标量或全场一致数组。
-        eta2: 流体 2（顶替液，中线带）黏度，标量或全场一致数组。
-        m: 黏度比 η₁/η₂ > 0。
+        eta1: 流体 1（被顶替液，壁面带）黏度，标量或全场一致数组；Phase 4b 起
+            亦接受逐列场 ``(1,nz)``/``(ny,nz)``（列版闭包=逐列独立 (4.21)）。
+        eta2: 流体 2（顶替液，中线带）黏度，同上。
+        m: 黏度比 η₁/η₂ > 0（标量或同形列场）。
         b_field: (2,ny,nz) 浮力全向量（(4.22) 字面分组，唯一口径）：
             b_field[0]=b_φ（φ-散度槽）、b_field[1]=b_ξ（ξ-散度槽），无量纲；
             竖直井装配 b_φ = χ·r_a·cosβ/F²、b_ξ = χ·r_a·sin(πφ)·sinβ/F²。
@@ -393,10 +403,17 @@ def solve_stream_function(geom: Dict, c_bar, eta1, eta2, m: float, b_field,
     c = np.asarray(c_bar, dtype=float)
     if c.shape != H.shape:
         raise ValueError("c_bar 形状须与 geom['H'] 相同 (ny,nz)")
-    e1 = _scalar_viscosity(eta1, "eta1")
-    e2 = _scalar_viscosity(eta2, "eta2")
-    m = float(m)
-    if not m > 0.0:
+    # Phase 4b：eta1/eta2 与 m 允许 (1,nz)/(ny,nz) 广播形列场（标量入逐位不变）。
+    e1 = _scalar_viscosity(eta1, "eta1", shape=(ny_, nz_))
+    e2 = _scalar_viscosity(eta2, "eta2", shape=(ny_, nz_))
+    m_arr = np.asarray(m, dtype=float)
+    if m_arr.ndim == 0:
+        m = float(m_arr)          # 标量入标量出（逐位 = HEAD）
+    elif m_arr.shape in ((1, nz_), (ny_, nz_)):
+        m = m_arr                 # 列场透传（与 e1/e2 同形，表达式原样广播）
+    else:
+        m = float(m)              # 其他形状保持旧语义（不可转 float 即按原路径报错）
+    if not (m > 0.0 if np.ndim(m) == 0 else bool(np.all(m > 0.0))):
         raise ValueError("m = η₁/η₂ 必须为正")
 
     # I₁ 闭包（Z&F22 (4.21a)；c̄/H 传场、η 传标量）。B-1：经 ClosureProvider 注入；

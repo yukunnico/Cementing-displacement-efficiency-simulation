@@ -1,0 +1,77 @@
+{
+ "tag": "B_col_on",
+ "井名": "呼101",
+ "变体": "Ton_static_rate_x1.0",
+ "配置": {
+  "depthwise_temperature": true,
+  "nz": 250,
+  "ny": 40,
+  "pressure_mode": "hydrostatic",
+  "pressure_caliber": "shoe",
+  "include_yield_term": false,
+  "enable_stream_yield_gate": false,
+  "CORRECTED_KW": {
+   "enable_yield_gate": true,
+   "enable_regime_split": true,
+   "enable_local_i3": true
+  },
+  "tt_s": 13742.727272727272
+ },
+ "η_E": 0.9570148569577591,
+ "η_N": 0.7627486693716802,
+ "elapsed_s": 73.5,
+ "summary_浮力数_b": 23.40989054861047,
+ "extra_饥饿份额": 0.012747462356860917,
+ "extra_front_narrow_m": 1179.4859437751004,
+ "extra_温度流变审计": {
+  "clamp": 1,
+  "nearest": 1
+ },
+ "观测": {
+  "均匀场快捷路径命中": 0,
+  "列派生批次数": 15,
+  "列memo尺寸": 15,
+  "列审计聚合": {
+   "clamp": 5559,
+   "nearest": 5559,
+   "model_assumption": 251,
+   "no_replace": 753
+  },
+  "lambda_op_last": 13525.078154958128,
+  "shear_rate_rep_last": 38.6187172570711,
+  "dt中位_s": 3.152922052842085,
+  "步数": 4807,
+  "cfl_clip_events": 0,
+  "逐站点μ(F²/b_num 标量口径证据)": {
+   "_buoyancy_number_at|钻井液": {
+    "n": 1,
+    "min": 0.04679753464156249,
+    "max": 0.04679753464156249
+   },
+   "_froude_squared_at|钻井液": {
+    "n": 9614,
+    "min": 0.04679753464156249,
+    "max": 0.04679753464156249
+   },
+   "_velocity_stream_function|钻井液": {
+    "n": 4807,
+    "min": 0.04679753464156249,
+    "max": 0.04679753464156249
+   },
+   "_velocity_stream_function|领浆": {
+    "n": 4807,
+    "min": 0.0991077801427683,
+    "max": 0.0991077801427683
+   }
+  }
+ },
+ "provenance": {
+  "git_HEAD": "225cac0413129d38af464904d7e2e57ff1a2159d",
+  "job": {
+   "depthwise": true
+  },
+  "time": "2026-10-07 16:43:57",
+  "python": "3.13.7",
+  "cemdisp": "D:\\users\\desktop\\research\\控压固井项目\\cement model_温压耦合分支\\cemdisp\\__init__.py"
+ }
+}
