@@ -5,6 +5,8 @@
 
 - ``ConstantTemperatureField``: 恒温场（关温耦合时的回退默认）
 - ``GeothermalTemperatureField``: 地温静温剖面场 T(z)=T0+grad·z（无瞬态表井的静温档）
+- ``AnchoredProfileField``: 静温点锚分段线性场（4d 新增）——循环准稳态温度系数
+  k 必给无默认 + Ramey 型瞬态接口位 + 锚域外回退地温式（F-4 聚合越界计数）
 - ``TableTemperatureField``: 表格温度场，双线性插值（深度×时间），越界 clamp + 审计
 - ``load_delivered_pair``: 加载交付的管内/环空两表，并校验井底（最深行）共享同值
 
@@ -35,6 +37,7 @@ import pandas as pd
 __all__ = [
     "ConstantTemperatureField",
     "GeothermalTemperatureField",
+    "AnchoredProfileField",
     "TableTemperatureField",
     "ClampEvent",
     "load_delivered_pair",
@@ -152,6 +155,220 @@ class GeothermalTemperatureField:
     def __repr__(self) -> str:  # pragma: no cover —— 仅调试可读性
         return (f"GeothermalTemperatureField(T0_c={self.T0_c!r}, "
                 f"grad_c_per_m={self.grad_c_per_m!r})")
+
+
+# ---------------------------------------------------------------------------
+# 静温锚点剖面场（4d 新增，纯追加；Phase 4 设计规格 §1 项 5 / 测绘项 14）
+# ---------------------------------------------------------------------------
+class AnchoredProfileField:
+    """静温点锚分段线性场：``T(md_m, t_s) -> °C``，与既有三场同型可互换注入。
+
+    物理口径（如实声明，无新物理发明）
+    ----------------------------------
+    - **基准线**：静温族点锚 ``(md_m, T_c)`` 分段线性（``np.interp``），代表
+      静止地温剖面。锚点的族归属（静温/循环/出口/邻井四族混装是已知数据现状，
+      测绘项 16）由调用方**构造前裁定**——同一 md 出现不同 T 视为族混装，
+      构造期直接 ``ValueError``（同 md 同值的跨文档重复行自动合并）。
+    - **循环准稳态修正**：``regime="circulating"`` 时返回 ``T = k · T_static(md)``。
+      k 即施工设计「领浆/尾浆温度系数」口径——对摄氏绝对值的乘性系数
+      （锚点 notes 实证：152 °C × 0.85 = 129.2 °C；155 °C × 0.85 ≈ 131.75 ≈ 132 °C）。
+      ``k ∈ (0, 1]`` **必给、无默认**：系数取值 = 用户硬停点（先报后动），
+      本类不携带任何缺省系数；k=1 ⇒ 纯静温锚。
+    - **锚域外回退**：``fallback_geothermal=True``（默认，已声明）时锚点 md 域外
+      回退 :class:`GeothermalTemperatureField` 统一地温式（复用模块常量单一真源，
+      不复制字面量）；``False`` 时钳位到端点锚值。域外查询一律记越界审计。
+    - **瞬态项（接口位，实现从简）**：``transient_tau_s`` 给定时按一阶集总
+      Ramey/Hasan-Kabir 型混合
+      ``T(md,t) = T_qs(md) + [T_static(md) − T_qs(md)] · exp(−t/τ)``，
+      t=0 出发于静温、t→∞ 收敛于循环准稳态。这是对非稳态井筒热交换的
+      **一阶集总近似**（无径向导热/传输线解析细节，τ 为 lumped 时间常数），
+      仅作接口位；缺省 ``None`` = 不启用（时间维不消费，与 Geothermal 同型）。
+
+    审计（Phase 4 设计规格 §0 F-4）
+    ------------------------------
+    三件套 ``oob_count`` / ``oob_events`` / ``reset_audit()`` 与既有场同型：
+    标量路径 ``T()`` **逐查询**记 ``ClampEvent``（与 Table 一致）；批量列查询
+    :meth:`T_column` **逐批聚合计数**——每批至多追加 1 条代表事件（偏移锚域
+    边界最远的域外点），域外点数另累计于 :attr:`oob_column_clamped_total`，
+    防逐查询 append 爆表。
+    """
+
+    def __init__(
+        self,
+        anchors: Sequence[Tuple[float, float]],
+        temperature_factor_k: float,
+        *,
+        regime: str = "circulating",
+        fallback_geothermal: bool = True,
+        transient_tau_s: Optional[float] = None,
+        source: Optional[str] = None,
+    ) -> None:
+        pts = sorted((float(md), float(t)) for md, t in anchors)
+        if len(pts) < 2:
+            raise ValueError(f"静温锚点至少需 2 点（分段线性），实际 {len(pts)}")
+        if not np.isfinite(np.asarray(pts, dtype=float)).all():
+            raise ValueError("静温锚点含 NaN/Inf，须先剔除非有限值")
+        # 同 md：同值合并（跨文档重复行），异值抛错（族混装须构造前裁定）
+        mds: List[float] = []
+        ts: List[float] = []
+        for md, t in pts:
+            if mds and abs(md - mds[-1]) < 1e-9:
+                if abs(t - ts[-1]) > 1e-9:
+                    raise ValueError(
+                        f"锚点冲突：md={md:.1f} m 出现不同静温值 {ts[-1]:.2f} / "
+                        f"{t:.2f} °C（温度族混装须在构造前裁定，测绘项16/风险9）"
+                    )
+                continue
+            mds.append(md)
+            ts.append(t)
+        if len(mds) < 2:
+            raise ValueError(f"去重后锚点不足 2 点，无法分段线性：{pts}")
+
+        k = float(temperature_factor_k)
+        if not np.isfinite(k) or not (0.0 < k <= 1.0):
+            raise ValueError(
+                "温度系数 k 须属于 (0, 1]（必给、无默认——取值属用户硬停点"
+                f"先报后动），实际 {temperature_factor_k!r}"
+            )
+        if regime not in ("static", "circulating"):
+            raise ValueError(
+                "regime 须为 static（纯静温锚）或 circulating（k 乘性修正），"
+                f"实际 {regime!r}"
+            )
+        tau: Optional[float] = None
+        if transient_tau_s is not None:
+            tau = float(transient_tau_s)
+            if not np.isfinite(tau) or tau <= 0.0:
+                raise ValueError(
+                    f"transient_tau_s 须为正有限秒数，实际 {transient_tau_s!r}"
+                )
+
+        self.md_anchor_m = np.asarray(mds, dtype=float)
+        self.T_anchor_c = np.asarray(ts, dtype=float)
+        self.temperature_factor_k = k
+        self.regime = regime
+        self.fallback_geothermal = bool(fallback_geothermal)
+        self.transient_tau_s = tau
+        self.source = source
+        # 域外回退线复用统一地温场（单一真源常量，不复制字面量）
+        self._geo = GeothermalTemperatureField()
+        self._oob_events: List[ClampEvent] = []
+        self._oob_column_clamped_total = 0
+
+    # -- 内部：静温基准线（域外按回退开关） ----------------------------------
+    def _static_line(self, md: np.ndarray) -> np.ndarray:
+        """静温基准线：锚域内分段线性；域外按 fallback 开关取地温式/端点值。"""
+        mds = self.md_anchor_m
+        vals = np.interp(md, mds, self.T_anchor_c)  # np.interp 域外默认钳端点值
+        if self.fallback_geothermal:
+            outside = (md < float(mds[0])) | (md > float(mds[-1]))
+            if np.any(outside):
+                vals = np.where(
+                    outside,
+                    self._geo.T0_c + self._geo.grad_c_per_m * md,
+                    vals,
+                )
+        return vals
+
+    def _apply_regime(self, t_static: np.ndarray, t_s: float) -> np.ndarray:
+        """按 regime/瞬态开关把静温线映射为返回温度（static 原样；circulating 乘 k，
+        启用瞬态时再按 exp(-t/tau) 从静温向准稳态一阶混合）。"""
+        if self.regime == "static":
+            return t_static
+        t_qs = self.temperature_factor_k * t_static
+        if self.transient_tau_s is None:
+            return t_qs
+        blend = float(np.exp(-max(t_s, 0.0) / self.transient_tau_s))
+        return t_qs + (t_static - t_qs) * blend
+
+    # -- 越界审计三件套（同型）+ F-4 聚合计数 --------------------------------
+    @property
+    def oob_count(self) -> int:
+        """越界审计计数（F-4 口径：标量路径逐查询计数；列批量路径逐批计数，
+        每批至多 1 条代表事件，域外点数另见 oob_column_clamped_total）。"""
+        return len(self._oob_events)
+
+    @property
+    def oob_events(self) -> Tuple[ClampEvent, ...]:
+        """越界查询记录（标量路径逐条；批量路径为逐批代表事件）。"""
+        return tuple(self._oob_events)
+
+    @property
+    def oob_column_clamped_total(self) -> int:
+        """批量列查询累计域外（被回退/钳位）查询点数——F-4 聚合计数。"""
+        return self._oob_column_clamped_total
+
+    def reset_audit(self) -> None:
+        """清空越界审计（事件列表与批量聚合计数）。"""
+        self._oob_events.clear()
+        self._oob_column_clamped_total = 0
+
+    # -- 查询接口（与既有场同型） --------------------------------------------
+    def T(self, md_m: float, t_s: float) -> float:
+        """取 (md_m [m], t_s [s]) 处温度（°C）。
+
+        越界语义：md 出锚域 ⇒ 回退线取值 + 逐查询 ClampEvent；
+        t<0 仅在瞬态启用时钳 0 并审计（瞬态关闭时时间维不消费，同 Geothermal）。
+        """
+        md = float(md_m)
+        tt = float(t_s)
+        mds = self.md_anchor_m
+        lo, hi = float(mds[0]), float(mds[-1])
+        md_out = md < lo or md > hi
+        t_out = self.transient_tau_s is not None and tt < 0.0
+        if md_out or t_out:
+            self._oob_events.append(
+                ClampEvent(
+                    md_m=md,
+                    t_s=tt,
+                    md_clamped_m=min(max(md, lo), hi),
+                    t_clamped_s=(max(tt, 0.0) if self.transient_tau_s is not None else tt),
+                )
+            )
+        return float(self._apply_regime(self._static_line(np.array([md])), tt)[0])
+
+    def T_column(self, md_values, t_s: float = 0.0) -> np.ndarray:
+        """批量列查询（F-4 聚合计数入口）：返回与输入同形状的 °C float 数组。
+
+        与逐点调用 T **同值**；越界一次计数——每批至多追加 1 条代表
+        ClampEvent（取偏移锚域边界最远的域外点），域外点数累加进
+        oob_column_clamped_total。既有标量路径不受影响。
+        """
+        arr = np.asarray(md_values, dtype=float)
+        flat = arr.ravel()
+        mds = self.md_anchor_m
+        lo, hi = float(mds[0]), float(mds[-1])
+        tt = float(t_s)
+        below = flat < lo
+        above = flat > hi
+        n_oob_md = int(np.count_nonzero(below)) + int(np.count_nonzero(above))
+        t_out = self.transient_tau_s is not None and tt < 0.0
+        if n_oob_md or t_out:
+            if n_oob_md:
+                dist = np.where(below, lo - flat, 0.0) + np.where(above, flat - hi, 0.0)
+                rep_md = float(flat[int(np.argmax(dist))])
+            else:
+                rep_md = float(flat[0]) if flat.size else 0.0
+            self._oob_events.append(
+                ClampEvent(
+                    md_m=rep_md,
+                    t_s=tt,
+                    md_clamped_m=min(max(rep_md, lo), hi),
+                    t_clamped_s=(
+                        max(tt, 0.0) if self.transient_tau_s is not None else tt
+                    ),
+                )
+            )
+            self._oob_column_clamped_total += n_oob_md
+        return self._apply_regime(self._static_line(flat), tt).reshape(arr.shape)
+
+    def __repr__(self) -> str:  # pragma: no cover —— 仅调试可读性
+        return (
+            f"AnchoredProfileField(n_anchors={len(self.md_anchor_m)}, "
+            f"temperature_factor_k={self.temperature_factor_k!r}, "
+            f"regime={self.regime!r}, fallback_geothermal={self.fallback_geothermal!r}, "
+            f"transient_tau_s={self.transient_tau_s!r}, source={self.source!r})"
+        )
 
 
 # ---------------------------------------------------------------------------
