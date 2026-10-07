@@ -142,7 +142,32 @@ BASELINE_VARIANT = "Toff_zero"
 
 # 判别量 JSON 的 schema 版本（写入每个 *_判别量.json；_load_case 要求版本
 # 相符才复用 ⇒ 缺版本号或不符一律重算，防改码后吃到旧公式产物）
-EXTRA_SCHEMA_VERSION = 2
+# 5b-③（2026-10-07）：schema_version 内嵌**代码指纹**——判别量由代码公式算出，
+# 改码后档名不变 ⇒ 原先必须 `--force` 或删 JSON 才重算（易漏）。现把决定数值的
+# 源文件内容哈希并入版本号：**改码即自动失效重算**，`--force` 仍保留作显式强制。
+def _code_fingerprint() -> str:
+    """决定判别量数值的源文件内容 sha256（截断 12 位）——改码即变。"""
+    import hashlib
+    root = Path(__file__).resolve().parents[2]
+    files = (
+        "cemdisp/data/rheology_vs_temperature.py",
+        "cemdisp/models2d/annulus_d2dga.py",
+        "cemdisp/models2d/two_layer.py",
+        "cemdisp/models2d/stream_function.py",
+        "cemdisp/transport1d/casing_flow.py",
+        "scripts/entrypoints/run_sensitivity_current_20260916.py",
+        "scripts/entrypoints/run_sensitivity_temperature_t2_20261001.py",
+    )
+    h = hashlib.sha256()
+    for rel in files:
+        f = root / rel
+        h.update(rel.encode("utf-8"))
+        h.update(b"|")
+        h.update(f.read_bytes() if f.exists() else b"<missing>")
+    return h.hexdigest()[:12]
+
+
+EXTRA_SCHEMA_VERSION = f"2+{_code_fingerprint()}"
 
 # 汇总表 schema（列序即写盘序）
 CSV_COLUMNS = [
@@ -184,7 +209,8 @@ def _opts(mode: str, *, on: bool = True, yield_gate: bool | None = None,
           pressure_mode: str = "off",
           pressure_caliber: str = "shoe",
           stream_yield_gate: bool | None = None,
-          include_yield_term: bool = False) -> dict:
+          include_yield_term: bool = False,
+          depthwise: bool = False) -> dict:
     """run_opts（09-16 共享装配层；R1/P-1/Phase 1.5 2026-10-06 由三键扩为八键；
     Phase 2 2026-10-06 加第 9 键 `include_yield_term`）。
 
@@ -210,6 +236,9 @@ def _opts(mode: str, *, on: bool = True, yield_gate: bool | None = None,
         # ⚠ 必须**同时**加形参与返回键：只加形参不加键 ⇒ normalize_run_opts 静默补默认
         # False ⇒ 标"拆分 on"的档实际按 off 跑（静默标签失真，Phase 2 对抗核查 W-1）。
         "include_yield_term": include_yield_term,
+        # 5d-③：Phase 4b 2D 逐列温度（默认 False ⇒ 既有 20+ 变体条目逐位不变）
+        "enable_depthwise_temperature": depthwise,
+
     }
 
 

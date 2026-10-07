@@ -218,7 +218,11 @@ def build_variants() -> list[tuple[str, object, object, object, dict | None]]:
 RUN_OPTS_KEYS = ("enable_temperature_rheology", "temperature_mode",
                  "enable_yield_gate", "rheology_formula", "mud_extrapolate",
                  "pressure_mode", "pressure_caliber", "enable_stream_yield_gate",
-                 "include_yield_term")
+                 "include_yield_term",
+                 # 5d-③（2026-10-07，计划 §3-2 三件套）：Phase 4b 的 2D 逐列温度开关
+                 # 进 run_opts。**仅 annulus 有该形参** ⇒ 只准 annulus_kwargs_from_opts 出键；
+                 # casing_kwargs_from_opts 出键即运行期 TypeError（C-01 同型不对称陷阱）。
+                 "enable_depthwise_temperature")
 TEMPERATURE_MODES = ("off", "static", "table", "const60", "anchored", "table_ext")
 PRESSURE_MODES = ("off", "hydrostatic")
 PRESSURE_CALIBERS = ("shoe", "mean")
@@ -332,6 +336,7 @@ def normalize_run_opts(run_opts: dict | None) -> dict:
         "pressure_caliber": "shoe",
         "enable_stream_yield_gate": None,
         "include_yield_term": False,
+        "enable_depthwise_temperature": False,
     }
     if run_opts:
         unknown = sorted(set(run_opts) - set(opts))
@@ -380,6 +385,19 @@ def normalize_run_opts(run_opts: dict | None) -> dict:
     if not isinstance(opts["include_yield_term"], bool):
         raise TypeError(
             f"include_yield_term 须为 bool，实际 {type(opts['include_yield_term']).__name__}"
+        )
+    # 5d-③：2D 逐列温度开关（纯 bool；默认 False ⇒ 逐位=HEAD）
+    if not isinstance(opts["enable_depthwise_temperature"], bool):
+        raise TypeError(
+            "enable_depthwise_temperature 须为 bool，实际 "
+            f"{type(opts['enable_depthwise_temperature']).__name__}"
+        )
+    if opts["enable_depthwise_temperature"] and not opts["enable_temperature_rheology"]:
+        # 同 temperature_mode 的「标签失真」家族：逐列开关只在 T-on 路径被消费，
+        # T-off 时静默空转（solver 侧另有 dead-switch 告警）⇒ 此处响亮报错。
+        raise ValueError(
+            "enable_depthwise_temperature=True 但 enable_temperature_rheology=False："
+            "逐列温度不会被消费，请开温度开关"
         )
     pmode = opts["pressure_mode"]
     if pmode not in PRESSURE_MODES:
@@ -454,6 +472,11 @@ def annulus_kwargs_from_opts(opts: dict) -> dict:
     # False/缺键 ⇒ 不出键 ⇒ solver 用构造默认 False ⇒ 与 HEAD 逐位（关 2 红线）。
     if opts["include_yield_term"]:
         kw["include_yield_term"] = True
+    # 5d-③（2026-10-07）：Phase 4b 逐列温度开关。**仅 True 时出键**（同 include_yield_term
+    # 模式：默认值不产生额外 kwarg ⇒ 既有契约测试的"缺省逐键等于扩展前"不变量保持）。
+    # ⚠️ 只有 annulus 有本形参；casing 侧不得出键。
+    if opts["enable_depthwise_temperature"]:
+        kw["enable_depthwise_temperature"] = True
     return kw
 
 

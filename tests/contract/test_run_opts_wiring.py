@@ -282,8 +282,9 @@ def test_temperature_modes_registry_grew_without_touching_default():
     assert set(("off", "static", "table", "const60")) <= set(TEMPERATURE_MODES)
     assert normalize_run_opts(None)["temperature_mode"] == "off"
     assert normalize_run_opts(None)["enable_temperature_rheology"] is False
-    # run_opts 键面未扩（本波不接 run_opts，计划 §3-2 留 5d）
-    assert "enable_depthwise_temperature" not in RUN_OPTS_KEYS
+    # 5d-③（2026-10-07）：逐列温度开关已进 run_opts（4d 时该断言为"未接线"状态快照，随 5d 接线翻转）
+    assert "enable_depthwise_temperature" in RUN_OPTS_KEYS
+    assert normalize_run_opts(None)["enable_depthwise_temperature"] is False
 
 
 def test_anchored_registry_matches_spec_table():
@@ -342,3 +343,46 @@ def test_table_ext_loads_extended_shape_or_skips():
     assert f2.table.shape == (333, 362)
     assert float(f1.time_s[-1]) == pytest.approx(21600.0)
     assert note
+
+
+# --------------------------------------------------------------------------- #
+# 6. 5d-③：enable_depthwise_temperature 接线（计划 §3-2 三件套）
+# --------------------------------------------------------------------------- #
+def test_depthwise_key_reaches_annulus_only():
+    """新键**到达 annulus** 且 **casing 侧不出键**（不对称陷阱，同 stream_yield_gate）。"""
+    opts = normalize_run_opts({
+        "enable_temperature_rheology": True, "temperature_mode": "static",
+        "enable_depthwise_temperature": True,
+    })
+    ann = annulus_kwargs_from_opts(opts)
+    cas = casing_kwargs_from_opts(opts)
+    assert ann.get("enable_depthwise_temperature") is True
+    assert "enable_depthwise_temperature" not in cas
+    assert "enable_depthwise_temperature" in _ANNULUS_PARAMS
+    assert "enable_depthwise_temperature" not in _CASING_PARAMS
+
+
+def test_depthwise_default_emits_no_key():
+    """默认 False ⇒ **不出键**（关2：缺省逐键等于扩展前口径）。"""
+    opts = normalize_run_opts({"enable_temperature_rheology": True,
+                               "temperature_mode": "static"})
+    assert "enable_depthwise_temperature" not in annulus_kwargs_from_opts(opts)
+
+
+def test_depthwise_type_and_cross_guard():
+    """非 bool 响亮报错；逐列开而温度关 ⇒ 响亮报错（"标签失真"家族）。"""
+    with pytest.raises(TypeError):
+        normalize_run_opts({"enable_depthwise_temperature": "yes"})
+    with pytest.raises(ValueError):
+        normalize_run_opts({"enable_depthwise_temperature": True,
+                            "enable_temperature_rheology": False})
+
+
+def test_t2_opts_carries_depthwise_through():
+    """T2 `_opts()` **形参与返回键双改**（只改形参会被 normalize 静默补默认）。"""
+    from entrypoints.run_sensitivity_temperature_t2_20261001 import _opts
+    o = _opts("static", depthwise=True)
+    assert o["enable_depthwise_temperature"] is True
+    assert annulus_kwargs_from_opts(normalize_run_opts(o))[
+        "enable_depthwise_temperature"] is True
+    assert _opts("static")["enable_depthwise_temperature"] is False

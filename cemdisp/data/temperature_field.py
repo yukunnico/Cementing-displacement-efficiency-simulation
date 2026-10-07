@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import re
 import zipfile
+from collections import deque
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional, Tuple
@@ -67,6 +68,12 @@ DEFAULT_DEPTH_CSV = (
     DEFAULT_DATA_DIR / "HT1-004压力计算" / "呼1-004井身结构.csv"
 )
 
+# 越界审计事件列表上限（Phase 5b-①：deque 定长同型化，与
+# `rheology_vs_temperature._AUDIT_MAX` 同一策略——超限丢最旧，内存有界）。
+# 语义说明：诊断事件列表是**观测窗**而非完整日志；批量列路径本就"每批至多 1 条"，
+# 定长只影响极端越界场景下的保留窗口，不影响 `oob_column_clamped_total`（累加计数不丢）。
+_OOB_AUDIT_MAX = 10000
+_CACHE_VERSION = 2   # npz 缓存版本（Phase 5b-②：加指纹后升版）
 EXPECTED_SHAPE: Tuple[int, int] = (333, 200)  # 深度 333 点 × 时间 200 列
 # ---- Phase 4d 版本感知登记表（交付路径逐位不变；扩展表须经 load_extended_pair_4d）----
 # 扩展表 = HT1_004_T.m 沙箱扩时程产物：0..198 min 逐分钟 + 施工终点 198.792801 min
@@ -267,7 +274,7 @@ class AnchoredProfileField:
         self.source = source
         # 域外回退线复用统一地温场（单一真源常量，不复制字面量）
         self._geo = GeothermalTemperatureField()
-        self._oob_events: List[ClampEvent] = []
+        self._oob_events: deque = deque(maxlen=_OOB_AUDIT_MAX)
         self._oob_column_clamped_total = 0
 
     # -- 内部：静温基准线（域外按回退开关） ----------------------------------
@@ -464,7 +471,7 @@ class TableTemperatureField:
         self.depth_m = z
         self.time_s = t
         self.source = Path(source) if source is not None else None
-        self._oob_events: List[ClampEvent] = []
+        self._oob_events: deque = deque(maxlen=_OOB_AUDIT_MAX)
         self._oob_column_clamped_total: int = 0
 
     # -- 审计 ---------------------------------------------------------------
@@ -629,20 +636,36 @@ class TableTemperatureField:
         return field
 
     @staticmethod
+    def _cache_fingerprint(table: np.ndarray, depth_m: np.ndarray,
+                           time_s: np.ndarray) -> str:
+        """内容指纹：三个数组的字节流 sha256（截断 16 位十六进制）。"""
+        import hashlib
+        h = hashlib.sha256()
+        for arr in (table, depth_m, time_s):
+            a = np.ascontiguousarray(np.asarray(arr, dtype=np.float64))
+            h.update(str(a.shape).encode("ascii"))
+            h.update(a.tobytes())
+        return h.hexdigest()[:16]
+
+    @staticmethod
     def _load_cache(
         cache_path: Path,
     ) -> Optional[Tuple[np.ndarray, np.ndarray, str, np.ndarray]]:
         try:
             with np.load(cache_path, allow_pickle=False) as data:
                 keys = set(data.files)
-                if not {"table", "depth_m", "time_s", "source"} <= keys:
+                if not {"table", "depth_m", "time_s", "source",
+                        "cache_version", "fingerprint"} <= keys:
+                    return None        # 旧版缓存（无指纹）⇒ 视为未命中
+                if int(np.asarray(data["cache_version"]).ravel()[0]) != _CACHE_VERSION:
                     return None
-                return (
-                    np.asarray(data["table"], dtype=float),
-                    np.asarray(data["depth_m"], dtype=float),
-                    str(data["source"]),
-                    np.asarray(data["time_s"], dtype=float),
-                )
+                t = np.asarray(data["table"], dtype=float)
+                z = np.asarray(data["depth_m"], dtype=float)
+                ts = np.asarray(data["time_s"], dtype=float)
+                if TableTemperatureField._cache_fingerprint(t, z, ts) != str(
+                        np.asarray(data["fingerprint"]).ravel()[0]):
+                    return None        # 指纹不符（损坏/被改写）⇒ 回退解析源文件
+                return t, z, str(data["source"]), ts
         except Exception:
             # 缓存损坏/不可读 → 视为未命中，回退解析源文件
             return None
@@ -658,6 +681,9 @@ class TableTemperatureField:
             depth_m=field.depth_m,
             time_s=field.time_s,
             source=np.str_(str(xlsx_path)),
+            cache_version=np.int64(_CACHE_VERSION),
+            fingerprint=np.str_(TableTemperatureField._cache_fingerprint(
+                field.table, field.depth_m, field.time_s)),
         )
 
 
