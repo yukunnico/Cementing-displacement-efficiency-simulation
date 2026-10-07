@@ -83,6 +83,13 @@ __all__ = [
     "bottom_window_backpressure",
     "compare_with_reference",
     "run_ht1004_target",
+    # P-4 泛化附加（Phase 3.2，纯加法入口）
+    "fluid_table_from",
+    "build_pump_schedule_custom",
+    "build_segments_custom",
+    "track_casing_interfaces_custom",
+    "assign_casing_properties_custom",
+    "run_well_forward",
 ]
 
 # --------------------------------------------------------------------------
@@ -1473,4 +1480,310 @@ def run_ht1004_target(sandbox_dir: Path) -> Dict[str, object]:
         "annulus_static_MPa": ann["P_static_MPa"],
         "tvd_cum_m1b": ecd["TVD_cum_guarded_m1b"],
         "pr_seg": segs.pr_seg,
+    }
+
+
+# ==========================================================================
+# P-4 泛化附加块（Phase 3.2，2026-10-07）——纯加法：
+# 不改动上方任何函数；run_ht1004_target 数值路径零改动（契约测试钉住）。
+# 用途 = 呼101/呼1-003 正演产品口径（无 MATLAB 靶，不背原样复现红线，
+# 但公式/乘序/单位镜像内核，与靶链同口径可比）。
+# ==========================================================================
+
+
+def fluid_table_from(
+    rates_Lmin, vols_L, rou_gcc, miu_mPas, tau_Pa, rou0, miu0, tau0,
+    dt_min=1.0, bp_MPa=None,
+):
+    """通用流体表构造（N 路；前 5 路必须 = 进环空流体，S8/S9 五界面模型硬约束）。"""
+    n = len(rates_Lmin)
+    if n < 5:
+        raise ValueError("环空侧按 5 界面建模（S8/S9），流体路数必须 >= 5")
+    for name, seq in (("vols_L", vols_L), ("rou_gcc", rou_gcc),
+                      ("miu_mPas", miu_mPas), ("tau_Pa", tau_Pa)):
+        if len(seq) != n:
+            raise ValueError(name + " 长度与 rates 不符")
+    bp = tuple(0.0 for _ in range(n)) if bp_MPa is None else tuple(float(x) for x in bp_MPa)
+    if len(bp) != n:
+        raise ValueError("bp_MPa 长度与路数不符")
+    return FluidTable(
+        dt_min=dt_min,
+        rates_Lmin=tuple(float(x) for x in rates_Lmin),
+        vols_L=tuple(float(x) for x in vols_L),
+        rou0=float(rou0), miu0=float(miu0), tau0=float(tau0),
+        rou_gcc=tuple(float(x) for x in rou_gcc),
+        miu_mPas=tuple(float(x) for x in miu_mPas),
+        tau_Pa=tuple(float(x) for x in tau_Pa),
+        bp_MPa=bp,
+    )
+
+
+def build_pump_schedule_custom(fluids):
+    """S7 通用版（N 路）。分支序镜像 :291-335 边界归属习惯：
+    第 1 路 t<node1；第 2/3 路以 >= 起；第 4 路起以 > 起（先命中先赢）；
+    越过末节点 = 停泵（pump=0，与原样一致）。无 :733 类靶专属偏置。"""
+    rates = fluids.rates_Lmin
+    vols = fluids.vols_L
+    n_f = len(rates)
+    total_min = 0.0
+    for v, r in zip(vols, rates):
+        total_min += v / r
+    n_time = int(math.floor(total_min / fluids.dt_min))
+    nodes = []
+    acc = 0.0
+    for v, r in zip(vols, rates):
+        acc += v / r
+        nodes.append(acc / fluids.dt_min)
+    pump = np.zeros(n_time + 1)
+    bp = np.zeros(n_time + 1)
+    vol_all = np.zeros(n_time + 1)
+    q = np.zeros(n_time + 1)
+    pump[1] = rates[0]
+    bp[1] = fluids.bp_MPa[0]
+    vol_all[1] = pump[1] * fluids.dt_min
+    for t in range(2, n_time + 1):
+        tv = float(t)
+        k = None
+        if tv < nodes[0]:
+            k = 0
+        elif n_f >= 2 and tv >= nodes[0] and tv <= nodes[1]:
+            k = 1
+        elif n_f >= 3 and tv >= nodes[1] and tv <= nodes[2]:
+            k = 2
+        else:
+            for j in range(3, n_f):
+                if tv > nodes[j - 2] and tv <= nodes[j - 1]:
+                    k = j
+                    break
+        if k is None:
+            pump[t] = 0.0
+            bp[t] = 0.0
+        else:
+            pump[t] = rates[k]
+            bp[t] = fluids.bp_MPa[k]
+        vol_all[t] = vol_all[t - 1] + pump[t] * fluids.dt_min
+    q[1:] = np.asarray([((float(p) / 60.0) / 1000.0) for p in pump[1:]])
+    return PumpSchedule(
+        n_time=n_time, dt_min=fluids.dt_min, nodes_min=nodes,
+        pump_Lmin_1b=pump, bp_MPa_1b=bp, vol_all_L_1b=vol_all, q_m3s_1b=q,
+    )
+
+
+def build_segments_custom(structure, thresholds_m, bore_const_mm, pipe_od_mm,
+                          pipe_wall_mm, pianxin=True):
+    """S2/S3/S6 通用版。K = len(thresholds)+1 段（靶 = 7 段硬编码；此处参数化）。
+
+    - thresholds_m：升序变径/变段分界 MD [m]；
+    - bore_const_mm：逐段井眼/套管内径常数 [mm]，None = 取 CSV 名义直径列（靶段 4-7 语义）。
+      靶语义注记：段 1-3 常数 245.37 = 273.1 套管 ID —— 传值一律按**直径**口径
+      （legacy "radius 列实为直径"陷阱不在此参数上）；
+    - pipe_od_mm / pipe_wall_mm：逐段管串外径/壁厚 [mm]（ID = OD - 2*wall）。
+    其余几何/容积链/PR 运算与 build_segments 同式同序。
+    """
+    thr = [float(x) for x in thresholds_m]
+    K = len(thr) + 1
+    if not (len(bore_const_mm) == len(pipe_od_mm) == len(pipe_wall_mm) == K):
+        raise ValueError("thresholds/常数表段数不符（K = len(thresholds)+1）")
+    n = structure.n_segment
+    cd = structure.c_depth_m
+    masks = []
+    for j, t in enumerate(thr):
+        lo = thr[j - 1] if j > 0 else float("-inf")
+        masks.append((cd > lo) & (cd <= t))
+    masks.append(cd > thr[-1])
+    d_bit = np.zeros(n)
+    d_out = np.zeros(n)
+    d_in = np.zeros(n)
+    for k, m in enumerate(masks):
+        bc = bore_const_mm[k]
+        if bc is not None:
+            d_bit[m] = float(bc) * 0.001
+        else:
+            d_bit[m] = structure.hole_dia_cm[m] * 0.01
+        od = float(pipe_od_mm[k])
+        wt = float(pipe_wall_mm[k])
+        d_out[m] = od * 0.001
+        d_in[m] = (od - wt * 2) * 0.001
+    area_cout = math.pi * (d_bit**2 - d_out**2) / 4.0
+    area_cin = math.pi * (d_in**2) / 4.0
+    out_diam_bole = structure.hole_dia_cm * 10.0
+    vol_cas_seg = area_cin * structure.seg_len_m
+    capacity_m3 = _sum_seq(vol_cas_seg)
+    capacity_L = capacity_m3 * 1000.0
+    cos_deg = np.array([math.cos(math.radians(float(dg))) for dg in structure.deg])
+    vert_len = np.abs(structure.seg_len_m * cos_deg)
+    tvd_cum = np.asarray(_cumsum_seq(vert_len))
+    d_i = d_out.copy()
+    d_o = structure.hole_dia_cm / 100.0
+    vab = np.zeros(n)
+    for i in range(n):
+        vab[i] = _sum_seq(structure.vol_annulus_L[i:])
+    vtop = np.zeros(n)
+    prod_cin = area_cin * structure.seg_len_m
+    for i in range(n):
+        vtop[i] = _sum_seq(prod_cin[: i + 1]) * 1000.0
+    pr_seg = []
+    for m in masks:
+        if np.any(m):
+            mean_dole = _mean_seq(out_diam_bole[m])
+            mean_cas = _mean_seq(d_out[m]) * 1000.0
+            pr_seg.append(friction_pr(mean_dole, mean_cas))
+        else:
+            pr_seg.append(0.0)
+    pr = np.zeros(n)
+    for i in range(n):
+        c = float(cd[i])
+        pr[i] = pr_seg[K - 1]
+        for j, t in enumerate(thr):
+            if c <= t:
+                pr[i] = pr_seg[j]
+                break
+    a_annulus = structure.sq_annulus_dm2 / 100.0
+    return Segments(
+        n=n,
+        c_depth_m1b=_pad1(cd),
+        seg_len_m1b=_pad1(structure.seg_len_m),
+        sq_annulus_dm2_1b=_pad1(structure.sq_annulus_dm2),
+        d_bit_m1b=_pad1(d_bit),
+        d_cas_out_m1b=_pad1(d_out),
+        d_cas_in_m1b=_pad1(d_in),
+        out_diam_bole_mm1b=_pad1(out_diam_bole),
+        area_cout_m2_1b=_pad1(area_cout),
+        area_cin_m2_1b=_pad1(area_cin),
+        d_i_m1b=_pad1(d_i),
+        d_o_m1b=_pad1(d_o),
+        A_annulus_m2_1b=_pad1(a_annulus),
+        cos_deg_1b=_pad1(cos_deg),
+        vert_len_m1b=_pad1(vert_len),
+        tvd_cum_m1b=_pad1(tvd_cum),
+        vab_L1b=_pad1(vab),
+        vtop_L1b=_pad1(vtop),
+        capacity_pipe_L=capacity_L,
+        seg_masks=masks,
+        pr_seg=pr_seg,
+        pr_1b=_pad1(pr),
+    )
+
+
+def track_casing_interfaces_custom(sched, segs, fluids):
+    """S11 通用版（N 界面）。阈值链同 :738-774；不携带 :733 +1200 L 靶专属偏置
+    （原样复现红线仅约束 run_ht1004_target；正演产品口径按干净语义）。"""
+    nt = sched.n_time
+    n_f = len(fluids.vols_L)
+    dt = sched.dt_min
+    vol_c = np.zeros((n_f, nt + 1))
+    thr = [0.0]
+    acc = 0.0
+    for k in range(1, n_f):
+        acc += fluids.vols_L[k - 1]
+        thr.append(acc)
+    for t in range(2, nt + 1):
+        for k in range(n_f):
+            if sched.vol_all_L_1b[t] > thr[k]:
+                vol_c[k, t] = vol_c[k, t - 1] + sched.pump_Lmin_1b[t] * dt
+    tags = np.zeros((nt, n_f))
+    res_h = np.zeros((nt, n_f))
+    for t in range(1, nt + 1):
+        for k in range(n_f):
+            tag, _rv, rh = _casing_interface_scan(
+                float(vol_c[k, t]), segs.vtop_L1b, segs.area_cin_m2_1b, segs.n)
+            tags[t - 1, k] = tag
+            res_h[t - 1, k] = rh
+    return vol_c, tags, res_h
+
+
+def assign_casing_properties_custom(tags, res_h, sched, segs, fluids):
+    """S11 属性分配通用版（N 流体链，方向对偶同 :1119-1279；无 :1153 legacy 分支）。"""
+    nt, n = sched.n_time, segs.n
+    N = len(fluids.rou_gcc)
+    R = list(fluids.rou_gcc)
+    M = list(fluids.miu_mPas)
+    T = list(fluids.tau_Pa)
+    R0, M0, T0 = fluids.rou0, fluids.miu0, fluids.tau0
+    plen = segs.seg_len_m1b
+    acin = segs.area_cin_m2_1b
+    pump = sched.pump_Lmin_1b
+    rou = np.zeros((nt + 1, n + 1))
+    miu = np.zeros((nt + 1, n + 1))
+    tau = np.zeros((nt + 1, n + 1))
+    velo = np.zeros((nt + 1, n + 1))
+    for t in range(1, nt + 1):
+        tc = tags[t - 1]
+        for i in range(1, n + 1):
+            if i > tc[0]:
+                rou[t, i], miu[t, i], tau[t, i] = R0, M0, T0
+            elif i == tc[0]:
+                p = min(max(res_h[t - 1, 0] / plen[i], 0.0), 1.0)
+                q = 1.0 - p
+                rou[t, i] = p * R0 + q * R[0]
+                miu[t, i] = p * M0 + q * M[0]
+                tau[t, i] = p * T0 + q * T[0]
+            else:
+                placed = False
+                for k in range(1, N):
+                    if tc[k] < i < tc[k - 1]:
+                        rou[t, i], miu[t, i], tau[t, i] = R[k], M[k], T[k]
+                        placed = True
+                        break
+                    if i == tc[k]:
+                        p = min(max(res_h[t - 1, k] / plen[i], 0.0), 1.0)
+                        q = 1.0 - p
+                        rou[t, i] = p * R[k] + q * R[k + 1]
+                        miu[t, i] = p * M[k] + q * M[k + 1]
+                        tau[t, i] = p * T[k] + q * T[k + 1]
+                        placed = True
+                        break
+                if not placed and i < tc[N - 1]:
+                    rou[t, i], miu[t, i], tau[t, i] = R[N - 1], M[N - 1], T[N - 1]
+            if pump[t] > 0:
+                velo[t, i] = ((pump[t] / 1000.0) / 60.0) / acin[i]
+            else:
+                velo[t, i] = 0.0
+    return {"rou_gcc": rou, "miu_mPas": miu, "tau_Pa": tau, "velo_m_s": velo}
+
+
+def run_well_forward(structure, segs, fluids, sched):
+    """P-4 正演装配（复用靶内核全链；无 S16/S19-S22/S25——那些是呼1-004 靶专属窗口/对比）。
+
+    返回：泵压时程 [MPa]、环空井底压力 [MPa]、井底环空/管内 ECD [g/cm3]、
+    cumvol [m3]、summary 标量组。
+    """
+    nt, n = sched.n_time, segs.n
+    vol_a = annulus_entry_volumes(sched, segs, fluids)
+    tags_a, res_h_a = track_annulus_interfaces(vol_a, segs, _pad1(structure.deg))
+    props_a = assign_annulus_properties(tags_a, res_h_a, sched, segs, fluids)
+    ann = hydrostatic_and_friction_chain(segs, props_a, sched)
+    vol_c, tags_c, res_h_c = track_casing_interfaces_custom(sched, segs, fluids)
+    props_c = assign_casing_properties_custom(tags_c, res_h_c, sched, segs, fluids)
+    st_c = casing_static_chain(props_c, segs, nt)
+    cas = pump_pressure_backtrack(segs, props_c, sched, ann["P_total_Pa"], st_c["P_static_Pa"])
+    ecd = compute_ecd_esd(ann["P_total_Pa"], ann["P_static_Pa"], cas["P_casing_Pa"],
+                          segs.tvd_cum_m1b, nt, n)
+    pump1 = cas["pump_surface_MPa"][1:]
+    ecd_bot = ecd["ECD_annulus_g_cm3"][1:, n]
+    ecd_cas_bot = ecd["ECD_casing_g_cm3"][1:, n]
+    p_bot = ann["P_total_MPa"][1:, n]
+    cumvol1 = np.asarray([sched.vol_all_L_1b[t] / 1000.0 for t in range(1, nt + 1)])
+    summary = {
+        "n_time": nt,
+        "n_segment": n,
+        "n_fluid_paths": len(fluids.vols_L),
+        "min_pump_MPa": float(np.min(pump1)),
+        "max_pump_MPa": float(np.max(pump1)),
+        "max_annuli_bottom_MPa": float(np.max(p_bot)),
+        "min_bottom_ECD_g_cm3": float(np.min(ecd_bot)),
+        "max_bottom_ECD_g_cm3": float(np.max(ecd_bot)),
+        "min_bottom_ECD_casing_g_cm3": float(np.min(ecd_cas_bot)),
+        "max_bottom_ECD_casing_g_cm3": float(np.max(ecd_cas_bot)),
+        "capacity_pipe_L": float(segs.capacity_pipe_L),
+        "TVD_bottom_m": float(segs.tvd_cum_m1b[n]),
+        "nan_inf_count": int(np.sum(~np.isfinite(pump1)) + np.sum(~np.isfinite(ecd_bot))),
+    }
+    return {
+        "pump_MPa": pump1, "ann_bottom_MPa": p_bot,
+        "ecd_bottom_annulus_g_cm3": ecd_bot, "ecd_bottom_casing_g_cm3": ecd_cas_bot,
+        "cumvol_m3": cumvol1, "ecd_ann_full": ecd["ECD_annulus_g_cm3"][1:, 1:],
+        "ecd_cas_full": ecd["ECD_casing_g_cm3"][1:, 1:],
+        "flow_pattern_ann": ann["flow_pattern"][1:, 1:],
+        "sched_nodes_min": sched.nodes_min, "summary": summary,
     }
