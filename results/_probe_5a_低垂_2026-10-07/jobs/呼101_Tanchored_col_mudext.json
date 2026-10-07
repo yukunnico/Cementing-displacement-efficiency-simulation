@@ -1,0 +1,55 @@
+{
+ "tag": "呼101_Tanchored_col_mudext",
+ "井名": "呼101",
+ "档": "anchored",
+ "note": "",
+ "η_E": 0.9688857822961399,
+ "η_N": 0.895995293983719,
+ "elapsed_s": 113.0,
+ "配置": {
+  "mud_extrapolate": true,
+  "gap_law": true,
+  "depthwise": true,
+  "nz": 250,
+  "stop_t_s": 13742.727272727272
+ },
+ "extra": {
+  "饥饿份额": 0.00460302053225022,
+  "front_narrow_m": 2368.883534136546,
+  "front_wide_m": 2398.6184738955826,
+  "interface_length_ratio": 0.012474,
+  "屈服门活化率_b加权": 0.22614042992213246,
+  "屈服门_wall占比": 0.6633,
+  "stop_t_s": 13742.727272727272,
+  "温度审计_oob": 6669,
+  "温度流变审计": {
+   "extrapolate": 1,
+   "p_default": 1,
+   "nearest": 1
+  }
+ },
+ "health": {
+  "步数": 6662,
+  "cfl_clip_events": 0,
+  "col_memo_size": 16
+ },
+ "冻结判据": {
+  "verdict": "完全冻结",
+  "冻结占比": 1.0,
+  "tau_y_min_pa": {
+   "min": 5.992304404587902,
+   "median": 10.122280250880262,
+   "max": 21.08791936697874
+  },
+  "eccentricity": {
+   "min": 0.5205879518072289,
+   "max": 0.6196787148594378
+  },
+  "delta_rho_az_kg_m3_median": 0.05380374086993722,
+  "driving_pa_median": 0.00013134169327385715,
+  "driving_pa_max": 0.002654479888705416,
+  "resisting_pa_median": 6.478158071490527,
+  "ratio_p05": 1685.7016721385733,
+  "ratio_p50": 78770.82197298096
+ }
+}

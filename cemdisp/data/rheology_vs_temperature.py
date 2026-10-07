@@ -35,7 +35,8 @@ from typing import Optional
 
 from cemdisp.data.fluid_spec import FluidRole, FluidSpec, RheologyModel
 
-__all__ = ["RheologyFormulaParams", "fluid_at", "get_audit", "reset_audit"]
+__all__ = ["RheologyFormulaParams", "fluid_at", "get_audit", "reset_audit",
+           "is_replaced"]
 
 
 # ---------------------------------------------------------------------------
@@ -264,6 +265,28 @@ def _route(fluid: FluidSpec) -> tuple[str, Optional[str]]:
     if role in (FluidRole.LEAD, FluidRole.TAIL, FluidRole.INTERMEDIATE):
         return "cement", None                   # 中间浆并入水泥档（补裁③）
     return "no_replace", "unmatched"
+
+
+def is_replaced(fluid: FluidSpec,
+                params: Optional[RheologyFormulaParams] = None) -> bool:
+    """该相在温变公式分派表中**是否会被替换**（与 `fluid_at` 判据同源、单一真源）。
+
+    Phase 5a-②（2026-10-07）新增：T-on 下「未覆盖水泥相丢 hb_fix 常数回落」的判定入口。
+    ``False`` ⇔ `fluid_at` 会**原样返回同一对象**（no_replace 族：冲洗液/替浆链/不匹配），
+    或水泥相密度越出捕获区 ``[cm_lo, cm_hi]``。
+
+    实现与 `fluid_at` 逐条对应、不复制判据逻辑：``_route`` 定族 → ``no_replace``
+    直接 False；``cement`` 族再看 `_cement_values` 的密度门（其返回 None 的唯一条件即
+    ``not (cm_lo <= d <= cm_hi)``，与 T 无关）；``mud``/``spacer`` 恒 True。
+    """
+    family, _note = _route(fluid)
+    if family == "no_replace":
+        return False
+    if family == "cement":
+        p = _DEFAULT_PARAMS if params is None else params
+        d = fluid.density_kg_m3 / 1000.0
+        return bool(p.cm_lo <= d <= p.cm_hi)
+    return True                                 # mud / spacer
 
 
 # ---------------------------------------------------------------------------

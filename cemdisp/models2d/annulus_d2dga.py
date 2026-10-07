@@ -79,6 +79,7 @@ from cemdisp.data.rheology_vs_temperature import (
     RheologyFormulaParams,
     fluid_at,
     get_audit as get_rheo_audit,
+    is_replaced as is_temperature_replaced,
     reset_audit as reset_rheo_audit,
 )
 from cemdisp.data.temperature_field import ConstantTemperatureField
@@ -1568,9 +1569,21 @@ class AnnulusD2DGASolver:
         （未被公式覆盖的相保留静态参数，其 τy 贡献按 spec 取值/0）；
         T-off：走既有 `_cement_phase_yield_stress`（常数机制照旧，逐位 = HEAD）。
         """
-        if self.enable_temperature_rheology:
+        # Phase 5a-②（2026-10-07）：T-on **覆盖优先、未覆盖回落**——
+        # 原实现 T-on 下无条件走公式态，绕过 `hb_fix_cement_tau_y` 常数机制 ⇒
+        # 公式未覆盖的水泥相（密度越出捕获区）丢失常数回落（方案 §4 病灶②）。
+        # 现加覆盖判定：被覆盖相仍走公式 τy（绝对替换裁定不变）；
+        # 未覆盖相回落 `_cement_phase_yield_stress`（T-off 同一路径）。
+        # 关2：`hb_fix_cement_tau_y=False`（生产默认）时两支同为
+        # `_fluid_yield_stress` ⇒ **默认路径逐位不变**。
+        if self._is_col_bundle(fluid):
+            base = self._scalar_of(fluid)      # 列版 bundle ⇒ 解包判覆盖（标量语义）
+        else:
+            base = fluid
+        if (self.enable_temperature_rheology
+                and is_temperature_replaced(base, self.rheology_formula_params)):
             return self._fluid_yield_stress(fluid)
-        return self._cement_phase_yield_stress(fluid)
+        return self._cement_phase_yield_stress(base)
 
     @staticmethod
     def _yield_gate_wall(w, b, mu_reg, tau_y, cement_ever, cement_local,

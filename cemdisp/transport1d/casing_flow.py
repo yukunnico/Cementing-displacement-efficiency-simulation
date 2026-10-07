@@ -161,6 +161,7 @@ class CasingFlowSolver:
         mixing_enhancement_factor: float = 5.0,
         max_mixing_enhancement: float = 10.0,
         has_plug: bool = False,
+        bingham_pv_fix: bool = False,   # Phase 5a-③：宾汉 PV 回退修复（默认关 ⇒ 逐位=HEAD）
         mixing_contact_time: bool = False,
         plug_face_zero_mixing: bool = False,
         # T1-3（2026-10-01 温压耦合 Task 8）：温变流变总开关 + 构造层恒温
@@ -289,6 +290,7 @@ class CasingFlowSolver:
         self.mixing_enhancement_factor: float = mixing_enhancement_factor
         self.max_mixing_enhancement: float = max_mixing_enhancement
         self.has_plug: bool = has_plug
+        self.bingham_pv_fix: bool = bool(bingham_pv_fix)
         self.mixing_contact_time: bool = mixing_contact_time
         self.plug_face_zero_mixing: bool = plug_face_zero_mixing
         # ------------------------------------------------------------------ #
@@ -734,6 +736,17 @@ class CasingFlowSolver:
             return fluid.plastic_viscosity_pa_s or 0.01
 
         tau_y = fluid.yield_stress_pa or 0.0
+        if fluid.rheology_model == RheologyModel.BINGHAM and self.bingham_pv_fix:
+            # 5a-③（2026-10-07）：宾汉丢 PV 地雷修复（**默认关**，见下）——Dai 2024 A.11 的
+            # μ_eff = τ₀/(u/D) + k·(u/D)^(n-1) 中，宾汉的 k ≡ PV、n ≡ 1；
+            # 原实现走 `consistency_k or 0.01`（宾汉 consistency_k 恒 None）
+            # ⇒ 返回 τy/γ̇ + 0.01，**PV 被 0.01 顶掉**。缺 PV 时才回退 0.01
+            # （沿用原「缺值回退」语义，不新增行为）。
+            # 可达性：本入口唯一消费方 `_interface_instability_factor` 被
+            # `has_plug=True` 短路（8 井生产全 has_plug）⇒ 生产不可达，
+            # 本次修复对 T-off/T-on 生产数字零影响（逐位）。
+            pv = fluid.plastic_viscosity_pa_s
+            return tau_y / shear_rate + (0.01 if pv is None else pv)
         k_cons = fluid.consistency_k or 0.01
         n = fluid.power_law_n if fluid.power_law_n is not None else 1.0
 
