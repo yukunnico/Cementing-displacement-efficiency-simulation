@@ -1,0 +1,128 @@
+{
+ "shapes": {
+  "delivered_T_in": [
+   333,
+   200
+  ],
+  "delivered_T_out": [
+   333,
+   200
+  ],
+  "ext_T_in": [
+   333,
+   362
+  ],
+  "ext_T_out": [
+   333,
+   362
+  ],
+  "axis_len": 362,
+  "depth_len": 333
+ },
+ "axis": {
+  "first200_equals_delivered_true_axis": true,
+  "axis_max_s": 21600.0,
+  "delivered_true_end_s": 11927.568063332099,
+  "monotonic": true,
+  "steps_after_col199_min": [
+   0.20719894446500575,
+   1.0,
+   1.0
+  ]
+ },
+ "T_in": {
+  "n_exact": 66600,
+  "n_gt_1e-12": 0,
+  "n_gt_1e-9": 0,
+  "max_abs_diff": 0.0,
+  "mean_abs_diff": 0.0,
+  "extension_segment": {
+   "col200_end_s_note": "col199=施工终点198.7928min；col200 起为 199..360 min 扩展段",
+   "depth_last_row_over_ext": {
+    "at_199min": 102.21450069538189,
+    "at_250min": 100.32796927526994,
+    "at_300min": 99.20179325260706,
+    "at_360min": 97.78866910577477
+   },
+   "depth_30m_row_over_ext": {
+    "at_199min": 16.527999998701688,
+    "at_360min": 16.527999998701688
+   },
+   "colmonotone_last_row": true
+  }
+ },
+ "T_out": {
+  "n_exact": 66600,
+  "n_gt_1e-12": 0,
+  "n_gt_1e-9": 0,
+  "max_abs_diff": 0.0,
+  "mean_abs_diff": 0.0,
+  "extension_segment": {
+   "col200_end_s_note": "col199=施工终点198.7928min；col200 起为 199..360 min 扩展段",
+   "depth_last_row_over_ext": {
+    "at_199min": 102.21450069538189,
+    "at_250min": 100.32796927526994,
+    "at_300min": 99.20179325260706,
+    "at_360min": 97.78866910577477
+   },
+   "depth_30m_row_over_ext": {
+    "at_199min": 35.44989063065722,
+    "at_360min": 33.74181928793224
+   },
+   "colmonotone_last_row": true
+  }
+ },
+ "bottom_row_shared": true,
+ "stop_t_coverage": {
+  "r0.6_Toff": {
+   "stop_t_s": 19016.017281054297,
+   "covered_by_ext": true,
+   "covered_by_delivered": false,
+   "margin_s_vs_ext_end": 2583.982718945703
+  },
+  "r0.6_Ton_const60": {
+   "stop_t_s": 19016.017281054297,
+   "covered_by_ext": true,
+   "covered_by_delivered": false,
+   "margin_s_vs_ext_end": 2583.982718945703
+  },
+  "r0.6_Ton_static": {
+   "stop_t_s": 19016.017281054297,
+   "covered_by_ext": true,
+   "covered_by_delivered": false,
+   "margin_s_vs_ext_end": 2583.982718945703
+  },
+  "r0.6_Ton_table": {
+   "stop_t_s": 19016.017281054297,
+   "covered_by_ext": true,
+   "covered_by_delivered": false,
+   "margin_s_vs_ext_end": 2583.982718945703
+  },
+  "r0.8_Toff": {
+   "stop_t_s": 14262.0,
+   "covered_by_ext": true,
+   "covered_by_delivered": false,
+   "margin_s_vs_ext_end": 7338.0
+  },
+  "r0.8_Ton_static": {
+   "stop_t_s": 14262.0,
+   "covered_by_ext": true,
+   "covered_by_delivered": false,
+   "margin_s_vs_ext_end": 7338.0
+  },
+  "r1.0_baseline": {
+   "stop_t_s": 11409.6,
+   "covered_by_ext": true,
+   "covered_by_delivered": true,
+   "margin_s_vs_ext_end": 10190.4
+  }
+ },
+ "verdict": {
+  "history_unchanged_T_in": true,
+  "history_unchanged_T_out": true,
+  "r06_covered": true,
+  "r08_covered": true
+ },
+ "bottom_row_note": "约定=最深行两表同值；全表同值不适用（管内/环空上部本应异值）。此前置检查误比全表，已纠正。",
+ "bottom_row_criterion": "np.allclose(atol=1e-9) 与 load_delivered_pair 同约定；井底行 max|Δ|=1.42e-14"
+}

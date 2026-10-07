@@ -1,0 +1,30 @@
+{
+ "extended_load": {
+  "shape": [
+   333,
+   362
+  ],
+  "axis_end_s": 21600.0,
+  "axis_col199_s": 11927.568063332099,
+  "first200_equals_delivered_bitwise": true
+ },
+ "assert_on_delivered_raises": {
+  "r0.6": true,
+  "r0.8": true,
+  "r1.0": false,
+  "r1.2": false
+ },
+ "assert_on_extended_passes": {
+  "r0.6": true,
+  "r0.8": true,
+  "r1.0": true,
+  "r1.2": true
+ },
+ "query_at_r06_stop": {
+  "extended_value_C": 98.72153348535029,
+  "extended_oob": 0,
+  "delivered_value_C": 102.10659197886767,
+  "delivered_oob": 1,
+  "note": "扩展表 oob=0（真覆盖）；交付表 oob=1（clamp 计数行为保持原样）"
+ }
+}

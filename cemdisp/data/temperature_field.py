@@ -9,6 +9,8 @@
   k 必给无默认 + Ramey 型瞬态接口位 + 锚域外回退地温式（F-4 聚合越界计数）
 - ``TableTemperatureField``: 表格温度场，双线性插值（深度×时间），越界 clamp + 审计
 - ``load_delivered_pair``: 加载交付的管内/环空两表，并校验井底（最深行）共享同值
+- ``load_extended_pair_4d``: 呼1-004 时程扩展表（333x362，表末 21600 s）的版本感知
+  加载（Phase 4d，F-4 登记）；``assert_time_table_coverage``: 批次级 stop_t>表末 前置断言
 
 数据源（交付件）：
 - 管内表: 参考文档/温压耦合数据、/T_in.xlsx（333 行 × 200 列纯数值矩阵，无表头）
@@ -41,6 +43,12 @@ __all__ = [
     "TableTemperatureField",
     "ClampEvent",
     "load_delivered_pair",
+    "load_extended_pair_4d",
+    "assert_time_table_coverage",
+    "TemperatureTableCoverageError",
+    "EXTENDED_SHAPE_4D",
+    "EXTENDED_TABLE_MARKER",
+    "TABLE_VERSIONS",
     "GEO_T0_C",
     "GEO_GRAD_C_PER_M",
     "EXPECTED_SHAPE",
@@ -60,6 +68,13 @@ DEFAULT_DEPTH_CSV = (
 )
 
 EXPECTED_SHAPE: Tuple[int, int] = (333, 200)  # 深度 333 点 × 时间 200 列
+# ---- Phase 4d 版本感知登记表（交付路径逐位不变；扩展表须经 load_extended_pair_4d）----
+# 扩展表 = HT1_004_T.m 沙箱扩时程产物：0..198 min 逐分钟 + 施工终点 198.792801 min
+# + 199..360 min 逐分钟，共 362 列，表末 21600 s ≥ stop_t(r0.6)=19016.0 s。
+# 前 200 列与交付表逐元素位级一致（对账证据：results/_probe_4d扩表_2026-10-07/compare_result.json）。
+EXTENDED_SHAPE_4D: Tuple[int, int] = (333, 362)
+EXTENDED_TABLE_MARKER = "_ext4d"  # 扩展表文件名必备溯源标识
+TABLE_VERSIONS = {"delivered": EXPECTED_SHAPE, "extended_4d": EXTENDED_SHAPE_4D}
 TIME_STEP_S: float = 60.0                     # 每列 1 min，col0=初始时刻
 DEPTH_CSV_COLUMN = "depth_well_logging_m_"
 _SHEET_XML = "xl/worksheets/sheet1.xml"
@@ -702,5 +717,109 @@ def load_delivered_pair(
         max_diff = float(np.max(np.abs(bottom_in - bottom_out)))
         raise ValueError(
             f"井底（最深行）两表应共享同值，实际最大偏差 {max_diff:.3e} °C"
+        )
+    return t_in, t_out
+
+
+# ---------------------------------------------------------------------------
+# Phase 4d：时程扩展表加载 + 批次级 stop_t 覆盖断言
+# ---------------------------------------------------------------------------
+class TemperatureTableCoverageError(ValueError):
+    """批次级前置断言失败：要求覆盖的时刻超过温度表时间轴末端。
+
+    语义 = 响亮报错、不静默 clamp。``TableTemperatureField.T`` 自身的
+    越界 clamp + 逐条审计行为不变——本异常只在批驱动的前置门抛出。
+    """
+
+
+def assert_time_table_coverage(
+    fields,
+    stop_t_s: float,
+    *,
+    label: str = "",
+) -> None:
+    """批次级前置断言：温度表时间轴末端须覆盖 ``stop_t_s``，否则抛错。
+
+    供批驱动在起跑前调用（如敏感性补跑的低排量档 stop_t 校核），把历史上
+    "表格档 r0.6/0.8 被静默 clamp 污染"的教训固化为硬门。
+
+    参数
+    ----------
+    fields : TableTemperatureField 或其可迭代（管内/环空两表一起传）
+    stop_t_s : 批次需要表覆盖到的时刻（s），通常为水泥顶替停泵时刻
+    label : 批次标识，仅用于报错信息
+    """
+    seq = [fields] if hasattr(fields, "time_s") else list(fields)
+    for f in seq:
+        ts = getattr(f, "time_s", None)
+        if ts is None:
+            raise TypeError(f"字段 {type(f).__name__} 无 time_s 轴，不适用表格覆盖断言")
+        ts_end = float(np.asarray(ts)[-1])
+        if stop_t_s > ts_end:
+            src = getattr(f, "source", None)
+            raise TemperatureTableCoverageError(
+                f"[{label or 'batch'}] stop_t={stop_t_s:.1f} s 超出温度表时间轴末端 "
+                f"{ts_end:.1f} s（超出 {stop_t_s - ts_end:.1f} s；表源={src}）。"
+                "禁止静默 clamp：请改用扩展表（load_extended_pair_4d）或裁短批次。"
+            )
+
+
+def load_extended_pair_4d(
+    t_in_xlsx: Path,
+    t_out_xlsx: Path,
+    time_axis_csv_min: Path,
+    *,
+    depth_csv_path: Path = DEFAULT_DEPTH_CSV,
+    marker: str = EXTENDED_TABLE_MARKER,
+    expected_shape: Tuple[int, int] = EXTENDED_SHAPE_4D,
+) -> Tuple[TableTemperatureField, TableTemperatureField]:
+    """加载呼1-004 时程扩展温度表（333x362，表末 21600 s）。
+
+    溯源要求（F-4 登记的硬条件，缺任一即报错）：
+    - 两表文件名须含 ``_ext4d`` 标识（防把交付表/中间产物误当扩展表）；
+    - 须附带时间轴侧车 CSV（单位 min，非均匀网格：0..198, 198.792801, 199..360）；
+    - 形状硬校验 ``expected_shape``（默认 EXTENDED_SHAPE_4D）；
+    - 井底（最深行）两表同值，容差与 ``load_delivered_pair`` 一致（1e-9）。
+
+    实现只走 ``TableTemperatureField`` 既有的显式参数路径（time_s、
+    expected_shape 均为原有入参），交付表路径 ``from_files`` /
+    ``load_delivered_pair`` 零改动。扩展表不做 npz 缓存（批驱动一次性加载，
+    zipfile+XML 解析成本可接受）。
+    """
+    for p in (t_in_xlsx, t_out_xlsx):
+        if marker not in Path(p).name:
+            raise ValueError(
+                f"扩展表文件名须含溯源标识 {marker!r}：{p}"
+            )
+
+    axis_min = np.asarray(
+        pd.read_csv(Path(time_axis_csv_min), header=None).to_numpy(dtype=float)
+    ).ravel()
+    if axis_min.size != expected_shape[1]:
+        raise ValueError(
+            f"时间轴侧车长度应为 {expected_shape[1]}（=扩展表列数），实际 {axis_min.size}"
+        )
+    if len(axis_min) < 2:
+        raise ValueError("时间轴侧车至少需 2 个节点")
+    if np.isnan(axis_min).any():
+        raise ValueError("时间轴侧车含 NaN")
+    if not np.all(np.diff(axis_min) > 0):
+        raise ValueError("时间轴侧车非严格单调递增")
+    time_s = axis_min * 60.0
+
+    depth_m = _read_depth_axis(depth_csv_path)
+    fields = []
+    for p in (Path(t_in_xlsx), Path(t_out_xlsx)):
+        table = _read_xlsx_numeric(p)
+        fields.append(
+            TableTemperatureField(
+                table, depth_m, time_s, expected_shape=expected_shape, source=p
+            )
+        )
+    t_in, t_out = fields
+    if not np.allclose(t_in.table[-1], t_out.table[-1], atol=1e-9, rtol=0):
+        max_diff = float(np.max(np.abs(t_in.table[-1] - t_out.table[-1])))
+        raise ValueError(
+            f"扩展表井底（最深行）两表应共享同值，实际最大偏差 {max_diff:.3e} °C"
         )
     return t_in, t_out
