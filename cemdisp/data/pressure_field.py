@@ -52,6 +52,7 @@ __all__ = [
     "PressureField",
     "ConstantPressureField",
     "HydrostaticPressureField",
+    "TablePressureField",
     "PressureOutOfRangeEvent",
     "insitu_column_density",
     "ANNULUS_ROLES",
@@ -218,6 +219,84 @@ class HydrostaticPressureField:
     def __repr__(self) -> str:  # pragma: no cover - 仅调试可读性
         return (f"HydrostaticPressureField({self.well_name!r}, "
                 f"{len(self.layers)} 层, g={self.g})")
+
+
+class TablePressureField:
+    """(md, t) 二维表压力场（Phase 3.1 P-2 二期，spec §1.3）：``P(md_m, t_s) -> MPa`` 双线性插值。
+
+    数据 = ``md 节点列``（m，严格升序）× ``时间列``（s，严格升序）的二维表
+    ``table_mpa``（形状 ``(n_md, n_t)``，单位 MPa）。用途 = Phase 4 逐深温度/压力产品位；
+    **本阶段只落地 + 单测，不注入任何生产路径**（C-14 同型声明）。
+
+    插值口径
+    --------
+    先对相邻两时间列在 md 方向各做线性插值（``np.interp``），再在 t 方向线性加权
+    （= 矩形网格双线性）。查询点落在网格/列上时返回精确节点值。
+
+    oob 三件套**同型 HydrostaticPressureField**（spec §1.3）
+    --------------------------------------------------------
+    - 计数条件与静液柱类逐字一致：**只统计 md 轴**（``md<0`` 或 ``md>bottom_md_m``），
+      记 :class:`PressureOutOfRangeEvent`；``t`` 轴不属"井底/负深度"语义 ⇒ 端点延拓
+      **钳位不计数**（对位 Hydrostatic"静压与 t 无关 ⇒ t 被忽略"——本类钳位而非外推）。
+    - 返回语义 = 钳位端点延拓（两轴都不外推）。
+    """
+
+    def __init__(
+        self,
+        well_name: str,
+        md_grid_m: Sequence[float],
+        t_grid_s: Sequence[float],
+        table_mpa: Sequence[Sequence[float]],
+        *,
+        bottom_md_m: Optional[float] = None,
+    ) -> None:
+        self._md = np.asarray(md_grid_m, dtype=float)
+        self._t = np.asarray(t_grid_s, dtype=float)
+        self._tab = np.asarray(table_mpa, dtype=float)
+        if self._md.ndim != 1 or self._t.ndim != 1 or self._tab.ndim != 2:
+            raise ValueError("md/t 网格须为一维，table 须为二维 (n_md, n_t)")
+        if self._md.size < 2 or self._t.size < 2:
+            raise ValueError("md/t 网格须为长度 ≥2 的一维序列")
+        if self._tab.shape != (self._md.size, self._t.size):
+            raise ValueError(
+                f"table 形状 {self._tab.shape} 与网格 {(self._md.size, self._t.size)} 不符")
+        if np.any(np.diff(self._md) <= 0.0):
+            raise ValueError("md 网格须严格升序")
+        if np.any(np.diff(self._t) <= 0.0):
+            raise ValueError("t 网格须严格升序")
+        self.well_name = str(well_name)
+        self.bottom_md_m = float(bottom_md_m) if bottom_md_m is not None else float(self._md[-1])
+        self._oob: list = []
+
+    def P(self, md_m: float, t_s: float) -> float:
+        """双线性插值压力 [MPa]；md 越界计数并钳位，t 钳位不计数（口径见类 docstring）。"""
+        md = float(md_m)
+        t = float(t_s)
+        if md < 0.0 or md > self.bottom_md_m:
+            self._oob.append(PressureOutOfRangeEvent(md, t, self.bottom_md_m))
+        md_c = min(max(md, float(self._md[0])), float(self._md[-1]))
+        t_c = min(max(t, float(self._t[0])), float(self._t[-1]))
+        j = int(np.searchsorted(self._t, t_c, side="right")) - 1
+        j = min(max(j, 0), self._t.size - 2)
+        p0 = float(np.interp(md_c, self._md, self._tab[:, j]))
+        p1 = float(np.interp(md_c, self._md, self._tab[:, j + 1]))
+        w = (t_c - float(self._t[j])) / (float(self._t[j + 1]) - float(self._t[j]))
+        return p0 + w * (p1 - p0)
+
+    @property
+    def oob_count(self) -> int:
+        return len(self._oob)
+
+    @property
+    def oob_events(self) -> Tuple[PressureOutOfRangeEvent, ...]:
+        return tuple(self._oob)
+
+    def reset_audit(self) -> None:
+        self._oob.clear()
+
+    def __repr__(self) -> str:  # pragma: no cover - 仅调试可读性
+        return (f"TablePressureField({self.well_name!r}, "
+                f"{self._md.size}×{self._t.size}, bottom_md_m={self.bottom_md_m})")
 
 
 # ---------------------------------------------------------------------------
